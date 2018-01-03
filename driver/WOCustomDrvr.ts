@@ -15,7 +15,9 @@ import * as Meta from "system_lib/Metadata";
  3. It's available as a free download, so anyone can use it to play
  	with this example code.
 
- The port value specified below indicates the default TCP port number,
+ Some notes the on the "Meta.driver" annotations below.
+
+ The port value specified indicates the default TCP port number,
  selected automatically when chosing this driver. The 'NetworkTCP' string
  specifies that this driver is intended for that type of subsystem, and
  its constructor will accept that type.

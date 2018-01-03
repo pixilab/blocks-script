@@ -36,12 +36,14 @@ define(["require", "exports", "driver/Driver", "system_lib/Metadata"], function 
      3. It's available as a free download, so anyone can use it to play
         with this example code.
     
-     The port value specified below indicates the default TCP port number,
+     Some notes the on the "Meta.driver" annotations below.
+    
+     The port value specified indicates the default TCP port number,
      selected automatically when chosing this driver. The 'NetworkTCP' string
      specifies that this driver is intended for that type of subsystem, and
      its constructor will accept that type.
      */
-    var WOCustomDrvr = /** @class */ (function (_super) {
+    var WOCustomDrvr = WOCustomDrvr_1 = (function (_super) {
         __extends(WOCustomDrvr, _super);
         /**
          * Create me, attached to the network socket I communicate through. When using a
@@ -72,7 +74,6 @@ define(["require", "exports", "driver/Driver", "system_lib/Metadata"], function 
                 _this.getInitialStatus(); // If so, get status right away
             return _this;
         }
-        WOCustomDrvr_1 = WOCustomDrvr;
         Object.defineProperty(WOCustomDrvr.prototype, "connected", {
             get: function () {
                 return this.mConnected;
@@ -236,50 +237,49 @@ define(["require", "exports", "driver/Driver", "system_lib/Metadata"], function 
             }
             this.pendingQueries = {};
         };
-        // A regex for parsing replies from WO
-        WOCustomDrvr.kReplyParser = /\[([^\]]+)\](\w*)[\s]?(.*)/;
-        __decorate([
-            Meta.property("Connected to WATCHOUT", true),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomDrvr.prototype, "connected", null);
-        __decorate([
-            Meta.property("Main timeline playing"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomDrvr.prototype, "playing", null);
-        __decorate([
-            Meta.property("Standby mode"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomDrvr.prototype, "standBy", null);
-        __decorate([
-            Meta.property("Generic input level"),
-            Meta.min(0),
-            Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], WOCustomDrvr.prototype, "input", null);
-        __decorate([
-            Meta.callable("Play or stop any auxiliary timeline"),
-            __param(0, Meta.parameter("Name of aux timeline to control")),
-            __param(1, Meta.parameter("Whether to start the timeline")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Boolean]),
-            __metadata("design:returntype", void 0)
-        ], WOCustomDrvr.prototype, "playAuxTimeline", null);
-        WOCustomDrvr = WOCustomDrvr_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 3040 }),
-            __metadata("design:paramtypes", [Object])
-        ], WOCustomDrvr);
         return WOCustomDrvr;
-        var WOCustomDrvr_1;
     }(Driver_1.Driver));
+    // A regex for parsing replies from WO
+    WOCustomDrvr.kReplyParser = /\[([^\]]+)\](\w*)[\s]?(.*)/;
+    __decorate([
+        Meta.property("Connected to WATCHOUT", true),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomDrvr.prototype, "connected", null);
+    __decorate([
+        Meta.property("Main timeline playing"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomDrvr.prototype, "playing", null);
+    __decorate([
+        Meta.property("Standby mode"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomDrvr.prototype, "standBy", null);
+    __decorate([
+        Meta.property("Generic input level"),
+        Meta.min(0),
+        Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], WOCustomDrvr.prototype, "input", null);
+    __decorate([
+        Meta.callable("Play or stop any auxiliary timeline"),
+        __param(0, Meta.parameter("Name of aux timeline to control")),
+        __param(1, Meta.parameter("Whether to start the timeline")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Boolean]),
+        __metadata("design:returntype", void 0)
+    ], WOCustomDrvr.prototype, "playAuxTimeline", null);
+    WOCustomDrvr = WOCustomDrvr_1 = __decorate([
+        Meta.driver('NetworkTCP', { port: 3040 }),
+        __metadata("design:paramtypes", [Object])
+    ], WOCustomDrvr);
     exports.WOCustomDrvr = WOCustomDrvr;
     /**	Keeping track of an outstanding query sent to WO, to be resolved
         when corresponding reply arrives.
     */
-    var Query = /** @class */ (function () {
+    var Query = (function () {
         /**
          * Create a query tagged with a unique ID, allowing the reply to be
          * tied back to the promise awaiting it, once the response arrives.
@@ -327,7 +327,8 @@ define(["require", "exports", "driver/Driver", "system_lib/Metadata"], function 
         Query.prototype.fail = function (error) {
             this.rejector(error);
         };
-        Query.prevId = 0; // Generate unique query IDs from here
         return Query;
     }());
+    Query.prevId = 0; // Generate unique query IDs from here
+    var WOCustomDrvr_1;
 });
