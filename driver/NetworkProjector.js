@@ -1,6 +1,6 @@
 /*
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2017 by Mike Fahl.
+ * Created 2018 by Mike Fahl.
  */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -21,7 +21,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Metadata", "driver/Driver"], function (require, exports, Metadata_1, Driver_1) {
+define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], function (require, exports, Metadata_1, Driver_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     /**

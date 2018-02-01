@@ -1,5 +1,9 @@
+/*
+ * Created 2017 by Mike Fahl.
+ */
+
 import {NetworkTCP} from "system/Network";
-import {Driver} from "driver/Driver";
+import {Driver} from "system_lib/Driver";
 import * as Meta from "system_lib/Metadata";
 
 /**
@@ -34,6 +38,8 @@ export class WOCustomDrvr extends Driver<NetworkTCP> {
 	private mPlaying = false;	// Most recent state (obtained from WO initially)
 	private mStandBy = false;
 	private mLevel = 0;			// Numeric state of Output
+
+	private mLayerCond = 0;
 
 	/**
 	 * Create me, attached to the network socket I communicate through. When using a
@@ -70,6 +76,18 @@ export class WOCustomDrvr extends Driver<NetworkTCP> {
 	}
 	public get connected(): boolean {
 		return this.mConnected;
+	}
+
+	@Meta.property("Layer condition flags")
+	public set layerCond(cond: number) {
+		if (this.mLayerCond !== cond) {
+			this.mLayerCond = cond;
+			this.tell("enableLayerCond " + cond);
+		}
+		// console.info("layerCond", cond)
+	}
+	public get layerCond(): number {
+		return this.mLayerCond;
 	}
 
 	/**

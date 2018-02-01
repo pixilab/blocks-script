@@ -1,6 +1,6 @@
 /*
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2017 by Mike Fahl.
+ * Created 2018 by Mike Fahl.
  */
 
 /**

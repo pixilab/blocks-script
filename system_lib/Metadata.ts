@@ -68,7 +68,7 @@ export function property(description?: string, readOnly?: boolean) {
 					this.__scriptFacade.firePropChanged(propName);
 			};
 		}
-		Reflect.defineMetadata('pixi:property', description, target, propName);
+		Reflect.defineMetadata('pixi:property', description || "", target, propName);
 		if (readOnly) // Explicit read-only (may still have a setter for "internal" use)
 			Reflect.defineMetadata('pixi:readOnly', true, target, propName);
 		return prop;
@@ -82,7 +82,7 @@ export function callable(description?: string) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
 		const func: Function = target[propertyKey];
 		const info = {	// Information provided about this callable
-			descr: description,
+			descr: description || "",
 			args: getArgs(func)
 		};
 		return Reflect.defineMetadata("pixi:callable", info, target, propertyKey);

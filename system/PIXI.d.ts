@@ -9,8 +9,8 @@ declare function asap(callback: Function): void;
 declare function wait(millis:number): CancelablePromise<void>;
 declare var console: Console;
 
-/**	All log functions take one or many strings, that will be concatenated with a space
-	as separator.
+/** Log functions take one or many values, which will be concatenated
+    with a space as separator.
  */
 interface console {
 	log(...toLog: string[]):void;		// Synonymous with info

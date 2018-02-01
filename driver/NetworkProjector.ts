@@ -1,11 +1,11 @@
 /*
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2017 by Mike Fahl.
+ * Created 2018 by Mike Fahl.
  */
 
 import {NetworkTCP} from "system/Network";
 import {property} from "system_lib/Metadata";
-import {Driver} from "driver/Driver";
+import {Driver} from "system_lib/Driver";
 
 /**
  Common functionality needed by projectors controlled over the network.

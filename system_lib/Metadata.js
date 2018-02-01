@@ -59,7 +59,7 @@ define(["require", "exports"], function (require, exports) {
                         this.__scriptFacade.firePropChanged(propName);
                 };
             }
-            Reflect.defineMetadata('pixi:property', description, target, propName);
+            Reflect.defineMetadata('pixi:property', description || "", target, propName);
             if (readOnly)
                 Reflect.defineMetadata('pixi:readOnly', true, target, propName);
             return prop;
@@ -73,7 +73,7 @@ define(["require", "exports"], function (require, exports) {
         return function (target, propertyKey, descriptor) {
             var func = target[propertyKey];
             var info = {
-                descr: description,
+                descr: description || "",
                 args: getArgs(func)
             };
             return Reflect.defineMetadata("pixi:callable", info, target, propertyKey);
