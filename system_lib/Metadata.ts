@@ -95,7 +95,7 @@ export function callable(description?: string) {
 export function parameter(description?: string) {
 	return function(clsFunc: Object, propertyKey: string, paramIndex: number) {
 		propertyKey = propertyKey + ':' + paramIndex;
-		return Reflect.defineMetadata("pixi:param", description, clsFunc, propertyKey);
+		return Reflect.defineMetadata("pixi:param", description || "", clsFunc, propertyKey);
 	}
 }
 

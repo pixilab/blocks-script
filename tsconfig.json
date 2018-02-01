@@ -6,7 +6,7 @@
 		"noEmitHelpers": false,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
-		"removeComments": false,
+		"removeComments": true,
 		"sourceMap": false,
 		"isolatedModules": false,
 		"moduleResolution": "classic",

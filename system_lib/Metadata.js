@@ -86,7 +86,7 @@ define(["require", "exports"], function (require, exports) {
     function parameter(description) {
         return function (clsFunc, propertyKey, paramIndex) {
             propertyKey = propertyKey + ':' + paramIndex;
-            return Reflect.defineMetadata("pixi:param", description, clsFunc, propertyKey);
+            return Reflect.defineMetadata("pixi:param", description || "", clsFunc, propertyKey);
         };
     }
     exports.parameter = parameter;
