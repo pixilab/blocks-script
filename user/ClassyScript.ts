@@ -3,11 +3,12 @@
  */
 
 import {Script, ScriptEnv} from "system_lib/Script";
-import {callable, parameter, property} from "system_lib/Metadata";
+import {callable, max, min, parameter, property} from "system_lib/Metadata";
 
 export class ClassyScript extends Script {
-	private mConnected: boolean;
-	private mDynPropValue: boolean;
+	private mConnected = false;
+	private mDynPropValue = false;
+	private mLevel = 0;
 
 	public constructor(env : ScriptEnv) {
 		super(env);
@@ -50,6 +51,20 @@ export class ClassyScript extends Script {
 	public get connected(): boolean {
 		return this.mConnected;
 	}
+
+	/**
+	 * A fake "level" property you can assign to a slider or similar.
+	 */
+	@property("A numeric value")
+	@min(0) @max(25)
+	set level(value: number) {
+		this.mLevel = value;
+		console.info("Property level changed to", value);
+	}
+	get level(): number {
+		return this.mLevel;
+	}
+
 
 	@callable("Something to help the user")
 	public doSomething(

@@ -14,6 +14,11 @@ export var PubSub: PubSubber;
 /**
  * An object of this class can be required under the PubSub name, allowing you
  * to hook up script properties and listeners.
+ *
+ * DEPRECATED! The functions in this class should *not* be used for class-based
+ * custom script development. Use property() and changed() as provided by the
+ * Script base-class instead, and use the @callable annotation to expose
+ * functions.
  */
 interface PubSubber {
 
