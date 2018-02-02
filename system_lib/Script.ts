@@ -19,6 +19,22 @@ export class Script {
 	 */
 	property<T>(name: string, options: SGOptions, setGetFunc: SetterGetter<T>): void {
 		this.__scriptFacade.property(name, options, setGetFunc);
+
+		// A little dance to make this work also for direct JS-style assignment
+		Object.defineProperty(this.constructor.prototype, name, {
+			get: function () {
+				return setGetFunc();
+			},
+			set: function (value) {
+				if (!options.readOnly) {
+					const oldValue = setGetFunc();
+					if (oldValue !== setGetFunc(value))
+						this.changed(name);
+				}
+			},
+			enumerable: true,
+			configurable: true
+		});
 	}
 
 	/**	Inform others that prop has changed, causing any

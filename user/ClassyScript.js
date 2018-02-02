@@ -40,10 +40,6 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
                     if (_this.mDynPropValue !== sv) {
                         _this.mDynPropValue = sv;
                         console.log("dynProp1", sv);
-                        /*	Notify others about change. Must ALWAYS be
-                            done manually for programmatic properties.
-                         */
-                        _this.changed("dynProp1");
                     }
                 }
                 return _this.mDynPropValue;
@@ -68,9 +64,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
                         when changed through the setter, as using the setter automatically
                         notifies others of changes. But in some cases, it may be desirable
                         to maintain and update state *without* going through the setter,
-                        and then you can use the explicit method. The explicit method is
-                        ALWAYS required for programmatically created properties, as shown
-                        above.
+                        and then you can use the explicit method.
                      */
                     _this.changed('connected');
                 });

@@ -54,8 +54,7 @@ interface PubSubber {
 
 
 /**
- * A function to set or get a value. If the parameter is missing, then it is considered a
- * getter, else it is considered a setter.
+ * A function that will set the value if its parameter is defined. Always returns the current value.
  */
 export interface SetterGetter<T> {
 	(setValue?: T): T;

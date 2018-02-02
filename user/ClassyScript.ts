@@ -22,10 +22,6 @@ export class ClassyScript extends Script {
 				if (this.mDynPropValue !== sv) {
 					this.mDynPropValue = sv;
 					console.log("dynProp1", sv);
-					/*	Notify others about change. Must ALWAYS be
-						done manually for programmatic properties.
-					 */
-					this.changed("dynProp1");
 				}
 			}
 			return this.mDynPropValue;
@@ -46,9 +42,7 @@ export class ClassyScript extends Script {
 				when changed through the setter, as using the setter automatically
 				notifies others of changes. But in some cases, it may be desirable
 				to maintain and update state *without* going through the setter,
-				and then you can use the explicit method. The explicit method is
-				ALWAYS required for programmatically created properties, as shown
-				above.
+				and then you can use the explicit method.
 			 */
 			this.changed('connected');
 		});
