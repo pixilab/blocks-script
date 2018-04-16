@@ -32,8 +32,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return _this;
         }
         BarcoE2.prototype.activatePreset = function (preset) {
+            this.mLive = preset;
             return this.send(preset);
         };
+        Object.defineProperty(BarcoE2.prototype, "live", {
+            get: function () {
+                return this.mLive;
+            },
+            set: function (preset) {
+                this.activatePreset(preset);
+            },
+            enumerable: true,
+            configurable: true
+        });
         BarcoE2.prototype.send = function (preset) {
             return this.socket.sendText("PRESET -a " + preset);
         };
@@ -44,6 +55,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
         ], BarcoE2.prototype, "activatePreset", null);
+        __decorate([
+            Metadata_1.property("Current live preset"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], BarcoE2.prototype, "live", null);
         BarcoE2 = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 9878 }),
             __metadata("design:paramtypes", [Object])

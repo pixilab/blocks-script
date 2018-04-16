@@ -23,9 +23,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**	A very basic Barco E2 driver for recalling presets using the newer JSON
-    *  based protocol.
-    */
     var BarcoE2_JSON = (function (_super) {
         __extends(BarcoE2_JSON, _super);
         function BarcoE2_JSON(socket) {
@@ -35,42 +32,69 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return _this;
         }
         BarcoE2_JSON.prototype.activatePreset = function (preset, preview) {
+            if (preview)
+                this.mPreview = preset;
+            else
+                this.mLive = preset;
             return this.send(new Command("activatePreset", { id: preset, type: preview ? 0 : 1 }));
         };
-        /**
-         * Send specified command, returning a promise resolved once sent.
-         */
+        Object.defineProperty(BarcoE2_JSON.prototype, "preview", {
+            get: function () {
+                return this.mPreview;
+            },
+            set: function (preset) {
+                this.activatePreset(preset, true);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(BarcoE2_JSON.prototype, "live", {
+            get: function () {
+                return this.mLive;
+            },
+            set: function (preset) {
+                this.activatePreset(preset, false);
+            },
+            enumerable: true,
+            configurable: true
+        });
         BarcoE2_JSON.prototype.send = function (cmd) {
             var cmdJson = JSON.stringify(cmd);
             return this.socket.sendText(cmdJson);
         };
+        __decorate([
+            Metadata_1.callable("Load a preset into Live or Preview"),
+            __param(0, Metadata_1.parameter("Preset number")),
+            __param(1, Metadata_1.parameter("Load into Preview", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Boolean]),
+            __metadata("design:returntype", void 0)
+        ], BarcoE2_JSON.prototype, "activatePreset", null);
+        __decorate([
+            Metadata_1.property("Current preview preset"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], BarcoE2_JSON.prototype, "preview", null);
+        __decorate([
+            Metadata_1.property("Current live preset"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], BarcoE2_JSON.prototype, "live", null);
+        BarcoE2_JSON = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 9999 }),
+            __metadata("design:paramtypes", [Object])
+        ], BarcoE2_JSON);
         return BarcoE2_JSON;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.callable("Load a preset into Program or Preview"),
-        __param(0, Metadata_1.parameter("Preset number")),
-        __param(1, Metadata_1.parameter("Load into Preview", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, Boolean]),
-        __metadata("design:returntype", void 0)
-    ], BarcoE2_JSON.prototype, "activatePreset", null);
-    BarcoE2_JSON = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 9999 }),
-        __metadata("design:paramtypes", [Object])
-    ], BarcoE2_JSON);
     exports.BarcoE2_JSON = BarcoE2_JSON;
-    /**
-     * Base class of commands sent.
-     */
     var Command = (function () {
-        function Command(method, // Name of command
-            params) {
+        function Command(method, params) {
             this.method = method;
             this.jsonrpc = "2.0";
             this.id = Command.nextId++;
             this.params = params;
         }
+        Command.nextId = 1;
         return Command;
     }());
-    Command.nextId = 1;
 });

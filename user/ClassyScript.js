@@ -1,6 +1,3 @@
-/*
- * Created 2018 by Mike Fahl.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -30,11 +27,11 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         __extends(ClassyScript, _super);
         function ClassyScript(env) {
             var _this = _super.call(this, env) || this;
+            _this.mConnected = false;
+            _this.mDynPropValue = false;
+            _this.mLevel = 0;
             console.log("ClassyScript instantiated");
             _this.mConnected = false;
-            /*	Example of how to add a property programmatically. Useful for
-                properties that may not be known until runtime.
-             */
             _this.property("dynProp1", { type: Boolean }, function (sv) {
                 if (sv !== undefined) {
                     if (_this.mDynPropValue !== sv) {
@@ -50,9 +47,6 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             get: function () {
                 return this.mConnected;
             },
-            /**
-             * A fake "connected" property, just logging the connection state.
-             */
             set: function (online) {
                 var _this = this;
                 this.mConnected = online;
@@ -60,14 +54,19 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
                 wait(2000).then(function () {
                     _this.mConnected = false;
                     console.log("Connected OFF after delay");
-                    /*	Notify others if state change internally. This is NOT required
-                        when changed through the setter, as using the setter automatically
-                        notifies others of changes. But in some cases, it may be desirable
-                        to maintain and update state *without* going through the setter,
-                        and then you can use the explicit method.
-                     */
                     _this.changed('connected');
                 });
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ClassyScript.prototype, "level", {
+            get: function () {
+                return this.mLevel;
+            },
+            set: function (value) {
+                this.mLevel = value;
+                console.info("Property level changed to", value);
             },
             enumerable: true,
             configurable: true
@@ -80,19 +79,25 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ClassyScript.prototype.internalFunction = function (a, b) {
             return a + b;
         };
+        __decorate([
+            Metadata_1.property("Useful textual description"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], ClassyScript.prototype, "connected", null);
+        __decorate([
+            Metadata_1.property("A numeric value"),
+            Metadata_1.min(0), Metadata_1.max(25),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], ClassyScript.prototype, "level", null);
+        __decorate([
+            Metadata_1.callable("Something to help the user"),
+            __param(0, Metadata_1.parameter("Textual description shown in UI")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Boolean]),
+            __metadata("design:returntype", String)
+        ], ClassyScript.prototype, "doSomething", null);
         return ClassyScript;
     }(Script_1.Script));
-    __decorate([
-        Metadata_1.property("Useful textual description"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], ClassyScript.prototype, "connected", null);
-    __decorate([
-        Metadata_1.callable("Something to help the user"),
-        __param(0, Metadata_1.parameter("Textual description shown in UI")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Boolean]),
-        __metadata("design:returntype", String)
-    ], ClassyScript.prototype, "doSomething", null);
     exports.ClassyScript = ClassyScript;
 });

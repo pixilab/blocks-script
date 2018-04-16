@@ -1,11 +1,13 @@
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {callable, driver, min, parameter} from "system_lib/Metadata";
+import {callable, driver, min, parameter, property} from "system_lib/Metadata";
 
 /**	A very basic Barco E2 driver for recalling presets.
 */
 @driver('NetworkTCP', { port: 9878 })
 export class BarcoE2 extends Driver<NetworkTCP> {
+
+	private mLive: number;
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
@@ -16,7 +18,16 @@ export class BarcoE2 extends Driver<NetworkTCP> {
 	public activatePreset(
 		@parameter("Preset number") preset: number
 	) {
+		this.mLive = preset;
 		return this.send(preset);
+	}
+
+	@property("Current live preset")
+	public set live(preset: number) {
+		this.activatePreset(preset);
+	}
+	public get live() {
+		return this.mLive;
 	}
 
 	/**

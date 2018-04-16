@@ -1,6 +1,6 @@
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {callable, driver, min, parameter} from "system_lib/Metadata";
+import {callable, driver, min, parameter, property} from "system_lib/Metadata";
 
 /**	A very basic Barco E2 driver for recalling presets using the newer JSON
 *  based protocol.
@@ -8,20 +8,45 @@ import {callable, driver, min, parameter} from "system_lib/Metadata";
 @driver('NetworkTCP', { port: 9999 })
 export class BarcoE2_JSON extends Driver<NetworkTCP> {
 
+	private mPreview: number;
+	private mLive: number;
+
+
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
 		socket.autoConnect();
 	}
 
-	@callable("Load a preset into Program or Preview")
+	@callable("Load a preset into Live or Preview")
 	public activatePreset(
 		@parameter("Preset number")  preset: number,
 		@parameter("Load into Preview", true) preview?: boolean
 	) {
+		if (preview)
+			this.mPreview = preset;
+		else
+			this.mLive = preset;
+
 		return this.send(new Command(
 			"activatePreset",
 			{ id: preset, type: preview ? 0 : 1 }
 		));
+	}
+
+	@property("Current preview preset")
+	public set preview(preset: number) {
+		this.activatePreset(preset, true);
+	}
+	public get preview() {
+		return this.mPreview;
+	}
+
+	@property("Current live preset")
+	public set live(preset: number) {
+		this.activatePreset(preset, false);
+	}
+	public get live() {
+		return this.mLive;
 	}
 
 	/**

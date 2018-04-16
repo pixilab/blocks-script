@@ -20,54 +20,71 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var BarcoPW392 = (function (_super) {
-        __extends(BarcoPW392, _super);
-        function BarcoPW392(socket) {
+    var Christie_GS = (function (_super) {
+        __extends(Christie_GS, _super);
+        function Christie_GS(socket) {
             var _this = _super.call(this, socket) || this;
-            _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
-            _this.addState(_this._input = new NetworkProjector_1.NumState('IABS', 'input', 0, BarcoPW392_1.kMaxInput));
+            _this._power = new NetworkProjector_1.BoolState('PWR', 'power');
+            _this.addState(_this._power);
+            _this._input = new NetworkProjector_1.NumState('SIN+MAIN', 'input', Christie_GS_1.kMinInput, Christie_GS_1.kMaxInput);
+            _this.addState(_this._input);
+            socket.setReceiveFraming(")", true);
             _this.poll();
             _this.attemptConnect();
             return _this;
         }
-        BarcoPW392_1 = BarcoPW392;
-        BarcoPW392.prototype.isOfTypeName = function (typeName) {
-            return typeName === "BarcoPW392" ? this : _super.prototype.isOfTypeName.call(this, typeName);
-        };
-        Object.defineProperty(BarcoPW392.prototype, "input", {
+        Christie_GS_1 = Christie_GS;
+        Object.defineProperty(Christie_GS.prototype, "input", {
             get: function () {
                 return this._input.get();
             },
             set: function (value) {
-                if (this._input.set(value))
+                if (this._input.set(value)) {
                     this.sendCorrection();
+                }
             },
             enumerable: true,
             configurable: true
         });
-        BarcoPW392.prototype.justConnected = function () {
+        Christie_GS.prototype.justConnected = function () {
             _super.prototype.justConnected.call(this);
-            this.getInitialState();
-        };
-        BarcoPW392.prototype.getInitialState = function () {
-            var _this = this;
             this.connected = false;
-            this.request('POWR').then(function (reply) {
-                _this._power.updateCurrent((parseInt(reply) & 1) != 0);
-                return _this.request('IABS');
+            this.pollStatus();
+        };
+        Christie_GS.prototype.pollStatus = function () {
+            var _this = this;
+            this.request('PWR?').then(function (reply) {
+                var powered = reply == '1';
+                _this._power.updateCurrent(powered);
+                if (powered)
+                    return _this.request('SIN+MAIN?');
+                else {
+                    _this.connected = true;
+                    _this.sendCorrection();
+                }
             }).then(function (reply) {
-                _this._input.updateCurrent(parseInt(reply));
+                if (reply !== undefined) {
+                    var selInput = parseInt(reply);
+                    if (!isNaN(selInput))
+                        _this._input.updateCurrent(selInput);
+                }
                 _this.connected = true;
                 _this.sendCorrection();
             }).catch(function (error) {
                 _this.disconnectAndTryAgainSoon();
             });
+            return true;
         };
-        BarcoPW392.prototype.request = function (question, param) {
+        Christie_GS.prototype.request = function (question, param) {
             var _this = this;
-            var toSend = ':' + question;
-            toSend += (param === undefined) ? '?' : param;
-            this.socket.sendText(toSend).catch(function (err) { return _this.sendFailed(err); });
+            var toSend = question.indexOf('?') < 0 ? '#' + question : question;
+            if (param !== undefined)
+                toSend += param;
+            toSend = '(' + toSend + ')';
+            this.socket.sendText(toSend)
+                .catch(function (err) {
+                return _this.sendFailed(err);
+            });
             var result = this.startRequest(question);
             result.finally(function () {
                 asap(function () {
@@ -76,36 +93,30 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             });
             return result;
         };
-        BarcoPW392.prototype.textReceived = function (text) {
+        Christie_GS.prototype.textReceived = function (text) {
             if (text) {
-                var parts = BarcoPW392_1.replyParser.exec(text);
-                if (parts && parts[1] === this.currCmd) {
-                    if (parts[2]) {
-                        console.warn("BarcoPW response", text);
-                        this.requestFailure(text);
-                    }
-                    else
-                        this.requestSuccess(parts[3]);
-                }
+                var parts = Christie_GS_1.replyParser.exec(text);
+                if (parts)
+                    this.requestSuccess(parts[1]);
                 else
                     console.warn("Unexpected data", text);
-                this.requestFinished();
             }
         };
-        BarcoPW392.replyParser = /\%\d* (\S*) (\!?)(\d*)/;
-        BarcoPW392.kMaxInput = 25;
+        Christie_GS.replyParser = /\(\D+(\d+)\D/;
+        Christie_GS.kMinInput = 1;
+        Christie_GS.kMaxInput = 12;
         __decorate([
             Meta.property("Desired input source number"),
-            Meta.min(0), Meta.max(BarcoPW392_1.kMaxInput),
+            Meta.min(Christie_GS_1.kMinInput), Meta.max(Christie_GS_1.kMaxInput),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
-        ], BarcoPW392.prototype, "input", null);
-        BarcoPW392 = BarcoPW392_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 1025 }),
+        ], Christie_GS.prototype, "input", null);
+        Christie_GS = Christie_GS_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 3002 }),
             __metadata("design:paramtypes", [Object])
-        ], BarcoPW392);
-        return BarcoPW392;
-        var BarcoPW392_1;
+        ], Christie_GS);
+        return Christie_GS;
+        var Christie_GS_1;
     }(NetworkProjector_1.NetworkProjector));
-    exports.BarcoPW392 = BarcoPW392;
+    exports.Christie_GS = Christie_GS;
 });
