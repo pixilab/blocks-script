@@ -23,17 +23,22 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
     /**
      Manage a PJLink projector, accessed through a provided NetworkTCPDevice connection.
      */
-    var PJLink = /** @class */ (function (_super) {
+    var PJLink = PJLink_1 = (function (_super) {
         __extends(PJLink, _super);
         function PJLink(socket) {
             var _this = _super.call(this, socket) || this;
-            _this.propList.push(_this._power = new NetworkProjector_1.BoolState('POWR'));
-            _this.propList.push(_this._input = new NetworkProjector_1.NumState('INPT', PJLink_1.kMinInput, PJLink_1.kMaxInput));
+            _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
+            _this.addState(_this._input = new NetworkProjector_1.NumState('INPT', 'input', PJLink_1.kMinInput, PJLink_1.kMaxInput));
             _this.poll(); // Get polling going
             _this.attemptConnect(); // Attempt initial connection
             return _this;
         }
-        PJLink_1 = PJLink;
+        /**
+         * Allow clients to check for my type, just as in some system object classes
+         */
+        PJLink.prototype.isOfTypeName = function (typeName) {
+            return typeName === "PJLink" ? this : _super.prototype.isOfTypeName.call(this, typeName);
+        };
         Object.defineProperty(PJLink.prototype, "input", {
             /**
              Get current input, if known, else undefined.
@@ -98,13 +103,9 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             var toSend = '%1' + question;
             toSend += ' ';
             toSend += (param === undefined) ? '?' : param;
-            this.currCmd = toSend;
             // console.info("request", toSend);
             this.socket.sendText(toSend).catch(function (err) { return _this.sendFailed(err); });
-            var result = new Promise(function (resolve, reject) {
-                _this.currResolver = resolve;
-                _this.currRejector = reject;
-            });
+            var result = this.startRequest(question);
             result.finally(function () {
                 asap(function () {
                     // console.info("request finally sendCorrection");
@@ -141,11 +142,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                             hence re-trying it soon again.
                          */
                         switch (text) {
-                            case 'ERR1':// Undefined command - no need to re-try
+                            case 'ERR1':
                                 this.errorMsg("Undefined command", this.currCmd);
                                 treatAsOk = true;
                                 break;
-                            case 'ERR2':// Parameter not accepted (e.g., non-existing input)
+                            case 'ERR2':
                                 this.errorMsg("Bad command parameter", this.currCmd);
                                 treatAsOk = true;
                                 break;
@@ -153,41 +154,39 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                                 this.warnMsg("PJLink response", currCmd, text);
                                 break;
                         }
-                        if (!treatAsOk && this.currRejector)
-                            this.currRejector(text);
+                        if (!treatAsOk)
+                            this.requestFailure(text);
                     }
-                    /*	Successfull response ('OK' for commands, reply for query),
+                    /*	Successful response ('OK' for commands, reply for query),
                         or error deemed as "ok" above since there's nothing we can
                         do about it anyway, and there's no point in rejecting and
                         subsequently re-trying it.
                      */
-                    if (treatAsOk) {
-                        if (this.currResolver)
-                            this.currResolver(text);
-                    }
+                    if (treatAsOk)
+                        this.requestSuccess(text);
                 }
                 else
-                    this.currRejector("Unexpected reply " + text + ", expected " + currCmd);
+                    this.requestFailure("Unexpected reply " + text + ", expected " + currCmd);
             }
             else
                 this.warnMsg("Unexpected data", text);
             this.requestFinished();
         };
-        PJLink.kMinInput = 11;
-        PJLink.kMaxInput = 59;
-        __decorate([
-            Meta.property("Desired input source number"),
-            Meta.min(PJLink_1.kMinInput),
-            Meta.max(PJLink_1.kMaxInput),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], PJLink.prototype, "input", null);
-        PJLink = PJLink_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 4352 }),
-            __metadata("design:paramtypes", [Object])
-        ], PJLink);
         return PJLink;
-        var PJLink_1;
     }(NetworkProjector_1.NetworkProjector));
+    PJLink.kMinInput = 11;
+    PJLink.kMaxInput = 59;
+    __decorate([
+        Meta.property("Desired input source number"),
+        Meta.min(PJLink_1.kMinInput),
+        Meta.max(PJLink_1.kMaxInput),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], PJLink.prototype, "input", null);
+    PJLink = PJLink_1 = __decorate([
+        Meta.driver('NetworkTCP', { port: 4352 }),
+        __metadata("design:paramtypes", [Object])
+    ], PJLink);
     exports.PJLink = PJLink;
+    var PJLink_1;
 });

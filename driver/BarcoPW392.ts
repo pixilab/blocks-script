@@ -17,11 +17,21 @@ export class BarcoPW392 extends NetworkProjector {
 
 	constructor(socket: NetworkTCP) {
 		super(socket);
-		this.propList.push(this._power = new BoolState('POWR'));
-		this.propList.push(this._input = new NumState('IABS', 0, BarcoPW392.kMaxInput));
+		this.addState(this._power = new BoolState('POWR', 'power'));
+		this.addState(this._input = new NumState(
+			'IABS', 'input',
+			0, BarcoPW392.kMaxInput
+		));
 
 		this.poll();	// Get polling going
 		this.attemptConnect();	// Attempt initial connection
+	}
+
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "BarcoPW392" ? this : super.isOfTypeName(typeName);
 	}
 
 	/*
@@ -74,7 +84,6 @@ export class BarcoPW392 extends NetworkProjector {
 		});
 	}
 
-
 	/*
 	 Send a question or command to the projector, and wait for the response. The
 	 response is assumed to be
@@ -86,17 +95,13 @@ export class BarcoPW392 extends NetworkProjector {
 	 If error: rrr is an error code, beginning with a '!'char
 	 */
 	request(question: string, param?: string): Promise<string> {
-		this.currCmd = question;
 		var toSend = ':' + question;
 		toSend += (param === undefined) ? '?' : param;
 		// console.info("request", toSend);
 		this.socket.sendText(toSend).catch(err=>this.sendFailed(err));
-		const result = new Promise<string>((resolve, reject) => {
-			this.currResolver = resolve;
-			this.currRejector = reject;
-		});
+		const result = this.startRequest(question);
 		result.finally(()=> {
-			asap(()=> {	// Send further corrections soon, once this cycle settled
+			asap(()=> {	// Send further corrections soon
 				// console.info("request finally sendCorrection");
 				this.sendCorrection();
 			});
@@ -115,10 +120,9 @@ export class BarcoPW392 extends NetworkProjector {
 			if (parts && parts[1] === this.currCmd) {
 				if (parts[2]) {
 					console.warn("BarcoPW response", text);
-					if (this.currRejector)
-						this.currRejector(text);	// Entire error reply
-				} else if (this.currResolver)
-					this.currResolver(parts[3]); // Only "reply" data part
+					this.requestFailure(text);
+				} else
+					this.requestSuccess(parts[3]); // Only "reply" data part
 			} else
 				console.warn("Unexpected data", text);
 			this.requestFinished();

@@ -13,6 +13,6 @@ export var Modbus: { [moduleName: string]: ModbusModule; };
 export interface ModbusModule { [channelName: string]: ModbusChannel; }
 
 export interface ModbusChannel {
-	value: number|boolean;
-	subscribe(type: "change", listener: (sender: ModbusChannel, message:{value:number|boolean})=>void): void;
+	value: number|boolean;	// Read only if channel is input
+	subscribe(event: "change", listener: (sender: ModbusChannel, message:{value:number|boolean})=>void): void;
 }

@@ -13,13 +13,16 @@ export var Spot: SpotGroup;
 /**
  Marker interface for items that can live in a SpotGroup (including other SpotGroups)
  */
-interface SpotGroupItem {}
+interface SpotGroupItem {
+}
 
 interface SpotGroup extends SpotGroupItem {
 	[name: string]: SpotGroupItem;
 }
 
 export interface DisplaySpot extends SpotGroupItem {
+
+	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name
 
 	/**
 	 True if the spot is connected. Read only.
@@ -63,6 +66,11 @@ export interface DisplaySpot extends SpotGroupItem {
 	reboot(): void;
 
 	/**
+	 * Locate time position in video/audio
+	 */
+	seek(timeInSeconds: number):void;
+
+	/**
 	 * Ask Spot to select an alternative picture source, by name. Supported inputs vary
 	 * with spot models, but typically look like, "DVI", "HDMI" or "HDMI1" (if has more
 	 * than one input of same type). Specify empty string to revert to the default Spot
@@ -85,13 +93,38 @@ export interface DisplaySpot extends SpotGroupItem {
 	 */
 	volume: number;
 
-	subscribe(type: "connect", listener: (sender: DisplaySpot, message:{
+	/**
+	 * Apply custom CSS classes to root display element ("theDisplay").
+	 * Multiple classes separated by space.
+	 */
+	customClasses: string;
+
+	/**
+	 Ask Spot to reveal the specified path, which is assumed to exist
+	 in the currently loaded block. The path must be absolute (start
+	 with a slash), and in the form
+
+	  	/TopLevel/subLevel/targetBlock
+
+	 Where each segment must be one of the following:
+
+	 - An alphanumeric block name.
+	 - A numeric index into a list of blocks (0-based)
+	 - A relative change in a list (e.g., a Slideshow), in the form
+	 	+	To advance one step, with wrap-around once the end is reached
+	 	-	To step backwards by one step, with wrap-around
+	 	+2	To step forward by two steps, with no wrap-around
+	 	-3	To step backwards 3 steps, with no wrap-around
+	 */
+	gotoPage(path: string): void;
+
+	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
 		type:
 			'Connection'|		// Connection state changed (check with isConnected)
 			'ConnectionFailed'	// Connection attempt failed
 	})=>void): void;
 
-	subscribe(type: "spot", listener: (sender: DisplaySpot, message:{
+	subscribe(event: "spot", listener: (sender: DisplaySpot, message:{
 		type:
 			'DefaultBlock'|		// Default block changed (may be schedule)
 			'PriorityBlock'|	// Priority block changed (may be schedule)
@@ -102,5 +135,5 @@ export interface DisplaySpot extends SpotGroupItem {
 			'Playing'			// Is playing (vs paused)
 	})=>void): void;
 
-	unsubscribe(type: string, listener: Function);
+	unsubscribe(event: string, listener: Function): void;
 }

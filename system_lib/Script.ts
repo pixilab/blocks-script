@@ -4,16 +4,12 @@
  */
 
 import {SetterGetter, SGOptions} from "system/PubSub";
+import {ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
 
 /**
  Ultimate base class for all TypeScript based user scripts.
  */
-export class Script {
-	private __scriptFacade: ScriptEnv;
-
-	constructor(env: ScriptEnv) {
-		this.__scriptFacade = env;
-	}
+export class Script extends ScriptBase<ScriptEnv> {
 
 	/** Expose a dynamic property of type T with specified options and name.
 	 */
@@ -29,7 +25,7 @@ export class Script {
 				if (!options.readOnly) {
 					const oldValue = setGetFunc();
 					if (oldValue !== setGetFunc(value))
-						this.changed(name);
+						this.__scriptFacade.firePropChanged(name);
 				}
 			},
 			enumerable: true,
@@ -37,16 +33,35 @@ export class Script {
 		});
 	}
 
-	/**	Inform others that prop has changed, causing any
-	 *	subscribers to be notified soon.
+	/**
+	 * Establish a named channel associated with this script, with optional "data received
+	 * on channel" handler function.
 	 */
-	changed(prop: any): void {
-		this.__scriptFacade.changed(prop);
+	establishChannel(leafChannelName: string, callback?: (data: string)=>void) {
+		if (callback) {
+			this.__scriptFacade.establishChannel(leafChannelName, function (sender:any, axon:any) {
+				callback(axon.data);
+			});
+		} else
+			this.__scriptFacade.establishChannel(leafChannelName);
+	}
+
+	/**
+	 * Send data on my named channel.
+	 */
+	sendOnChannel(leafChannelName: string, data: string) {
+		this.__scriptFacade.sendOnChannel(leafChannelName, data);
 	}
 }
 
-export interface ScriptEnv {
-	firePropChanged(propName: string): void;
-	changed(prop: any): void;
+
+// Internal implementation - not for direct client access
+export interface ScriptEnv extends ScriptBaseEnv {
+	changed(prop: string|Function): void;
+	firePropChanged(prop: string): void;
 	property(p1: any, p2?: any, p3?: any): void;
+
+	establishChannel(name: string):void;
+	establishChannel(name: string, listener: Function): void;
+	sendOnChannel(name: string, data: string):void;
 }

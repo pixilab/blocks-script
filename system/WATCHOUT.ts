@@ -47,19 +47,19 @@ interface WATCHOUTCluster {
 
 	// // // // Notification subscriptions
 
-	subscribe(type: "connect", listener: (sender: WATCHOUTCluster, message:{
+	subscribe(event: "connect", listener: (sender: WATCHOUTCluster, message:{
 		type:
 			'Connection'|		// Connection state changed (check with isConnected)
 			'ConnectionFailed'	// Connection attempt failed
 	})=>void): void;
 
-	subscribe(type: "play", listener: (sender: WATCHOUTCluster, message:{
+	subscribe(event: "play", listener: (sender: WATCHOUTCluster, message:{
 		type:
 			'Playback'|		// Playback state changed
 			'TimePosition'	// Time position changed abruptly
 	})=>void): void;
 
-	subscribe(type: "watchout", listener: (sender: WATCHOUTCluster, message:{
+	subscribe(event: "watchout", listener: (sender: WATCHOUTCluster, message:{
 		type:
 			'Authentication'|	// Authentication level changed
 			'Busy'|				// Computer indicated being busy
@@ -69,10 +69,10 @@ interface WATCHOUTCluster {
 			'StandBy'			// Stand-by state changed
 	})=>void): void;
 
-	subscribe(type: "error", listener: (sender: WATCHOUTCluster, message:{
+	subscribe(event: "error", listener: (sender: WATCHOUTCluster, message:{
 		type: 'Error'|'Warning',
 		text: string
 	})=>void): void;
 
-	unsubscribe(type: string, listener: Function);
+	unsubscribe(event: string, listener: Function): void;
 }

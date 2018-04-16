@@ -13,8 +13,8 @@ define(["require", "exports"], function (require, exports) {
      low level-driver type for more information.
     
      Note to self: I must pass in baseDriverType as a string, since those are typically
-     defined as interfaces (they're implemented in Java land), so I can't get the
-     param type using design:paramtypes, as that will just say Object for an interface.
+     defined as interfaces (they're implemented in Java), so I can't get the param type
+     using design:paramtypes, as that will just say 'Object' for an interface.
      */
     function driver(baseDriverType, typeSpecificMeta) {
         var info = {
@@ -81,12 +81,19 @@ define(["require", "exports"], function (require, exports) {
     }
     exports.callable = callable;
     /**
-     Function parameter annotation, providing a textual description of the parameter.
+     Optional function parameter annotation, providing a textual description of the parameter.
+     Also allows trailing parameters to be marked as optional (typically used with
+     '?' after the param name in the param list to also inform the compiler).
      */
-    function parameter(description) {
+    function parameter(description, optional) {
         return function (clsFunc, propertyKey, paramIndex) {
             propertyKey = propertyKey + ':' + paramIndex;
-            return Reflect.defineMetadata("pixi:param", description || "", clsFunc, propertyKey);
+            var data = {
+                descr: description || "",
+                opt: optional || false
+            };
+            // Note that "data" here used to be JUST the description string in Blocks < 1.1b16
+            return Reflect.defineMetadata("pixi:param", data, clsFunc, propertyKey);
         };
     }
     exports.parameter = parameter;

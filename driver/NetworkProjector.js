@@ -21,13 +21,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], function (require, exports, Metadata_1, Driver_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     /**
      Common functionality needed by projectors controlled over the network.
      */
-    var NetworkProjector = /** @class */ (function (_super) {
+    var NetworkProjector = (function (_super) {
         __extends(NetworkProjector, _super);
         function NetworkProjector(socket) {
             var _this = _super.call(this, socket) || this;
@@ -45,6 +48,19 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             });
             return _this;
         }
+        /**
+         * Add a state managed by me.
+         */
+        NetworkProjector.prototype.addState = function (state) {
+            this.propList.push(state);
+            state.setDriver(this); // Allowing it to fire notifications through me
+        };
+        /**
+         * Allow clients to check for my type, just as in some system object classes
+         */
+        NetworkProjector.prototype.isOfTypeName = function (typeName) {
+            return typeName === "NetworkProjector" ? this : null;
+        };
         Object.defineProperty(NetworkProjector.prototype, "power", {
             /**
              Get current power state, if known, else undefined.
@@ -62,6 +78,19 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             enumerable: true,
             configurable: true
         });
+        /**
+         * Passthrough for sending raw commands frmo tasks and client scripts.
+         * Comment out @callable if you don't want to expose sending raw command strings to tasks.
+         */
+        NetworkProjector.prototype.sendText = function (text) {
+            return this.socket.sendText(text, this.getDefaultEoln());
+        };
+        /**
+         * Override in subclasses that need special form of eoln seq.
+         */
+        NetworkProjector.prototype.getDefaultEoln = function () {
+            return undefined;
+        };
         Object.defineProperty(NetworkProjector.prototype, "connected", {
             /**
              Return true if I'm currently online to the projector. Note that
@@ -163,7 +192,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
          */
         NetworkProjector.prototype.attemptConnect = function () {
             var _this = this;
-            if (!this.connecting && this.socket.enabled) {
+            if (!this.socket.connected && !this.connecting && this.socket.enabled) {
                 // console.info("attemptConnect");
                 this.socket.connect().then(function () { return _this.justConnected(); }, function (error) { return _this.connectStateChanged(); });
                 this.connecting = true;
@@ -219,11 +248,23 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             var _this = this;
             this.poller = wait(60000);
             this.poller.then(function () {
-                if (!_this.connecting && !_this.connectDly)
-                    _this.attemptConnect(); // Status retrieved once connected
-                if (!_this.discarded)
+                var continuePolling = true;
+                if (!_this.socket.connected) {
+                    if (!_this.connecting && !_this.connectDly)
+                        _this.attemptConnect(); // Status retrieved once connected
+                }
+                else
+                    continuePolling = _this.pollStatus();
+                if (continuePolling && !_this.discarded)
                     _this.poll();
             });
+        };
+        /**
+            Override to poll for status regularly, if desired.
+            Ret true if to continue polling
+         */
+        NetworkProjector.prototype.pollStatus = function () {
+            return false;
         };
         /**
          Failed sending command. Assume socket is down, and initiate connection
@@ -243,34 +284,97 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             // Else assume done through rejector
         };
         /**
-         End of current request (whether successful or failed). Clear out associated state.
+         * Begin a new request, storing the command sent in currCmd and returning a promise that will
+         * be finished when the request finishes. If the driver subclass determines that the request
+         * is finished, it typically calls requestSuccess or requestFail. If it is finished
+         * for some other abnormal reason, it must call requestFinished. I will set up a timeout to reject
+         * the command and call requestFinished after some time, in case there's never any reply.
+         */
+        NetworkProjector.prototype.startRequest = function (cmd) {
+            var _this = this;
+            this.currCmd = cmd;
+            var result = new Promise(function (resolve, reject) {
+                _this.currResolver = resolve;
+                _this.currRejector = reject;
+            });
+            this.cmdTimeout = wait(4000); // Should be ample time to respond
+            this.cmdTimeout.then(function () { return _this.requestFailure("Timeout for " + cmd); });
+            return result;
+        };
+        /**
+         * Call to indicate that the current command succeeded.
+         */
+        NetworkProjector.prototype.requestSuccess = function (result) {
+            if (this.currResolver)
+                this.currResolver(result);
+            this.requestClear();
+        };
+        /**
+         * Call to indicate that the current command failed.
+         */
+        NetworkProjector.prototype.requestFailure = function (msg) {
+            // Suppress warning if power is off. Many projectors behave erratic then.
+            if (this.power)
+                console.warn("Request failed", msg);
+            if (this.currRejector)
+                this.currRejector(msg);
+            this.requestClear();
+        };
+        /**
+         End of current request in some unspecific manner. Do nothing if request already
+         terminated, else consider this error.
          */
         NetworkProjector.prototype.requestFinished = function () {
+            if (this.currRejector)
+                this.requestFailure("Request failed for unspecific reason");
+        };
+        /**
+         * Clear out state associated with the current request.
+         */
+        NetworkProjector.prototype.requestClear = function () {
+            if (this.cmdTimeout)
+                this.cmdTimeout.cancel();
+            delete this.cmdTimeout;
             delete this.currCmd;
             delete this.currRejector;
             delete this.currResolver;
         };
-        __decorate([
-            Metadata_1.property("Power on/off"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], NetworkProjector.prototype, "power", null);
-        __decorate([
-            Metadata_1.property("True if projector is online", true),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], NetworkProjector.prototype, "connected", null);
         return NetworkProjector;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.property("Power on/off"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], NetworkProjector.prototype, "power", null);
+    __decorate([
+        Metadata_1.callable("Send raw command string to device"),
+        __param(0, Metadata_1.parameter("What to send")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", Promise)
+    ], NetworkProjector.prototype, "sendText", null);
+    __decorate([
+        Metadata_1.property("True if projector is online", true),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], NetworkProjector.prototype, "connected", null);
     exports.NetworkProjector = NetworkProjector;
     /**
      Property state for a single property, with current and wanted values, allowing
      for desired-state-tracking behavior in the driver, rather than command queueing.
      */
-    var State = /** @class */ (function () {
-        function State(baseCmd) {
+    var State = (function () {
+        function State(baseCmd, propName) {
             this.baseCmd = baseCmd;
+            this.propName = propName;
         }
+        /**
+         * Set the driver I'm associated with, allowing me to fire property changes when
+         * the tail wags the dog.
+         */
+        State.prototype.setDriver = function (driver) {
+            this.driver = driver;
+        };
         /**
          Return wanted state, if any, else current, else undefined.
          */
@@ -291,7 +395,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
          let the tail wag the dog under the right circumstances. Without this mechanism,
          you may not be able to control the device if it has changed state "behind our
          back". E.g., if the projector has powered itself down due to "no signal", we
-         would still thing it is ON if that's the last state set, and since there's then
+         would still think it is ON if that's the last state set, and since there's then
          no change in the "wanted" value when attempting to turn it on, it won't send the
          command, and the projector can not be turned on from the user's point of view.
     
@@ -307,9 +411,16 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 // Got a new, defined, current state
                 if (lastCurrent === this.wanted) {
                     this.wanted = newState; // Let the tail wag the dog
+                    this.notifyListeners();
                     // console.info("updateCurrent wag dog", this.baseCmd, newState);
                 }
+                else if (this.wanted === undefined)
+                    this.notifyListeners(); // Had nop wanted state - notify for current
             }
+        };
+        State.prototype.notifyListeners = function () {
+            if (this.driver && this.propName)
+                this.driver.changed(this.propName); // Let others know
         };
         /**
          Return true if I have pending correction to send.
@@ -334,7 +445,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     /**
      Manage a boolean state.
      */
-    var BoolState = /** @class */ (function (_super) {
+    var BoolState = (function (_super) {
         __extends(BoolState, _super);
         function BoolState() {
             return _super !== null && _super.apply(this, arguments) || this;
@@ -348,10 +459,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     /**
      Manage a numeric state, including limits.
      */
-    var NumState = /** @class */ (function (_super) {
+    var NumState = (function (_super) {
         __extends(NumState, _super);
-        function NumState(baseCmd, min, max) {
-            var _this = _super.call(this, baseCmd) || this;
+        function NumState(baseCmd, propName, min, max) {
+            var _this = _super.call(this, baseCmd, propName) || this;
             _this.baseCmd = baseCmd;
             _this.min = min;
             _this.max = max;

@@ -4,7 +4,7 @@
  */
 
 import {NetworkTCP} from "system/Network";
-import {property} from "system_lib/Metadata";
+import {callable, parameter, property} from "system_lib/Metadata";
 import {Driver} from "system_lib/Driver";
 
 /**
@@ -21,12 +21,13 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	// Basic states (presumably) supported by all projectors.
 	protected _power: BoolState;					// Set in subclass ctor
 	// Remember to add to propList if you add more states here
-	protected propList: State<any>[];			// States I attempt to apply to the projector
+	private readonly propList: State<any>[];		// States I attempt to apply to the projector
 
 	// Most recent command sent to projector, with associated resolver/rejector callbacks
 	protected currCmd: string;	// Command in flight, if any
-	protected currResolver: (value?: string | Thenable<string>) => void;
-	protected currRejector: (error?: any) => void;
+	private currResolver: (value?: string | Thenable<string>) => void;
+	private currRejector: (error?: any) => void;
+	private cmdTimeout: CancelablePromise<void>;	// Timeout associated with current command
 
 	private sendFailedReported: boolean;	// To not nag if can't send data
 
@@ -47,6 +48,21 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
+	 * Add a state managed by me.
+	 */
+	protected addState(state: State<any>) {
+		this.propList.push(state);
+		state.setDriver(this);	// Allowing it to fire notifications through me
+	}
+
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "NetworkProjector" ? this : null;
+	}
+
+	/**
 	 Turn power on/off.
 	 */
 	@property("Power on/off")
@@ -61,6 +77,23 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		return this._power.get();
 	}
 
+	/**
+	 * Passthrough for sending raw commands frmo tasks and client scripts.
+	 * Comment out @callable if you don't want to expose sending raw command strings to tasks.
+	 */
+	@callable("Send raw command string to device")
+	public sendText(
+		@parameter("What to send") text: string,
+	): Promise<any> {
+		return this.socket.sendText(text, this.getDefaultEoln());
+	}
+
+	/**
+	 * Override in subclasses that need special form of eoln seq.
+	 */
+	protected getDefaultEoln(): string | undefined {
+		return undefined;
+	}
 
 	/**
 	 Return true if I'm currently online to the projector. Note that
@@ -147,7 +180,6 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 					() => { // Sending request failed
 						if (this.reqToSend())		// Anything important to say
 							this.retryCorrectionSoon();	// Re-try in a while
-
 					}
 				);
 			}
@@ -171,7 +203,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 Attempt to connect now.
 	 */
 	protected attemptConnect() {
-		if (!this.connecting && this.socket.enabled) {
+		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
 			// console.info("attemptConnect");
 			this.socket.connect().then(
 				() => this.justConnected(),
@@ -235,11 +267,23 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected poll() {
 		this.poller = wait(60000);
 		this.poller.then(()=> {
-			if (!this.connecting && !this.connectDly)
-				this.attemptConnect();	// Status retrieved once connected
-			if (!this.discarded)	// Keep polling
+			var continuePolling = true;
+			if (!this.socket.connected) {
+				if (!this.connecting && !this.connectDly)
+					this.attemptConnect();	// Status retrieved once connected
+			} else  // I'm connected - move ahead to poll for current status
+				continuePolling = this.pollStatus();
+			if (continuePolling && !this.discarded)	// Keep polling
 				this.poll();
 		})
+	}
+
+	/**
+	 	Override to poll for status regularly, if desired.
+	 	Ret true if to continue polling
+	 */
+	protected pollStatus(): boolean {
+		return false;
 	}
 
 	/**
@@ -261,9 +305,60 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 End of current request (whether successful or failed). Clear out associated state.
+	 * Begin a new request, storing the command sent in currCmd and returning a promise that will
+	 * be finished when the request finishes. If the driver subclass determines that the request
+	 * is finished, it typically calls requestSuccess or requestFail. If it is finished
+	 * for some other abnormal reason, it must call requestFinished. I will set up a timeout to reject
+	 * the command and call requestFinished after some time, in case there's never any reply.
+	 */
+	protected startRequest(cmd: string) {
+		this.currCmd = cmd;
+		const result = new Promise<string>((resolve, reject) => {
+			this.currResolver = resolve;
+			this.currRejector = reject;
+		});
+		this.cmdTimeout = wait(4000);	// Should be ample time to respond
+		this.cmdTimeout.then(() => this.requestFailure("Timeout for " + cmd));
+		return result;
+	}
+
+	/**
+	 * Call to indicate that the current command succeeded.
+	 */
+	protected requestSuccess(result: string) {
+		if (this.currResolver)
+			this.currResolver(result);
+		this.requestClear();
+	}
+
+	/**
+	 * Call to indicate that the current command failed.
+	 */
+	protected requestFailure(msg?: string) {
+		// Suppress warning if power is off. Many projectors behave erratic then.
+		if (this.power)
+			console.warn("Request failed", msg);
+		if (this.currRejector)
+			this.currRejector(msg);
+		this.requestClear();
+	}
+
+	/**
+	 End of current request in some unspecific manner. Do nothing if request already
+	 terminated, else consider this error.
 	 */
 	protected requestFinished() {
+		if (this.currRejector)
+			this.requestFailure("Request failed for unspecific reason");
+	}
+
+	/**
+	 * Clear out state associated with the current request.
+	 */
+	private requestClear() {
+		if (this.cmdTimeout)
+			this.cmdTimeout.cancel();
+		delete this.cmdTimeout;
 		delete this.currCmd;
 		delete this.currRejector;
 		delete this.currResolver;
@@ -277,10 +372,19 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
  for desired-state-tracking behavior in the driver, rather than command queueing.
  */
 export abstract class State<T> {
-	protected current: T;					// Current state of projector, if known
-	protected wanted: T;		// Desired (set by user user) state, if any
+	protected current: T;		// Current state of projector, if known
+	protected wanted: T;		// Desired (set by user) state, if any
+	private driver: Driver<any>;		// Associated driver
 
-	constructor(protected baseCmd: string) {}
+	constructor(protected baseCmd: string, private propName: string) {}
+
+	/**
+	 * Set the driver I'm associated with, allowing me to fire property changes when
+	 * the tail wags the dog.
+	 */
+	setDriver(driver: Driver<any>) {
+		this.driver = driver;
+	}
 
 	/**
 	 Return wanted state, if any, else current, else undefined.
@@ -304,7 +408,7 @@ export abstract class State<T> {
 	 let the tail wag the dog under the right circumstances. Without this mechanism,
 	 you may not be able to control the device if it has changed state "behind our
 	 back". E.g., if the projector has powered itself down due to "no signal", we
-	 would still thing it is ON if that's the last state set, and since there's then
+	 would still think it is ON if that's the last state set, and since there's then
 	 no change in the "wanted" value when attempting to turn it on, it won't send the
 	 command, and the projector can not be turned on from the user's point of view.
 
@@ -320,9 +424,16 @@ export abstract class State<T> {
 			// Got a new, defined, current state
 			if (lastCurrent === this.wanted) { // Last state was my currently "wanted"
 				this.wanted = newState;		// Let the tail wag the dog
+				this.notifyListeners();
 				// console.info("updateCurrent wag dog", this.baseCmd, newState);
-			}
+			} else if (this.wanted === undefined)
+				this.notifyListeners(); // Had nop wanted state - notify for current
 		}
+	}
+
+	private notifyListeners() {
+		if (this.driver && this.propName)
+			this.driver.changed(this.propName);	// Let others know
 	}
 
 	/**
@@ -363,8 +474,8 @@ export class NumState extends State<number> {
 	private min: number;
 	private max: number;
 
-	constructor(protected baseCmd: string, min: number, max: number) {
-		super(baseCmd);
+	constructor(protected baseCmd: string, propName: string, min: number, max: number) {
+		super(baseCmd, propName);
 		this.min = min;
 		this.max = max;
 	}

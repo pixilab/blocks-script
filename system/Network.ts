@@ -8,52 +8,143 @@
  */
 export var Network: { [deviceName: string]: NetworkTCP|NetworkUDP; };
 
-export interface NetworkTCP {
-	name: string;			// Name of this TCP port (read-only)
-	fullName: string;		// Full name, including any containers (read-only)
-	enabled: boolean;		// True if I'm enabled. Else won't send data. (read-only)
+/**
+ *	A TCP network port.
+ */
+export interface NetworkTCP extends NetworkBase {
+	isOfTypeName(typeName: string): NetworkTCP|null;	// Check subtype by name
 
-	autoConnect(): void;		// Request auto-connection behavior (default is OFF for a driver)
-	connect(): Promise<any>;	// Explicit connection. Returns a "connect finished" promise
+	connected: boolean;		// True if I'm currently connected (read-only)
+	fullName: string;		// Useful for logging purposes (read-only)
+
+	/**
+	 * Specify end-of-data framing for textReceived. If not set, this defaults to any of CR/LF,
+	 * CR, or LF. Example, to read data terminated by a > character, call setEoln('>').
+	 * If you want the termination sequencde to be included in the data received, pass
+	 * true in includeInData. Otherwise, the termination sequence will NOT be included.
+	 *
+	 * IMPORTANT: To have any effect, call this function BEFORE connect/autoConnect.
+	 */
+	setReceiveFraming(sequence: string, includeInData?: boolean): void;
+
+	/*	Request auto-connection behavior (default is OFF for a driver).
+		Optionally set "raw" data mode if not already open in other mode.
+	 */
+	autoConnect(rawBytesMode?: boolean): void;
+
+	/*	Explicit connection. Returns a "connect finished" promise.
+		Optionally set "raw" data mode if not already open in other mode.
+	 */
+	connect(rawBytesMode?: boolean): Promise<any>;
+
 	disconnect(): void;			// Disconnect immediately
-	connected: boolean;			// True if I'm currently connected (read-only)
 
-	// Send text with \r appended. Promise resolved once sent.
-	sendText(text:string): Promise<any>;
+	/*	Send text with a carriage return appended.
+		Returned promise resolved/rejected once sent/failed.
+	*/
+	sendText(text: string): Promise<any>;
 
-	// Send text with optional line terminator (none if null). Promise resolved once sent.
-	sendText(text:string, optLineTerminator: string): Promise<any>;
+	/*	Send text with optional line terminator (none if null).
+		Returned promise resolved/rejected once sent/failed.
+	*/
+	sendText(text: string, optLineTerminator: string): Promise<any>;
 
-	// // // // Notification subscriptions
+	/*	Send "raw" data bytes. Only allowed when opened in "rawBytesMode".
+		Returned promise resolved/rejected once sent/failed.
+	 */
+	sendBytes(rawData: number[]): Promise<any>;
 
-	subscribe(type: 'textReceived', listener: (sender: NetworkTCP, message:{
-		text:string				// The text string that was received (excluding line terminator)
-	})=>void): void;
+	// // // // Notification subscription management // // // //
 
-	subscribe(type: 'connect', listener: (sender: NetworkTCP, message:{
-		type:
-			'Connection'|		// Connection state changed (check with isConnected)
+	/*	Read text data string (single line), interpreted as ASCII/UTF-8, by default up to (but not including)
+		the end of line (which may be CR, CR/LF or LF). This default termination may be overridden
+		by calling setReceiveFraming.
+		NOT applicable when connected in rawBytesMode.
+
+	 */
+	subscribe(event: 'textReceived', listener: (sender: NetworkTCP, message: {
+		text: string				// The text string that was received (excluding line terminator)
+	}) => void): void;
+
+	/*	Read "raw" data. Only applicable when connected in rawBytesMode. Note that data received
+		has no "framing" applied, and is just the next batch of bytes in the connection's
+		incoming data stream. Any framing needs to be applied by the receiveing driver/script.
+	 */
+	subscribe(event: 'bytesReceived', listener: (sender: NetworkTCP, message: {
+		rawData: number[]		// The raw data that was received
+	}) => void): void;
+
+	/**
+	 * Notification when connection state changes or fails. May be used as an alternative
+	 * to the promise returned from connect(), and/or to be notified if the connection is
+	 * dropped.
+	 */
+	subscribe(event: 'connect', listener: (sender: NetworkTCP, message: {
+		type: 'Connection' |		// Connection state changed (check with isConnected)
 			'ConnectionFailed'	// Connection attempt failed
-	})=>void): void;
+	}) => void): void;
 
-	subscribe(type: 'finish', listener: (sender: NetworkTCP)=>void): void;
+	// Host object is being shut down
+	subscribe(event: 'finish', listener: (sender: NetworkTCP)=>void): void;
 
-	unsubscribe(type: string, listener: Function);
 }
 
+/**
+ *	A UDP network port.
+ */
+export interface NetworkUDP extends NetworkBase {
+	isOfTypeName(typeName: string): NetworkUDP|null;	// Check subtype by name
 
-export interface NetworkUDP {
-	name: string;			// Name of this TCP port (read-only)
-	fullName: string;		// Full name, including any containers (read-only)
-	enabled: boolean;		// True if I'm enabled. Else won't send data. (read-only)
+	// Text to send (append \r or other framing before calling, if needed)
+	sendText(text:string): void;
 
-	sendText(text:string): void; // Text to send (add \r before calling, if needed)
+	// Send raw data bytes
+	sendBytes(data: number[]): void;
 
-	// // // // Notification subscriptions
+	// // // // Notification subscription management // // // //
 
-	subscribe(type: 'finish', listener: (sender: NetworkUDP)=>void): void;
-	subscribe(type: 'textReceived', listener: (sender: NetworkUDP, message:{
+	// Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
+	subscribe(event: 'textReceived', listener: (sender: NetworkUDP, message:{
 		text:string				// The text string that was received
 	})=>void): void;
-	unsubscribe(type: string, listener: Function);
+
+	// Receive "raw" data containing the entire UDP packet.
+	subscribe(event: 'bytesReceived', listener: (sender: NetworkUDP, message:{
+		rawData:number[]				// The raw data that was received
+	})=>void): void;
+
+	// Host object is being shut down
+	subscribe(event: 'finish', listener: (sender: NetworkUDP)=>void): void;
+}
+
+/**
+ * Base interface declaring some common functionality used by both UDP and TCP
+ * network ports.
+ */
+interface NetworkBase {
+	// Read-only properties:
+	name: string;			// Name of this TCP port
+	fullName: string;		// Full name, including enclosing containers
+	enabled: boolean;		// True if I'm enabled (else won't send data)
+	address: string;		// Target IP address (e.g., "10.0.2.45")
+
+	/**
+	 * Send wake-on-LAN message to this device or device with specified MAC address,
+	 * which must be exactly 6 bytes long, or a colon separated string in the form
+	 * "11:22:33:44:55:66". To use "this device" (i.e., no argument), you must have
+	 * called enableWakeOnLAN() early on (typically in the driver's constructor),
+	 * and enugh time must have elapsed for the MAC address to be picked up and
+	 * stored.
+	 */
+	wakeOnLAN(macAddr?: string|number[]): void;
+
+	/**
+	 * Indicate that you want to call wakeOnLAN() on this device at some future
+	 * point in time, thus initiating acquisition of the devices MAC address.
+	 */
+	enableWakeOnLAN(): void
+
+	unsubscribe(event: string, listener: Function): void;
+	changed(prop: string|Function): void;
+	firePropChanged(prop: string): void;
 }

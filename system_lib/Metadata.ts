@@ -11,8 +11,8 @@
  low level-driver type for more information.
 
  Note to self: I must pass in baseDriverType as a string, since those are typically
- defined as interfaces (they're implemented in Java land), so I can't get the
- param type using design:paramtypes, as that will just say Object for an interface.
+ defined as interfaces (they're implemented in Java), so I can't get the param type
+ using design:paramtypes, as that will just say 'Object' for an interface.
  */
 export function driver(baseDriverType: string, typeSpecificMeta: any) {
 	const info: DriverInfo = {
@@ -90,12 +90,19 @@ export function callable(description?: string) {
 }
 
 /**
- Function parameter annotation, providing a textual description of the parameter.
+ Optional function parameter annotation, providing a textual description of the parameter.
+ Also allows trailing parameters to be marked as optional (typically used with
+ '?' after the param name in the param list to also inform the compiler).
  */
-export function parameter(description?: string) {
+export function parameter(description?: string, optional?: boolean) {
 	return function(clsFunc: Object, propertyKey: string, paramIndex: number) {
 		propertyKey = propertyKey + ':' + paramIndex;
-		return Reflect.defineMetadata("pixi:param", description || "", clsFunc, propertyKey);
+		var data = {
+			descr: description || "",
+			opt: optional || false
+		};
+		// Note that "data" here used to be JUST the description string in Blocks < 1.1b16
+		return Reflect.defineMetadata("pixi:param", data, clsFunc, propertyKey);
 	}
 }
 

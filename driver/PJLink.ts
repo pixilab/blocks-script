@@ -19,12 +19,21 @@ export class PJLink extends NetworkProjector {
 
 	constructor(socket: NetworkTCP) {
 		super(socket);
-		this.propList.push(this._power = new BoolState('POWR'));
-		this.propList.push(this._input = new NumState('INPT', PJLink.kMinInput, PJLink.kMaxInput));
+		this.addState(this._power = new BoolState('POWR', 'power'));
+		this.addState(this._input = new NumState(
+			'INPT', 'input',
+			PJLink.kMinInput, PJLink.kMaxInput
+		));
 
 		this.poll();	// Get polling going
-
 		this.attemptConnect();	// Attempt initial connection
+	}
+
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "PJLink" ? this : super.isOfTypeName(typeName);
 	}
 
 	/**
@@ -97,13 +106,9 @@ export class PJLink extends NetworkProjector {
 		var toSend = '%1' + question;
 		toSend += ' ';
 		toSend += (param === undefined) ? '?' : param;
-		this.currCmd = toSend;
 		// console.info("request", toSend);
 		this.socket.sendText(toSend).catch(err=>this.sendFailed(err));
-		const result = new Promise<string>((resolve, reject) => {
-			this.currResolver = resolve;
-			this.currRejector = reject;
-		});
+		const result = this.startRequest(question);
 		result.finally(()=> {
 			asap(()=> {	// Send further corrections soon, once this cycle settled
 				// console.info("request finally sendCorrection");
@@ -154,21 +159,19 @@ export class PJLink extends NetworkProjector {
 						this.warnMsg("PJLink response", currCmd, text);
 						break;
 					}
-					if (!treatAsOk && this.currRejector)
-						this.currRejector(text);
+					if (!treatAsOk)
+						this.requestFailure(text);
 				}
 
-				/*	Successfull response ('OK' for commands, reply for query),
+				/*	Successful response ('OK' for commands, reply for query),
 					or error deemed as "ok" above since there's nothing we can
 					do about it anyway, and there's no point in rejecting and
 					subsequently re-trying it.
 				 */
-				if (treatAsOk) {
-					if (this.currResolver)
-						this.currResolver(text);
-				}
+				if (treatAsOk)
+					this.requestSuccess(text);
 			} else
-				this.currRejector("Unexpected reply " + text + ", expected " + currCmd);
+				this.requestFailure("Unexpected reply " + text + ", expected " + currCmd);
 		} else
 			this.warnMsg("Unexpected data", text);
 		this.requestFinished();

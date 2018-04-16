@@ -16,10 +16,10 @@ export interface Fixture { [channelName: string]: AnalogChannel|RangeChannel; }
  * Common channel stuff.
  */
 export interface Channel {
+	isOfTypeName(typeName: string): Channel|null;	// Check subtype by name
 	name: string;		// Read-only channel name
 	value: number;		// Get/set channel value. When set, uses fixture's default fade rate
 	fadeTo(value: number, timeInSeconds: number): void;	// Fade to value over time
-	isRangeChannel(): RangeChannel|null;	// Returns RangeChannel if that's what I am, else falsy
 }
 
 /**
@@ -28,6 +28,7 @@ export interface Channel {
  * channel's internal resolution (e.g., 8 or 16 bits).
  */
 export interface AnalogChannel extends Channel {
+	isOfTypeName(typeName: string): AnalogChannel|null;
 	maxValue: number;	// Read-only maximum of "value" (1 indicates normalized channel).
 }
 
@@ -39,6 +40,7 @@ export interface AnalogChannel extends Channel {
  * to 0...1.
  */
 export interface RangeChannel extends Channel {
+	isOfTypeName(typeName: string): RangeChannel|null;
 	state: string;		// Name of currently selected range
 	ranges: Range[];	// Read-only list of ranges
 }
