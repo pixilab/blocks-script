@@ -14,7 +14,7 @@ export class BarcoE2 extends Driver<NetworkTCP> {
 
 	@callable("Load a preset into Program or Preview")
 	public activatePreset(
-		@parameter("Preset number") @min(0) preset: number,
+		@parameter("Preset number") preset: number,
 		@parameter("Load into Preview", true) preview?: boolean
 	) {
 		return this.send(new Command(
