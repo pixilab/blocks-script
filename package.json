@@ -1,0 +1,11 @@
+{
+  "name": "script",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "PIXILAB",
+  "license": "Copyright (c) PIXILAB Technologies AB, Sweden. All Rights Reserved.",
+  "dependencies": {
+    "reflect-metadata": "^0.1.10"
+  }
+}
