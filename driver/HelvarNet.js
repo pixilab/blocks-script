@@ -23,9 +23,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**	A very basic HelvarNet driver mainly for recalling DALI scenes
-        and possibly controlling some other misc functions.
-    */
     var HelvarNet = (function (_super) {
         __extends(HelvarNet, _super);
         function HelvarNet(socket) {
@@ -62,62 +59,54 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var cmd = "V:1,C:14,L:" + levelStr + ",@" + address + fadeParam(fadeTime);
             this.sendCmd(cmd);
         };
-        /**
-         * Frame the command with leading > and trailing #.
-         */
         HelvarNet.prototype.sendCmd = function (cmd) {
             cmd = '>' + cmd + '#';
-            // console.warn("DALI", cmd);
             this.socket.sendText(cmd, null);
         };
+        __decorate([
+            Metadata_1.callable("Recall scene number on group"),
+            __param(0, Metadata_1.parameter("Group to control")),
+            __param(1, Metadata_1.parameter("Scene number to recall")),
+            __param(2, Metadata_1.parameter("Scene block", true)),
+            __param(3, Metadata_1.parameter("Transition time, in seconds", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], HelvarNet.prototype, "recallScene", null);
+        __decorate([
+            Metadata_1.callable("Adjust curr scene of group up or down"),
+            __param(0, Metadata_1.parameter("Proportion, -1..1")),
+            __param(1, Metadata_1.parameter("Group to control, 1..16383")),
+            __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], HelvarNet.prototype, "sceneAbsAdjust", null);
+        __decorate([
+            Metadata_1.callable("Adjust curr scene of group up or down incrementally"),
+            __param(0, Metadata_1.parameter("Proportion, -1..1")),
+            __param(1, Metadata_1.parameter("Group to control, 1..16383")),
+            __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], HelvarNet.prototype, "sceneRelAdjust", null);
+        __decorate([
+            Metadata_1.callable("Apply brightness level to a single device"),
+            __param(0, Metadata_1.parameter("Brightness, 0..1")),
+            __param(1, Metadata_1.parameter("Target device, as '1.2.3.4'")),
+            __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, String, Number]),
+            __metadata("design:returntype", void 0)
+        ], HelvarNet.prototype, "levelToDevice", null);
+        HelvarNet = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 50000 }),
+            __metadata("design:paramtypes", [Object])
+        ], HelvarNet);
         return HelvarNet;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.callable("Recall scene number on group"),
-        __param(0, Metadata_1.parameter("Group to control")),
-        __param(1, Metadata_1.parameter("Scene number to recall")),
-        __param(2, Metadata_1.parameter("Scene block", true)),
-        __param(3, Metadata_1.parameter("Transition time, in seconds", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], HelvarNet.prototype, "recallScene", null);
-    __decorate([
-        Metadata_1.callable("Adjust curr scene of group up or down"),
-        __param(0, Metadata_1.parameter("Proportion, -1..1")),
-        __param(1, Metadata_1.parameter("Group to control, 1..16383")),
-        __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], HelvarNet.prototype, "sceneAbsAdjust", null);
-    __decorate([
-        Metadata_1.callable("Adjust curr scene of group up or down incrementally"),
-        __param(0, Metadata_1.parameter("Proportion, -1..1")),
-        __param(1, Metadata_1.parameter("Group to control, 1..16383")),
-        __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], HelvarNet.prototype, "sceneRelAdjust", null);
-    __decorate([
-        Metadata_1.callable("Apply brightness level to a single device"),
-        __param(0, Metadata_1.parameter("Brightness, 0..1")),
-        __param(1, Metadata_1.parameter("Target device, as '1.2.3.4'")),
-        __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, String, Number]),
-        __metadata("design:returntype", void 0)
-    ], HelvarNet.prototype, "levelToDevice", null);
-    HelvarNet = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 50000 }),
-        __metadata("design:paramtypes", [Object])
-    ], HelvarNet);
     exports.HelvarNet = HelvarNet;
-    /**
-     * Convert a fade time in seconds to a centisecond string prefixed by ",F:"
-     * ready to be appended to a command.
-     */
     function fadeParam(timeInSeconds) {
         if (timeInSeconds === undefined)
             timeInSeconds = 0;

@@ -20,11 +20,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /*
-     Manage a Christie PERFORMANCE display, accessed through a provided
-     NetworkTCP connection.
-     */
-    var ChristiePerformance = ChristiePerformance_1 = (function (_super) {
+    var ChristiePerformance = (function (_super) {
         __extends(ChristiePerformance, _super);
         function ChristiePerformance(socket) {
             var _this = _super.call(this, socket) || this;
@@ -32,7 +28,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.enableWakeOnLAN();
             socket.autoConnect(true);
             socket.subscribe('connect', function (sender, message) {
-                // console.info('connect msg', message.type);
                 _this.connectStateChanged();
             });
             socket.subscribe('bytesReceived', function (sender, msg) {
@@ -40,9 +35,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             });
             return _this;
         }
-        /**
-         * Allow clients to check for my type, just as in some system object classes
-         */
+        ChristiePerformance_1 = ChristiePerformance;
         ChristiePerformance.prototype.isOfTypeName = function (typeName) {
             return typeName === "ChristiePerformance" ? this : null;
         };
@@ -50,7 +43,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = this;
             if (this.socket.connected) {
                 if (this.powerUpResolver) {
-                    // Consider powered SOON, but not immediately - display is SLOOOW!
                     this.powerUpResolver(wait(15000));
                     this.poweringUp.then(function () {
                         return _this.nowPowered();
@@ -61,83 +53,52 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 else
                     this.nowPowered();
             }
-            // console.log("connected", this.socket.connected);
         };
         ChristiePerformance.prototype.nowPowered = function () {
             if (this.powerState === undefined)
-                this.powerState = true; // Consider power to be on now
+                this.powerState = true;
             if (!this.powerState)
                 this.powerDown();
             else {
                 if (this.inputNum !== undefined)
-                    this.input = this.inputNum; // Enforce selected input
+                    this.input = this.inputNum;
                 else {
-                    var cmd = this.makeCmd(0xAD); // Query input state
+                    var cmd = this.makeCmd(0xAD);
                     this.appendChecksum(cmd);
                     this.socket.sendBytes(cmd);
                 }
             }
         };
-        /**
-         * Got some bytes from display. Look out for reply to "Query input state"
-         * command sent when connected above with no desired input specified, in
-         * which case it makes sense to pull the input from the device instead.
-         *
-         * ToDo: Not finished yet, and the docs is unclear/wrong on the input
-         * numbers. Later...
-         */
         ChristiePerformance.prototype.bytesReceived = function (data) {
             var sd = "";
             for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
                 var n = data_1[_i];
                 sd += n.toString() + ' ';
             }
-            // console.log("bytesReceived", data.length, sd);
         };
         Object.defineProperty(ChristiePerformance.prototype, "power", {
-            /**
-             Get current power state, if known, else undefined.
-             */
             get: function () {
                 return this.powerState;
             },
-            /**
-             Turn power on/off. Turning off is instant. Turning on takes quite a
-             while, and is implemented through WoL, since the stupid display
-             turns off its network interface when switched off, even though
-             the manual describes a command to turn it on. Go figure...
-        
-             As an alternative to setting power to true, call powerUp()
-             and await its returned promise.
-             */
             set: function (on) {
                 if (this.powerState != on) {
                     this.powerState = on;
                     if (on)
-                        this.powerUp2(); // This takes a while
+                        this.powerUp2();
                     else
                         this.powerDown();
                 }
-                // console.log("Sent", cmd);
             },
             enumerable: true,
             configurable: true
         });
-        /**
-         * Power up using wake-on-LAN. Returned promise resolved
-         * once connected.
-         */
         ChristiePerformance.prototype.powerUp = function () {
             if (!this.powerState) {
-                this.powerState = true; // Indicates desired state
+                this.powerState = true;
                 this.changed('power');
             }
             return this.powerUp2();
         };
-        /**
-         * Send wake-on-LAN, unless one is already in progress.
-         * Return promise resolved once powered up.
-         */
         ChristiePerformance.prototype.powerUp2 = function () {
             var _this = this;
             if (!this.poweringUp) {
@@ -153,7 +114,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             return this.poweringUp;
         };
-        // Send command to turn power off
         ChristiePerformance.prototype.powerDown = function () {
             var cmd = this.makeCmd(0x18);
             cmd.push(1);
@@ -161,15 +121,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.socket.sendBytes(cmd);
         };
         Object.defineProperty(ChristiePerformance.prototype, "input", {
-            /*
-             Get current input, if known, else undefined.
-             */
             get: function () {
                 return this.inputNum;
             },
-            /*
-             Set desired input source.
-             */
             set: function (value) {
                 this.inputNum = value;
                 var cmd = this.makeCmd(0xAC);
@@ -177,14 +131,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 cmd.push(1);
                 this.appendChecksum(cmd);
                 this.socket.sendBytes(cmd);
-                // console.log("Input", value);
             },
             enumerable: true,
             configurable: true
         });
         ChristiePerformance.prototype.makeCmd = function (cmd) {
             var cmdBuf = [];
-            // Byte kLengthIx is length of remaining Metadata
             cmdBuf.push(0xa6, 1, 0, 0, 0, 0, 1, cmd);
             return cmdBuf;
         };
@@ -198,32 +150,32 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             cmdBuf.push(checksum);
         };
+        ChristiePerformance.kMinInput = 1;
+        ChristiePerformance.kMaxInput = 16;
+        ChristiePerformance.kLengthIx = 5;
+        __decorate([
+            Meta.property("Power on/off"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], ChristiePerformance.prototype, "power", null);
+        __decorate([
+            Meta.callable("Power up using wake-on-LAN"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", Promise)
+        ], ChristiePerformance.prototype, "powerUp", null);
+        __decorate([
+            Meta.property("Desired input source number"),
+            Meta.min(ChristiePerformance_1.kMinInput), Meta.max(ChristiePerformance_1.kMaxInput),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], ChristiePerformance.prototype, "input", null);
+        ChristiePerformance = ChristiePerformance_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 5000 }),
+            __metadata("design:paramtypes", [Object])
+        ], ChristiePerformance);
         return ChristiePerformance;
+        var ChristiePerformance_1;
     }(Driver_1.Driver));
-    ChristiePerformance.kMinInput = 1; // Allowable input range
-    ChristiePerformance.kMaxInput = 16;
-    ChristiePerformance.kLengthIx = 5;
-    __decorate([
-        Meta.property("Power on/off"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], ChristiePerformance.prototype, "power", null);
-    __decorate([
-        Meta.callable("Power up using wake-on-LAN"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", []),
-        __metadata("design:returntype", Promise)
-    ], ChristiePerformance.prototype, "powerUp", null);
-    __decorate([
-        Meta.property("Desired input source number"),
-        Meta.min(ChristiePerformance_1.kMinInput), Meta.max(ChristiePerformance_1.kMaxInput),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], ChristiePerformance.prototype, "input", null);
-    ChristiePerformance = ChristiePerformance_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 5000 }),
-        __metadata("design:paramtypes", [Object])
-    ], ChristiePerformance);
     exports.ChristiePerformance = ChristiePerformance;
-    var ChristiePerformance_1;
 });

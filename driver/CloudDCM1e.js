@@ -1,6 +1,3 @@
-/*
- * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -23,13 +20,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var CloudDCM1e = CloudDCM1e_1 = (function (_super) {
+    var CloudDCM1e = (function (_super) {
         __extends(CloudDCM1e, _super);
-        /**
-         * Create me, attached to the network socket I communicate through. When using a
-         * driver, the driver replaces the built-in functionality of the network socket
-         with the properties and callable functions exposed.
-         */
         function CloudDCM1e(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
@@ -44,13 +36,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 return _this.textReceived(msg.text);
             });
             socket.setReceiveFraming("/>", true);
-            socket.autoConnect(); // Use automatic connection
+            socket.autoConnect();
             console.info("Driver initialized");
             return _this;
         }
-        /**
-         * If just connected, fetch the current state of the mixer.
-         */
+        CloudDCM1e_1 = CloudDCM1e;
         CloudDCM1e.prototype.connectStateChanged = function (message) {
             if (message.type === 'Connection') {
                 if (this.socket.connected) {
@@ -232,22 +222,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: true,
             configurable: true
         });
-        /**
-         * Send request, await response matching responsePattern, extract
-         * the first group of data from the response and resolve returned
-         * promise, or reject promise if got non-matching data or timeout.
-         */
         CloudDCM1e.prototype.sendRequest = function (request, responsePattern) {
             var req = new Request(request, responsePattern);
             this.requestQueue.push(req);
             if (this.requestQueue.length === 1)
                 this.sendNextRequest();
-            // Else will be sent automatically when pending one finished
             return req;
         };
-        /*	Get the request at the head of the queue and send it. Wait for it to finish,
-            then remove it from queue and proceed with next, if any.
-         */
         CloudDCM1e.prototype.sendNextRequest = function () {
             var _this = this;
             if (this.keepAliveTimer) {
@@ -260,113 +241,103 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 if (_this.requestQueue.length)
                     _this.sendNextRequest();
                 else {
-                    /*	Nothing to send. Make sure we send SOMETHING
-                        every now and then to keep connection open,
-                        as the device otherwise has a tendency to
-                        shut it down, without telling us until
-                        next time we try to send something.
-                     */
                     _this.keepAliveTimer = wait(20000);
                     _this.keepAliveTimer.then(function () {
                         delete _this.keepAliveTimer;
-                        // console.log("Keep alive");
                         _this.sendRequest("<Z" + 1 + ".MU,SQ/>", Zone.kInputPattern);
                     });
                 }
-                // Else I will be called explicitly when new request queued
             });
         };
+        CloudDCM1e.kZones = 8;
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn1", null);
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn2", null);
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn3", null);
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn4", null);
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn5", null);
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.min(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn6", null);
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn7", null);
+        __decorate([
+            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn8", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume1", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume2", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume3", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume4", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume5", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume6", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume7", null);
+        __decorate([
+            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume8", null);
+        CloudDCM1e = CloudDCM1e_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 4999 }),
+            __metadata("design:paramtypes", [Object])
+        ], CloudDCM1e);
         return CloudDCM1e;
+        var CloudDCM1e_1;
     }(Driver_1.Driver));
-    CloudDCM1e.kZones = 8;
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn1", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn2", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn3", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn4", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn5", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.min(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn6", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn7", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn8", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume1", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume2", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume3", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume4", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume5", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume6", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume7", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume8", null);
-    CloudDCM1e = CloudDCM1e_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 4999 }),
-        __metadata("design:paramtypes", [Object])
-    ], CloudDCM1e);
     exports.CloudDCM1e = CloudDCM1e;
-    /**
-     * A single request with its expected reply.
-     */
     var Request = (function () {
         function Request(request, responsePattern) {
             var _this = this;
@@ -377,11 +348,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 _this.rejector = rejector;
             });
         }
-        /**
-         * Revise this request. Can be used to change its data payload as long as it isn't yet sent.
-         * Only use this to revise the request with a new command of the same kind; e.g., to
-         * revise the volume level in a "set volume" command.
-         */
         Request.prototype.reviseRequest = function (newToSend) {
             this.command = newToSend;
         };
@@ -389,7 +355,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = this;
             this.sent = true;
             socket.sendText(this.command, '\r\n');
-            // console.log("Sent", this.command);
             this.waiter = wait(500);
             this.waiter.then(function () {
                 _this.rejector("Timeout");
@@ -397,8 +362,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             });
             return this.reply;
         };
-        /*	Look at reply, resolving me if the expected one, else rejecting me.
-         */
         Request.prototype.considerReply = function (reply) {
             if (this.waiter)
                 this.waiter.cancel();
@@ -415,18 +378,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function Zone(owner, zoneNum) {
             this.owner = owner;
             this.kZone = zoneNum;
-            // Deliberately leave input, volume undefined to pick up through poll
         }
-        /**
-         * Set volume level, also sending command to device.
-         */
         Zone.prototype.setVolume = function (volume) {
             this.volume = volume;
             volume = Math.round((1 - volume) * Zone.kMinVol);
             var request = "<Z" + this.kZone + ".MU,L" + volume + "/>";
-            // Don't queue new request if most recent one isn't sent yet
             if (this.lastVolRequest && !this.lastVolRequest.sent)
-                this.lastVolRequest.reviseRequest(request); // Just update its payload
+                this.lastVolRequest.reviseRequest(request);
             else
                 this.lastVolRequest = this.owner.sendRequest(request, Zone.kVolumePattern);
         };
@@ -434,12 +392,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.input = input;
             this.owner.sendRequest("<Z" + this.kZone + ".MU,S" + input + "/>", Zone.kInputPattern);
         };
-        /*	Poll status of this zone, updating my properties when data arrives.
-            Will ONLY poll for properties that haven't yet been set (e.g., done
-            at start-up only, not when connection lost and later re-connected).
-            <Z1.MU,SQ/> -> <z1.mu,s=5/>
-            <Z1.MU,LQ/> -> <z1.mu,l=23/>
-         */
         Zone.prototype.poll = function () {
             var _this = this;
             if (this.input === undefined) {
@@ -463,10 +415,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 });
             }
         };
+        Zone.kInputPattern = /<z\d\.mu,s=(.*)\/>/;
+        Zone.kVolumePattern = /<z\d\.mu,l=(.*)\/>/;
+        Zone.kMinVol = 62;
         return Zone;
     }());
-    Zone.kInputPattern = /<z\d\.mu,s=(.*)\/>/;
-    Zone.kVolumePattern = /<z\d\.mu,l=(.*)\/>/;
-    Zone.kMinVol = 62; // Max volume attenuation (-62 == "mute")
-    var CloudDCM1e_1;
 });

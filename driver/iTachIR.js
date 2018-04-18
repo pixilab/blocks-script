@@ -1,6 +1,3 @@
-/*
- * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -26,9 +23,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**	Basic driver for sending keystrokes through a Global Caché iTach
-        Ethernet IR sender.
-    */
     var iTachIR = (function (_super) {
         __extends(iTachIR, _super);
         function iTachIR(socket) {
@@ -53,32 +47,31 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 if (channel > 9)
                     this.sendKey(Math.floor(channel / 10).toString());
                 this.sendKey((channel % 10).toString());
-                this.sendKey("OK"); // Speeds up channel access somewhat
+                this.sendKey("OK");
             },
             enumerable: true,
             configurable: true
         });
+        __decorate([
+            Metadata_1.callable("Send a single key-press"),
+            __param(0, Metadata_1.parameter("Key to send")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", void 0)
+        ], iTachIR.prototype, "sendKey", null);
+        __decorate([
+            Metadata_1.property("TV channel number"),
+            Metadata_1.min(1), Metadata_1.max(99),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], iTachIR.prototype, "channel", null);
+        iTachIR = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 4998 }),
+            __metadata("design:paramtypes", [Object])
+        ], iTachIR);
         return iTachIR;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.callable("Send a single key-press"),
-        __param(0, Metadata_1.parameter("Key to send")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", void 0)
-    ], iTachIR.prototype, "sendKey", null);
-    __decorate([
-        Metadata_1.property("TV channel number"),
-        Metadata_1.min(1), Metadata_1.max(99),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], iTachIR.prototype, "channel", null);
-    iTachIR = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 4998 }),
-        __metadata("design:paramtypes", [Object])
-    ], iTachIR);
     exports.iTachIR = iTachIR;
-    // Key codes learnt from the TV box remote through the iTach box
     var keyToCode = {
         "0": "sendir,2:1,3,36337,1,1,70,55,30,9,10,9,10,9,10,9,20,9,10,19,20,19,10,9,10,9,10,9,10,9,10,9,10,9,20,19,10,9,10,9,10,9,20,9,10,19,10,9,20,9,10,9,10,9,10,9,10,19,10,9,20,2887,70,55,30,9,10,9,10,9,10,9,20,19,10,9,20,19,10,9,10,9,10,9,10,9,10,9,10,9,20,19,10,9,10,9,10,9,20,9,10,19,10,9,20,9,10,9,10,9,10,19,20,19,20,4651",
         "1": "sendir,2:1,4,36231,1,1,70,54,30,9,10,9,10,9,10,9,20,9,10,19,20,19,10,9,10,9,10,9,10,9,10,9,10,9,20,19,10,9,10,9,10,9,10,9,10,9,20,19,20,9,10,9,10,9,10,9,10,9,10,9,10,9,10,4637",
