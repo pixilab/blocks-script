@@ -1,6 +1,6 @@
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {callable, driver, max, min, parameter} from "system_lib/Metadata";
+import {callable, driver, parameter} from "system_lib/Metadata";
 
 /**	A very basic HelvarNet driver mainly for recalling DALI scenes
 	and possibly controlling some other misc functions.
@@ -15,10 +15,10 @@ export class HelvarNet extends Driver<NetworkTCP> {
 
 	@callable("Recall scene number on group")
 	public recallScene(
-		@parameter("Group to control") @min(1) @max(16383) group: number,
-		@parameter("Scene number to recall") @min(1) @max(16) scene: number,
-		@parameter("Scene block", true) @min(1) @max(8) block?: number,
-		@parameter("Transition time, in seconds", true) @min(1) fadeTime?: number
+		@parameter("Group to control") group: number,
+		@parameter("Scene number to recall") scene: number,
+		@parameter("Scene block", true) block?: number,
+		@parameter("Transition time, in seconds", true) fadeTime?: number
 	) {
 		if (block === undefined)
 			block = 1;
@@ -31,8 +31,8 @@ export class HelvarNet extends Driver<NetworkTCP> {
 
 	@callable("Adjust curr scene of group up or down")
 	public sceneAbsAdjust(
-		@parameter("Proportion, -1..1")  @min(-1) @max(1) proportion: number,
-		@parameter("Group to control, 1..16383")  @min(1) @max(16383) group: number,
+		@parameter("Proportion, -1..1") proportion: number,
+		@parameter("Group to control, 1..16383") group: number,
 		@parameter("Transition time, in seconds", true) fadeTime?: number
 	) {
 		const propStr = Math.round(proportion * 100).toString();
@@ -44,8 +44,8 @@ export class HelvarNet extends Driver<NetworkTCP> {
 
 	@callable("Adjust curr scene of group up or down incrementally")
 	public sceneRelAdjust(
-		@parameter("Proportion, -1..1")  @min(-1) @max(1) proportion: number,
-		@parameter("Group to control, 1..16383")  @min(1) @max(16383) group: number,
+		@parameter("Proportion, -1..1") proportion: number,
+		@parameter("Group to control, 1..16383") group: number,
 		@parameter("Transition time, in seconds", true) fadeTime?: number
 	) {
 		const propStr = Math.round(proportion * 100).toString();

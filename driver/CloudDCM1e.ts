@@ -301,7 +301,7 @@ class Request {
 class Zone {
 	static kInputPattern = /<z\d\.mu,s=(.*)\/>/;
 	static kVolumePattern = /<z\d\.mu,l=(.*)\/>/;
-	private static kMinVol = 62;		// Max volume attenuation, dB
+	private static kMinVol = 62;	// Max volume attenuation (-62 == "mute")
 
 	private owner: CloudDCM1e;
 	private kZone: number; // Number of this zone 1...8

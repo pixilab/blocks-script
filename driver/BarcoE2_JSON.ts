@@ -1,6 +1,6 @@
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {callable, driver, min, parameter} from "system_lib/Metadata";
+import {callable, driver, parameter} from "system_lib/Metadata";
 
 /**	A very basic Barco E2 driver for recalling presets using the newer JSON
 *  based protocol.
