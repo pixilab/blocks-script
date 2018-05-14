@@ -1,21 +1,6 @@
-/*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2017 by Mike Fahl.
- */
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**
-     Annotation defining a class acting as a device driver. This class must have a constructor
-     that takes the baseDriverType of low-level driver to attach to. The driverMeta passed in
-     is an object with keys and values as dictated by the type of driver attached to. E.g., for
-     a NetworkTCP driver, this may specify the port number to use. See documentation for each
-     low level-driver type for more information.
-    
-     Note to self: I must pass in baseDriverType as a string, since those are typically
-     defined as interfaces (they're implemented in Java), so I can't get the param type
-     using design:paramtypes, as that will just say 'Object' for an interface.
-     */
     function driver(baseDriverType, typeSpecificMeta) {
         var info = {
             paramTypes: [baseDriverType],
@@ -26,19 +11,12 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.driver = driver;
-    /**
-     Annotation defining a property, for use on set or get pseudo-method defining the property.
-     In addition to adding "pixi:property" metadata to the property, it also hooks up change
-     notofication qualified by the name of the property when its value changes through the
-     "set" pseudo-method. If there are pixi:min or pixi:max constraints applied to the
-     property, I will clip any value set to these extremes.
-     */
     function property(description, readOnly) {
         return function (target, propName, prop) {
             var origSetter = prop.set;
-            var constrMin; // Constraint value(s), if any
+            var constrMin;
             var constrMax;
-            var constr; // Set once any constraints have been obtained
+            var constr;
             if (origSetter) {
                 prop.set = function (newValue) {
                     var oldValue = prop.get.call(this);
@@ -46,7 +24,7 @@ define(["require", "exports"], function (require, exports) {
                         if (!constr) {
                             constrMin = Reflect.getMetadata("pixi:min", target, propName);
                             constrMax = Reflect.getMetadata("pixi:max", target, propName);
-                            constr = true; // Now loaded
+                            constr = true;
                         }
                         if (constrMin !== undefined)
                             newValue = Math.max(newValue, constrMin);
@@ -66,9 +44,6 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.property = property;
-    /**
-     Annotation declaring a callable method, with optional description.
-     */
     function callable(description) {
         return function (target, propertyKey, descriptor) {
             var func = target[propertyKey];
@@ -80,11 +55,6 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.callable = callable;
-    /**
-     Optional function parameter annotation, providing a textual description of the parameter.
-     Also allows trailing parameters to be marked as optional (typically used with
-     '?' after the param name in the param list to also inform the compiler).
-     */
     function parameter(description, optional) {
         return function (clsFunc, propertyKey, paramIndex) {
             propertyKey = propertyKey + ':' + paramIndex;
@@ -92,15 +62,10 @@ define(["require", "exports"], function (require, exports) {
                 descr: description || "",
                 opt: optional || false
             };
-            // Note that "data" here used to be JUST the description string in Blocks < 1.1b16
             return Reflect.defineMetadata("pixi:param", data, clsFunc, propertyKey);
         };
     }
     exports.parameter = parameter;
-    /**
-     Annotation defining a numeric value constraint, mainly for use on numeric properties (although
-     it could conceivably also be used on strings to define a min/max length, or similar).
-     */
     function min(min) {
         return function (target, propertyKey, descriptor) {
             Reflect.defineMetadata("pixi:min", min, target, propertyKey);
@@ -113,12 +78,8 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.max = max;
-    /*	Get the formal parameter names of func as an array.
-     */
     function getArgs(func) {
-        // First match everything inside the function argument parens.
         var args = func.toString().match(funcArgsRegEx)[1];
-        // Split the arguments string into an array comma delimited.
         return args.split(',')
             .map(function (arg) {
             return arg.replace(parNameRegEx, '').trim();
@@ -126,7 +87,6 @@ define(["require", "exports"], function (require, exports) {
             return arg;
         });
     }
-    // Regexes used by getArgs above
     var funcArgsRegEx = /function\s.*?\(([^)]*)\)/;
     var parNameRegEx = /\/\*.*\*\//;
 });
