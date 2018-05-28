@@ -54,6 +54,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             return this.powerUp2();
         };
+        ZummaPC.prototype.shutDown = function () {
+            this.powerDown();
+        };
         ZummaPC.prototype.powerUp2 = function () {
             var _this = this;
             if (!this.poweringUp) {
@@ -83,6 +86,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", Promise)
         ], ZummaPC.prototype, "powerUp", null);
+        __decorate([
+            Meta.callable("Shut down using Zumma"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", void 0)
+        ], ZummaPC.prototype, "shutDown", null);
         ZummaPC = __decorate([
             Meta.driver('NetworkUDP', { port: 32400 }),
             __metadata("design:paramtypes", [Object])

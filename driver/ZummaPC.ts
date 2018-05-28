@@ -83,6 +83,14 @@ export class ZummaPC extends Driver<NetworkUDP> {
     }
 
     /**
+     * Power down using Zumma
+     */
+    @Meta.callable("Shut down using Zumma")
+    public shutDown() {
+        this.powerDown();
+    }
+
+    /**
      * Send wake-on-LAN, unless one is already in progress.
      * Return promise resolved once powered up.
      */
