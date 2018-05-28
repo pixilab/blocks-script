@@ -13,11 +13,13 @@ export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFa
 
 	constructor(scriptFacade: DriverFacade) {
 		super(scriptFacade);
-		// Re-emit message associated with basic "connected" state
-		scriptFacade.subscribe('connect', (sender:any, message:any) => {
-			if (message.type === 'Connection')
-				this.__scriptFacade.firePropChanged('connected')
-		});
+		if (scriptFacade.isOfTypeName("NetworkTCP")) {
+			// Re-emit message associated with basic "connected" state
+			scriptFacade.subscribe('connect', (sender:any, message:any) => {
+				if (message.type === 'Connection')
+					this.__scriptFacade.firePropChanged('connected')
+			});
+		}
 	}
 
 	/**	Inform others that prop has changed, causing any
@@ -39,6 +41,7 @@ export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFa
 
 // Internal implementation - not for direct client access
 interface DriverFacade {
+	isOfTypeName(typeName: string): any|null;	// Check subtype by name
 	changed(prop: string|Function): void;
 	firePropChanged(prop: string): void;
 	subscribe(name: string, listener: Function): void;

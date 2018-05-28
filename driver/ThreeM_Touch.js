@@ -1,6 +1,3 @@
-/*
- * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -23,11 +20,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**	Driver for controlling a 3M touch display, via serial port connected
-    *  through a Moxa nPort. 9600 baud, no parity, 8 data bits seems to be
-    *  default.
-    */
-    var ThreeM_Touch = ThreeM_Touch_1 = (function (_super) {
+    var ThreeM_Touch = (function (_super) {
         __extends(ThreeM_Touch, _super);
         function ThreeM_Touch(socket) {
             var _this = _super.call(this, socket) || this;
@@ -35,6 +28,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.autoConnect(true);
             return _this;
         }
+        ThreeM_Touch_1 = ThreeM_Touch;
         Object.defineProperty(ThreeM_Touch.prototype, "power", {
             get: function () {
                 return this.powered;
@@ -57,125 +51,101 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: true,
             configurable: true
         });
-        /**
-         * Send command at specified "opcodePage", "opcode" and
-          * param as per the protocol docs.
-         */
         ThreeM_Touch.prototype.sendCommand = function (cd, param) {
             param = Math.min(cd.paramMax, Math.max(0, param));
             var cmd = buildCommand(cd.page, cd.code, param);
             return this.socket.sendBytes(cmd);
         };
+        ThreeM_Touch.kCommands = {
+            BRIGHTNESS: {
+                page: 0x01,
+                code: 0x10,
+                paramMax: 100
+            },
+            CONTRAST: {
+                page: 0x01,
+                code: 0x12,
+                paramMax: 100
+            },
+            COLOR_TEMP: {
+                page: 0x02,
+                code: 0x54,
+                paramMax: 2
+            },
+            VOLUME: {
+                page: 0x0,
+                code: 0x62,
+                paramMax: 30
+            },
+            MUTE: {
+                page: 0x0,
+                code: 0x8D,
+                paramMax: 1
+            },
+            INPUT: {
+                page: 0x02,
+                code: 0xCB,
+                paramMax: 3
+            },
+            POWER: {
+                page: 0x0,
+                code: 0x03,
+                paramMax: 1
+            }
+        };
+        __decorate([
+            Metadata_1.property("Display power"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], ThreeM_Touch.prototype, "power", null);
+        __decorate([
+            Metadata_1.property("Display brightness"),
+            Metadata_1.min(0),
+            Metadata_1.max(80),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], ThreeM_Touch.prototype, "brightness", null);
+        ThreeM_Touch = ThreeM_Touch_1 = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 4001 }),
+            __metadata("design:paramtypes", [Object])
+        ], ThreeM_Touch);
         return ThreeM_Touch;
+        var ThreeM_Touch_1;
     }(Driver_1.Driver));
-    // Some useful commands, mainly as documentation
-    ThreeM_Touch.kCommands = {
-        BRIGHTNESS: {
-            page: 0x01,
-            code: 0x10,
-            paramMax: 100
-        },
-        CONTRAST: {
-            page: 0x01,
-            code: 0x12,
-            paramMax: 100
-        },
-        COLOR_TEMP: {
-            page: 0x02,
-            code: 0x54,
-            paramMax: 2 // 19300K, 6500K, Custom
-        },
-        VOLUME: {
-            page: 0x0,
-            code: 0x62,
-            paramMax: 30
-        },
-        MUTE: {
-            page: 0x0,
-            code: 0x8D,
-            paramMax: 1 // 1 is mute
-        },
-        INPUT: {
-            page: 0x02,
-            code: 0xCB,
-            paramMax: 3 // 0 VGA, 2 DVI, 2 HDMI, 3 DP
-        },
-        POWER: {
-            page: 0x0,
-            code: 0x03,
-            paramMax: 1 // 0 OFF, 1 ON
-        }
-    };
-    __decorate([
-        Metadata_1.property("Display power"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], ThreeM_Touch.prototype, "power", null);
-    __decorate([
-        Metadata_1.property("Display brightness"),
-        Metadata_1.min(0),
-        Metadata_1.max(80),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], ThreeM_Touch.prototype, "brightness", null);
-    ThreeM_Touch = ThreeM_Touch_1 = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 4001 }),
-        __metadata("design:paramtypes", [Object])
-    ], ThreeM_Touch);
     exports.ThreeM_Touch = ThreeM_Touch;
-    /**
-     * Build command as an array of bytes, with specified opcodePage, opcode and
-     * param as per the protocol docs.
-     */
     function buildCommand(opcodePage, opcode, param) {
         var data = [];
-        data.push(1); // SOH
-        data.push(0x30); // "Reserved"
-        data.push(0x2A); // "All Sets" (presumably display ID "wildcard")
-        data.push(0x30); // "Sender is PC"
-        data.push(0x45); // "Set parameter command"
+        data.push(1);
+        data.push(0x30);
+        data.push(0x2A);
+        data.push(0x30);
+        data.push(0x45);
         var lengthPos = data.length;
-        data.push(0x30); // Command length: '0A' for 10 bytes STX...ETX inclusive
-        data.push(0x30); // Backpatched here later
-        var headerLength = data.length; // Not included in command length to be backpatched
-        data.push(2); // STX
+        data.push(0x30);
+        data.push(0x30);
+        var headerLength = data.length;
+        data.push(2);
         appendHex(data, opcodePage, 2);
-        // data.push(0x30);	// "Opcode page number 00"
-        // data.push(0x30);
         appendHex(data, opcode, 2);
-        // data.push(0x30);	// "Power Opcode"
-        // data.push(0x33);
         appendHex(data, param, 4);
-        // data.push(0x30);	// "Parameter" 0000 or 0001
-        // data.push(0x30);
-        // data.push(0x30);
-        // data.push(on ? 0x31 : 0x30);
-        data.push(3); // ETX
+        data.push(3);
         var cmdLength = data.length - headerLength;
         var cmdLenHex = toHex(cmdLength, 2);
         data[lengthPos] = cmdLenHex.charCodeAt(0);
         data[lengthPos + 1] = cmdLenHex.charCodeAt(1);
-        // Checksum  (all bytes except leading SOH byte)
         var checksum = 0;
         for (var ix = 1; ix < data.length; ++ix)
-            checksum = checksum ^ data[ix]; // XOR of all bytes
+            checksum = checksum ^ data[ix];
         data.push(checksum);
-        data.push(0x0d); // Terminating CR
+        data.push(0x0d);
         return data;
     }
-    /**
-     * Append num hex encoded into numDigits to dataArray.
-     */
     function appendHex(dataArray, num, numDigits) {
         var chars = toHex(num, numDigits);
         for (var ci = 0; ci < numDigits; ++ci)
             dataArray.push(chars.charCodeAt(ci));
     }
-    /**
-     * Return num as hex encoded string with numDigits.
-     */
     function toHex(num, numDigits) {
         return ('0000' + num.toString(16).toUpperCase()).slice(-numDigits);
     }
-    var ThreeM_Touch_1;
 });

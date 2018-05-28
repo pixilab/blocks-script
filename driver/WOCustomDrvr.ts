@@ -1,7 +1,3 @@
-/*
- * Created 2017 by Mike Fahl.
- */
-
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import * as Meta from "system_lib/Metadata";
@@ -50,7 +46,7 @@ export class WOCustomDrvr extends Driver<NetworkTCP> {
 		super(socket);
 		socket.subscribe('connect', (sender, message)=> {
 			// console.info('connect msg', message.type);
-			this.connectStateChanged()
+			this.connectStateChanged();
 		});
 		socket.subscribe('textReceived', (sender, msg)=>
 			this.textReceived(msg.text)
@@ -147,7 +143,7 @@ export class WOCustomDrvr extends Driver<NetworkTCP> {
 		@Meta.parameter("Name of aux timeline to control") name: string,
 		@Meta.parameter("Whether to start the timeline") start: boolean
 	) {
-		this.tell((start ? "run " : "kill ") + name);
+		this.tell((start ? "run \"" : "kill \"") + name + '""');
 	}
 
 	/**
@@ -222,7 +218,6 @@ export class WOCustomDrvr extends Driver<NetworkTCP> {
 		if (this.socket.connected) {
 			const query = new Query(question);
 			this.pendingQueries[query.id] = query;
-			// console.info('ask', query.fullCmd);
 			this.socket.sendText(query.fullCmd);
 			return query.promise;
 		} else
