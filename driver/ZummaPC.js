@@ -17,6 +17,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -26,10 +29,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             socket.enableWakeOnLAN();
+            socket.autoConnect(false);
+            socket.subscribe('connect', function (sender, message) {
+                _this.connectStateChanged();
+            });
             return _this;
         }
+        ZummaPC.prototype.sendText = function (text) {
+            return this.socket.sendText(text, null);
+        };
         ZummaPC.prototype.tell = function (data) {
-            this.socket.sendText(data);
+            this.socket.sendText(data, null);
         };
         Object.defineProperty(ZummaPC.prototype, "power", {
             get: function () {
@@ -75,6 +85,34 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ZummaPC.prototype.powerDown = function () {
             this.tell("stop");
         };
+        ZummaPC.prototype.connectStateChanged = function () {
+            var _this = this;
+            if (this.socket.connected) {
+                if (this.powerUpResolver) {
+                    this.powerUpResolver(wait(5000));
+                    this.poweringUp.then(function () {
+                        return _this.nowPowered();
+                    });
+                    delete this.powerUpResolver;
+                    delete this.poweringUp;
+                }
+                else
+                    this.nowPowered();
+            }
+        };
+        ZummaPC.prototype.nowPowered = function () {
+            if (this.powerState === undefined)
+                this.powerState = true;
+            if (!this.powerState)
+                this.powerDown();
+        };
+        __decorate([
+            Meta.callable("Send raw command string to device"),
+            __param(0, Meta.parameter("What to send")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", Promise)
+        ], ZummaPC.prototype, "sendText", null);
         __decorate([
             Meta.property("Power on/off"),
             __metadata("design:type", Boolean),
@@ -93,7 +131,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:returntype", void 0)
         ], ZummaPC.prototype, "shutDown", null);
         ZummaPC = __decorate([
-            Meta.driver('NetworkUDP', { port: 32400 }),
+            Meta.driver('NetworkTCP', { port: 32401 }),
             __metadata("design:paramtypes", [Object])
         ], ZummaPC);
         return ZummaPC;

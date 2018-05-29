@@ -1,8 +1,8 @@
 /*
- * Created 2017 by Mike Fahl.
+ * Created 2018 by Sam Walz.
  */
 
-import {NetworkUDP} from "system/Network";
+import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import * as Meta from "system_lib/Metadata";
 
@@ -14,8 +14,8 @@ import * as Meta from "system_lib/Metadata";
  specifies that this driver is intended for that type of subsystem, and
  its constructor will accept that type.
  */
-@Meta.driver('NetworkUDP', { port: 32400 })
-export class ZummaPC extends Driver<NetworkUDP> {
+@Meta.driver('NetworkTCP', { port: 32401 })
+export class ZummaPC extends Driver<NetworkTCP> {
 	// IMPORTANT: The class name above MUST match the name of the
 	// file (minus its extension).
 
@@ -24,16 +24,35 @@ export class ZummaPC extends Driver<NetworkUDP> {
 	private poweringUp: Promise<void>;	// Set while waiting to be powered up
     private powerUpResolver: (value?: any) => void;
 
+    protected connecting: boolean;				// Has initiated a connection attempt
+
 	/**
 	 * Create me, attached to the network socket I communicate through. When using a
 	 * driver, the driver replaces the built-in functionality of the network socket
 	 with the properties and callable functions exposed.
 	 */
-	public constructor(private socket: NetworkUDP) {
+	public constructor(private socket: NetworkTCP) {
 		super(socket);
         socket.enableWakeOnLAN();
+		socket.autoConnect(false);
+
+        socket.subscribe('connect', (sender, message)=> {
+			// console.info('connect msg', message.type);
+			this.connectStateChanged()
+		});
 	}
 
+
+    /**
+	 * Passthrough for sending raw commands frmo tasks and client scripts.
+	 * Comment out @callable if you don't want to expose sending raw command strings to tasks.
+	 */
+	@Meta.callable("Send raw command string to device")
+	public sendText(
+		@Meta.parameter("What to send") text: string,
+	): Promise<any> {
+		return this.socket.sendText(text, null);
+	}
 
 	/**
 	 * Tell Zumma something through the UDP socket. Funnel most commands through here
@@ -41,7 +60,7 @@ export class ZummaPC extends Driver<NetworkUDP> {
 	 */
 	private tell(data: string) {
 		// console.info('tell', data);
-		this.socket.sendText(data);
+		this.socket.sendText(data, null);
 	}
 
 
@@ -113,6 +132,31 @@ export class ZummaPC extends Driver<NetworkUDP> {
     private powerDown() {
         this.tell("stop");
     }
+
+    private connectStateChanged() {
+		if (this.socket.connected) {
+			if (this.powerUpResolver) {
+				// Consider powered SOON, but not immediately - display is SLOOOW!
+				this.powerUpResolver(wait(5000));
+				this.poweringUp.then(()=>
+					this.nowPowered()
+				);
+				delete this.powerUpResolver;
+				delete this.poweringUp;
+			} else
+				this.nowPowered();
+		}
+		// console.log("connected", this.socket.connected);
+	}
+
+    private nowPowered() {
+		if (this.powerState === undefined)	// Never set
+			this.powerState = true;		// Consider power to be on now
+
+		if (!this.powerState)	// I'm supposed to be OFF
+			this.powerDown();
+
+	}
 
 
 }
