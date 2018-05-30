@@ -35,6 +35,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             });
             return _this;
         }
+        Object.defineProperty(ZummaPC.prototype, "connected", {
+            get: function () {
+                return this.connectedToZumma;
+            },
+            set: function (online) {
+                this.connectedToZumma = online;
+            },
+            enumerable: true,
+            configurable: true
+        });
         ZummaPC.prototype.sendText = function (text) {
             return this.socket.sendText(text, null);
         };
@@ -65,16 +75,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return this.powerUp2();
         };
         ZummaPC.prototype.shutDown = function () {
-            this.powerDown();
+            if (this.powerState) {
+                this.powerState = false;
+                this.changed('power');
+            }
+            return this.powerDown();
         };
         ZummaPC.prototype.powerUp2 = function () {
             var _this = this;
             if (!this.poweringUp) {
                 this.socket.wakeOnLAN();
-                this.poweringUp = new Promise(function (resolver, rejector) {
-                    _this.powerUpResolver = resolver;
-                    wait(40000).then(function () {
-                        rejector("Timeout");
+                this.poweringUp = new Promise(function (resolve, reject) {
+                    _this.powerUpResolver = resolve;
+                    wait(60000).then(function () {
+                        reject("Timeout");
                         delete _this.poweringUp;
                         delete _this.powerUpResolver;
                     });
@@ -83,13 +97,24 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return this.poweringUp;
         };
         ZummaPC.prototype.powerDown = function () {
-            this.tell("stop");
+            var _this = this;
+            if (!this.shuttingDown) {
+                this.tell("stop");
+                this.shuttingDown = new Promise(function (resolve, reject) {
+                    _this.shutDownResolver = resolve;
+                    wait(30000).then(function () {
+                        reject("Timeout");
+                        delete _this.shuttingDown;
+                        delete _this.shutDownResolver;
+                    });
+                });
+            }
+            return this.shuttingDown;
         };
         ZummaPC.prototype.connectStateChanged = function () {
             var _this = this;
             if (this.socket.connected) {
                 if (this.powerUpResolver) {
-                    this.powerUpResolver(wait(5000));
                     this.poweringUp.then(function () {
                         return _this.nowPowered();
                     });
@@ -99,6 +124,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 else
                     this.nowPowered();
             }
+            else {
+                if (this.shutDownResolver) {
+                    this.shutDownResolver(wait(10000));
+                    this.shuttingDown.then(function () {
+                        _this.nowPowerless();
+                    });
+                    delete this.shutDownResolver;
+                    delete this.shuttingDown;
+                }
+                else {
+                    this.nowPowerless();
+                }
+            }
+            this.connected = this.socket.connected;
         };
         ZummaPC.prototype.nowPowered = function () {
             if (this.powerState === undefined)
@@ -106,6 +145,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             if (!this.powerState)
                 this.powerDown();
         };
+        ZummaPC.prototype.nowPowerless = function () {
+            if (this.powerState === undefined)
+                this.powerState = false;
+            if (this.powerState)
+                this.powerUp();
+        };
+        __decorate([
+            Meta.property("Connected to Zumma", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], ZummaPC.prototype, "connected", null);
         __decorate([
             Meta.callable("Send raw command string to device"),
             __param(0, Meta.parameter("What to send")),
@@ -128,7 +178,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             Meta.callable("Shut down using Zumma"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
-            __metadata("design:returntype", void 0)
+            __metadata("design:returntype", Promise)
         ], ZummaPC.prototype, "shutDown", null);
         ZummaPC = __decorate([
             Meta.driver('NetworkTCP', { port: 32401 }),

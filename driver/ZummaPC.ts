@@ -24,7 +24,11 @@ export class ZummaPC extends Driver<NetworkTCP> {
 	private poweringUp: Promise<void>;	// Set while waiting to be powered up
     private powerUpResolver: (value?: any) => void;
 
+    private shuttingDown: Promise<void>;
+    private shutDownResolver: (value?: any) => void;
+
     protected connecting: boolean;				// Has initiated a connection attempt
+    private connectedToZumma: boolean;
 
 	/**
 	 * Create me, attached to the network socket I communicate through. When using a
@@ -42,6 +46,15 @@ export class ZummaPC extends Driver<NetworkTCP> {
 		});
 	}
 
+
+    @Meta.property("Connected to Zumma", true)
+	public set connected(online: boolean) {
+		this.connectedToZumma = online;
+		// console.info("Connection state", online)
+	}
+	public get connected(): boolean {
+		return this.connectedToZumma;
+	}
 
     /**
 	 * Passthrough for sending raw commands frmo tasks and client scripts.
@@ -105,8 +118,12 @@ export class ZummaPC extends Driver<NetworkTCP> {
      * Power down using Zumma
      */
     @Meta.callable("Shut down using Zumma")
-    public shutDown() {
-        this.powerDown();
+    public shutDown(): Promise<void> {
+        if (this.powerState) {
+            this.powerState = false;		// Indicates desired state
+            this.changed('power');
+        }
+        return this.powerDown();
     }
 
     /**
@@ -116,10 +133,10 @@ export class ZummaPC extends Driver<NetworkTCP> {
     private powerUp2(): Promise<void> {
         if (!this.poweringUp) {
             this.socket.wakeOnLAN();
-            this.poweringUp = new Promise<void>((resolver, rejector)=> {
-                this.powerUpResolver = resolver;
-                wait(40000).then(()=> {
-                    rejector("Timeout");
+            this.poweringUp = new Promise<void>((resolve, reject)=> {
+                this.powerUpResolver = resolve;
+                wait(60000).then(()=> {
+                    reject("Timeout");
                     delete this.poweringUp;
                     delete this.powerUpResolver;
                 });
@@ -129,15 +146,25 @@ export class ZummaPC extends Driver<NetworkTCP> {
     }
 
     // Send command to turn power off
-    private powerDown() {
-        this.tell("stop");
+    private powerDown(): Promise<void> {
+        if (!this.shuttingDown) {
+            this.tell("stop");
+            this.shuttingDown = new Promise<void>((resolve, reject)=> {
+                this.shutDownResolver = resolve;
+                // wait sec to lose Zumma connection
+                wait(30000).then(()=> {
+                    reject("Timeout");
+                    delete this.shuttingDown;
+                    delete this.shutDownResolver;
+                });
+            });
+        }
+        return this.shuttingDown;
     }
 
     private connectStateChanged() {
-		if (this.socket.connected) {
+        if (this.socket.connected) {
 			if (this.powerUpResolver) {
-				// Consider powered SOON, but not immediately - display is SLOOOW!
-				this.powerUpResolver(wait(5000));
 				this.poweringUp.then(()=>
 					this.nowPowered()
 				);
@@ -145,18 +172,41 @@ export class ZummaPC extends Driver<NetworkTCP> {
 				delete this.poweringUp;
 			} else
 				this.nowPowered();
-		}
-		// console.log("connected", this.socket.connected);
+		} else {
+            if (this.shutDownResolver) {
+                this.shutDownResolver(wait(10000));
+                this.shuttingDown.then(()=>{
+                    this.nowPowerless();
+                });
+                delete this.shutDownResolver;
+                delete this.shuttingDown;
+            } else {
+                this.nowPowerless();
+            }
+        }
+		// console.info("connectStateChanged", this.socket.connected);
+		this.connected = this.socket.connected; // Propagate state to clients
+
 	}
 
     private nowPowered() {
 		if (this.powerState === undefined)	// Never set
 			this.powerState = true;		// Consider power to be on now
 
-		if (!this.powerState)	// I'm supposed to be OFF
+        // supposed to be off
+		if (!this.powerState)
 			this.powerDown();
 
 	}
+
+    private nowPowerless() {
+        if (this.powerState === undefined)
+            this.powerState = false;
+
+        // supposed to be on
+        if (this.powerState)
+            this.powerUp();
+    }
 
 
 }
