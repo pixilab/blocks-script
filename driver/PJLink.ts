@@ -108,7 +108,7 @@ export class PJLink extends NetworkProjector {
 		toSend += (param === undefined) ? '?' : param;
 		// console.info("request", toSend);
 		this.socket.sendText(toSend).catch(err=>this.sendFailed(err));
-		const result = this.startRequest(question);
+		const result = this.startRequest(toSend);
 		result.finally(()=> {
 			asap(()=> {	// Send further corrections soon, once this cycle settled
 				// console.info("request finally sendCorrection");
@@ -123,7 +123,7 @@ export class PJLink extends NetworkProjector {
 	 */
 	protected textReceived(text: string): void {
 		if (text.indexOf('PJLINK ') === 0) {	// Initial handshake sent spontaneously by projector
-			if (this.unauthenticated = (text === 'PJLINK 1'))
+			if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0))
 				this.errorMsg("PJLink authentication not supported");
 			else
 				this.getInitialState();	// Pick up initial state before doing anything else

@@ -79,7 +79,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             toSend += ' ';
             toSend += (param === undefined) ? '?' : param;
             this.socket.sendText(toSend).catch(function (err) { return _this.sendFailed(err); });
-            var result = this.startRequest(question);
+            var result = this.startRequest(toSend);
             result.finally(function () {
                 asap(function () {
                     _this.sendCorrection();
@@ -89,7 +89,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         };
         PJLink.prototype.textReceived = function (text) {
             if (text.indexOf('PJLINK ') === 0) {
-                if (this.unauthenticated = (text === 'PJLINK 1'))
+                if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0))
                     this.errorMsg("PJLink authentication not supported");
                 else
                     this.getInitialState();
