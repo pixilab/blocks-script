@@ -108,7 +108,7 @@ export class PJLink extends NetworkProjector {
 		toSend += (param === undefined) ? '?' : param;
 		// console.info("request", toSend);
 		this.socket.sendText(toSend).catch(err=>this.sendFailed(err));
-		const result = this.startRequest(question);
+		const result = this.startRequest(toSend);
 		result.finally(()=> {
 			asap(()=> {	// Send further corrections soon, once this cycle settled
 				// console.info("request finally sendCorrection");

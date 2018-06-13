@@ -79,7 +79,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             toSend += ' ';
             toSend += (param === undefined) ? '?' : param;
             this.socket.sendText(toSend).catch(function (err) { return _this.sendFailed(err); });
-            var result = this.startRequest(question);
+            var result = this.startRequest(toSend);
             result.finally(function () {
                 asap(function () {
                     _this.sendCorrection();
