@@ -3,6 +3,8 @@
  * Created 2017 by Mike Fahl.
  */
 
+import {ScriptBaseEnv} from "../system_lib/ScriptBase";
+
 /**
  * Access Network subsystem known by system by its device (socket) name.
  */
@@ -15,7 +17,8 @@ export interface NetworkTCP extends NetworkBase {
 	isOfTypeName(typeName: string): NetworkTCP|null;	// Check subtype by name
 
 	connected: boolean;		// True if I'm currently connected (read-only)
-	fullName: string;		// Useful for logging purposes (read-only)
+	fullName: string;		// Full, unique name (read-only)
+	name: string;			// Leaf network port name (read only)
 
 	/**
 	 * Specify end-of-data framing for textReceived. If not set, this defaults to any of CR/LF,
@@ -121,7 +124,7 @@ export interface NetworkUDP extends NetworkBase {
  * Base interface declaring some common functionality used by both UDP and TCP
  * network ports.
  */
-interface NetworkBase {
+interface NetworkBase extends ScriptBaseEnv {
 	// Read-only properties:
 	name: string;			// Name of this TCP port
 	fullName: string;		// Full name, including enclosing containers
@@ -145,6 +148,4 @@ interface NetworkBase {
 	enableWakeOnLAN(): void
 
 	unsubscribe(event: string, listener: Function): void;
-	changed(prop: string|Function): void;
-	firePropChanged(prop: string): void;
 }

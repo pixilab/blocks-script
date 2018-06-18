@@ -57,8 +57,6 @@ export class Script extends ScriptBase<ScriptEnv> {
 
 // Internal implementation - not for direct client access
 export interface ScriptEnv extends ScriptBaseEnv {
-	changed(prop: string|Function): void;
-	firePropChanged(prop: string): void;
 	property(p1: any, p2?: any, p3?: any): void;
 
 	establishChannel(name: string):void;
