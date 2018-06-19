@@ -135,7 +135,7 @@ export class ZummaPC extends Driver<NetworkTCP> {
             this.socket.wakeOnLAN();
             this.poweringUp = new Promise<void>((resolve, reject)=> {
                 this.powerUpResolver = resolve;
-                wait(60000).then(()=> {
+                wait(90000).then(()=> {
                     reject("Timeout");
                     delete this.poweringUp;
                     delete this.powerUpResolver;
@@ -152,7 +152,7 @@ export class ZummaPC extends Driver<NetworkTCP> {
             this.shuttingDown = new Promise<void>((resolve, reject)=> {
                 this.shutDownResolver = resolve;
                 // wait sec to lose Zumma connection
-                wait(30000).then(()=> {
+                wait(35000).then(()=> {
                     reject("Timeout");
                     delete this.shuttingDown;
                     delete this.shutDownResolver;
@@ -174,7 +174,7 @@ export class ZummaPC extends Driver<NetworkTCP> {
 				this.nowPowered();
 		} else {
             if (this.shutDownResolver) {
-                this.shutDownResolver(wait(10000));
+                this.shutDownResolver(wait(25000));
                 this.shuttingDown.then(()=>{
                     this.nowPowerless();
                 });

@@ -87,7 +87,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.socket.wakeOnLAN();
                 this.poweringUp = new Promise(function (resolve, reject) {
                     _this.powerUpResolver = resolve;
-                    wait(60000).then(function () {
+                    wait(90000).then(function () {
                         reject("Timeout");
                         delete _this.poweringUp;
                         delete _this.powerUpResolver;
@@ -102,7 +102,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.tell("stop");
                 this.shuttingDown = new Promise(function (resolve, reject) {
                     _this.shutDownResolver = resolve;
-                    wait(30000).then(function () {
+                    wait(35000).then(function () {
                         reject("Timeout");
                         delete _this.shuttingDown;
                         delete _this.shutDownResolver;
@@ -126,7 +126,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             else {
                 if (this.shutDownResolver) {
-                    this.shutDownResolver(wait(10000));
+                    this.shutDownResolver(wait(25000));
                     this.shuttingDown.then(function () {
                         _this.nowPowerless();
                     });
