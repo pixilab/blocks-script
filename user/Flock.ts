@@ -27,11 +27,29 @@ export class Flock extends Script {
 
 
     @callable("Send message to Flock")
-	private sendMessage(
+	public sendMessage(
         @parameter("Message content") message: string
-    ): void {
-		var request = SimpleHTTP.newRequest(Flock.FLOCK_MSG_URL + this.accessToken);
-        request.post('{"text":"' + message + '"}', 'application/json');
+    ): Promise<any> {
+		return this.sendJSON('{"text":"' + message + '"}');
 	}
+
+    @callable("Send rich text message to Flock")
+    public sendRichMessage(
+        @parameter("Rich text version (using FlockML. Supports e.g. <a>, <em>, <i>, <strong>, <b>, <u>, <br>)") richText: string
+    ): Promise<any> {
+        return this.sendJSON(
+            '{' +
+            '  "attachments": [{' +
+            '    "views": { "flockml": "<flockml>' + richText + '</flockml>" }' +
+            '  }]' +
+            '}'
+        );
+    }
+
+    private sendJSON (jsonContent : string) : Promise<any>
+    {
+        var request = SimpleHTTP.newRequest(Flock.FLOCK_MSG_URL + this.accessToken);
+        return request.post(jsonContent, 'application/json');
+    }
 
 }
