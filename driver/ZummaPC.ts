@@ -131,7 +131,8 @@ export class ZummaPC extends Driver<NetworkTCP> {
      * Return promise resolved once powered up.
      */
     private powerUp2(): Promise<void> {
-        if (!this.poweringUp) {
+        if (!this.socket.connected &&
+            !this.poweringUp) {
             this.socket.wakeOnLAN();
             this.poweringUp = new Promise<void>((resolve, reject)=> {
                 this.powerUpResolver = resolve;
@@ -147,7 +148,8 @@ export class ZummaPC extends Driver<NetworkTCP> {
 
     // Send command to turn power off
     private powerDown(): Promise<void> {
-        if (!this.shuttingDown) {
+        if (this.socket.connected &&
+            !this.shuttingDown) {
             this.tell("stop");
             this.shuttingDown = new Promise<void>((resolve, reject)=> {
                 this.shutDownResolver = resolve;

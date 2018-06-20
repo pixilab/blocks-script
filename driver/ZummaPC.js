@@ -83,7 +83,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         ZummaPC.prototype.powerUp2 = function () {
             var _this = this;
-            if (!this.poweringUp) {
+            if (!this.socket.connected &&
+                !this.poweringUp) {
                 this.socket.wakeOnLAN();
                 this.poweringUp = new Promise(function (resolve, reject) {
                     _this.powerUpResolver = resolve;
@@ -98,7 +99,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         ZummaPC.prototype.powerDown = function () {
             var _this = this;
-            if (!this.shuttingDown) {
+            if (this.socket.connected &&
+                !this.shuttingDown) {
                 this.tell("stop");
                 this.shuttingDown = new Promise(function (resolve, reject) {
                     _this.shutDownResolver = resolve;
