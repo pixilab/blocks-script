@@ -102,6 +102,14 @@ export class ZummaPC extends Driver<NetworkTCP> {
     }
 
     /**
+    * Is PC online (powered up and connected)?
+    */
+    @Meta.property("Is device online?")
+    public get online(): boolean {
+        return this.socket.connected;
+    }
+
+    /**
      * Power up using wake-on-LAN. Returned promise resolved
      * once connected.
      */
@@ -170,6 +178,7 @@ export class ZummaPC extends Driver<NetworkTCP> {
 				this.poweringUp.then(()=>
 					this.nowPowered()
 				);
+                console.log("ZummaPC powered up successfully");
 				delete this.powerUpResolver;
 				delete this.poweringUp;
 			} else
@@ -196,9 +205,9 @@ export class ZummaPC extends Driver<NetworkTCP> {
 			this.powerState = true;		// Consider power to be on now
 
         // supposed to be off
-		if (!this.powerState)
-			this.powerDown();
-
+		// if (!this.powerState) {
+        //     this.powerDown();
+        // }
 	}
 
     private nowPowerless() {

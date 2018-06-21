@@ -67,6 +67,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(ZummaPC.prototype, "online", {
+            get: function () {
+                return this.socket.connected;
+            },
+            enumerable: true,
+            configurable: true
+        });
         ZummaPC.prototype.powerUp = function () {
             if (!this.powerState) {
                 this.powerState = true;
@@ -120,6 +127,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.poweringUp.then(function () {
                         return _this.nowPowered();
                     });
+                    console.log("ZummaPC powered up successfully");
                     delete this.powerUpResolver;
                     delete this.poweringUp;
                 }
@@ -144,8 +152,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ZummaPC.prototype.nowPowered = function () {
             if (this.powerState === undefined)
                 this.powerState = true;
-            if (!this.powerState)
-                this.powerDown();
         };
         ZummaPC.prototype.nowPowerless = function () {
             if (this.powerState === undefined)
@@ -170,6 +176,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], ZummaPC.prototype, "power", null);
+        __decorate([
+            Meta.property("Is device online?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], ZummaPC.prototype, "online", null);
         __decorate([
             Meta.callable("Power up using wake-on-LAN"),
             __metadata("design:type", Function),
