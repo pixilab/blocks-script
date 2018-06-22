@@ -20,10 +20,67 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function (require, exports, PJLink_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    var CMD_POWR = 'POWR';
+    var CMD_INPT = 'INPT';
+    var CMD_AVMT = 'AVMT';
+    var CMD_FREZ = 'FREZ';
+    var CMD_ERST = 'ERST';
+    var CMD_LAMP = 'LAMP';
+    var CMD_INST = 'INST';
+    var CMD_NAME = 'NAME';
+    var CMD_INF1 = 'INF1';
+    var CMD_INF2 = 'INF2';
+    var CMD_INFO = 'INFO';
+    var CMD_CLSS = 'CLSS';
+    var CMD_SNUM = 'SNUM';
+    var CMD_SVER = 'SVER';
+    var CMD_INNM = 'INNM';
+    var CMD_IRES = 'IRES';
+    var CMD_RRES = 'RRES';
+    var CMD_FILT = 'FILT';
+    var CMD_RLMP = 'RLMP';
+    var CMD_RFIL = 'RFIL';
+    var CMD_SVOL = 'SVOL';
+    var CMD_MVOL = 'MVOL';
     var PJLinkPlus = (function (_super) {
         __extends(PJLinkPlus, _super);
         function PJLinkPlus(socket) {
-            return _super.call(this, socket) || this;
+            var _this = _super.call(this, socket) || this;
+            _this.wantedDeviceParameters = [
+                CMD_POWR,
+                CMD_ERST,
+                CMD_LAMP,
+                CMD_NAME,
+                CMD_INF1,
+                CMD_INF2,
+                CMD_INFO
+            ];
+            _this._lineBreak = '\n';
+            _this._powerStatus = 0;
+            _this._isOff = false;
+            _this._isOn = false;
+            _this._isCooling = false;
+            _this._isWarmingUp = false;
+            _this._lampCount = 0;
+            _this._lampOneHours = 0;
+            _this._lampTwoHours = 0;
+            _this._lampThreeHours = 0;
+            _this._lampFourHours = 0;
+            _this._lampOneActive = false;
+            _this._lampTwoActive = false;
+            _this._lampThreeActive = false;
+            _this._lampFourActive = false;
+            _this._errorStatus = '000000';
+            _this._errorStatusFan = 0;
+            _this._errorStatusLamp = 0;
+            _this._errorStatusTemperature = 0;
+            _this._errorStatusCoverOpen = 0;
+            _this._errorStatusFilter = 0;
+            _this._errorStatusOther = 0;
+            _this._hasError = false;
+            _this._hasWarning = false;
+            _this._currentParameterFetchList = [];
+            return _this;
         }
         PJLinkPlus.prototype.fetchDeviceInfo = function () {
             var _this = this;
@@ -37,9 +94,44 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
                     });
                 });
             }
-            this.fetchInfoName();
+            this.fetchDeviceInformation(this.wantedDeviceParameters);
             return this.fetchingDeviceInfo;
         };
+        Object.defineProperty(PJLinkPlus.prototype, "powerStatus", {
+            get: function () {
+                return this._powerStatus;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "isOff", {
+            get: function () {
+                return this._isOff;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "isOn", {
+            get: function () {
+                return this._isOn;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "isCooling", {
+            get: function () {
+                return this._isCooling;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "isWarmingUp", {
+            get: function () {
+                return this._isWarmingUp;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(PJLinkPlus.prototype, "name", {
             get: function () {
                 return this._name;
@@ -103,63 +195,236 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             enumerable: true,
             configurable: true
         });
-        PJLinkPlus.prototype.fetchInfoName = function () {
-            var _this = this;
-            this.request('NAME').then(function (reply) {
-                _this._name = reply;
-                _this.fetchInfoManufactureName();
-            }, function (error) {
-                _this.fetchInfoManufactureName();
-            });
+        Object.defineProperty(PJLinkPlus.prototype, "lampOneActive", {
+            get: function () {
+                return this._lampOneActive;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "lampTwoActive", {
+            get: function () {
+                return this._lampTwoActive;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "lampThreeActive", {
+            get: function () {
+                return this._lampThreeActive;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "lampFourActive", {
+            get: function () {
+                return this._lampFourActive;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "errorStatus", {
+            get: function () {
+                return this._errorStatus;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "hasError", {
+            get: function () {
+                return this._hasError;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "hasWarning", {
+            get: function () {
+                return this._hasWarning;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "hasProblem", {
+            get: function () {
+                return this._hasError || this._hasWarning;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "detailedStatusReport", {
+            get: function () {
+                return 'Device: ' + this._manufactureName + ' ' + this._productName + ' ' + this._name + this._lineBreak +
+                    'Power status: ' + this.translatePowerCode(this._powerStatus) + this._lineBreak +
+                    'Error status: ' + this._lineBreak +
+                    'Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
+                    'Lamp: ' + this.translateErrorCode(this._errorStatusLamp) + this._lineBreak +
+                    'Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
+                    'Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
+                    'Filter: ' + this.translateErrorCode(this._errorStatusFilter) + this._lineBreak +
+                    'Other: ' + this.translateErrorCode(this._errorStatusOther) + this._lineBreak +
+                    (this._lampCount > 0 ? 'Lamp status: ' + this._lineBreak : '') +
+                    (this._lampCount > 0 ? 'Lamp one: ' + (this._lampOneActive ? 'on' : 'off') + ', ' + this._lampOneHours + ' lighting hours' + this._lineBreak : '') +
+                    (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
+                    (this._lampCount > 2 ? 'Lamp three: ' + (this._lampThreeActive ? 'on' : 'off') + ', ' + this._lampThreeHours + ' lighting hours' + this._lineBreak : '') +
+                    (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '');
+            },
+            enumerable: true,
+            configurable: true
+        });
+        PJLinkPlus.prototype.translateErrorCode = function (code) {
+            switch (code) {
+                case 0:
+                    return 'No error detected (or not supported)';
+                case 1:
+                    return 'Warning';
+                case 3:
+                    return 'Error';
+            }
+            return 'unknown error code';
         };
-        PJLinkPlus.prototype.fetchInfoManufactureName = function () {
-            var _this = this;
-            this.request('INF1').then(function (reply) {
-                _this._manufactureName = reply;
-                _this.fetchInfoProductName();
-            }, function (error) {
-                _this.fetchInfoProductName();
-            });
+        PJLinkPlus.prototype.translatePowerCode = function (code) {
+            switch (code) {
+                case 0:
+                    return 'Off';
+                case 1:
+                    return 'On';
+                case 2:
+                    return 'Cooling';
+                case 3:
+                    return 'Warming Up';
+            }
+            return 'unknown power code';
         };
-        PJLinkPlus.prototype.fetchInfoProductName = function () {
-            var _this = this;
-            this.request('INF2').then(function (reply) {
-                _this._productName = reply;
-                _this.fetchInfoOther();
-            }, function (error) {
-                _this.fetchInfoOther();
-            });
+        PJLinkPlus.prototype.fetchDeviceInformation = function (wantedInfo) {
+            this._currentParameterFetchList = wantedInfo.slice();
+            this.fetchInfoLoop();
         };
-        PJLinkPlus.prototype.fetchInfoOther = function () {
+        PJLinkPlus.prototype.fetchInfoLoop = function () {
             var _this = this;
-            this.request('INFO').then(function (reply) {
-                _this._otherInformation = reply;
-                _this.fetchInfoLamp();
-            }, function (error) {
-                _this.fetchInfoLamp();
-            });
+            if (this._currentParameterFetchList.length > 0) {
+                this._currentParameter = this._currentParameterFetchList.pop();
+                this.request(this._currentParameter).then(function (reply) {
+                    _this.processInfoQueryReply(_this._currentParameter, reply);
+                    _this.fetchInfoLoop();
+                }, function (error) {
+                    _this.fetchInfoLoop();
+                });
+            }
+            else {
+                this.fetchInfoResolve();
+            }
         };
-        PJLinkPlus.prototype.fetchInfoLamp = function () {
-            var _this = this;
-            this.request('LAMP').then(function (reply) {
-                var lampData = reply.split(' ');
-                _this._lampCount = lampData.length / 2;
-                if (_this._lampCount >= 1) {
-                    _this._lampOneHours = parseInt(lampData[0]);
-                }
-                if (_this._lampCount >= 2) {
-                    _this._lampTwoHours = parseInt(lampData[2]);
-                }
-                if (_this._lampCount >= 3) {
-                    _this._lampOneHours = parseInt(lampData[4]);
-                }
-                if (_this._lampCount >= 4) {
-                    _this._lampTwoHours = parseInt(lampData[6]);
-                }
-                _this.fetchInfoResolve();
-            }, function (error) {
-                _this.fetchInfoResolve();
-            });
+        PJLinkPlus.prototype.processInfoQueryReply = function (command, reply) {
+            switch (command) {
+                case CMD_POWR:
+                    var newPowerStatus = parseInt(reply);
+                    if (this._powerStatus != newPowerStatus) {
+                        this._powerStatus = newPowerStatus;
+                        this.changed('powerStatus');
+                        var newIsOff = this._powerStatus == 0;
+                        var newIsOn = this._powerStatus == 1;
+                        var newIsCooling = this._powerStatus == 2;
+                        var newIsWarmingUp = this._powerStatus == 3;
+                        if (this._isOff != newIsOff) {
+                            this._isOff = newIsOff;
+                            this.changed('isOff');
+                        }
+                        if (this._isOn != newIsOn) {
+                            this._isOn = newIsOn;
+                            this.changed('isOn');
+                        }
+                        if (this._isCooling != newIsCooling) {
+                            this._isCooling = newIsCooling;
+                            this.changed('isCooling');
+                        }
+                        if (this._isWarmingUp != newIsWarmingUp) {
+                            this._isWarmingUp = newIsWarmingUp;
+                            this.changed('isWarmingUp');
+                        }
+                    }
+                    break;
+                case CMD_INPT:
+                    break;
+                case CMD_AVMT:
+                    break;
+                case CMD_ERST:
+                    var errorNames = ['Fan', 'Lamp', 'Temperature', 'CoverOpen', 'Filter', 'Other'];
+                    this._errorStatus = reply;
+                    if (reply.length == 6) {
+                        var list = [0, 0, 0, 0, 0, 0];
+                        var warning = false;
+                        var error = false;
+                        for (var i = 0; i < reply.length; i++) {
+                            list[i] = parseInt(reply[i]);
+                            error = error || list[i] == 2;
+                            warning = warning || list[i] == 1;
+                            this['_errorStatus' + errorNames[0]] = list[i];
+                        }
+                        if (this._hasError != error) {
+                            this._hasError = error;
+                            this.changed('hasError');
+                            this.changed('hasProblem');
+                        }
+                        if (this._hasWarning != warning) {
+                            this._hasWarning = warning;
+                            this.changed('hasWarning');
+                            this.changed('hasProblem');
+                        }
+                    }
+                    break;
+                case CMD_LAMP:
+                    var lampNames = ['One', 'Two', 'Three', 'Four'];
+                    var lampData = reply.split(' ');
+                    this._lampCount = lampData.length / 2;
+                    for (var i = 0; i < this._lampCount; i++) {
+                        console.warn(i + ' lamp');
+                        var newHours = parseInt(lampData[i * 2]);
+                        var newActive = parseInt(lampData[i * 2 + 1]) == 1;
+                        if (this['_lamp' + lampNames[i] + 'Hours'] != newHours) {
+                            this['_lamp' + lampNames[i] + 'Hours'] = newHours;
+                            this.changed('lamp' + lampNames[i] + 'Hours');
+                        }
+                        if (this['_lamp' + lampNames[i] + 'Active'] != newActive) {
+                            this['_lamp' + lampNames[i] + 'Active'] = newActive;
+                            this.changed('lamp' + lampNames[i] + 'Active');
+                        }
+                    }
+                    break;
+                case CMD_INST:
+                    break;
+                case CMD_NAME:
+                    this._name = reply;
+                    break;
+                case CMD_INF1:
+                    this._manufactureName = reply;
+                    break;
+                case CMD_INF2:
+                    this._productName = reply;
+                    break;
+                case CMD_INFO:
+                    this._otherInformation = reply;
+                    break;
+                case CMD_CLSS:
+                    break;
+                case CMD_SNUM:
+                    break;
+                case CMD_SVER:
+                    break;
+                case CMD_INNM:
+                    break;
+                case CMD_IRES:
+                    break;
+                case CMD_RRES:
+                    break;
+                case CMD_FILT:
+                    break;
+                case CMD_RLMP:
+                    break;
+                case CMD_RFIL:
+                    break;
+                case CMD_FREZ:
+                    break;
+            }
         };
         PJLinkPlus.prototype.fetchInfoResolve = function () {
             if (this.fetchDeviceInfoResolver) {
@@ -191,6 +456,31 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", Promise)
         ], PJLinkPlus.prototype, "fetchDeviceInfo", null);
+        __decorate([
+            Meta.property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "powerStatus", null);
+        __decorate([
+            Meta.property("Is device off?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "isOff", null);
+        __decorate([
+            Meta.property("Is device on?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "isOn", null);
+        __decorate([
+            Meta.property("Is device cooling?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "isCooling", null);
+        __decorate([
+            Meta.property("Is device warming up?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "isWarmingUp", null);
         __decorate([
             Meta.property("Projector/Display name (NAME)"),
             __metadata("design:type", String),
@@ -236,6 +526,51 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampFourHours", null);
+        __decorate([
+            Meta.property("Lamp one: active"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "lampOneActive", null);
+        __decorate([
+            Meta.property("Lamp one: active"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "lampTwoActive", null);
+        __decorate([
+            Meta.property("Lamp one: active"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "lampThreeActive", null);
+        __decorate([
+            Meta.property("Lamp one: active"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "lampFourActive", null);
+        __decorate([
+            Meta.property("Error status (ERST)"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "errorStatus", null);
+        __decorate([
+            Meta.property("Error reported?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "hasError", null);
+        __decorate([
+            Meta.property("Warning reported?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "hasWarning", null);
+        __decorate([
+            Meta.property("Problem reported?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "hasProblem", null);
+        __decorate([
+            Meta.property("Detailed device status report (human readable)"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "detailedStatusReport", null);
         __decorate([
             Meta.property("custom request response"),
             __metadata("design:type", String),
