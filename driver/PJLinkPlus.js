@@ -51,17 +51,19 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
         function PJLinkPlus(socket) {
             var _this = _super.call(this, socket) || this;
             _this.wantedDeviceParameters = [
-                CMD_POWR,
-                CMD_ERST,
-                CMD_AVMT,
-                CMD_LAMP,
-                CMD_NAME,
-                CMD_INF1,
-                CMD_INF2,
-                CMD_INFO,
-                CMD_FILT
+                { cmd: CMD_POWR, dynamic: true },
+                { cmd: CMD_ERST, dynamic: true },
+                { cmd: CMD_AVMT, dynamic: true },
+                { cmd: CMD_LAMP, dynamic: true },
+                { cmd: CMD_NAME, dynamic: false },
+                { cmd: CMD_INF1, dynamic: false },
+                { cmd: CMD_INF2, dynamic: false },
+                { cmd: CMD_INFO, dynamic: false },
+                { cmd: CMD_FILT, dynamic: true }
             ];
+            _this.skipDeviceParameters = [];
             _this._lineBreak = '\n';
+            _this._lastKnownConnectionDateSet = false;
             _this._powerStatus = 0;
             _this._isOff = false;
             _this._isOn = false;
@@ -88,6 +90,9 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             _this._hasWarning = false;
             _this._currentParameterFetchList = [];
             _this.addState(_this._mute = new NetworkProjector_1.NumState('AVMT', 'mute', PJLinkPlus_1.kMinMute, PJLinkPlus_1.kMaxMute));
+            socket.subscribe('connect', function (sender, message) {
+                _this.onConnectStateChange();
+            });
             return _this;
         }
         PJLinkPlus_1 = PJLinkPlus;
@@ -104,18 +109,43 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
         });
         PJLinkPlus.prototype.fetchDeviceInfo = function () {
             var _this = this;
+            var delay = this.connected ? 0 : (this.isOnline ? 5000 : 0);
+            delay += this.socket.connected ? 0 : (this.isOnline ? 25000 : 0);
             if (!this.fetchingDeviceInfo) {
                 this.fetchingDeviceInfo = new Promise(function (resolve, reject) {
                     _this.fetchDeviceInfoResolver = resolve;
-                    wait(10000).then(function () {
-                        reject("Timeout");
-                        delete _this.fetchingDeviceInfo;
-                        delete _this.fetchDeviceInfoResolver;
-                    });
+                    if (_this.isOnline) {
+                        wait(5000 + delay).then(function () {
+                            reject("Timeout");
+                            delete _this.fetchingDeviceInfo;
+                            delete _this.fetchDeviceInfoResolver;
+                        });
+                    }
+                    else {
+                        wait(100).then(function () {
+                            reject('Projector/Display seems offline');
+                            delete _this.fetchingDeviceInfo;
+                            delete _this.fetchDeviceInfoResolver;
+                        });
+                    }
                 });
             }
-            this.fetchDeviceInformation(this.wantedDeviceParameters);
+            this.delayedInfoFetch(delay);
             return this.fetchingDeviceInfo;
+        };
+        PJLinkPlus.prototype.delayedInfoFetch = function (countdown) {
+            var _this = this;
+            if (this.socket.connected && this.connected) {
+                this.fetchDeviceInformation(this.wantedDeviceParameters);
+            }
+            else if (countdown < 0) {
+            }
+            else {
+                this.delayedDeviceInfoFetch = wait(PJLinkPlus_1.delayedFetchInterval);
+                this.delayedDeviceInfoFetch.then(function () {
+                    _this.delayedInfoFetch(countdown - PJLinkPlus_1.delayedFetchInterval);
+                });
+            }
         };
         Object.defineProperty(PJLinkPlus.prototype, "powerStatus", {
             get: function () {
@@ -174,9 +204,9 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(PJLinkPlus.prototype, "name", {
+        Object.defineProperty(PJLinkPlus.prototype, "deviceName", {
             get: function () {
-                return this._name;
+                return this._deviceName;
             },
             enumerable: true,
             configurable: true
@@ -307,13 +337,32 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(PJLinkPlus.prototype, "isOnline", {
+            get: function () {
+                if (this.socket.connected) {
+                    this._lastKnownConnectionDate = new Date();
+                    return true;
+                }
+                if (!this._lastKnownConnectionDateSet) {
+                    console.warn('last known connection date unknown');
+                    return false;
+                }
+                var msSinceLastConnection = (new Date()).getTime() - this._lastKnownConnectionDate.getTime();
+                return msSinceLastConnection < 30000;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(PJLinkPlus.prototype, "detailedStatusReport", {
             get: function () {
-                return 'Device: ' + this._manufactureName + ' ' + this._productName + ' ' + this._name + this._lineBreak +
+                if (this._infoFetchDate === undefined) {
+                    return 'call "fetchDeviceInfo" at least once before requesting "detailedStatusReport"';
+                }
+                return 'Device: ' + this._manufactureName + ' ' + this._productName + ' ' + this._deviceName + this._lineBreak +
                     'Power status: ' + this.translatePowerCode(this._powerStatus) + this._lineBreak +
-                    'Error status: ' + this._lineBreak +
+                    'Error status: (' + this._errorStatus + ')' + this._lineBreak +
                     'Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
-                    'Lamp: ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
+                    'Lamp' + (this._lampCount > 1 ? 's' : '') + ': ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
                     'Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
                     'Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
                     'Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? this.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
@@ -322,7 +371,8 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                     (this._lampCount > 0 ? 'Lamp one: ' + (this._lampOneActive ? 'on' : 'off') + ', ' + this._lampOneHours + ' lighting hours' + this._lineBreak : '') +
                     (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
                     (this._lampCount > 2 ? 'Lamp three: ' + (this._lampThreeActive ? 'on' : 'off') + ', ' + this._lampThreeHours + ' lighting hours' + this._lineBreak : '') +
-                    (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '');
+                    (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '') +
+                    '(status report last updated ' + this._infoFetchDate + ')';
             },
             enumerable: true,
             configurable: true
@@ -330,7 +380,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
         PJLinkPlus.prototype.translateErrorCode = function (code) {
             switch (code) {
                 case 0:
-                    return 'No error detected (or not supported)';
+                    return 'OK';
                 case 1:
                     return 'Warning';
                 case 3:
@@ -351,24 +401,36 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             }
             return 'unknown power code';
         };
+        PJLinkPlus.prototype.nextParameterToFetch = function () {
+            var parameter;
+            while ((parameter === undefined ||
+                this.skipDeviceParameters.indexOf(parameter.cmd) > -1) &&
+                this._currentParameterFetchList.length > 0) {
+                parameter = this._currentParameterFetchList.pop();
+            }
+            return parameter;
+        };
         PJLinkPlus.prototype.fetchDeviceInformation = function (wantedInfo) {
             this._currentParameterFetchList = wantedInfo.slice();
             this.fetchInfoLoop();
         };
         PJLinkPlus.prototype.fetchInfoLoop = function () {
             var _this = this;
-            if (this._currentParameterFetchList.length > 0) {
-                this._currentParameter = this._currentParameterFetchList.pop();
-                this.request(this._currentParameter).then(function (reply) {
+            this._currentParameter = this.nextParameterToFetch();
+            if (this._currentParameter !== undefined) {
+                this.request(this._currentParameter.cmd).then(function (reply) {
                     if (reply != ERR_1) {
-                        _this.processInfoQueryReply(_this._currentParameter, reply);
+                        _this.processInfoQueryReply(_this._currentParameter.cmd, reply);
+                        if (!_this._currentParameter.dynamic) {
+                            _this.skipDeviceParameters.push(_this._currentParameter.cmd);
+                        }
                     }
                     else {
-                        _this.processInfoQueryError(_this._currentParameter, reply);
+                        _this.processInfoQueryError(_this._currentParameter.cmd, reply);
                     }
                     _this.fetchInfoLoop();
                 }, function (error) {
-                    _this.processInfoQueryError(_this._currentParameter, error);
+                    _this.processInfoQueryError(_this._currentParameter.cmd, error);
                     _this.fetchInfoLoop();
                 });
             }
@@ -379,6 +441,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
         PJLinkPlus.prototype.fetchInfoResolve = function () {
             if (this.fetchDeviceInfoResolver) {
                 this.fetchDeviceInfoResolver();
+                this._infoFetchDate = new Date();
                 console.info("got device info");
                 delete this.fetchingDeviceInfo;
                 delete this.fetchDeviceInfoResolver;
@@ -387,12 +450,16 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
         PJLinkPlus.prototype.processInfoQueryError = function (command, error) {
             switch (command) {
                 case CMD_LAMP:
-                    if (error == ERR_1)
+                    if (error == ERR_1) {
                         this._hasLamps = false;
+                        this.skipDeviceParameters.push(CMD_LAMP);
+                    }
                     break;
                 case CMD_FILT:
-                    if (error == ERR_1)
+                    if (error == ERR_1) {
                         this._hasFilter = false;
+                        this.skipDeviceParameters.push(CMD_FILT);
+                    }
                     break;
             }
         };
@@ -461,7 +528,6 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                     var lampData = reply.split(' ');
                     this._lampCount = lampData.length / 2;
                     for (var i = 0; i < this._lampCount; i++) {
-                        console.warn(i + ' lamp');
                         var newHours = parseInt(lampData[i * 2]);
                         var newActive = parseInt(lampData[i * 2 + 1]) == 1;
                         if (this['_lamp' + lampNames[i] + 'Hours'] != newHours) {
@@ -477,16 +543,32 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                 case CMD_INST:
                     break;
                 case CMD_NAME:
-                    this._name = reply;
+                    var newDeviceName = reply;
+                    if (this._deviceName != newDeviceName) {
+                        this._deviceName = newDeviceName;
+                        this.changed('deviceName');
+                    }
                     break;
                 case CMD_INF1:
-                    this._manufactureName = reply;
+                    var newManufactureName = reply;
+                    if (this._manufactureName != newManufactureName) {
+                        this._manufactureName = newManufactureName;
+                        this.changed('manufactureName');
+                    }
                     break;
                 case CMD_INF2:
-                    this._productName = reply;
+                    var newProductName = reply;
+                    if (this._productName != newProductName) {
+                        this._productName = newProductName;
+                        this.changed('productName');
+                    }
                     break;
                 case CMD_INFO:
-                    this._otherInformation = reply;
+                    var newOtherInformation = reply;
+                    if (this._otherInformation != newOtherInformation) {
+                        this._otherInformation = newOtherInformation;
+                        this.changed('otherInformation');
+                    }
                     break;
                 case CMD_CLSS:
                     break;
@@ -520,6 +602,9 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                     break;
             }
         };
+        PJLinkPlus.prototype.onConnectStateChange = function () {
+            this._lastKnownConnectionDate = new Date();
+        };
         Object.defineProperty(PJLinkPlus.prototype, "customRequestResponse", {
             get: function () {
                 return this._customRequestResult;
@@ -537,6 +622,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             });
             return request;
         };
+        PJLinkPlus.delayedFetchInterval = 10000;
         PJLinkPlus.kMinMute = 10;
         PJLinkPlus.kMaxMute = 31;
         __decorate([
@@ -591,7 +677,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             Meta.property("Projector/Display name (NAME)"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
-        ], PJLinkPlus.prototype, "name", null);
+        ], PJLinkPlus.prototype, "deviceName", null);
         __decorate([
             Meta.property("Manufacture name (INF1)"),
             __metadata("design:type", String),
@@ -682,6 +768,11 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "hasProblem", null);
+        __decorate([
+            Meta.property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "isOnline", null);
         __decorate([
             Meta.property("Detailed device status report (human readable)"),
             __metadata("design:type", String),
