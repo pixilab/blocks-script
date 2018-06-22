@@ -34,6 +34,13 @@ import * as Meta from "system_lib/Metadata";
 /* write only */
 /** Speaker volume adjustment (write only) */     const CMD_SVOL = 'SVOL';
 /** Microphone volume adjustment (write only) */  const CMD_MVOL = 'MVOL';
+/*
+ * projector error codes
+ */
+/** Not supported / Not installed */              const ERR_1 = 'ERR1';
+/** Out of parameter */                           const ERR_2 = 'ERR2';
+/** Unavialable time for any reason */            const ERR_3 = 'ERR3';
+/** Projector / Display failure */                const ERR_4 = 'ERR4';
 
 /**
  Manage a PJLink projector, accessed through a provided NetworkTCPDevice connection.
@@ -45,12 +52,15 @@ export class PJLinkPlus extends PJLink {
     private wantedDeviceParameters = [
         CMD_POWR,
         CMD_ERST,
+        CMD_AVMT,
         CMD_LAMP,
         CMD_NAME,
         CMD_INF1,
         CMD_INF2,
-        CMD_INFO
+        CMD_INFO,
+        CMD_FILT
     ];
+    // line break for e.g. detailed status report
     private _lineBreak = '\n';
 
     private fetchingDeviceInfo: Promise<void>;
@@ -62,12 +72,15 @@ export class PJLinkPlus extends PJLink {
     private _isOn = false;
     private _isCooling = false;
     private _isWarmingUp = false;
+    // audio / video mute
+    private _mute : NumState;
     // various information
     private _name : string;
     private _manufactureName : string;
     private _productName : string;
     private _otherInformation : string;
     // lamp information
+    private _hasLamps : boolean;
     private _lampCount = 0;
     private _lampOneHours = 0;
     private _lampTwoHours = 0;
@@ -77,6 +90,9 @@ export class PJLinkPlus extends PJLink {
     private _lampTwoActive = false;
     private _lampThreeActive = false;
     private _lampFourActive = false;
+    // filter information
+    private _hasFilter : boolean;
+    private _filterUsageTime = 0;
     // error / warning reated
     private _errorStatus = '000000';
     private _errorStatusFan = 0;
@@ -93,8 +109,31 @@ export class PJLinkPlus extends PJLink {
 
     private _customRequestResult : string;
 
+    private static kMinMute = 10;
+	private static kMaxMute = 31;
 	constructor(socket: NetworkTCP) {
 		super(socket);
+        this.addState(this._mute = new NumState(
+			'AVMT', 'mute',
+			PJLinkPlus.kMinMute, PJLinkPlus.kMaxMute
+		));
+	}
+
+    /**
+	 * Set mute setting
+	 */
+	@Meta.property("Mute setting. (Video mute on/off: 11/10, Audio mute on/off: 21/20, A/V mute on/off: 31/30)")
+	@Meta.min(PJLinkPlus.kMinMute)
+	@Meta.max(PJLinkPlus.kMaxMute)
+	public set mute(value: number) {
+		if (this._mute.set(value))
+			this.sendCorrection();
+	}
+    /**
+	 Get current mute setting
+	 */
+	public get mute(): number {
+		return this._mute.get();
 	}
 
     @Meta.callable("Refresh device information")
@@ -102,9 +141,9 @@ export class PJLinkPlus extends PJLink {
         if (!this.fetchingDeviceInfo) {
             this.fetchingDeviceInfo = new Promise<void>((resolve, reject) => {
                 this.fetchDeviceInfoResolver = resolve;
-                wait(30000).then(()=> {
+                wait(10000).then(()=> {
                     reject("Timeout");
-                    delete this.fetchDeviceInfo;
+                    delete this.fetchingDeviceInfo;
                     delete this.fetchDeviceInfoResolver;
                 });
             });
@@ -112,7 +151,7 @@ export class PJLinkPlus extends PJLink {
         this.fetchDeviceInformation(this.wantedDeviceParameters);
         return this.fetchingDeviceInfo;
     }
-
+    /* power status */
     @Meta.property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)")
     public get powerStatus() : number {
         return this._powerStatus;
@@ -134,6 +173,25 @@ export class PJLinkPlus extends PJLink {
         return this._isWarmingUp;
     }
 
+    /* audio / video mute */
+    @Meta.property("Mute audio")
+    public set muteAudio (value: boolean) {
+        this.mute = value ? 21 : 20;
+    }
+    public get muteAudio () : boolean {
+        var currentValue = this._mute.get();
+        return currentValue == 31 || currentValue == 21;
+    }
+    @Meta.property("Mute video")
+    public set muteVideo (value: boolean) {
+        this.mute = value ? 11 : 10;
+    }
+    public get muteVideo () : boolean {
+        var currentValue = this._mute.get();
+        return currentValue == 31 || currentValue == 11;
+    }
+
+    /* various information */
     @Meta.property("Projector/Display name (NAME)")
     public get name () : string {
         return this._name;
@@ -154,11 +212,11 @@ export class PJLinkPlus extends PJLink {
         return this._otherInformation;
     }
 
+    /* lamp properties */
     @Meta.property("Lamp count")
     public get lampCount (): number {
         return this._lampCount;
     }
-
     @Meta.property("Lamp one: lighting hours")
     public get lampOneHours (): number {
         return this._lampOneHours;
@@ -192,11 +250,21 @@ export class PJLinkPlus extends PJLink {
         return this._lampFourActive;
     }
 
+    /* filter properties */
+    @Meta.property("Has filter?")
+    public get hasFilter() : boolean {
+        return this._hasFilter;
+    }
+    @Meta.property("Filter usage time (hours)")
+    public get filterUsageTime () : number {
+        return this._filterUsageTime;
+    }
+
+    /* error properties*/
     @Meta.property("Error status (ERST)")
     public get errorStatus (): string {
         return this._errorStatus;
     }
-
     @Meta.property("Error reported?")
     public get hasError () : boolean {
         return this._hasError;
@@ -216,16 +284,17 @@ export class PJLinkPlus extends PJLink {
             'Power status: ' + this.translatePowerCode(this._powerStatus) + this._lineBreak +
             'Error status: ' + this._lineBreak +
             'Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
-            'Lamp: ' + this.translateErrorCode(this._errorStatusLamp) + this._lineBreak +
+            'Lamp: ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
             'Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
             'Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
-            'Filter: ' + this.translateErrorCode(this._errorStatusFilter) + this._lineBreak +
+            'Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? this.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
             'Other: ' + this.translateErrorCode(this._errorStatusOther) + this._lineBreak +
             (this._lampCount > 0 ? 'Lamp status: ' + this._lineBreak : '') +
             (this._lampCount > 0 ? 'Lamp one: ' + (this._lampOneActive ? 'on' : 'off') + ', ' + this._lampOneHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 2 ? 'Lamp three: ' + (this._lampThreeActive ? 'on' : 'off') + ', ' + this._lampThreeHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '');
+
     }
 
     private translateErrorCode (code : number) : string {
@@ -263,15 +332,39 @@ export class PJLinkPlus extends PJLink {
 
             this.request(this._currentParameter).then(
                 reply => {
-                    this.processInfoQueryReply(this._currentParameter, reply);
+                    if (reply != ERR_1) {
+                        this.processInfoQueryReply(this._currentParameter, reply);
+                    } else {
+                        // PJLink perceives ERR_1 and ERR_2 as successful queries
+                        this.processInfoQueryError(this._currentParameter, reply);
+                    }
                     this.fetchInfoLoop();
                 },
                 error => {
+                    this.processInfoQueryError(this._currentParameter, error);
                     this.fetchInfoLoop();
                 }
             );
         } else {
             this.fetchInfoResolve();
+        }
+    }
+    private fetchInfoResolve () : void {
+        if (this.fetchDeviceInfoResolver) {
+            this.fetchDeviceInfoResolver();
+            console.info("got device info");
+            delete this.fetchingDeviceInfo;
+            delete this.fetchDeviceInfoResolver;
+        }
+    }
+    private processInfoQueryError (command : string, error : string) {
+        switch (command) {
+            case CMD_LAMP:
+                if (error == ERR_1) this._hasLamps = false;
+                break;
+            case CMD_FILT:
+                if (error == ERR_1) this._hasFilter = false;
+                break;
         }
     }
     private processInfoQueryReply (command : string, reply : string) {
@@ -306,6 +399,7 @@ export class PJLinkPlus extends PJLink {
             case CMD_INPT:
                 break;
             case CMD_AVMT:
+                this._mute.updateCurrent(parseInt(reply));
                 break;
             case CMD_ERST:
                 var errorNames = ['Fan', 'Lamp', 'Temperature', 'CoverOpen', 'Filter', 'Other'];
@@ -333,6 +427,7 @@ export class PJLinkPlus extends PJLink {
                 }
                 break;
             case CMD_LAMP:
+                this._hasLamps = true;
                 var lampNames = ['One', 'Two', 'Three', 'Four'];
                 var lampData = reply.split(' ');
                 this._lampCount = lampData.length / 2;
@@ -377,6 +472,16 @@ export class PJLinkPlus extends PJLink {
             case CMD_RRES:
                 break;
             case CMD_FILT:
+                var newHasFilter = true;
+                var newFilterUsageTime = parseInt(reply);
+                if (this._hasFilter != newHasFilter) {
+                    this._hasFilter = newHasFilter;
+                    this.changed('hasFilter');
+                }
+                if (this._filterUsageTime != newFilterUsageTime) {
+                    this._filterUsageTime = newFilterUsageTime;
+                    this.changed('filterUsageTime');
+                }
                 break;
             case CMD_RLMP:
                 break;
@@ -386,14 +491,7 @@ export class PJLinkPlus extends PJLink {
                 break;
         }
     }
-    private fetchInfoResolve () : void {
-        if (this.fetchDeviceInfoResolver) {
-            this.fetchDeviceInfoResolver();
-            console.info("got device info");
-            delete this.fetchingDeviceInfo;
-            delete this.fetchDeviceInfoResolver;
-        }
-    }
+
 
 
     @Meta.property("custom request response")
@@ -406,6 +504,7 @@ export class PJLinkPlus extends PJLink {
         var request = this.request(question, param == "" ? undefined : param).then(
 			reply => {
 				this._customRequestResult = reply;
+                this.changed('customRequestResponse');
 			},
 			error => {
 				this._customRequestResult = "request failed: " + error;

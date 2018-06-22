@@ -17,7 +17,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function (require, exports, PJLink_1, Meta) {
+define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, PJLink_1, NetworkProjector_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var CMD_POWR = 'POWR';
@@ -42,6 +42,10 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
     var CMD_RFIL = 'RFIL';
     var CMD_SVOL = 'SVOL';
     var CMD_MVOL = 'MVOL';
+    var ERR_1 = 'ERR1';
+    var ERR_2 = 'ERR2';
+    var ERR_3 = 'ERR3';
+    var ERR_4 = 'ERR4';
     var PJLinkPlus = (function (_super) {
         __extends(PJLinkPlus, _super);
         function PJLinkPlus(socket) {
@@ -49,11 +53,13 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             _this.wantedDeviceParameters = [
                 CMD_POWR,
                 CMD_ERST,
+                CMD_AVMT,
                 CMD_LAMP,
                 CMD_NAME,
                 CMD_INF1,
                 CMD_INF2,
-                CMD_INFO
+                CMD_INFO,
+                CMD_FILT
             ];
             _this._lineBreak = '\n';
             _this._powerStatus = 0;
@@ -70,6 +76,7 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             _this._lampTwoActive = false;
             _this._lampThreeActive = false;
             _this._lampFourActive = false;
+            _this._filterUsageTime = 0;
             _this._errorStatus = '000000';
             _this._errorStatusFan = 0;
             _this._errorStatusLamp = 0;
@@ -80,16 +87,29 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             _this._hasError = false;
             _this._hasWarning = false;
             _this._currentParameterFetchList = [];
+            _this.addState(_this._mute = new NetworkProjector_1.NumState('AVMT', 'mute', PJLinkPlus_1.kMinMute, PJLinkPlus_1.kMaxMute));
             return _this;
         }
+        PJLinkPlus_1 = PJLinkPlus;
+        Object.defineProperty(PJLinkPlus.prototype, "mute", {
+            get: function () {
+                return this._mute.get();
+            },
+            set: function (value) {
+                if (this._mute.set(value))
+                    this.sendCorrection();
+            },
+            enumerable: true,
+            configurable: true
+        });
         PJLinkPlus.prototype.fetchDeviceInfo = function () {
             var _this = this;
             if (!this.fetchingDeviceInfo) {
                 this.fetchingDeviceInfo = new Promise(function (resolve, reject) {
                     _this.fetchDeviceInfoResolver = resolve;
-                    wait(30000).then(function () {
+                    wait(10000).then(function () {
                         reject("Timeout");
-                        delete _this.fetchDeviceInfo;
+                        delete _this.fetchingDeviceInfo;
                         delete _this.fetchDeviceInfoResolver;
                     });
                 });
@@ -128,6 +148,28 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
         Object.defineProperty(PJLinkPlus.prototype, "isWarmingUp", {
             get: function () {
                 return this._isWarmingUp;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "muteAudio", {
+            get: function () {
+                var currentValue = this._mute.get();
+                return currentValue == 31 || currentValue == 21;
+            },
+            set: function (value) {
+                this.mute = value ? 21 : 20;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "muteVideo", {
+            get: function () {
+                var currentValue = this._mute.get();
+                return currentValue == 31 || currentValue == 11;
+            },
+            set: function (value) {
+                this.mute = value ? 11 : 10;
             },
             enumerable: true,
             configurable: true
@@ -223,6 +265,20 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(PJLinkPlus.prototype, "hasFilter", {
+            get: function () {
+                return this._hasFilter;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "filterUsageTime", {
+            get: function () {
+                return this._filterUsageTime;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(PJLinkPlus.prototype, "errorStatus", {
             get: function () {
                 return this._errorStatus;
@@ -257,10 +313,10 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
                     'Power status: ' + this.translatePowerCode(this._powerStatus) + this._lineBreak +
                     'Error status: ' + this._lineBreak +
                     'Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
-                    'Lamp: ' + this.translateErrorCode(this._errorStatusLamp) + this._lineBreak +
+                    'Lamp: ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
                     'Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
                     'Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
-                    'Filter: ' + this.translateErrorCode(this._errorStatusFilter) + this._lineBreak +
+                    'Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? this.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
                     'Other: ' + this.translateErrorCode(this._errorStatusOther) + this._lineBreak +
                     (this._lampCount > 0 ? 'Lamp status: ' + this._lineBreak : '') +
                     (this._lampCount > 0 ? 'Lamp one: ' + (this._lampOneActive ? 'on' : 'off') + ', ' + this._lampOneHours + ' lighting hours' + this._lineBreak : '') +
@@ -304,14 +360,40 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             if (this._currentParameterFetchList.length > 0) {
                 this._currentParameter = this._currentParameterFetchList.pop();
                 this.request(this._currentParameter).then(function (reply) {
-                    _this.processInfoQueryReply(_this._currentParameter, reply);
+                    if (reply != ERR_1) {
+                        _this.processInfoQueryReply(_this._currentParameter, reply);
+                    }
+                    else {
+                        _this.processInfoQueryError(_this._currentParameter, reply);
+                    }
                     _this.fetchInfoLoop();
                 }, function (error) {
+                    _this.processInfoQueryError(_this._currentParameter, error);
                     _this.fetchInfoLoop();
                 });
             }
             else {
                 this.fetchInfoResolve();
+            }
+        };
+        PJLinkPlus.prototype.fetchInfoResolve = function () {
+            if (this.fetchDeviceInfoResolver) {
+                this.fetchDeviceInfoResolver();
+                console.info("got device info");
+                delete this.fetchingDeviceInfo;
+                delete this.fetchDeviceInfoResolver;
+            }
+        };
+        PJLinkPlus.prototype.processInfoQueryError = function (command, error) {
+            switch (command) {
+                case CMD_LAMP:
+                    if (error == ERR_1)
+                        this._hasLamps = false;
+                    break;
+                case CMD_FILT:
+                    if (error == ERR_1)
+                        this._hasFilter = false;
+                    break;
             }
         };
         PJLinkPlus.prototype.processInfoQueryReply = function (command, reply) {
@@ -346,6 +428,7 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
                 case CMD_INPT:
                     break;
                 case CMD_AVMT:
+                    this._mute.updateCurrent(parseInt(reply));
                     break;
                 case CMD_ERST:
                     var errorNames = ['Fan', 'Lamp', 'Temperature', 'CoverOpen', 'Filter', 'Other'];
@@ -373,6 +456,7 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
                     }
                     break;
                 case CMD_LAMP:
+                    this._hasLamps = true;
                     var lampNames = ['One', 'Two', 'Three', 'Four'];
                     var lampData = reply.split(' ');
                     this._lampCount = lampData.length / 2;
@@ -417,6 +501,16 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
                 case CMD_RRES:
                     break;
                 case CMD_FILT:
+                    var newHasFilter = true;
+                    var newFilterUsageTime = parseInt(reply);
+                    if (this._hasFilter != newHasFilter) {
+                        this._hasFilter = newHasFilter;
+                        this.changed('hasFilter');
+                    }
+                    if (this._filterUsageTime != newFilterUsageTime) {
+                        this._filterUsageTime = newFilterUsageTime;
+                        this.changed('filterUsageTime');
+                    }
                     break;
                 case CMD_RLMP:
                     break;
@@ -424,14 +518,6 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
                     break;
                 case CMD_FREZ:
                     break;
-            }
-        };
-        PJLinkPlus.prototype.fetchInfoResolve = function () {
-            if (this.fetchDeviceInfoResolver) {
-                this.fetchDeviceInfoResolver();
-                console.info("got device info");
-                delete this.fetchingDeviceInfo;
-                delete this.fetchDeviceInfoResolver;
             }
         };
         Object.defineProperty(PJLinkPlus.prototype, "customRequestResponse", {
@@ -445,11 +531,21 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             var _this = this;
             var request = this.request(question, param == "" ? undefined : param).then(function (reply) {
                 _this._customRequestResult = reply;
+                _this.changed('customRequestResponse');
             }, function (error) {
                 _this._customRequestResult = "request failed: " + error;
             });
             return request;
         };
+        PJLinkPlus.kMinMute = 10;
+        PJLinkPlus.kMaxMute = 31;
+        __decorate([
+            Meta.property("Mute setting. (Video mute on/off: 11/10, Audio mute on/off: 21/20, A/V mute on/off: 31/30)"),
+            Meta.min(PJLinkPlus_1.kMinMute),
+            Meta.max(PJLinkPlus_1.kMaxMute),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], PJLinkPlus.prototype, "mute", null);
         __decorate([
             Meta.callable("Refresh device information"),
             __metadata("design:type", Function),
@@ -481,6 +577,16 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "isWarmingUp", null);
+        __decorate([
+            Meta.property("Mute audio"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], PJLinkPlus.prototype, "muteAudio", null);
+        __decorate([
+            Meta.property("Mute video"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], PJLinkPlus.prototype, "muteVideo", null);
         __decorate([
             Meta.property("Projector/Display name (NAME)"),
             __metadata("design:type", String),
@@ -547,6 +653,16 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampFourActive", null);
         __decorate([
+            Meta.property("Has filter?"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "hasFilter", null);
+        __decorate([
+            Meta.property("Filter usage time (hours)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [])
+        ], PJLinkPlus.prototype, "filterUsageTime", null);
+        __decorate([
             Meta.property("Error status (ERST)"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
@@ -582,11 +698,12 @@ define(["require", "exports", "driver/PJLink", "system_lib/Metadata"], function 
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", Promise)
         ], PJLinkPlus.prototype, "customRequest", null);
-        PJLinkPlus = __decorate([
+        PJLinkPlus = PJLinkPlus_1 = __decorate([
             Meta.driver('NetworkTCP', { port: 4352 }),
             __metadata("design:paramtypes", [Object])
         ], PJLinkPlus);
         return PJLinkPlus;
+        var PJLinkPlus_1;
     }(PJLink_1.PJLink));
     exports.PJLinkPlus = PJLinkPlus;
 });
