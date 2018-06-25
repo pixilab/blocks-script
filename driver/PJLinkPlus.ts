@@ -318,7 +318,8 @@ export class PJLinkPlus extends PJLink {
             return false;
         }
         var msSinceLastConnection = (new Date()).getTime() - this._lastKnownConnectionDate.getTime();
-        return msSinceLastConnection < 30000;
+        console.warn(msSinceLastConnection);
+        return msSinceLastConnection < 42000;
     }
 
     @Meta.property("Detailed device status report (human readable)")
@@ -575,7 +576,11 @@ export class PJLinkPlus extends PJLink {
 
     private onConnectStateChange () {
         // either just connected or disconnected - in both cases proof of recent connection
+        if (this.socket.connected) {
+            this._lastKnownConnectionDateSet = true;
+        }
         this._lastKnownConnectionDate = new Date();
+
     }
 
     @Meta.property("custom request response")

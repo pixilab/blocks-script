@@ -348,7 +348,8 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                     return false;
                 }
                 var msSinceLastConnection = (new Date()).getTime() - this._lastKnownConnectionDate.getTime();
-                return msSinceLastConnection < 30000;
+                console.warn(msSinceLastConnection);
+                return msSinceLastConnection < 42000;
             },
             enumerable: true,
             configurable: true
@@ -603,6 +604,9 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             }
         };
         PJLinkPlus.prototype.onConnectStateChange = function () {
+            if (this.socket.connected) {
+                this._lastKnownConnectionDateSet = true;
+            }
             this._lastKnownConnectionDate = new Date();
         };
         Object.defineProperty(PJLinkPlus.prototype, "customRequestResponse", {
