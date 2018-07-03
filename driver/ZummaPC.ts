@@ -178,7 +178,7 @@ export class ZummaPC extends Driver<NetworkTCP> {
 				this.poweringUp.then(()=>
 					this.nowPowered()
 				);
-                this.powerUpResolver();
+                this.powerUpResolver(true);
                 console.log("ZummaPC powered up successfully");
 				delete this.powerUpResolver;
 				delete this.poweringUp;

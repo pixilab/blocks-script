@@ -42,6 +42,11 @@ import * as Meta from "system_lib/Metadata";
 /** Unavialable time for any reason */            const ERR_3 = 'ERR3';
 /** Projector / Display failure */                const ERR_4 = 'ERR4';
 
+/*
+ * fixed parameters
+ */
+/** status poll interval in milliseconds */       const STATUS_POLL_INTERVAL = 20000;
+
 /**
  Manage a PJLink projector, accessed through a provided NetworkTCPDevice connection.
  Extended version.
@@ -49,6 +54,7 @@ import * as Meta from "system_lib/Metadata";
 @Meta.driver('NetworkTCP', { port: 4352 })
 export class PJLinkPlus extends PJLink {
 
+    // parameters to request when fetching device info
     private wantedDeviceParameters = [
         { cmd: CMD_POWR, dynamic: true },
         { cmd: CMD_ERST, dynamic: true },
@@ -63,6 +69,13 @@ export class PJLinkPlus extends PJLink {
     private skipDeviceParameters = [];
     // line break for e.g. detailed status report
     private _lineBreak = '\n';
+
+    // parameters to request when polling the device
+    private devicePollParameters = [
+        { cmd: CMD_POWR, dynamic: true },
+        { cmd: CMD_ERST, dynamic: true }
+    ];
+    private statusPoller: CancelablePromise<void>;
 
     private fetchingDeviceInfo: Promise<void>;
     private fetchDeviceInfoResolver: (value?: any) => void;
@@ -113,6 +126,7 @@ export class PJLinkPlus extends PJLink {
     private _currentParameterFetchList = [];
     private _currentParameter : {cmd: string, dynamic: boolean};
 
+
     private _customRequestResult : string;
 
     private static kMinMute = 10;
@@ -126,6 +140,8 @@ export class PJLinkPlus extends PJLink {
         socket.subscribe('connect', (sender, message)=> {
 			this.onConnectStateChange();
 		});
+
+        this.pollDeviceStatus();
 	}
 
     /**
@@ -411,13 +427,29 @@ export class PJLinkPlus extends PJLink {
     }
     private fetchInfoResolve () : void {
         if (this.fetchDeviceInfoResolver) {
-            this.fetchDeviceInfoResolver();
+            this.fetchDeviceInfoResolver(true);
             this._infoFetchDate = new Date();
             console.info("got device info");
             delete this.fetchingDeviceInfo;
             delete this.fetchDeviceInfoResolver;
         }
     }
+    private pollDeviceStatus() {
+        console.warn('pollDeviceStatus');
+        // status interval minus up to 10% (to create some variation)
+		this.statusPoller = wait(STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1));
+		this.statusPoller.then(()=> {
+			if (this.socket.connected &&
+                this.connected) {
+                this.fetchDeviceInformation(this.devicePollParameters);
+			}
+			if (!this.discarded) {
+                // Keep polling
+                this.pollDeviceStatus();
+            }
+		})
+	}
+
     private processInfoQueryError (command : string, error : string) {
         switch (command) {
             case CMD_LAMP:
@@ -441,6 +473,9 @@ export class PJLinkPlus extends PJLink {
                 if (this._powerStatus != newPowerStatus) {
                     this._powerStatus = newPowerStatus;
                     this.changed('powerStatus');
+                    // also update PJLink base driver power status
+                    this._power.updateCurrent((parseInt(reply) & 1) != 0);
+                    // updating detailed status
                     var newIsOff = this._powerStatus == 0;
                     var newIsOn = this._powerStatus == 1;
                     var newIsCooling = this._powerStatus == 2;

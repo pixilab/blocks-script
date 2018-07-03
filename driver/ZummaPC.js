@@ -127,7 +127,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.poweringUp.then(function () {
                         return _this.nowPowered();
                     });
-                    this.powerUpResolver();
+                    this.powerUpResolver(true);
                     console.log("ZummaPC powered up successfully");
                     delete this.powerUpResolver;
                     delete this.poweringUp;
