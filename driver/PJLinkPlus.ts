@@ -10,30 +10,30 @@ import * as Meta from "system_lib/Metadata";
  * projector commands
  */
  /* read / write */
-/** Power status / control (R/W) */               const CMD_POWR = 'POWR';
-/** Input switch (R/W) */                         const CMD_INPT = 'INPT';
-/** Mute / Mute status (R/W)  */                  const CMD_AVMT = 'AVMT';
-/** Freeze / Freeze status (R/W) */               const CMD_FREZ = 'FREZ';
+/** Power status / control (R/W) */               const CMD_POWR = 'POWR';  // class 1
+/** Input switch (R/W) */                         const CMD_INPT = 'INPT';  // class 1
+/** Mute / Mute status (R/W)  */                  const CMD_AVMT = 'AVMT';  // class 1
+/** Freeze / Freeze status (R/W) */               const CMD_FREZ = 'FREZ';  // since PJLink 2.0 (class 2)
 /* read only */
-/** Error status (RO) */                          const CMD_ERST = 'ERST';
-/** Lamp number / lighting hour (RO) */           const CMD_LAMP = 'LAMP';
-/** Input toggling list (RO) */                   const CMD_INST = 'INST';
-/** Projector/Display name (RO) */                const CMD_NAME = 'NAME';
-/** Manufacture name information (RO) */          const CMD_INF1 = 'INF1';
-/** Product name information (RO) */              const CMD_INF2 = 'INF2';
-/** Other information (RO) */                     const CMD_INFO = 'INFO';
-/** Class information (RO) */                     const CMD_CLSS = 'CLSS';
-/** Serial number (RO) */                         const CMD_SNUM = 'SNUM';
-/** Software version (RO) */                      const CMD_SVER = 'SVER';
-/** Input terminal name (RO) */                   const CMD_INNM = 'INNM';
-/** Input resolution (RO) */                      const CMD_IRES = 'IRES';
-/** Recommended resolution (RO) */                const CMD_RRES = 'RRES';
-/** Filter usage time (RO) */                     const CMD_FILT = 'FILT';
-/** Lamp replacement model number (RO) */         const CMD_RLMP = 'RLMP';
-/** Filter replacement model number (RO) */       const CMD_RFIL = 'RFIL';
+/** Error status (RO) */                          const CMD_ERST = 'ERST';  // class 1
+/** Lamp number / lighting hour (RO) */           const CMD_LAMP = 'LAMP';  // class 1
+/** Input toggling list (RO) */                   const CMD_INST = 'INST';  // since PJLink 2.0 (class 2)
+/** Projector/Display name (RO) */                const CMD_NAME = 'NAME';  // class 1
+/** Manufacture name information (RO) */          const CMD_INF1 = 'INF1';  // class 1
+/** Product name information (RO) */              const CMD_INF2 = 'INF2';  // class 1
+/** Other information (RO) */                     const CMD_INFO = 'INFO';  // class 1
+/** Class information (RO) */                     const CMD_CLSS = 'CLSS';  // class 1
+/** Serial number (RO) */                         const CMD_SNUM = 'SNUM';  // since PJLink 2.0 (class 2)
+/** Software version (RO) */                      const CMD_SVER = 'SVER';  // since PJLink 2.0 (class 2)
+/** Input terminal name (RO) */                   const CMD_INNM = 'INNM';  // since PJLink 2.0 (class 2)
+/** Input resolution (RO) */                      const CMD_IRES = 'IRES';  // since PJLink 2.0 (class 2)
+/** Recommended resolution (RO) */                const CMD_RRES = 'RRES';  // since PJLink 2.0 (class 2)
+/** Filter usage time (RO) */                     const CMD_FILT = 'FILT';  // since PJLink 2.0 (class 2)
+/** Lamp replacement model number (RO) */         const CMD_RLMP = 'RLMP';  // since PJLink 2.0 (class 2)
+/** Filter replacement model number (RO) */       const CMD_RFIL = 'RFIL';  // since PJLink 2.0 (class 2)
 /* write only */
-/** Speaker volume adjustment (write only) */     const CMD_SVOL = 'SVOL';
-/** Microphone volume adjustment (write only) */  const CMD_MVOL = 'MVOL';
+/** Speaker volume adjustment (write only) */     const CMD_SVOL = 'SVOL';  // since PJLink 2.0 (class 2)
+/** Microphone volume adjustment (write only) */  const CMD_MVOL = 'MVOL';  // since PJLink 2.0 (class 2)
 /*
  * projector error codes
  */
@@ -58,6 +58,7 @@ export class PJLinkPlus extends PJLink {
     private wantedDeviceParameters = [
         { cmd: CMD_POWR, dynamic: true },
         { cmd: CMD_ERST, dynamic: true },
+        { cmd: CMD_CLSS, dynamic: false },
         { cmd: CMD_AVMT, dynamic: true },
         { cmd: CMD_LAMP, dynamic: true },
         { cmd: CMD_NAME, dynamic: false },
@@ -98,6 +99,7 @@ export class PJLinkPlus extends PJLink {
     private _manufactureName : string;
     private _productName : string;
     private _otherInformation : string;
+    private _class : number;
     // lamp information
     private _hasLamps : boolean;
     private _lampCount = 0;
@@ -357,7 +359,7 @@ export class PJLinkPlus extends PJLink {
             (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 2 ? 'Lamp three: ' + (this._lampThreeActive ? 'on' : 'off') + ', ' + this._lampThreeHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '') +
-            '(status report last updated ' + this._infoFetchDate + ')';
+            '(class ' + this._class + ', status report last updated ' + this._infoFetchDate + ')';
     }
 
     private translateErrorCode (code : number) : string {
@@ -366,7 +368,7 @@ export class PJLinkPlus extends PJLink {
                 return 'OK';
             case 1:
                 return 'Warning';
-            case 3:
+            case 2:
                 return 'Error';
         }
         return 'unknown error code';
@@ -577,6 +579,22 @@ export class PJLinkPlus extends PJLink {
                 }
                 break;
             case CMD_CLSS:
+                this._class = parseInt(reply);
+                if (this._class == 1) {
+                    // skip unsupported parameters (since we now know the PJLink class)
+                    this.skipDeviceParameters.push(CMD_INST);
+                    this.skipDeviceParameters.push(CMD_SNUM);
+                    this.skipDeviceParameters.push(CMD_SVER);
+                    this.skipDeviceParameters.push(CMD_INNM);
+                    this.skipDeviceParameters.push(CMD_IRES);
+                    this.skipDeviceParameters.push(CMD_RRES);
+                    this.skipDeviceParameters.push(CMD_FILT);
+                    this.skipDeviceParameters.push(CMD_RLMP);
+                    this.skipDeviceParameters.push(CMD_RFIL);
+                    this.skipDeviceParameters.push(CMD_SVOL);
+                    this.skipDeviceParameters.push(CMD_MVOL);
+                    this.skipDeviceParameters.push(CMD_FREZ);
+                }
                 break;
             case CMD_SNUM:
                 break;

@@ -54,6 +54,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             _this.wantedDeviceParameters = [
                 { cmd: CMD_POWR, dynamic: true },
                 { cmd: CMD_ERST, dynamic: true },
+                { cmd: CMD_CLSS, dynamic: false },
                 { cmd: CMD_AVMT, dynamic: true },
                 { cmd: CMD_LAMP, dynamic: true },
                 { cmd: CMD_NAME, dynamic: false },
@@ -379,7 +380,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                     (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
                     (this._lampCount > 2 ? 'Lamp three: ' + (this._lampThreeActive ? 'on' : 'off') + ', ' + this._lampThreeHours + ' lighting hours' + this._lineBreak : '') +
                     (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '') +
-                    '(status report last updated ' + this._infoFetchDate + ')';
+                    '(class ' + this._class + ', status report last updated ' + this._infoFetchDate + ')';
             },
             enumerable: true,
             configurable: true
@@ -390,7 +391,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                     return 'OK';
                 case 1:
                     return 'Warning';
-                case 3:
+                case 2:
                     return 'Error';
             }
             return 'unknown error code';
@@ -593,6 +594,21 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
                     }
                     break;
                 case CMD_CLSS:
+                    this._class = parseInt(reply);
+                    if (this._class == 1) {
+                        this.skipDeviceParameters.push(CMD_INST);
+                        this.skipDeviceParameters.push(CMD_SNUM);
+                        this.skipDeviceParameters.push(CMD_SVER);
+                        this.skipDeviceParameters.push(CMD_INNM);
+                        this.skipDeviceParameters.push(CMD_IRES);
+                        this.skipDeviceParameters.push(CMD_RRES);
+                        this.skipDeviceParameters.push(CMD_FILT);
+                        this.skipDeviceParameters.push(CMD_RLMP);
+                        this.skipDeviceParameters.push(CMD_RFIL);
+                        this.skipDeviceParameters.push(CMD_SVOL);
+                        this.skipDeviceParameters.push(CMD_MVOL);
+                        this.skipDeviceParameters.push(CMD_FREZ);
+                    }
                     break;
                 case CMD_SNUM:
                     break;
