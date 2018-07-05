@@ -31,6 +31,9 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             return _this;
         }
         PJLink_1 = PJLink;
+        PJLink.prototype.pollStatus = function () {
+            return true;
+        };
         PJLink.prototype.isOfTypeName = function (typeName) {
             return typeName === "PJLink" ? this : _super.prototype.isOfTypeName.call(this, typeName);
         };

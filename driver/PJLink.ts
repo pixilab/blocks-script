@@ -29,6 +29,13 @@ export class PJLink extends NetworkProjector {
 		this.attemptConnect();	// Attempt initial connection
 	}
 
+    /**
+	 	Poll for status regularly.
+	 */
+    protected pollStatus(): boolean {
+		return true;
+	}
+
 	/**
 	 * Allow clients to check for my type, just as in some system object classes
 	 */
