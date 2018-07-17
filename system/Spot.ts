@@ -118,6 +118,16 @@ export interface DisplaySpot extends SpotGroupItem {
 	 */
 	gotoPage(path: string): void;
 
+	/**
+	 * Restore tags to those specified in the Spot's configuration.
+	 */
+	resetTags(): void;
+
+	/**
+	 * Force set of tags to only those specified (comma separated).
+	 */
+	forceTags(tags: string): void;
+
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
 		type:
 			'Connection'|		// Connection state changed (check with isConnected)
