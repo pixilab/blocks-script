@@ -1,6 +1,3 @@
-/*
- * Driver for Samsung MDC compatible displays.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -23,9 +20,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**	Basic driver for sending keystrokes through a Global Caché iTach
-        Ethernet IR sender.
-    */
     var SamsungMDC = (function (_super) {
         __extends(SamsungMDC, _super);
         function SamsungMDC(socket) {
@@ -59,20 +53,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: true,
             configurable: true
         });
-        /**	Rudimentary command generator and sender, accepting a single
-            command byte and an optional single param byte.
-        */
         SamsungMDC.prototype.sendCommand = function (cmdByte, paramByte) {
             var cmd = [];
-            cmd.push(0xAA); // Start of commanf marker (not part of checksum)
+            cmd.push(0xAA);
             cmd.push(cmdByte);
-            cmd.push(0); // 0 is default. 0xFE targets ALL (can't make that work)
+            cmd.push(0);
             if (paramByte !== undefined) {
                 cmd.push(1);
                 cmd.push(paramByte);
             }
             else
-                cmd.push(0); // No param
+                cmd.push(0);
             var checksum = 0;
             var count = cmd.length;
             for (var ix = 1; ix < count; ++ix)
@@ -81,23 +72,22 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.socket.sendBytes(cmd);
             console.log(cmd);
         };
+        __decorate([
+            Metadata_1.property("Power on/off"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], SamsungMDC.prototype, "power", null);
+        __decorate([
+            Metadata_1.property("Input (source) number. HDMI1=0x21. HDMI2=0x22"),
+            Metadata_1.min(0x14), Metadata_1.max(0x40),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SamsungMDC.prototype, "input", null);
+        SamsungMDC = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 1515 }),
+            __metadata("design:paramtypes", [Object])
+        ], SamsungMDC);
         return SamsungMDC;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.property("Power on/off"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], SamsungMDC.prototype, "power", null);
-    __decorate([
-        Metadata_1.property("Input (source) number. HDMI1=0x21. HDMI2=0x22"),
-        Metadata_1.min(0x14), Metadata_1.max(0x40) // Somewhat arbitrary constraints
-        ,
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], SamsungMDC.prototype, "input", null);
-    SamsungMDC = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 1515 }),
-        __metadata("design:paramtypes", [Object])
-    ], SamsungMDC);
     exports.SamsungMDC = SamsungMDC;
 });

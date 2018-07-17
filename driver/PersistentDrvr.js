@@ -1,6 +1,3 @@
-/*
- * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -20,12 +17,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "../system/SimpleFile", "../system_lib/Driver", "../system_lib/Metadata"], function (require, exports, SimpleFile_1, Driver_1, Metadata_1) {
+define(["require", "exports", "system/SimpleFile", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleFile_1, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**	A do-nothing driver that illustrates how a driver can store persistent data in a file
-    * named by the asociated port.
-    */
     var PersistentDrvr = (function (_super) {
         __extends(PersistentDrvr, _super);
         function PersistentDrvr(socket) {
@@ -34,9 +28,6 @@ define(["require", "exports", "../system/SimpleFile", "../system_lib/Driver", ".
             socket.autoConnect();
             var myFullName = socket.fullName;
             console.log("fullName", myFullName);
-            /*	Attempt to load the initial value of the property from a file
-                named by the full name of associated NetworkTCP ports.
-            */
             SimpleFile_1.SimpleFile.read(myFullName).then(function (readValue) {
                 if (_this.mStringo !== readValue) {
                     _this.mStringo = readValue;
@@ -63,16 +54,16 @@ define(["require", "exports", "../system/SimpleFile", "../system_lib/Driver", ".
             enumerable: true,
             configurable: true
         });
+        __decorate([
+            Metadata_1.property("Persisted property"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], PersistentDrvr.prototype, "stringo", null);
+        PersistentDrvr = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 1025 }),
+            __metadata("design:paramtypes", [Object])
+        ], PersistentDrvr);
         return PersistentDrvr;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.property("Persisted property"),
-        __metadata("design:type", String),
-        __metadata("design:paramtypes", [String])
-    ], PersistentDrvr.prototype, "stringo", null);
-    PersistentDrvr = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 1025 }),
-        __metadata("design:paramtypes", [Object])
-    ], PersistentDrvr);
     exports.PersistentDrvr = PersistentDrvr;
 });

@@ -1,7 +1,3 @@
-/*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2018 by Mike Fahl.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -24,15 +20,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], function (require, exports, ScriptBase_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**
-     Ultimate base class for all script-based drivers.
-     */
-    var Driver = /** @class */ (function (_super) {
+    var Driver = (function (_super) {
         __extends(Driver, _super);
         function Driver(scriptFacade) {
             var _this = _super.call(this, scriptFacade) || this;
             if (scriptFacade.isOfTypeName("NetworkTCP")) {
-                // Re-emit message associated with basic "connected" state
                 scriptFacade.subscribe('connect', function (sender, message) {
                     if (message.type === 'Connection')
                         _this.__scriptFacade.firePropChanged('connected');
@@ -40,18 +32,11 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
             }
             return _this;
         }
-        /**	Inform others that prop has changed, causing any
-         *	subscribers to be notified soon.
-         */
         Driver.prototype.changed = function (prop) {
             this.__scriptFacade.changed(prop);
         };
         Object.defineProperty(Driver.prototype, "connected", {
-            /*	Provide basic connected status. May be overridden in subclass
-                if it has better idea.
-             */
             get: function () {
-                // Always false for facade that doesn't have connected property
                 return this.__scriptFacade.connected ? true : false;
             },
             enumerable: true,

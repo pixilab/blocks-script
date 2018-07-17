@@ -1,6 +1,3 @@
-/*
- * Created 2017 by Mike Fahl.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -26,24 +23,14 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /**
-     An example driver using a UDP socket for communicating with WATCHOUT.
-    */
-    var WOCustomUdpDrvr = /** @class */ (function (_super) {
+    var WOCustomUdpDrvr = (function (_super) {
         __extends(WOCustomUdpDrvr, _super);
-        /**
-         * Create me, attached to the network socket I communicate through. When using a
-         * driver, the driver replaces the built-in functionality of the network socket
-         with the properties and callable functions exposed.
-         */
         function WOCustomUdpDrvr(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
-            // IMPORTANT: The class name above MUST match the name of the
-            // file (minus its extension).
-            _this.mPlaying = false; // Most recent state (obtained from WO initially)
+            _this.mPlaying = false;
             _this.mStandBy = false;
-            _this.mLevel = 0; // Numeric state of Output
+            _this.mLevel = 0;
             return _this;
         }
         Object.defineProperty(WOCustomUdpDrvr.prototype, "layerCond", {
@@ -56,7 +43,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.mLayerCond = cond;
                     this.tell("enableLayerCond " + cond);
                 }
-                // console.info("layerCond", cond)
             },
             enumerable: true,
             configurable: true
@@ -65,16 +51,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             get: function () {
                 return this.mPlaying;
             },
-            /**
-             * Main timeline playback state. Where both a set and get function are provided,
-             * the value can also be set from a button. It is, however, possible to have a
-             * set implementation while still exposing the property as read-only by
-             * setting the second (optional) parameter of the @Meta.property annotation
-             * to true. This is useful for values you may want to set internally, from
-             * within the driver itself, and that should then update UI bound to the property.
-             */
             set: function (play) {
-                this.tell(play ? "run" : "halt"); // Start/stop main timeline
+                this.tell(play ? "run" : "halt");
                 this.mPlaying = play;
             },
             enumerable: true,
@@ -84,9 +62,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             get: function () {
                 return this.mStandBy;
             },
-            /**
-             * Set and get the standBy mode of the cluster.
-             */
             set: function (stby) {
                 this.tell(stby ? "standBy true 1000" : "standBy false 1000");
                 this.mStandBy = stby;
@@ -98,10 +73,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             get: function () {
                 return this.mLevel;
             },
-            /**
-             * An input value, that can be bound to a slider. Here the min and max annotations are
-             * also used to specify the acceptable range of the numeric value.
-             */
             set: function (level) {
                 var cmd = 'setInput "In1" ' + level;
                 console.log("setInput cmd", cmd);
@@ -111,21 +82,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: true,
             configurable: true
         });
-        /**
-         * A function that can be called from a Task, supplying multiple parameters.
-    
-           IMPORTANT: If a callable returns a Promise, any task invoking it will
-           stall until the promise is resolved/rejected.
-         */
         WOCustomUdpDrvr.prototype.playAuxTimeline = function (name, start) {
             this.tell((start ? "run \"" : "kill \"") + name + '""');
         };
-        /**
-         * Tell WATCHOUT something through the  socket. Funnel most commands through here
-         * to also allow them to be logged, which makes testing easier.
-         */
         WOCustomUdpDrvr.prototype.tell = function (data) {
-            // console.info('tell', data);
             this.socket.sendText(data + '\r');
         };
         __decorate([
