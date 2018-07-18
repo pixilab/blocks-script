@@ -26,16 +26,28 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             socket.autoConnect();
-            socket.subscribe('textReceived', _this.gotText.bind(_this));
+            socket.subscribe('textReceived', function (sender, message) {
+                return _this.scanned = message.text;
+            });
             return _this;
         }
-        NetRFID.prototype.gotText = function (sender, message) {
-            this.scannedValue = message.text;
-        };
+        Object.defineProperty(NetRFID.prototype, "scanned", {
+            get: function () {
+                return this.mScanned;
+            },
+            set: function (value) {
+                this.mScanned = value;
+                if (value)
+                    this.startResetTimeout();
+            },
+            enumerable: true,
+            configurable: true
+        });
         NetRFID.prototype.startResetTimeout = function () {
+            var _this = this;
             this.stopResetTimer();
             this.mResetValuePromise = wait(1000);
-            this.mResetValuePromise.then(this.clearScannedValue.bind(this));
+            this.mResetValuePromise.then(function () { return _this.scanned = ""; });
         };
         NetRFID.prototype.stopResetTimer = function () {
             if (this.mResetValuePromise) {
@@ -43,26 +55,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.mResetValuePromise = undefined;
             }
         };
-        NetRFID.prototype.clearScannedValue = function () {
-            this.scannedValue = "";
-        };
-        Object.defineProperty(NetRFID.prototype, "scannedValue", {
-            get: function () {
-                return this.mScannedValue;
-            },
-            set: function (value) {
-                this.mScannedValue = value;
-                if (value)
-                    this.startResetTimeout();
-            },
-            enumerable: true,
-            configurable: true
-        });
         __decorate([
-            Metadata_1.property("The scanned value"),
+            Metadata_1.property("Last scanned value, or empty string", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
-        ], NetRFID.prototype, "scannedValue", null);
+        ], NetRFID.prototype, "scanned", null);
         NetRFID = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 50000 }),
             __metadata("design:paramtypes", [Object])
