@@ -437,7 +437,6 @@ export class PJLinkPlus extends PJLink {
         }
     }
     private pollDeviceStatus() {
-        console.warn('pollDeviceStatus');
         // status interval minus up to 10% (to create some variation)
 		this.statusPoller = wait(STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1));
 		this.statusPoller.then(()=> {
