@@ -138,7 +138,7 @@ export class ChristieAccess extends NetworkProjector {
 			if (parts)
 				this.requestSuccess(parts[1]); // Only "reply" data part
 			else
-				console.warn("Unexpected data", text);
+				this.warnMsg("Unexpected data", text);
 			this.requestFinished();
 		}
 	}

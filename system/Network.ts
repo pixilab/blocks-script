@@ -125,6 +125,9 @@ export interface NetworkUDP extends NetworkBase {
  * network ports.
  */
 interface NetworkBase extends ScriptBaseEnv {
+	// Check subtype by name (e.g., "NetworkUDP")
+	isOfTypeName(typeName: string): NetworkBase|null;
+
 	// Read-only properties:
 	name: string;			// Name of this TCP port
 	fullName: string;		// Full name, including enclosing containers

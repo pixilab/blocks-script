@@ -119,12 +119,8 @@ export interface DisplaySpot extends SpotGroupItem {
 	gotoPage(path: string): void;
 
 	/**
-	 * Restore tags to those specified in the Spot's configuration.
-	 */
-	resetTags(): void;
-
-	/**
-	 * Force set of tags to only those specified (comma separated).
+	 * Force set of local tags to only those specified (comma separated). Does not
+	 * alter any tags specified in the Display Spot's configuration.
 	 */
 	forceTags(tags: string): void;
 
