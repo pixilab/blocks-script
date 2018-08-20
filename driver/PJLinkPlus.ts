@@ -327,16 +327,17 @@ export class PJLinkPlus extends PJLink {
     /* special properties */
     @Meta.property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)")
     public get isOnline () : boolean {
+    	const now = new Date();
         if (this.socket.connected) {
-            this._lastKnownConnectionDate = new Date();
+            this._lastKnownConnectionDate = now;
             return true;
         }
         if (!this._lastKnownConnectionDateSet) {
             console.warn('last known connection date unknown');
             return false;
         }
-        var msSinceLastConnection = (new Date()).getTime() - this._lastKnownConnectionDate.getTime();
-        console.warn(msSinceLastConnection);
+        var msSinceLastConnection = now.getTime() - this._lastKnownConnectionDate.getTime();
+        // console.warn(msSinceLastConnection);
         return msSinceLastConnection < 42000;
     }
 
@@ -431,12 +432,13 @@ export class PJLinkPlus extends PJLink {
         if (this.fetchDeviceInfoResolver) {
             this.fetchDeviceInfoResolver(true);
             this._infoFetchDate = new Date();
-            console.info("got device info");
+            // console.info("got device info");
             delete this.fetchingDeviceInfo;
             delete this.fetchDeviceInfoResolver;
         }
     }
     private pollDeviceStatus() {
+        // console.warn('pollDeviceStatus');
         // status interval minus up to 10% (to create some variation)
 		this.statusPoller = wait(STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1));
 		this.statusPoller.then(()=> {

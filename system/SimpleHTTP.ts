@@ -23,10 +23,11 @@ export interface Response {
  a promise that will be resolved/rejected  once the request is
  finished.
  */
-interface Request {
-	setTimeout(seconds: number): Request;
+export interface Request {
+	setTimeout(seconds: number): Request;	// Maximum time the request may take
+	header(headerName:string, headerValue:string): Request; // Additional header sent with request
 
-	get(): Promise<Response>;
-	put(dataToSend: string,  mediaType: string): Promise<Response>;
-	post(dataToSend: string,  mediaType: string): Promise<Response>;
+	get(): Promise<Response>;	// Make a basic GET request
+	put(dataToSend: string,  mediaType: string): Promise<Response>;	// PUT request with supplied data
+	post(dataToSend: string,  mediaType: string): Promise<Response>; // POST request with supplied data
 }

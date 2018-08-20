@@ -337,10 +337,10 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected requestFailure(msg?: string) {
 		// Suppress warning if power is off. Many projectors behave erratic then.
 		if (this.power)
-			console.warn("Request failed", msg);
+			this.warnMsg("Request failed", msg);
+		this.requestClear();
 		if (this.currRejector)
 			this.currRejector(msg);
-		this.requestClear();
 	}
 
 	/**

@@ -346,16 +346,16 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
         });
         Object.defineProperty(PJLinkPlus.prototype, "isOnline", {
             get: function () {
+                var now = new Date();
                 if (this.socket.connected) {
-                    this._lastKnownConnectionDate = new Date();
+                    this._lastKnownConnectionDate = now;
                     return true;
                 }
                 if (!this._lastKnownConnectionDateSet) {
                     console.warn('last known connection date unknown');
                     return false;
                 }
-                var msSinceLastConnection = (new Date()).getTime() - this._lastKnownConnectionDate.getTime();
-                console.warn(msSinceLastConnection);
+                var msSinceLastConnection = now.getTime() - this._lastKnownConnectionDate.getTime();
                 return msSinceLastConnection < 42000;
             },
             enumerable: true,
@@ -450,14 +450,12 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             if (this.fetchDeviceInfoResolver) {
                 this.fetchDeviceInfoResolver(true);
                 this._infoFetchDate = new Date();
-                console.info("got device info");
                 delete this.fetchingDeviceInfo;
                 delete this.fetchDeviceInfoResolver;
             }
         };
         PJLinkPlus.prototype.pollDeviceStatus = function () {
             var _this = this;
-            console.warn('pollDeviceStatus');
             this.statusPoller = wait(STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1));
             this.statusPoller.then(function () {
                 if (_this.socket.connected &&
@@ -663,6 +661,7 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             });
             return request;
         };
+        var PJLinkPlus_1;
         PJLinkPlus.delayedFetchInterval = 10000;
         PJLinkPlus.kMinMute = 10;
         PJLinkPlus.kMaxMute = 31;
@@ -835,7 +834,6 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             __metadata("design:paramtypes", [Object])
         ], PJLinkPlus);
         return PJLinkPlus;
-        var PJLinkPlus_1;
     }(PJLink_1.PJLink));
     exports.PJLinkPlus = PJLinkPlus;
 });
