@@ -20,10 +20,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    /*
-     Manage a Christie ACCESS display, accessed through a provided NetworkTCP connection.
-     */
-    var ChristieAccess = ChristieAccess_1 = (function (_super) {
+    var ChristieAccess = (function (_super) {
         __extends(ChristieAccess, _super);
         function ChristieAccess(socket) {
             var _this = _super.call(this, socket) || this;
@@ -31,20 +28,15 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this.addState(_this._power);
             _this._input = new NetworkProjector_1.NumState('SELECTSOURCE', 'input', ChristieAccess_1.kMinInput, ChristieAccess_1.kMaxInput);
             _this.addState(_this._input);
-            _this.poll(); // Get polling going
-            _this.attemptConnect(); // Attempt initial connection
+            _this.poll();
+            _this.attemptConnect();
             return _this;
         }
+        ChristieAccess_1 = ChristieAccess;
         Object.defineProperty(ChristieAccess.prototype, "input", {
-            /*
-             Get current input, if known, else undefined.
-             */
             get: function () {
                 return this._input.get();
             },
-            /*
-             Set desired input source.
-             */
             set: function (value) {
                 if (this._input.set(value))
                     this.sendCorrection();
@@ -52,20 +44,13 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             enumerable: true,
             configurable: true
         });
-        /*
-         Override to call getInitialState on connection, as this protocol has
-         no initial handshake from projector.
-         */
         ChristieAccess.prototype.justConnected = function () {
             _super.prototype.justConnected.call(this);
             this.getInitialState();
         };
-        /*
-         Send queries to obtain the initial state of the projector.
-         */
         ChristieAccess.prototype.getInitialState = function () {
             var _this = this;
-            this.connected = false; // Mark me as not yet fully awake, to hold off commands
+            this.connected = false;
             this.request('GETQUICKSTANDBY').then(function (reply) {
                 console.info("getInitialState GETQUICKSTANDBY", reply);
                 if (reply)
@@ -74,7 +59,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             }).then(function (reply) {
                 console.info("getInitialState GETSOURCE", reply);
                 if (reply) {
-                    // GETSOURCE returns name, but we want input number
                     var inputNum = ChristieAccess_1.kInputNameToNum[reply];
                     if (inputNum)
                         _this._input.updateCurrent(inputNum);
@@ -86,25 +70,18 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 _this.disconnectAndTryAgainSoon();
             });
         };
-        /*
-         Send a question or command to the display, and wait for the response.
-         */
         ChristieAccess.prototype.request = function (question, param) {
             var _this = this;
             var toSend = question;
             if (param !== undefined)
                 toSend += ' ' + param;
-            // console.info("request", toSend);
             this.socket.sendText(toSend, this.getDefaultEoln())
                 .catch(function (err) {
                 return _this.sendFailed(err);
             });
             var result = this.startRequest(question);
             result.finally(function () {
-                // Send further corrections soon, with some delay between each as
-                // display isn't always happy with commands sent back to back
                 wait(600).then(function () {
-                    // console.info("request finally sendCorrection");
                     _this.sendCorrection();
                 });
             });
@@ -113,51 +90,44 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         ChristieAccess.prototype.getDefaultEoln = function () {
             return '\r\n';
         };
-        /*
-         Got data from peer. Handle responses to requests.
-         */
         ChristieAccess.prototype.textReceived = function (text) {
             if (text) {
                 console.info("textReceived", text);
                 var parts = ChristieAccess_1.replyParser.exec(text);
                 if (parts)
-                    this.requestSuccess(parts[1]); // Only "reply" data part
+                    this.requestSuccess(parts[1]);
                 else
                     this.warnMsg("Unexpected data", text);
                 this.requestFinished();
             }
         };
+        ChristieAccess.replyParser = /.* (.*)$/;
+        ChristieAccess.kMinInput = 5;
+        ChristieAccess.kMaxInput = 20;
+        ChristieAccess.kInputNameToNum = {
+            "FAV": 5,
+            "HDMI1": 7,
+            "HDMI2": 8,
+            "YPbPr": 11,
+            "VGA": 12,
+            "DVI": 18,
+            "DP": 19,
+            "OPS": 20
+        };
+        __decorate([
+            Meta.property("Desired input source number"),
+            Meta.min(ChristieAccess_1.kMinInput), Meta.max(ChristieAccess_1.kMaxInput),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], ChristieAccess.prototype, "input", null);
+        ChristieAccess = ChristieAccess_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 1986 }),
+            __metadata("design:paramtypes", [Object])
+        ], ChristieAccess);
         return ChristieAccess;
+        var ChristieAccess_1;
     }(NetworkProjector_1.NetworkProjector));
-    ChristieAccess.replyParser = /.* (.*)$/; // Extracts word following last space
-    ChristieAccess.kMinInput = 5; // Allowable input range
-    ChristieAccess.kMaxInput = 20;
-    // Maps input name to input number, as query command returns name, but we use number
-    ChristieAccess.kInputNameToNum = {
-        "FAV": 5,
-        "HDMI1": 7,
-        "HDMI2": 8,
-        "YPbPr": 11,
-        "VGA": 12,
-        "DVI": 18,
-        "DP": 19,
-        "OPS": 20
-    };
-    __decorate([
-        Meta.property("Desired input source number"),
-        Meta.min(ChristieAccess_1.kMinInput), Meta.max(ChristieAccess_1.kMaxInput),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], ChristieAccess.prototype, "input", null);
-    ChristieAccess = ChristieAccess_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 1986 }),
-        __metadata("design:paramtypes", [Object])
-    ], ChristieAccess);
     exports.ChristieAccess = ChristieAccess;
-    /**
-     * I use the SETQUICKSTANDBY command to implement power, by setting
-     * standby to "on" when power is off, and vice versa.
-     */
     var PowerState = (function (_super) {
         __extends(PowerState, _super);
         function PowerState() {
@@ -169,5 +139,4 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         return PowerState;
     }(NetworkProjector_1.State));
     exports.PowerState = PowerState;
-    var ChristieAccess_1;
 });

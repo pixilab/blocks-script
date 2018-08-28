@@ -5,12 +5,10 @@
 
 /// <reference path = 'PIXI.d.ts' />
 
-export var WebRenderer: WebRendererHandler;
-
-interface WebRendererHandler {
+export var WebRenderer: {
 	/**
 	 * Write web page as PNG image file. Returns a promise that's resolved once done.
 	 * The file is stored with the specified name under /public/WebRenderer/
 	 */
-	render(url: string, toFile:string, width:number, height:number): Promise<void>;
+	render(url: string, toFile:string, width:number, height:number, extraDelayMillis?: number, explicitReady?:boolean): Promise<void>;
 }

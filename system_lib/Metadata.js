@@ -78,6 +78,15 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.max = max;
+    function resource(auhorization) {
+        return function (target, propertyKey, descriptor) {
+            var info = {
+                auth: auhorization || ""
+            };
+            return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
+        };
+    }
+    exports.resource = resource;
     function getArgs(func) {
         var args = func.toString().match(funcArgsRegEx)[1];
         return args.split(',')

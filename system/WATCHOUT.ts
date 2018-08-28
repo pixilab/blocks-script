@@ -25,7 +25,6 @@ interface WATCHOUTCluster {
 	getShowName(): string;
 
 	playing: boolean;		// Main timeline
-	stopped: boolean;		// Main timeline
 	play(auxTimelineName?:string): void;	// Main timeline if no auxTimelineName
 	pause(auxTimelineName?:string): void;
 	stop(auxTimelineName?:string): void;
@@ -74,5 +73,6 @@ interface WATCHOUTCluster {
 		text: string
 	})=>void): void;
 
+	// Explicitly end subscription to event with function
 	unsubscribe(event: string, listener: Function): void;
 }
