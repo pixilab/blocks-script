@@ -17,7 +17,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Script", "system_lib/Metadata", "system/SimpleFile", "system/WebRenderer"], function (require, exports, Script_1, Metadata_1, SimpleFile_1, WebRenderer_1) {
+define(["require", "exports", "system_lib/Script", "system_lib/Metadata", "system/SimpleFile", "system/WebRenderer", "../system/WATCHOUT"], function (require, exports, Script_1, Metadata_1, SimpleFile_1, WebRenderer_1, WATCHOUT_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var Signature = (function (_super) {
@@ -28,13 +28,39 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata", "syste
             return _this;
         }
         Signature.prototype.render = function (data) {
+            var _this = this;
             var tempPath = data.tempPath;
             var src = "/temp/" + tempPath;
             var dest = "/public/block/Main/Signature/media/image.png";
             var compositeBlockUrl = "http://localhost:9080/spot/index.ftl?noConn=1&transparent=1&preview=1&block=" + encodeURI("Main/CompleteSignature");
-            return SimpleFile_1.SimpleFile.move(src, dest, true).then(function () {
-                return WebRenderer_1.WebRenderer.render(compositeBlockUrl, "Composite.png", 1920, 1080, 0, true);
+            WATCHOUT_1.WATCHOUT['qatar'].stop('Signatures');
+            this.moveRenderPromise = SimpleFile_1.SimpleFile.move(src, dest, true).then(function () {
+                return WebRenderer_1.WebRenderer.render(compositeBlockUrl, "new.png", 1920, 1080, 0, true);
             });
+            return new Promise(function (resolve) {
+                _this.allCompleteResolve = resolve;
+                SimpleFile_1.SimpleFile.delete('/public/WebRenderer/30.png').then(_this.lastDeleted.bind(_this), _this.lastDeleted.bind(_this));
+            });
+        };
+        Signature.prototype.lastDeleted = function () {
+            this.renameImage(29);
+        };
+        Signature.prototype.renameImage = function (imageNum) {
+            var _this = this;
+            if (imageNum === 0) {
+                this.moveRenderPromise.then(function () {
+                    SimpleFile_1.SimpleFile.move("/public/WebRenderer/new.png", "/public/WebRenderer/1.png").then(function () {
+                        _this.allDone();
+                    });
+                });
+            }
+            else {
+                SimpleFile_1.SimpleFile.move("/public/WebRenderer/" + imageNum + ".png", "/public/WebRenderer/" + (imageNum + 1) + ".png", true).then(this.renameImage.bind(this, imageNum - 1), this.renameImage.bind(this, imageNum - 1));
+            }
+        };
+        Signature.prototype.allDone = function () {
+            WATCHOUT_1.WATCHOUT['qatar'].play('Signatures');
+            this.allCompleteResolve({ success: true });
         };
         __decorate([
             Metadata_1.resource(),
