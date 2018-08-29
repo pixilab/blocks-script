@@ -14,3 +14,7 @@ You can then call it to parse a CSV file like this:
 
 See the papaparse documentation for details.
 
+* * *
+
+Also includes split-string by Jon Schlinkert (https://github.com/jonschlinkert/split-string),
+for splitting strings (such as device replies) respecting quotes and escape characters.
