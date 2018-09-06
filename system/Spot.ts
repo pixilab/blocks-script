@@ -6,18 +6,20 @@
 /// <reference path = 'PIXI.d.ts' />
 
 /**
- * Access a Spot known to the system under its assigned name.
- * Use dot notation to access spots inside groups.
+ * Access a SpotGroupItem under its assigned name.
+ * Use dot notation to access nested spots inside groups.
  */
-export var Spot: SpotGroup;
+export var Spot: {
+	[name: string]: SpotGroupItem;
+};
 
 /**
- Marker interface for items that can live in a SpotGroup (including other SpotGroups)
+ Items that can live in the root Spot object
  */
 interface SpotGroupItem {
 }
 
-interface SpotGroup extends SpotGroupItem {
+export interface SpotGroup extends SpotGroupItem {
 	[name: string]: SpotGroupItem;
 }
 
