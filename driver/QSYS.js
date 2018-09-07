@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    }
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -24,26 +27,35 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var split = require("lib/split-string");
+    var Mapping;
+    (function (Mapping) {
+        Mapping[Mapping["Position"] = 0] = "Position";
+        Mapping[Mapping["Value"] = 1] = "Value";
+    })(Mapping || (Mapping = {}));
     var QSYS = (function (_super) {
         __extends(QSYS, _super);
         function QSYS(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             _this.controls = [
-                { internalName: 'tap1Gain', controlName: 'tap1gain' },
-                { internalName: 'masterGain', controlName: 'mastergain' }
+                { controlName: 'masterGain' },
+                { controlName: 'Name with Space', propertyName: 'nameWithSpace' },
+                { controlName: 'rawProp', mapping: Mapping.Value },
             ];
             _this.mConnected = false;
             _this.props = {};
             _this.controlToProp = {};
             _this.asFeedback = false;
             for (var _i = 0, _a = _this.controls; _i < _a.length; _i++) {
-                var _b = _a[_i], controlName = _b.controlName, internalName = _b.internalName;
-                _this.props[internalName] = {
-                    controlName: controlName,
+                var control = _a[_i];
+                var prop = {
+                    controlName: control.controlName,
+                    propertyName: control.propertyName ? control.propertyName : control.controlName,
+                    mapping: control.mapping ? control.mapping : Mapping.Position,
                     value: 0
                 };
-                _this.controlToProp[controlName] = internalName;
+                _this.props[prop.propertyName] = prop;
+                _this.controlToProp[prop.controlName] = prop;
             }
             socket.subscribe('connect', function (sender, message) {
                 console.info('connect msg', message.type);
@@ -59,15 +71,21 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.keepAlive();
             return _this;
         }
-        Object.defineProperty(QSYS.prototype, "tap1Gain", {
-            get: function () { return this.propGetter('tap1Gain'); },
-            set: function (val) { this.propSetter('tap1Gain', val); },
-            enumerable: true,
-            configurable: true
-        });
         Object.defineProperty(QSYS.prototype, "masterGain", {
             get: function () { return this.propGetter('masterGain'); },
             set: function (val) { this.propSetter('masterGain', val); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(QSYS.prototype, "nameWithSpace", {
+            get: function () { return this.propGetter('nameWithSpace'); },
+            set: function (val) { this.propSetter('nameWithSpace', val); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(QSYS.prototype, "rawProp", {
+            get: function () { return this.propGetter('rawProp'); },
+            set: function (val) { this.propSetter('rawProp', val); },
             enumerable: true,
             configurable: true
         });
@@ -81,14 +99,18 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: true,
             configurable: true
         });
-        QSYS.prototype.propSetter = function (internalName, val) {
-            var prop = this.props[internalName];
-            if (!this.asFeedback)
-                this.tell('csp "' + prop.controlName + '" ' + val);
+        QSYS.prototype.propSetter = function (propertyName, val) {
+            var prop = this.props[propertyName];
+            if (!prop)
+                return;
+            if (!this.asFeedback) {
+                var command = prop.mapping == Mapping.Position ? "csp" : "csv";
+                this.tell(command + ' "' + prop.controlName + '" ' + val);
+            }
             prop.value = val;
         };
-        QSYS.prototype.propGetter = function (internalName) {
-            return this.props[internalName].value;
+        QSYS.prototype.propGetter = function (propertyName) {
+            return this.props[propertyName].value;
         };
         QSYS.prototype.controlSetPosition = function (id, position) {
             this.tell('csp "' + id + '" ' + position);
@@ -107,6 +129,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         QSYS.prototype.controlTrigger = function (id) {
             this.tell('ct "' + id + '"');
+        };
+        QSYS.prototype.snapshotLoad = function (sBank, sNum, rampTime) {
+            this.tell('ssl "' + sBank + '" ' + sNum + ' ' + rampTime);
+        };
+        QSYS.prototype.snapshotSave = function (sBank, sNum) {
+            this.tell('sss "' + sBank + '" ' + sNum);
         };
         QSYS.prototype.connectStateChanged = function () {
             console.info("connectStateChanged", this.socket.connected);
@@ -145,9 +173,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             if (pieces && pieces.length >= 1) {
                 var cmd = pieces[0];
                 if (cmd === "cv") {
-                    var id = pieces[1];
+                    var prop = this.controlToProp[pieces[1]];
+                    if (!prop) {
+                        console.warn('Received cv for unknown property ' + pieces[1]);
+                        return;
+                    }
+                    var value = prop.mapping == Mapping.Value ? pieces[3] : pieces[4];
                     this.asFeedback = true;
-                    this[this.controlToProp[id]] = parseFloat(pieces[4]);
+                    this[prop.propertyName] = parseFloat(value);
                     this.asFeedback = false;
                 }
                 else if (cmd === "cmv" || cmd === "cmvv" || cmd === "cvv") {
@@ -172,19 +205,26 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 console.warn("Unparsable reply from device", text);
         };
         __decorate([
-            Meta.property("Tap 1 Gain"),
-            Meta.min(0),
-            Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], QSYS.prototype, "tap1Gain", null);
-        __decorate([
             Meta.property("Master Gain"),
             Meta.min(0),
             Meta.max(1),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], QSYS.prototype, "masterGain", null);
+        __decorate([
+            Meta.property("Name with Space"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], QSYS.prototype, "nameWithSpace", null);
+        __decorate([
+            Meta.property("Raw Prop"),
+            Meta.min(-100),
+            Meta.max(20),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], QSYS.prototype, "rawProp", null);
         __decorate([
             Meta.property("Connected to Q-SYS", true),
             __metadata("design:type", Boolean),
@@ -239,6 +279,23 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], QSYS.prototype, "controlTrigger", null);
+        __decorate([
+            Meta.callable("Snapshot Load"),
+            __param(0, Meta.parameter("Snapshot Bank")),
+            __param(1, Meta.parameter("Snapshot Number")),
+            __param(2, Meta.parameter("Ramp Time")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], QSYS.prototype, "snapshotLoad", null);
+        __decorate([
+            Meta.callable("Snapshot Save"),
+            __param(0, Meta.parameter("Snapshot Bank")),
+            __param(1, Meta.parameter("Snapshot Number")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number]),
+            __metadata("design:returntype", void 0)
+        ], QSYS.prototype, "snapshotSave", null);
         QSYS = __decorate([
             Meta.driver('NetworkTCP', { port: 1702 }),
             __metadata("design:paramtypes", [Object])
