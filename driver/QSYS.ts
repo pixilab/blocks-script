@@ -16,8 +16,8 @@ const split:any = require("lib/split-string");
  Q-SYS controls names must be hard-coded below (at START CONFIGURATION),
  and (for now) getters and setters must be manually created.
 
- The driver exposes control positions (normalised 0.00-1.00 values) as Blocks
- property values.
+ The driver maps either control positions (normalised 0.00-1.00 values, default)
+ or raw values as Blocks property values.
 
  String and vector controls are not yet supported.
  */
@@ -26,13 +26,21 @@ interface Dictionary<T> {
 	[K: string]: T;
 }
 
-interface QSYSControl {
-	internalName: string;
+enum Mapping {
+	Position,
+	Value
+}
+
+interface Control {
 	controlName: string;
+	propertyName?: string;
+	mapping?: Mapping;
 }
 
 interface Prop {
 	controlName: string;
+	propertyName: string;
+	mapping: Mapping;
 	value: number;
 }
 
@@ -44,25 +52,27 @@ export class QSYS extends Driver<NetworkTCP> {
 	/**
 	 Define the Q-SYS Named Controls you wish to expose as Blocks properties here.
 
-	 internalName is the Blocks property id and must be a valid TypeScript variable name.
-	 controlName is the Named Control name in the Q-SYS design.
+	 controlName is the Named Control name in the Q-SYS design. By default, it
+	 will also be used as the propertyName.
+
+	 if controlName is not a valid Blocks property id and TypeScript variable name,
+	 you need to explicitly specify a propertyName to be used as the id.
+
+	 Remember to use the propertyName when defining your getters and setters.
+
+	 By default, properties map to control positions (0.00 - 1.00). Specify
+	 "mapping: Mapping.Value" to map to raw values instead.
 
 	 Define the user-visible property descriptions in the setters' @Meta.property decorators.
 	 */
 
-	private controls: Array<QSYSControl> = [
-		{internalName: 'tap1Gain', controlName: 'tap1gain'},
-		{internalName: 'masterGain', controlName: 'mastergain'}
+	private controls: Array<Control> = [
+		{controlName: 'masterGain'},
+		{controlName: 'Name with Space', propertyName: 'nameWithSpace'},
+		{controlName: 'rawProp', mapping: Mapping.Value},
 	]
 
 	/* Then, for each property, define a getter and a setter */
-
-	// tap1Gain
-	@Meta.property("Tap 1 Gain")
-	@Meta.min(0)
-	@Meta.max(1)
-	public set tap1Gain(val: number) { this.propSetter('tap1Gain', val); }
-	public get tap1Gain() { return this.propGetter('tap1Gain'); }
 
 	// masterGain
 	@Meta.property("Master Gain")
@@ -71,11 +81,25 @@ export class QSYS extends Driver<NetworkTCP> {
 	public set masterGain(val: number) { this.propSetter('masterGain', val); }
 	public get masterGain() { return this.propGetter('masterGain'); }
 
+	// nameWithSpace
+	@Meta.property("Name with Space")
+	@Meta.min(0)
+	@Meta.max(1)
+	public set nameWithSpace(val: number) { this.propSetter('nameWithSpace', val); }
+	public get nameWithSpace() { return this.propGetter('nameWithSpace'); }
+
+	// rawProp
+	@Meta.property("Raw Prop")
+	@Meta.min(-100)
+	@Meta.max(20)
+	public set rawProp(val: number) { this.propSetter('rawProp', val); }
+	public get rawProp() { return this.propGetter('rawProp'); }
+
 	/**** END CONFIGURATION ****/
 
 	private mConnected = false; // Connected to Q-SYS
 	private props: Dictionary<Prop> = {};
-	private controlToProp: Dictionary<string> = {};
+	private controlToProp: Dictionary<Prop> = {};
 
 	private statusPoller: CancelablePromise<void>; // Keep-alive poller
 	private asFeedback = false;
@@ -89,12 +113,15 @@ export class QSYS extends Driver<NetworkTCP> {
 		super(socket);
 
 		// Init properties, and map control names to properties, for processing incoming messages
-		for (const { controlName, internalName } of this.controls) {
-			this.props[internalName] = {
-				controlName: controlName,
+		for (const control of this.controls) {
+			let prop: Prop = {
+				controlName: control.controlName,
+				propertyName: control.propertyName ? control.propertyName : control.controlName,
+				mapping: control.mapping ? control.mapping : Mapping.Position,
 				value: 0
-			};
-			this.controlToProp[controlName] = internalName;
+			}
+			this.props[prop.propertyName] = prop;
+			this.controlToProp[prop.controlName] = prop;
 		}
 
 		// Connect
@@ -124,15 +151,19 @@ export class QSYS extends Driver<NetworkTCP> {
 
 	/* setter/getter helpers */
 
-	private propSetter(internalName: string, val: number) {
-		const prop: Prop = this.props[internalName];
-		if (!this.asFeedback)
-			this.tell('csp "' + prop.controlName + '" ' + val);
+	private propSetter(propertyName: string, val: number) {
+		const prop: Prop = this.props[propertyName];
+		if (!prop)
+			return;
+		if (!this.asFeedback) {
+			const command = prop.mapping == Mapping.Position ? "csp" : "csv";
+			this.tell(command + ' "' + prop.controlName + '" ' + val);
+		}
 		prop.value = val;
 	}
 
-	private propGetter(internalName: string) {
-		return this.props[internalName].value;
+	private propGetter(propertyName: string) {
+		return this.props[propertyName].value;
 	}
 
 	/** CALLABLE FUNCTIONS
@@ -205,8 +236,24 @@ export class QSYS extends Driver<NetworkTCP> {
 		this.tell('ct "' + id + '"');
 	}
 
-	/* Snapshot Load NOT IMPLEMENTED */
-	/* Snapshot Save NOT IMPLEMENTED */
+	/* Snapshot Load */
+	@Meta.callable("Snapshot Load")
+	public snapshotLoad(
+		@Meta.parameter("Snapshot Bank") sBank: string,
+		@Meta.parameter("Snapshot Number") sNum: number,
+		@Meta.parameter("Ramp Time") rampTime: number
+	) {
+		this.tell('ssl "' + sBank + '" ' + sNum + ' ' + rampTime);
+	}
+
+	/* Snapshot Save */
+	@Meta.callable("Snapshot Save")
+	public snapshotSave(
+		@Meta.parameter("Snapshot Bank") sBank: string,
+		@Meta.parameter("Snapshot Number") sNum: number
+	) {
+		this.tell('sss "' + sBank + '" ' + sNum);
+	}
 
 	/**
 	 Connection state changed. If became connected, setup the connection. Called
@@ -232,7 +279,7 @@ export class QSYS extends Driver<NetworkTCP> {
 		});
 	}
 
-	/** Login and subsribe to changes as I wake up.
+	/** Login and subscribe to changes as I wake up.
 	 */
 	private setupConnection() {
 		/**
@@ -282,10 +329,15 @@ export class QSYS extends Driver<NetworkTCP> {
 		if (pieces && pieces.length >= 1) {
 			const cmd = pieces[0];
 			if (cmd === "cv") {
-				// Control Value received, use CONTROL_POSITION to set property
-				const id = pieces[1];
+				// Control Value received, use CONTROL_POSITION or CONTROL_VALUE to set property
+				const prop = this.controlToProp[pieces[1]];
+				if (!prop) {
+					console.warn('Received cv for unknown property ' + pieces[1]);
+					return;
+				}
+				const value = prop.mapping == Mapping.Value ? pieces[3] : pieces[4];
 				this.asFeedback = true;
-				this[this.controlToProp[id]] = parseFloat(pieces[4]);
+				this[prop.propertyName] = parseFloat(value);
 				this.asFeedback = false;
 			} else if (cmd === "cmv" || cmd === "cmvv" || cmd === "cvv") {
 				// Not handled yet
