@@ -1,4 +1,5 @@
-/**	Scripting/driver service functions provided by BLOCKS' runtime environment.
+/**	Core functionality provided by Blocks' runtime environment, available to drivers and
+ 	user scripts.
 
 	Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
 	Created 2017 by Mike Fahl.

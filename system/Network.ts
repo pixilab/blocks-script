@@ -3,7 +3,7 @@
  * Created 2017 by Mike Fahl.
  */
 
-import {ScriptBaseEnv} from "../system_lib/ScriptBase";
+import {ScriptBaseEnv} from "system_lib/ScriptBase";
 
 /**
  * Access Network subsystem known by system by its device (socket) name.
@@ -52,7 +52,7 @@ export interface NetworkTCP extends NetworkBase {
 	*/
 	sendText(text: string, optLineTerminator: string): Promise<any>;
 
-	/*	Send "raw" data bytes. Only allowed when opened in "rawBytesMode".
+	/*	Send "raw" data bytes.
 		Returned promise resolved/rejected once sent/failed.
 	 */
 	sendBytes(rawData: number[]): Promise<any>;

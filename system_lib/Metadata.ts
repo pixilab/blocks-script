@@ -122,6 +122,26 @@ export function max(max:number) {
     };
 }
 
+/**
+ Annotation declaring a method as accessible from a web client under
+
+ 	rest/script/call/<user-script-name>/<method-name>
+
+ with a JSON body payload passed to the method as a string, and r eturning the string
+ returned frmo the method (presumably also JSON data).
+
+ The "authorization" parameter is not yet supported.
+ */
+export function resource(auhorization?: string) {
+	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
+		const info = {	// Information provided about this resource
+			auth: auhorization || ""
+		};
+		return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
+	}
+}
+
+
 /*	Get the formal parameter names of func as an array.
  */
 function getArgs(func: Function): string[] {

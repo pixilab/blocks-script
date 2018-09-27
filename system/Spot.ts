@@ -6,7 +6,8 @@
 /// <reference path = 'PIXI.d.ts' />
 
 /**
- * Access Spot subsystem known by system by its assigned name.
+ * Access a Spot known to the system under its assigned name.
+ * Use dot notation to access spots inside groups.
  */
 export var Spot: SpotGroup;
 
@@ -20,23 +21,10 @@ interface SpotGroup extends SpotGroupItem {
 	[name: string]: SpotGroupItem;
 }
 
-export interface DisplaySpot extends SpotGroupItem {
-
-	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name
-
-	/**
-	 True if the spot is connected. Read only.
-	 */
-	connected: boolean;
-
-	/**
-	 * Load a Block with priority. Returns a promise that's fulfilled once
-	 * the block is loaded, or rejected if the loading fails. Block name
-	 * is in "group/leaf" form. Setting to null or empty string reverts to
-	 * the normal block.
-	 */
-	loadPriorityBlock(name: string): Promise<any>;
-
+/**
+ * Basic Spot properties available for most spot types.
+ */
+export interface BaseSpot {
 	/**
 	 Default block name as "group/leaf", or empty string
 	 if none.
@@ -54,6 +42,23 @@ export interface DisplaySpot extends SpotGroupItem {
 	 if none.
 	 */
 	playingBlock: string;	// Read-only
+}
+
+export interface DisplaySpot extends SpotGroupItem, BaseSpot {
+	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name (e.g., "DisplaySpot")
+
+	/**
+	 True if the spot is connected. Read only.
+	 */
+	connected: boolean;
+
+	/**
+	 * Load a Block with priority. Returns a promise that's fulfilled once
+	 * the block is loaded, or rejected if the loading fails. Block name
+	 * is in "group/leaf" form. Setting to null or empty string reverts to
+	 * the normal block.
+	 */
+	loadPriorityBlock(name: string): Promise<any>;
 
 	/**
 	 * Turn power on/off, if possible.
@@ -99,6 +104,10 @@ export interface DisplaySpot extends SpotGroupItem {
 	 */
 	customClasses: string;
 
+	/**	Restore tags to those specified in the Spot's configuration.
+	 */
+	resetTags(): void;
+
 	/**
 	 Ask Spot to reveal the specified path, which is assumed to exist
 	 in the currently loaded block. The path must be absolute (start
@@ -141,5 +150,20 @@ export interface DisplaySpot extends SpotGroupItem {
 			'Playing'			// Is playing (vs paused)
 	})=>void): void;
 
+	unsubscribe(event: string, listener: Function): void;
+}
+
+
+export interface MobileSpot extends SpotGroupItem, BaseSpot {
+	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name (e.g., "MobileSpot")
+
+	subscribe(event: "spot", listener: (sender: MobileSpot, message:{
+		type:
+			'DefaultBlock'|		// Default block changed (may be schedule)
+			'PriorityBlock'|	// Priority block changed (may be schedule)
+			'PlayingBlock'		// Actually playing block changed (always media)
+	})=>void): void;
+
+	// Explicitly end subscription to event with function
 	unsubscribe(event: string, listener: Function): void;
 }

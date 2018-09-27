@@ -1,9 +1,7 @@
 /*
+ * Object that can be required by user scripts to access the PubSub mechanism.
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2017 by Mike Fahl.
- */
-
-/*	Object required by scripts to access the PubSub mechanism.
  */
 
 /*	Main entry point for me.
