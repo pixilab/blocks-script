@@ -100,6 +100,9 @@ export interface WATCHOUTCluster extends Timeline {
 		type: 'Error'|'Warning',
 		text: string
 	})=>void): void;
+
+	// Object is being shut down
+	subscribe(event: 'finish', listener: (sender: WATCHOUTCluster)=>void): void;
 }
 
 /**
@@ -129,4 +132,7 @@ export interface AuxTimeline extends Timeline {
 			'Playback'|		// Playback state changed
 			'TimePosition'	// Time position changed abruptly
 	})=>void): void;
+
+	// Object is being shut down
+	subscribe(event: 'finish', listener: (sender: AuxTimeline)=>void): void;
 }

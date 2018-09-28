@@ -87,7 +87,7 @@ export interface NetworkTCP extends NetworkBase {
 			'ConnectionFailed'	// Connection attempt failed
 	}) => void): void;
 
-	// Host object is being shut down
+	// Object is being shut down
 	subscribe(event: 'finish', listener: (sender: NetworkTCP)=>void): void;
 
 }
@@ -97,6 +97,8 @@ export interface NetworkTCP extends NetworkBase {
  */
 export interface NetworkUDP extends NetworkBase {
 	isOfTypeName(typeName: string): NetworkUDP|null;	// Check subtype by name
+
+	listenerPort: number;	// UDP listener port number, if any, else 0 (read only)
 
 	// Text to send (append \r or other framing before calling, if needed)
 	sendText(text:string): void;
@@ -116,7 +118,7 @@ export interface NetworkUDP extends NetworkBase {
 		rawData:number[]				// The raw data that was received
 	})=>void): void;
 
-	// Host object is being shut down
+	// Object is being shut down
 	subscribe(event: 'finish', listener: (sender: NetworkUDP)=>void): void;
 }
 

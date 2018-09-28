@@ -135,22 +135,38 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 */
 	forceTags(tags: string): void;
 
+	/**
+	 * Event fired when interesting connection state event occurs.
+	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
 		type:
 			'Connection'|		// Connection state changed (check with isConnected)
 			'ConnectionFailed'	// Connection attempt failed
 	})=>void): void;
 
+	/**
+	 *	Event fired when various spot state changes occur.
+	 */
 	subscribe(event: "spot", listener: (sender: DisplaySpot, message:{
 		type:
-			'DefaultBlock'|		// Default block changed (may be schedule)
-			'PriorityBlock'|	// Priority block changed (may be schedule)
-			'PlayingBlock'|		// Actually playing block changed (always media)
+			'DefaultBlock'|		// Default block changed
+			'PriorityBlock'|	// Priority block changed
+			'PlayingBlock'|		// Actually playing block changed
 			'InputSource'|		// Input source selection changed
 			'Volume'|			// Audio volume changed
 			'Active'|			// Actively viewed state changed
-			'Playing'			// Is playing (vs paused)
+			'Playing'			// Playing/paused state changed
 	})=>void): void;
+
+	/**
+	 *	Event fired when user navigates manually to a block path
+	 */
+	subscribe(event: 'navigation', listener: (sender: DisplaySpot, message: {
+		targetPath: string	// Absolute, slash-separate path navigated to
+	})=>void): void;
+
+	// Object is being shut down
+	subscribe(event: 'finish', listener: (sender: DisplaySpot)=>void): void;
 
 	unsubscribe(event: string, listener: Function): void;
 }
