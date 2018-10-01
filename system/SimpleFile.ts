@@ -32,6 +32,13 @@ export var SimpleFile: {
 	move(src: string, dest: string, replace?: boolean): Promise<void>;
 
 	/**
+	 * Copy a file from src to dest. If dest exists and replace is true, then
+	 * replace the file, else fail. Returns a promise that's resolved once done,
+	 * or rejected if the operation fails.
+	 */
+	copy(src: string, dest: string, replace?: boolean): Promise<void>;
+
+	/**
 	 * Delete specified file. Will only delete file (not directory).
 	 * Succeeds also if the file doesn't exist. Returns a promise that's resolved once done,
 	 * or rejected if the operation fails.
