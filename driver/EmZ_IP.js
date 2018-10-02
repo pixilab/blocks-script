@@ -334,7 +334,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function EmZIPSimpleControl(message) {
             var _this = _super.call(this, message) || this;
             if (!message)
-                _this.SetValue(LABEL_CDE, MESSAGE_TYPE_SIMPLE_CONTROL);
+                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL);
             return _this;
         }
         Object.defineProperty(EmZIPSimpleControl.prototype, "ValueORDRE", {
@@ -374,7 +374,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function EmZIPControl(message) {
             var _this = _super.call(this, message) || this;
             if (!message)
-                _this.SetValue(LABEL_CDE, MESSAGE_TYPE_CONTROL);
+                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_CONTROL);
             return _this;
         }
         return EmZIPControl;
@@ -384,7 +384,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function EmZIPUnicastSetup(message) {
             var _this = _super.call(this, message) || this;
             if (!message) {
-                _this.SetValue(LABEL_CDE, MESSAGE_TYPE_UNICAST_SETUP);
+                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP);
                 _this.ValueUNICAST = EmZIPUnicastSetup.CDEUNICAST_INIT;
             }
             return _this;
@@ -422,7 +422,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function EmZIPAcknowledgment(message) {
             var _this = _super.call(this, message) || this;
             if (!message)
-                _this.SetValue(LABEL_CDE, MESSAGE_TYPE_ACKNOWLEDGMENT);
+                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT);
             return _this;
         }
         EmZIPAcknowledgment.prototype.ToString = function () {

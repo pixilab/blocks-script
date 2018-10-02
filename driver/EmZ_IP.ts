@@ -343,7 +343,7 @@ class EmZIPSimpleControl extends EmZIPMessage
     public constructor (message? : string)
     {
         super(message);
-        if (!message) this.SetValue(LABEL_CDE, MESSAGE_TYPE_SIMPLE_CONTROL);
+        if (!message) this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL);
     }
 
 	public ToString() : string
@@ -361,7 +361,7 @@ class EmZIPControl extends EmZIPMessage
     public constructor (message? : string)
     {
         super(message);
-        if (!message) this.SetValue(LABEL_CDE, MESSAGE_TYPE_CONTROL);
+        if (!message) this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_CONTROL);
     }
 }
 
@@ -383,7 +383,7 @@ class EmZIPUnicastSetup extends EmZIPMessage
         super(message);
         if (!message)
         {
-            this.SetValue(LABEL_CDE, MESSAGE_TYPE_UNICAST_SETUP);
+            this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP);
             this.ValueUNICAST = EmZIPUnicastSetup.CDEUNICAST_INIT;
         }
     }
@@ -403,7 +403,7 @@ class EmZIPAcknowledgment extends EmZIPMessage
     public constructor (message? : string)
     {
         super(message);
-        if (!message) this.SetValue(LABEL_CDE, MESSAGE_TYPE_ACKNOWLEDGMENT);
+        if (!message) this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT);
     }
 
 	public ToString() : string
