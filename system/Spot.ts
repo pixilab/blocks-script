@@ -131,9 +131,10 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 
 	/**
 	 * Force set of local tags to only those specified (comma separated). Does not
-	 * alter any tags specified in the Display Spot's configuration.
+	 * alter any tags specified in the Display Spot's configuration. If ofSet specified,
+	 * then alter only tags within ofSet, leaving others alone.
 	 */
-	forceTags(tags: string): void;
+	forceTags(tags: string, ofSet?: string): void;
 
 	/**
 	 * Event fired when interesting connection state event occurs.
