@@ -60,59 +60,82 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function EmZ_IP(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this._lastEventID = 0;
+            _this._idDom = 0;
             socket.subscribe('textReceived', function (sender, message) {
-                console.info('text received', message + ' ' + sender);
                 _this.onMessage(message.text);
             });
             var messageUnicastSetup = new EmZIPUnicastSetup();
-            messageUnicastSetup.ValueIDDOM = 0;
-            messageUnicastSetup.ValueADR = '10.0.2.10';
+            messageUnicastSetup.ValueIDDOM = _this._idDom;
+            messageUnicastSetup.ValueADR = '192.168.1.10';
             messageUnicastSetup.ValuePORT = socket.listenerPort;
             _this.sendMessage(messageUnicastSetup);
             return _this;
         }
+        EmZ_IP.prototype.playZone = function (zone) {
+            var simpleControl = new EmZIPSimpleControl();
+            simpleControl.ValueIDDOM = this._idDom;
+            simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_STOP;
+            simpleControl.ValueNUMZONE = 0;
+            simpleControl.ValueOFFSET = 0;
+            this.sendMessage(simpleControl);
+            simpleControl = new EmZIPSimpleControl();
+            simpleControl.ValueIDDOM = this._idDom;
+            simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_PLAY_ZONE;
+            simpleControl.ValueNUMZONE = zone;
+            simpleControl.ValueOFFSET = 0;
+            this.sendMessage(simpleControl);
+        };
         EmZ_IP.prototype.sendText = function (text) {
             return this.socket.sendText(text);
         };
+        Object.defineProperty(EmZ_IP.prototype, "lastEventID", {
+            get: function () {
+                return this._lastEventID;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZ_IP.prototype, "lastEventPlayerID", {
+            get: function () {
+                return this._lastEventPlayerID;
+            },
+            enumerable: true,
+            configurable: true
+        });
         EmZ_IP.prototype.sendMessage = function (message) {
-            console.info(message.ToString());
             this.socket.sendText(message.ToString() + '\0');
         };
         EmZ_IP.prototype.onMessage = function (message) {
-            var emZIPMessage = new EmZIPMessage(message);
+            var emZIPMessage = EmZIPMessage.Parse(message);
             switch (emZIPMessage.ValueCDE) {
                 case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
                     break;
                 case EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER:
                     break;
                 case EmZIPMessage.MESSAGE_TYPE_EVENT:
-                    this.ReactTo(emZIPMessage);
+                    this.ProcessEvent(emZIPMessage);
+                    break;
+                case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
                     break;
                 default:
-                    console.log(emZIPMessage.ToString());
+                    console.info("received unsupported message type: " + emZIPMessage.ToString());
                     break;
             }
         };
-        EmZ_IP.prototype.ReactTo = function (eventMessage) {
-            console.info("Event:\n" +
-                "EmZ Domain: " + eventMessage.ValueIDDOM + "\n" +
-                "Emz ID: " + eventMessage.ValueIDEVT + "\n" +
-                "Zone number: " + eventMessage.ValueNUMZONE + "\n" +
-                "Player ID: " + eventMessage.ValuePLAYERID + "\n" +
-                "Language: " + eventMessage.ValueLANGUE + "\n");
-            var simpleControl = new EmZIPSimpleControl();
-            simpleControl.ValueIDDOM = eventMessage.ValueIDDOM;
-            simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_STOP;
-            simpleControl.ValueNUMZONE = 0;
-            simpleControl.ValueOFFSET = 0;
-            this.sendMessage(simpleControl);
-            simpleControl = new EmZIPSimpleControl();
-            simpleControl.ValueIDDOM = eventMessage.ValueIDDOM;
-            simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_PLAY_ZONE;
-            simpleControl.ValueNUMZONE = 2;
-            simpleControl.ValueOFFSET = 0;
-            this.sendMessage(simpleControl);
+        EmZ_IP.prototype.ProcessEvent = function (eventMessage) {
+            this._lastEventID++;
+            this._lastEventPlayerID = eventMessage.ValuePLAYERID;
+            this.changed("lastEventID");
+            this.changed("lastEventPlayerID");
         };
+        __decorate([
+            Meta.callable("Play Zone"),
+            __param(0, Meta.parameter("Zone to play")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number]),
+            __metadata("design:returntype", void 0)
+        ], EmZ_IP.prototype, "playZone", null);
         __decorate([
             Meta.callable("Send raw command to device"),
             __param(0, Meta.parameter("What to send")),
@@ -120,6 +143,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], EmZ_IP.prototype, "sendText", null);
+        __decorate([
+            Meta.property("ID of last received event. (Also: counter for received events)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [])
+        ], EmZ_IP.prototype, "lastEventID", null);
+        __decorate([
+            Meta.property("ID of player triggering last received event"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [])
+        ], EmZ_IP.prototype, "lastEventPlayerID", null);
         EmZ_IP = __decorate([
             Meta.driver('NetworkUDP', { port: PORT_UNICAST }),
             __metadata("design:paramtypes", [Object])

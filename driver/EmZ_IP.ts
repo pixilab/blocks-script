@@ -49,6 +49,11 @@ const PORT_UNICAST = 5023;
 export class EmZ_IP extends Driver<NetworkUDP> {
 
 
+    _lastEventID : number = 0;
+    _lastEventPlayerID : number;
+
+    _idDom : number = 0;
+
     /**
     * Create me, attached to the network socket I communicate through. When using a
      * driver, the driver replaces the built-in functionality of the network socket
@@ -59,17 +64,36 @@ export class EmZ_IP extends Driver<NetworkUDP> {
 
 
         socket.subscribe('textReceived', (sender, message)=> {
-            console.info('text received', message + ' ' + sender);
             this.onMessage(message.text);
         });
 
         // setup device for unicast to blocks server
         var messageUnicastSetup = new EmZIPUnicastSetup();
-        messageUnicastSetup.ValueIDDOM = 0;
-        messageUnicastSetup.ValueADR = '10.0.2.10';
+        messageUnicastSetup.ValueIDDOM = this._idDom;
+        messageUnicastSetup.ValueADR = '192.168.1.10';// '10.0.2.10';
         messageUnicastSetup.ValuePORT = socket.listenerPort;
         this.sendMessage(messageUnicastSetup);
 
+    }
+
+    @Meta.callable("Play Zone")
+    public playZone(
+        @Meta.parameter("Zone to play") zone : number
+    ) : void
+    {
+        var simpleControl = new EmZIPSimpleControl();
+        simpleControl.ValueIDDOM = this._idDom;
+        simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_STOP;
+        simpleControl.ValueNUMZONE = 0;
+        simpleControl.ValueOFFSET = 0;
+        this.sendMessage(simpleControl);
+
+        simpleControl = new EmZIPSimpleControl();
+        simpleControl.ValueIDDOM = this._idDom;
+        simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_PLAY_ZONE;
+        simpleControl.ValueNUMZONE = zone;
+        simpleControl.ValueOFFSET = 0;
+        this.sendMessage(simpleControl);
     }
 
     /**
@@ -79,19 +103,32 @@ export class EmZ_IP extends Driver<NetworkUDP> {
     @Meta.callable("Send raw command to device")
     public sendText(
         @Meta.parameter("What to send") text: string,
-    ): void {
+    ): void
+    {
         return this.socket.sendText(text);
+    }
+
+    @Meta.property("ID of last received event. (Also: counter for received events)")
+    public get lastEventID () : number
+    {
+        return this._lastEventID;
+    }
+
+    @Meta.property("ID of player triggering last received event")
+    public get lastEventPlayerID () : number
+    {
+        return this._lastEventPlayerID;
     }
 
     sendMessage(message : EmZIPMessage )
     {
-        console.info(message.ToString());
+        // console.info(message.ToString());
         this.socket.sendText(message.ToString() + '\0');
     }
 
     onMessage(message: string)
     {
-        var emZIPMessage = new EmZIPMessage(message);
+        var emZIPMessage = EmZIPMessage.Parse(message);
         switch (emZIPMessage.ValueCDE)
         {
             case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
@@ -101,39 +138,26 @@ export class EmZ_IP extends Driver<NetworkUDP> {
                 // do nothing
                 break;
             case EmZIPMessage.MESSAGE_TYPE_EVENT:
-                this.ReactTo(emZIPMessage as EmZIPEvent);
+                this.ProcessEvent(emZIPMessage as EmZIPEvent);
+                break;
+            case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
+                // nothing here yet
                 break;
             default:
-                console.log(emZIPMessage.ToString());
+                console.info("received unsupported message type: " + emZIPMessage.ToString());
                 break;
         }
     }
 
-    ReactTo (eventMessage : EmZIPEvent)
+    ProcessEvent (eventMessage : EmZIPEvent)
     {
-        console.info(
-            "Event:\n" +
-            "EmZ Domain: " + eventMessage.ValueIDDOM + "\n" +
-            "Emz ID: " + eventMessage.ValueIDEVT + "\n" +
-            "Zone number: " + eventMessage.ValueNUMZONE + "\n" +
-            "Player ID: " + eventMessage.ValuePLAYERID + "\n" +
-            "Language: " + eventMessage.ValueLANGUE + "\n"
-        );
-
-        var simpleControl = new EmZIPSimpleControl();
-        simpleControl.ValueIDDOM = eventMessage.ValueIDDOM;
-        simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_STOP;
-        simpleControl.ValueNUMZONE = 0;
-        simpleControl.ValueOFFSET = 0;
-        this.sendMessage(simpleControl);
-
-        simpleControl = new EmZIPSimpleControl();
-        simpleControl.ValueIDDOM = eventMessage.ValueIDDOM;
-        simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_PLAY_ZONE;
-        simpleControl.ValueNUMZONE = 2;
-        simpleControl.ValueOFFSET = 0;
-        this.sendMessage(simpleControl);
+        this._lastEventID++;
+        this._lastEventPlayerID = eventMessage.ValuePLAYERID;
+        this.changed("lastEventID");
+        this.changed("lastEventPlayerID");
     }
+
+
 
 }
 
