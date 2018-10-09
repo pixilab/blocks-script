@@ -60,23 +60,23 @@ export class EmZ_IP extends Driver<NetworkUDP> {
 
         socket.subscribe('textReceived', (sender, message)=> {
             console.info('text received', message + ' ' + sender);
-
+            this.onMessage(message.text);
         });
 
         // setup device for unicast to blocks server
         var messageUnicastSetup = new EmZIPUnicastSetup();
         messageUnicastSetup.ValueIDDOM = 0;
         messageUnicastSetup.ValueADR = '10.0.2.10';
-        messageUnicastSetup.ValuePORT = 5023;
+        messageUnicastSetup.ValuePORT = socket.listenerPort;
         this.sendMessage(messageUnicastSetup);
 
     }
 
     /**
     * Passthrough for sending raw commands frmo tasks and client scripts.
-     * Comment out @callable if you don't want to expose sending raw command strings to tasks.
-     */
-     @Meta.callable("Send raw command to device")
+    * Comment out @callable if you don't want to expose sending raw command strings to tasks.
+    */
+    @Meta.callable("Send raw command to device")
     public sendText(
         @Meta.parameter("What to send") text: string,
     ): void {

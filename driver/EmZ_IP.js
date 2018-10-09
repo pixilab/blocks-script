@@ -62,11 +62,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.socket = socket;
             socket.subscribe('textReceived', function (sender, message) {
                 console.info('text received', message + ' ' + sender);
+                _this.onMessage(message.text);
             });
             var messageUnicastSetup = new EmZIPUnicastSetup();
             messageUnicastSetup.ValueIDDOM = 0;
             messageUnicastSetup.ValueADR = '10.0.2.10';
-            messageUnicastSetup.ValuePORT = 5023;
+            messageUnicastSetup.ValuePORT = socket.listenerPort;
             _this.sendMessage(messageUnicastSetup);
             return _this;
         }
