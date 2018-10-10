@@ -126,8 +126,16 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 	-	To step backwards by one step, with wrap-around
 	 	+2	To step forward by two steps, with no wrap-around
 	 	-3	To step backwards 3 steps, with no wrap-around
+
+	 Fails silently if the target page can't be found.
 	 */
 	gotoPage(path: string): void;
+
+	/**
+	 * Same as gotoPage, but returns a promise that will be rejected with
+	 * an error message if the specified page can't be found.
+	 */
+	tryGotoPage(path: string): Promise<any>;
 
 	/**
 	 * Force set of local tags to only those specified (comma separated). Does not
