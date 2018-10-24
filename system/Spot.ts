@@ -106,10 +106,6 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 */
 	customClasses: string;
 
-	/**	Restore tags to those specified in the Spot's configuration.
-	 */
-	resetTags(): void;
-
 	/**
 	 Ask Spot to reveal the specified path, which is assumed to exist
 	 in the currently loaded block. The path must be absolute (start
@@ -171,7 +167,8 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 *	Event fired when user navigates manually to a block path
 	 */
 	subscribe(event: 'navigation', listener: (sender: DisplaySpot, message: {
-		targetPath: string	// Absolute, slash-separate path navigated to
+		targetPath: string,	// Requested path navigated to
+		foundPath: string	// Resulting absolute (//-style) and canonized path
 	})=>void): void;
 
 	// Object is being shut down
