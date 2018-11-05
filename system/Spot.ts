@@ -6,18 +6,20 @@
 /// <reference path = 'PIXI.d.ts' />
 
 /**
- * Access a Spot known to the system under its assigned name.
- * Use dot notation to access spots inside groups.
+ * Access a SpotGroupItem under its assigned name.
+ * Use dot notation to access nested spots inside groups.
  */
-export var Spot: SpotGroup;
+export var Spot: {
+	[name: string]: SpotGroupItem;
+};
 
 /**
- Marker interface for items that can live in a SpotGroup (including other SpotGroups)
+ Items that can live in the root Spot object
  */
 interface SpotGroupItem {
 }
 
-interface SpotGroup extends SpotGroupItem {
+export interface SpotGroup extends SpotGroupItem {
 	[name: string]: SpotGroupItem;
 }
 
@@ -104,10 +106,6 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 */
 	customClasses: string;
 
-	/**	Restore tags to those specified in the Spot's configuration.
-	 */
-	resetTags(): void;
-
 	/**
 	 Ask Spot to reveal the specified path, which is assumed to exist
 	 in the currently loaded block. The path must be absolute (start
@@ -124,31 +122,57 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 	-	To step backwards by one step, with wrap-around
 	 	+2	To step forward by two steps, with no wrap-around
 	 	-3	To step backwards 3 steps, with no wrap-around
+
+	 Fails silently if the target page can't be found.
 	 */
 	gotoPage(path: string): void;
 
 	/**
-	 * Force set of local tags to only those specified (comma separated). Does not
-	 * alter any tags specified in the Display Spot's configuration.
+	 * Same as gotoPage, but returns a promise that will be rejected with
+	 * an error message if the specified page can't be found.
 	 */
-	forceTags(tags: string): void;
+	tryGotoPage(path: string): Promise<any>;
 
+	/**
+	 * Force set of local tags to only those specified (comma separated). Does not
+	 * alter any tags specified in the Display Spot's configuration. If ofSet specified,
+	 * then alter only tags within ofSet, leaving others alone.
+	 */
+	forceTags(tags: string, ofSet?: string): void;
+
+	/**
+	 * Event fired when interesting connection state event occurs.
+	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
 		type:
 			'Connection'|		// Connection state changed (check with isConnected)
 			'ConnectionFailed'	// Connection attempt failed
 	})=>void): void;
 
+	/**
+	 *	Event fired when various spot state changes occur.
+	 */
 	subscribe(event: "spot", listener: (sender: DisplaySpot, message:{
 		type:
-			'DefaultBlock'|		// Default block changed (may be schedule)
-			'PriorityBlock'|	// Priority block changed (may be schedule)
-			'PlayingBlock'|		// Actually playing block changed (always media)
+			'DefaultBlock'|		// Default block changed
+			'PriorityBlock'|	// Priority block changed
+			'PlayingBlock'|		// Actually playing block changed
 			'InputSource'|		// Input source selection changed
 			'Volume'|			// Audio volume changed
 			'Active'|			// Actively viewed state changed
-			'Playing'			// Is playing (vs paused)
+			'Playing'			// Playing/paused state changed
 	})=>void): void;
+
+	/**
+	 *	Event fired when user navigates manually to a block path
+	 */
+	subscribe(event: 'navigation', listener: (sender: DisplaySpot, message: {
+		targetPath: string,	// Requested path navigated to
+		foundPath: string	// Resulting absolute (//-style) and canonized path
+	})=>void): void;
+
+	// Object is being shut down
+	subscribe(event: 'finish', listener: (sender: DisplaySpot)=>void): void;
 
 	unsubscribe(event: string, listener: Function): void;
 }

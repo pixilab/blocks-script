@@ -10,11 +10,34 @@
  */
 export var WATCHOUT: { [clusterName: string]: WATCHOUTCluster; };
 
-interface WATCHOUTCluster {
+/**
+ * Shared stuff provided both for the main timeline as well as aux timelines.
+ */
+export interface Timeline {
+	connected: boolean;		// Read only
+	playing: boolean;		// Timeline is playing
+	timePosition: number;	// Timeline time position
+
+	subscribe(event: "connect", listener: (sender: Timeline, message:{
+		type:
+			'Connection'|		// Connection state changed (check with isConnected)
+			'ConnectionFailed'	// Connection attempt failed
+	})=>void): void;
+
+	subscribe(event: "play", listener: (sender: Timeline, message:{
+		type:
+			'Playback'|		// Playback state changed
+			'TimePosition'	// Time position changed abruptly
+	})=>void): void;
+
+	// Explicitly end subscription to event with function
+	unsubscribe(event: string, listener: Function): void;
+}
+
+export interface WATCHOUTCluster extends Timeline {
 	connect(): Promise<any>;
 	disconnect(): void;
 	isConnected(): boolean;
-	connected: boolean;		// Read only
 
 	sleep(): Promise<any>;
 	wakeUp(timeoutMilliseconds?: number): Promise<any>;
@@ -24,7 +47,6 @@ interface WATCHOUTCluster {
 	isShowLoaded(): boolean;
 	getShowName(): string;
 
-	playing: boolean;		// Main timeline
 	play(auxTimelineName?:string): void;	// Main timeline if no auxTimelineName
 	pause(auxTimelineName?:string): void;
 	stop(auxTimelineName?:string): void;
@@ -44,7 +66,13 @@ interface WATCHOUTCluster {
 
 	setInput(name:string, value:number, slewRateMs?:number): void;
 
-	// // // // Notification subscriptions
+	// Get info about known aux timelines and their durations in mS
+	auxTimelines(): [{ name: string, duration: number }];
+
+	// Connect to an auxiliary timeline in order to subscribe to notifications from it
+	auxTimeline(name: string): AuxTimeline;
+
+	// // // // // // // Notification subscriptions // // // // // //
 
 	subscribe(event: "connect", listener: (sender: WATCHOUTCluster, message:{
 		type:
@@ -73,6 +101,38 @@ interface WATCHOUTCluster {
 		text: string
 	})=>void): void;
 
-	// Explicitly end subscription to event with function
-	unsubscribe(event: string, listener: Function): void;
+	// Object is being shut down
+	subscribe(event: 'finish', listener: (sender: WATCHOUTCluster)=>void): void;
+}
+
+/**
+ * Object you can get from a WATCHOUTCluster to subscribe to aux timeline status.
+ * IMPORTANT: Use this only if you need to get state from aux timelines. If
+ * you merely want to control an aux timeline, use the methods on WATCHOUTCluster
+ * that take an optional auxTimelineName instead. If you open various timelines
+ * in a dynamic manner from your script, close those you no longer need
+ * explicitly to save on resources.
+ */
+export interface AuxTimeline extends Timeline {
+	name: string;		// Read-only
+	duration: number;	// Read-only, milliseconds
+	stopped: boolean;
+	close(): void;		// Close the connection to this auxiliary timeline
+
+	// // // // // // // Notification subscriptions // // // // // //
+
+	subscribe(event: "connect", listener: (sender: AuxTimeline, message:{
+		type:
+			'Connection'|		// Connection state changed (check with isConnected)
+			'ConnectionFailed'	// Connection attempt failed
+	})=>void): void;
+
+	subscribe(event: "play", listener: (sender: AuxTimeline, message:{
+		type:
+			'Playback'|		// Playback state changed
+			'TimePosition'	// Time position changed abruptly
+	})=>void): void;
+
+	// Object is being shut down
+	subscribe(event: 'finish', listener: (sender: AuxTimeline)=>void): void;
 }
