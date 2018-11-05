@@ -125,10 +125,10 @@ export function max(max:number) {
 /**
  Annotation declaring a method as accessible from a web client under
 
- 	rest/script/call/<user-script-name>/<method-name>
+ 	rest/script/invoke/<user-script-name>/<method-name>
 
- with a JSON body payload passed to the method as a string, and r eturning the string
- returned frmo the method (presumably also JSON data).
+ with a JSON body payload passed to the method as a string, and returning the object
+ or string returned from the method as JSON data.
 
  The "authorization" parameter is not yet supported.
  */
