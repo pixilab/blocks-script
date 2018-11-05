@@ -34,6 +34,19 @@ export class Script extends ScriptBase<ScriptEnv> {
 	}
 
 	/**
+	 * Connect to the property at the specified full (dot-separated) path. Pass
+	 * a callback function to be notified when the value of the property changes.
+	 * Returns an object that can be used to read/write the property's value,
+	 * as well as close down the connection to the property once no longer
+	 * needed.
+	 *
+	 * The value associated with the property varies with the type of property.
+	 */
+	getProperty(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor {
+		return this.__scriptFacade.getProperty(fullPath, changeNotification);
+	}
+
+	/**
 	 * Establish a named channel associated with this script, with optional "data received
 	 * on channel" handler function.
 	 */
@@ -54,7 +67,6 @@ export class Script extends ScriptBase<ScriptEnv> {
 	}
 }
 
-
 // Internal implementation - not for direct client access
 export interface ScriptEnv extends ScriptBaseEnv {
 	property(p1: any, p2?: any, p3?: any): void;
@@ -62,4 +74,18 @@ export interface ScriptEnv extends ScriptBaseEnv {
 	establishChannel(name: string):void;
 	establishChannel(name: string, listener: Function): void;
 	sendOnChannel(name: string, data: string):void;
+	getProperty(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor;
+}
+
+/**
+ * What's returned from getProperty. Allows the property's value to be read/written.
+ * It may in some cases take some time for a property to become available. Check
+ * "available" to be true if you need to know. Once you no longer need
+ * this property, call close() to terminate the connection. No further change
+ * notification callbacks will be received) after calling close().
+ */
+export interface PropertyAccessor {
+	value: any;		// Current property value (read only if property is read only)
+	available: boolean;	// Property has been attached and is now live (read only)
+	close(): void;	// Close down this accessor - can no longer be used
 }

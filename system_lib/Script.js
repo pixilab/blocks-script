@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ * Created 2018 by Mike Fahl.
+ */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -11,13 +15,19 @@ var __extends = (this && this.__extends) || (function () {
 define(["require", "exports", "system_lib/ScriptBase"], function (require, exports, ScriptBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    /**
+     Ultimate base class for all TypeScript based user scripts.
+     */
     var Script = (function (_super) {
         __extends(Script, _super);
         function Script() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
+        /** Expose a dynamic property of type T with specified options and name.
+         */
         Script.prototype.property = function (name, options, setGetFunc) {
             this.__scriptFacade.property(name, options, setGetFunc);
+            // A little dance to make this work also for direct JS-style assignment
             Object.defineProperty(this.constructor.prototype, name, {
                 get: function () {
                     return setGetFunc();
@@ -33,6 +43,22 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
                 configurable: true
             });
         };
+        /**
+         * Connect to the property at the specified full (dot-separated) path. Pass
+         * a callback function to be notified when the value of the property changes.
+         * Returns an object that can be used to read/write the property's value,
+         * as well as close down the connection to the property once no longer
+         * needed.
+         *
+         * The value associated with the property varies with the type of property.
+         */
+        Script.prototype.getProperty = function (fullPath, changeNotification) {
+            return this.__scriptFacade.getProperty(fullPath, changeNotification);
+        };
+        /**
+         * Establish a named channel associated with this script, with optional "data received
+         * on channel" handler function.
+         */
         Script.prototype.establishChannel = function (leafChannelName, callback) {
             if (callback) {
                 this.__scriptFacade.establishChannel(leafChannelName, function (sender, axon) {
@@ -42,6 +68,9 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
             else
                 this.__scriptFacade.establishChannel(leafChannelName);
         };
+        /**
+         * Send data on my named channel.
+         */
         Script.prototype.sendOnChannel = function (leafChannelName, data) {
             this.__scriptFacade.sendOnChannel(leafChannelName, data);
         };

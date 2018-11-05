@@ -6,7 +6,7 @@
  * Common stuff shared between user scripts and drivers.
  */
 export class ScriptBase<FC extends ScriptBaseEnv> {
-	protected readonly __scriptFacade: FC;
+	protected readonly __scriptFacade: FC;	// Internal use only!
 
 	constructor(scriptFacade: FC) {
 		this.__scriptFacade = scriptFacade;
