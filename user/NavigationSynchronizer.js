@@ -24,60 +24,129 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
         __extends(NavigationSynchronizer, _super);
         function NavigationSynchronizer(env) {
             var _this = _super.call(this, env) || this;
-            NavigationSynchronizer.hookedUp = false;
+            _this.navigationMasters = [];
             return _this;
         }
-        NavigationSynchronizer.prototype.start = function () {
-            return this.hookUpSrcEvent();
-        };
-        NavigationSynchronizer.prototype.stop = function () {
-            return this.unhookSrcEvent();
-        };
-        NavigationSynchronizer.prototype.hookUpSrcEvent = function () {
-            if (!NavigationSynchronizer.sourceSpot) {
-                console.log("hooking up sync");
-                NavigationSynchronizer.hookedUp = true;
-                var sg = Spot_1.Spot['plint'];
-                NavigationSynchronizer.sourceSpot = sg['plint_master'];
-                NavigationSynchronizer.targetSpot = sg['plint_slave'];
-                NavigationSynchronizer.sourceSpot.subscribe('navigation', this.syncPath);
-                NavigationSynchronizer.sourceSpot.subscribe('finish', this.reHookUp);
-            }
-        };
-        NavigationSynchronizer.prototype.unhookSrcEvent = function () {
-            if (NavigationSynchronizer.sourceSpot) {
-                NavigationSynchronizer.hookedUp = false;
-                NavigationSynchronizer.sourceSpot.unsubscribe('navigation', this.syncPath);
-                NavigationSynchronizer.sourceSpot.unsubscribe('finish', this.reHookUp);
-                NavigationSynchronizer.sourceSpot = undefined;
-            }
-        };
-        NavigationSynchronizer.prototype.syncPath = function (sender, message) {
-            console.log("got sync path request - " + NavigationSynchronizer.hookedUp);
-            if (!NavigationSynchronizer.hookedUp)
+        NavigationSynchronizer.prototype.start = function (spotGroup, spotMaster, spotSlaves) {
+            var group = Spot_1.Spot[spotGroup];
+            if (!group)
                 return;
-            NavigationSynchronizer.targetSpot.gotoPage(message.targetPath);
-            console.log("Navigated to", message.targetPath);
+            var master = this.getNavigationMaster(group, spotMaster);
+            var spotSlaveList = spotSlaves.split(',');
+            spotSlaveList.forEach(function (slave) { return master.subscribe(slave.trim()); });
         };
-        NavigationSynchronizer.prototype.reHookUp = function () {
-            if (!NavigationSynchronizer.hookedUp)
+        NavigationSynchronizer.prototype.stop = function (spotGroup, spotMaster, spotSlaves) {
+            var group = Spot_1.Spot[spotGroup];
+            if (!group)
                 return;
-            NavigationSynchronizer.sourceSpot = undefined;
-            this.hookUpSrcEvent();
+            var master = this.getNavigationMaster(group, spotMaster);
+            var spotSlaveList = spotSlaves.split(',');
+            spotSlaveList.forEach(function (slave) { return master.unsubscribe(slave.trim()); });
+        };
+        NavigationSynchronizer.prototype.getNavigationMaster = function (spotGroup, masterName) {
+            var navigationMaster = undefined;
+            for (var i = 0; i < this.navigationMasters.length; i++) {
+                var master = this.navigationMasters[i];
+                if (master.spotGroup == spotGroup && master.sourceSpotName == masterName) {
+                    navigationMaster = master;
+                    break;
+                }
+            }
+            if (!navigationMaster) {
+                navigationMaster = new NavigationMaster(spotGroup, masterName);
+                this.navigationMasters.push(navigationMaster);
+            }
+            return navigationMaster;
         };
         __decorate([
             Meta.callable("Start Spot Synchronisation"),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", []),
+            __metadata("design:paramtypes", [String, String, String]),
             __metadata("design:returntype", void 0)
         ], NavigationSynchronizer.prototype, "start", null);
         __decorate([
             Meta.callable("Stop Spot Synchronisation"),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", []),
+            __metadata("design:paramtypes", [String, String, String]),
             __metadata("design:returntype", void 0)
         ], NavigationSynchronizer.prototype, "stop", null);
         return NavigationSynchronizer;
     }(Script_1.Script));
     exports.NavigationSynchronizer = NavigationSynchronizer;
+    var NavigationMaster = (function () {
+        function NavigationMaster(spotGroup, sourceSpotName) {
+            this.sourceSpot = undefined;
+            this.targetSpots = [];
+            this.hooked = false;
+            this.spotGroup = spotGroup;
+            this.sourceSpotName = sourceSpotName;
+            this.hookUpSource();
+            NavigationMaster.masters.push(this);
+        }
+        NavigationMaster.prototype.subscribe = function (targetSpotName) {
+            var targetSpot = this.spotGroup[targetSpotName];
+            if (!targetSpot) {
+                console.warn('no spot named ' + targetSpotName);
+                return;
+            }
+            this.targetSpots.push(targetSpot);
+        };
+        NavigationMaster.prototype.unsubscribe = function (targetSpotName) {
+            var targetSpot = this.spotGroup[targetSpotName];
+            if (!targetSpot) {
+                console.warn('no spot named ' + targetSpotName);
+                return;
+            }
+            this.targetSpots = this.targetSpots.filter(function (spot) { return spot == targetSpot; });
+        };
+        NavigationMaster.prototype.hookUpSource = function () {
+            if (!this.sourceSpot) {
+                this.hooked = true;
+                this.sourceSpot = this.spotGroup[this.sourceSpotName];
+                if (!this.sourceSpot) {
+                    console.warn('no spot named ' + this.sourceSpotName);
+                    this.hooked = false;
+                    return;
+                }
+                this.sourceSpot.subscribe('navigation', this.syncPath);
+                this.sourceSpot.subscribe('finish', this.reHookUp);
+            }
+        };
+        NavigationMaster.prototype.unhookSource = function () {
+            if (this.sourceSpot) {
+                this.hooked = false;
+                this.sourceSpot.unsubscribe('navigation', this.syncPath);
+                this.sourceSpot.unsubscribe('finish', this.reHookUp);
+                this.sourceSpot = undefined;
+            }
+        };
+        NavigationMaster.prototype.syncPath = function (sender, message) {
+            var master = NavigationMaster.findMaster(sender);
+            if (!master)
+                return;
+            if (!master.hooked)
+                return;
+            for (var i = 0; i < master.targetSpots.length; i++) {
+                var targetSpot = master.targetSpots[i];
+                targetSpot.gotoPage(message.targetPath);
+            }
+        };
+        NavigationMaster.prototype.reHookUp = function () {
+            if (!this.hooked)
+                return;
+            this.sourceSpot = undefined;
+            this.hookUpSource();
+        };
+        NavigationMaster.findMaster = function (spot) {
+            for (var i = 0; i < NavigationMaster.masters.length; i++) {
+                var m = NavigationMaster.masters[i];
+                if (m.sourceSpot == spot) {
+                    return m;
+                }
+            }
+            return undefined;
+        };
+        NavigationMaster.masters = [];
+        return NavigationMaster;
+    }());
 });
