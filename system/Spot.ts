@@ -68,6 +68,13 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	power: boolean;
 
 	/**
+	 * Current time position (e.g., in video), in seconds. Write to position the video.
+	 * Reading is supported only when spot has an active Synchronizer block which provides
+	 * this information (else returns NaN).
+	 */
+	time: number;
+
+	/**
 	 Ask display to reboot/reload. Not supported by all displays.
 	 */
 	reboot(): void;
