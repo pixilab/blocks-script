@@ -52,23 +52,23 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             var request = SimpleHTTP_1.SimpleHTTP.newRequest(Flock.FLOCK_MSG_URL + this.accessToken);
             return request.post(jsonContent, 'application/json');
         };
-        Flock.CONFIG_FILE_NAME = "Flock.config.json";
-        Flock.FLOCK_MSG_URL = "https://api.flock.com/hooks/sendMessage/";
-        __decorate([
-            Metadata_1.callable("Send message to Flock"),
-            __param(0, Metadata_1.parameter("Message content")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", Promise)
-        ], Flock.prototype, "sendMessage", null);
-        __decorate([
-            Metadata_1.callable("Send rich text message to Flock"),
-            __param(0, Metadata_1.parameter("Rich text version (using FlockML. Supports e.g. <a>, <em>, <i>, <strong>, <b>, <u>, <br>)")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", Promise)
-        ], Flock.prototype, "sendRichMessage", null);
         return Flock;
     }(Script_1.Script));
+    Flock.CONFIG_FILE_NAME = "Flock.config.json";
+    Flock.FLOCK_MSG_URL = "https://api.flock.com/hooks/sendMessage/";
+    __decorate([
+        Metadata_1.callable("Send message to Flock"),
+        __param(0, Metadata_1.parameter("Message content")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", Promise)
+    ], Flock.prototype, "sendMessage", null);
+    __decorate([
+        Metadata_1.callable("Send rich text message to Flock"),
+        __param(0, Metadata_1.parameter("Rich text version (using FlockML. Supports e.g. <a>, <em>, <i>, <strong>, <b>, <u>, <br>)")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", Promise)
+    ], Flock.prototype, "sendRichMessage", null);
     exports.Flock = Flock;
 });
