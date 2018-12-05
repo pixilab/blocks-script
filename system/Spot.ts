@@ -148,6 +148,14 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	forceTags(tags: string, ofSet?: string): void;
 
 	/**
+	 * Ask spot to scroll horizontally and/or vertically, to the specified position.
+	 * This assumes the existence of Scroller(s) on the client side, to do the actual
+	 * scrolling. The position is specified as a normalized value 0...1, where 0
+	 * is no scrolling, and 1 is the maximum amount of scrolling.
+	 */
+	scrollTo(x: number|undefined, y?:number): void;
+
+	/**
 	 * Event fired when interesting connection state event occurs.
 	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
