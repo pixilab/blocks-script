@@ -20,7 +20,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var CloudDCM1e = (function (_super) {
+    var CloudDCM1e = CloudDCM1e_1 = (function (_super) {
         __extends(CloudDCM1e, _super);
         function CloudDCM1e(socket) {
             var _this = _super.call(this, socket) || this;
@@ -40,7 +40,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             console.info("Driver initialized");
             return _this;
         }
-        CloudDCM1e_1 = CloudDCM1e;
         CloudDCM1e.prototype.connectStateChanged = function (message) {
             if (message.type === 'Connection') {
                 if (this.socket.connected) {
@@ -249,94 +248,93 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 }
             });
         };
-        CloudDCM1e.kZones = 8;
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn1", null);
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn2", null);
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn3", null);
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn4", null);
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn5", null);
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.min(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn6", null);
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn7", null);
-        __decorate([
-            Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneIn8", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume1", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume2", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume3", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume4", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume5", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume6", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume7", null);
-        __decorate([
-            Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], CloudDCM1e.prototype, "zoneVolume8", null);
-        CloudDCM1e = CloudDCM1e_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 4999 }),
-            __metadata("design:paramtypes", [Object])
-        ], CloudDCM1e);
         return CloudDCM1e;
-        var CloudDCM1e_1;
     }(Driver_1.Driver));
+    CloudDCM1e.kZones = 8;
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn1", null);
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn2", null);
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn3", null);
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn4", null);
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn5", null);
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.min(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn6", null);
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn7", null);
+    __decorate([
+        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneIn8", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume1", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume2", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume3", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume4", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume5", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume6", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume7", null);
+    __decorate([
+        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], CloudDCM1e.prototype, "zoneVolume8", null);
+    CloudDCM1e = CloudDCM1e_1 = __decorate([
+        Meta.driver('NetworkTCP', { port: 4999 }),
+        __metadata("design:paramtypes", [Object])
+    ], CloudDCM1e);
     exports.CloudDCM1e = CloudDCM1e;
     var Request = (function () {
         function Request(request, responsePattern) {
@@ -415,9 +413,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 });
             }
         };
-        Zone.kInputPattern = /<z\d\.mu,s=(.*)\/>/;
-        Zone.kVolumePattern = /<z\d\.mu,l=(.*)\/>/;
-        Zone.kMinVol = 62;
         return Zone;
     }());
+    Zone.kInputPattern = /<z\d\.mu,s=(.*)\/>/;
+    Zone.kVolumePattern = /<z\d\.mu,l=(.*)\/>/;
+    Zone.kMinVol = 62;
+    var CloudDCM1e_1;
 });

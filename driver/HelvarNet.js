@@ -63,49 +63,49 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             cmd = '>' + cmd + '#';
             this.socket.sendText(cmd, null);
         };
-        __decorate([
-            Metadata_1.callable("Recall scene number on group"),
-            __param(0, Metadata_1.parameter("Group to control")),
-            __param(1, Metadata_1.parameter("Scene number to recall")),
-            __param(2, Metadata_1.parameter("Scene block", true)),
-            __param(3, Metadata_1.parameter("Transition time, in seconds", true)),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number, Number, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], HelvarNet.prototype, "recallScene", null);
-        __decorate([
-            Metadata_1.callable("Adjust curr scene of group up or down"),
-            __param(0, Metadata_1.parameter("Proportion, -1..1")),
-            __param(1, Metadata_1.parameter("Group to control, 1..16383")),
-            __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], HelvarNet.prototype, "sceneAbsAdjust", null);
-        __decorate([
-            Metadata_1.callable("Adjust curr scene of group up or down incrementally"),
-            __param(0, Metadata_1.parameter("Proportion, -1..1")),
-            __param(1, Metadata_1.parameter("Group to control, 1..16383")),
-            __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], HelvarNet.prototype, "sceneRelAdjust", null);
-        __decorate([
-            Metadata_1.callable("Apply brightness level to a single device"),
-            __param(0, Metadata_1.parameter("Brightness, 0..1")),
-            __param(1, Metadata_1.parameter("Target device, as '1.2.3.4'")),
-            __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number, String, Number]),
-            __metadata("design:returntype", void 0)
-        ], HelvarNet.prototype, "levelToDevice", null);
-        HelvarNet = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 50000 }),
-            __metadata("design:paramtypes", [Object])
-        ], HelvarNet);
         return HelvarNet;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.callable("Recall scene number on group"),
+        __param(0, Metadata_1.parameter("Group to control")),
+        __param(1, Metadata_1.parameter("Scene number to recall")),
+        __param(2, Metadata_1.parameter("Scene block", true)),
+        __param(3, Metadata_1.parameter("Transition time, in seconds", true)),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Number, Number, Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], HelvarNet.prototype, "recallScene", null);
+    __decorate([
+        Metadata_1.callable("Adjust curr scene of group up or down"),
+        __param(0, Metadata_1.parameter("Proportion, -1..1")),
+        __param(1, Metadata_1.parameter("Group to control, 1..16383")),
+        __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Number, Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], HelvarNet.prototype, "sceneAbsAdjust", null);
+    __decorate([
+        Metadata_1.callable("Adjust curr scene of group up or down incrementally"),
+        __param(0, Metadata_1.parameter("Proportion, -1..1")),
+        __param(1, Metadata_1.parameter("Group to control, 1..16383")),
+        __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Number, Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], HelvarNet.prototype, "sceneRelAdjust", null);
+    __decorate([
+        Metadata_1.callable("Apply brightness level to a single device"),
+        __param(0, Metadata_1.parameter("Brightness, 0..1")),
+        __param(1, Metadata_1.parameter("Target device, as '1.2.3.4'")),
+        __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Number, String, Number]),
+        __metadata("design:returntype", void 0)
+    ], HelvarNet.prototype, "levelToDevice", null);
+    HelvarNet = __decorate([
+        Metadata_1.driver('NetworkTCP', { port: 50000 }),
+        __metadata("design:paramtypes", [Object])
+    ], HelvarNet);
     exports.HelvarNet = HelvarNet;
     function fadeParam(timeInSeconds) {
         if (timeInSeconds === undefined)

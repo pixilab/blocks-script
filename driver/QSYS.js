@@ -1,10 +1,7 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    }
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -204,103 +201,103 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             else
                 console.warn("Unparsable reply from device", text);
         };
-        __decorate([
-            Meta.property("Master Gain"),
-            Meta.min(0),
-            Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], QSYS.prototype, "masterGain", null);
-        __decorate([
-            Meta.property("Name with Space"),
-            Meta.min(0),
-            Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], QSYS.prototype, "nameWithSpace", null);
-        __decorate([
-            Meta.property("Raw Prop"),
-            Meta.min(-100),
-            Meta.max(20),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], QSYS.prototype, "rawProp", null);
-        __decorate([
-            Meta.property("Connected to Q-SYS", true),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], QSYS.prototype, "connected", null);
-        __decorate([
-            Meta.callable("Control Set Position"),
-            __param(0, Meta.parameter("Control ID")),
-            __param(1, Meta.parameter("Control Position")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "controlSetPosition", null);
-        __decorate([
-            Meta.callable("Control Set Position Ramp"),
-            __param(0, Meta.parameter("Control ID")),
-            __param(1, Meta.parameter("Control Position")),
-            __param(2, Meta.parameter("Ramp time")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "controlSetPositionRamp", null);
-        __decorate([
-            Meta.callable("Control Set String"),
-            __param(0, Meta.parameter("Control ID")),
-            __param(1, Meta.parameter("Control String")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "controlSetString", null);
-        __decorate([
-            Meta.callable("Control Set Value"),
-            __param(0, Meta.parameter("Control ID")),
-            __param(1, Meta.parameter("Control Value")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "controlSetValue", null);
-        __decorate([
-            Meta.callable("Control Set Value Ramp"),
-            __param(0, Meta.parameter("Control ID")),
-            __param(1, Meta.parameter("Control Value")),
-            __param(2, Meta.parameter("Ramp time")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "controlSetValueRamp", null);
-        __decorate([
-            Meta.callable("Control Trigger"),
-            __param(0, Meta.parameter("Control ID")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "controlTrigger", null);
-        __decorate([
-            Meta.callable("Snapshot Load"),
-            __param(0, Meta.parameter("Snapshot Bank")),
-            __param(1, Meta.parameter("Snapshot Number")),
-            __param(2, Meta.parameter("Ramp Time")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "snapshotLoad", null);
-        __decorate([
-            Meta.callable("Snapshot Save"),
-            __param(0, Meta.parameter("Snapshot Bank")),
-            __param(1, Meta.parameter("Snapshot Number")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number]),
-            __metadata("design:returntype", void 0)
-        ], QSYS.prototype, "snapshotSave", null);
-        QSYS = __decorate([
-            Meta.driver('NetworkTCP', { port: 1702 }),
-            __metadata("design:paramtypes", [Object])
-        ], QSYS);
         return QSYS;
     }(Driver_1.Driver));
+    __decorate([
+        Meta.property("Master Gain"),
+        Meta.min(0),
+        Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], QSYS.prototype, "masterGain", null);
+    __decorate([
+        Meta.property("Name with Space"),
+        Meta.min(0),
+        Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], QSYS.prototype, "nameWithSpace", null);
+    __decorate([
+        Meta.property("Raw Prop"),
+        Meta.min(-100),
+        Meta.max(20),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], QSYS.prototype, "rawProp", null);
+    __decorate([
+        Meta.property("Connected to Q-SYS", true),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], QSYS.prototype, "connected", null);
+    __decorate([
+        Meta.callable("Control Set Position"),
+        __param(0, Meta.parameter("Control ID")),
+        __param(1, Meta.parameter("Control Position")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Number]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "controlSetPosition", null);
+    __decorate([
+        Meta.callable("Control Set Position Ramp"),
+        __param(0, Meta.parameter("Control ID")),
+        __param(1, Meta.parameter("Control Position")),
+        __param(2, Meta.parameter("Ramp time")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "controlSetPositionRamp", null);
+    __decorate([
+        Meta.callable("Control Set String"),
+        __param(0, Meta.parameter("Control ID")),
+        __param(1, Meta.parameter("Control String")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, String]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "controlSetString", null);
+    __decorate([
+        Meta.callable("Control Set Value"),
+        __param(0, Meta.parameter("Control ID")),
+        __param(1, Meta.parameter("Control Value")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Number]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "controlSetValue", null);
+    __decorate([
+        Meta.callable("Control Set Value Ramp"),
+        __param(0, Meta.parameter("Control ID")),
+        __param(1, Meta.parameter("Control Value")),
+        __param(2, Meta.parameter("Ramp time")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "controlSetValueRamp", null);
+    __decorate([
+        Meta.callable("Control Trigger"),
+        __param(0, Meta.parameter("Control ID")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "controlTrigger", null);
+    __decorate([
+        Meta.callable("Snapshot Load"),
+        __param(0, Meta.parameter("Snapshot Bank")),
+        __param(1, Meta.parameter("Snapshot Number")),
+        __param(2, Meta.parameter("Ramp Time")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "snapshotLoad", null);
+    __decorate([
+        Meta.callable("Snapshot Save"),
+        __param(0, Meta.parameter("Snapshot Bank")),
+        __param(1, Meta.parameter("Snapshot Number")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Number]),
+        __metadata("design:returntype", void 0)
+    ], QSYS.prototype, "snapshotSave", null);
+    QSYS = __decorate([
+        Meta.driver('NetworkTCP', { port: 1702 }),
+        __metadata("design:paramtypes", [Object])
+    ], QSYS);
     exports.QSYS = QSYS;
 });

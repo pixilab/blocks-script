@@ -11,6 +11,12 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.driver = driver;
+    function roleRequired(role) {
+        return function (target) {
+            return Reflect.defineMetadata("pixi:roleRequired", role, target);
+        };
+    }
+    exports.roleRequired = roleRequired;
     function property(description, readOnly) {
         return function (target, propName, prop) {
             var origSetter = prop.set;

@@ -20,7 +20,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var PJLink = (function (_super) {
+    var PJLink = PJLink_1 = (function (_super) {
         __extends(PJLink, _super);
         function PJLink(socket) {
             var _this = _super.call(this, socket) || this;
@@ -30,7 +30,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this.attemptConnect();
             return _this;
         }
-        PJLink_1 = PJLink;
         PJLink.prototype.pollStatus = function () {
             return true;
         };
@@ -131,21 +130,21 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 this.warnMsg("Unexpected data", text);
             this.requestFinished();
         };
-        PJLink.kMinInput = 11;
-        PJLink.kMaxInput = 59;
-        __decorate([
-            Meta.property("Desired input source number"),
-            Meta.min(PJLink_1.kMinInput),
-            Meta.max(PJLink_1.kMaxInput),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], PJLink.prototype, "input", null);
-        PJLink = PJLink_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 4352 }),
-            __metadata("design:paramtypes", [Object])
-        ], PJLink);
         return PJLink;
-        var PJLink_1;
     }(NetworkProjector_1.NetworkProjector));
+    PJLink.kMinInput = 11;
+    PJLink.kMaxInput = 59;
+    __decorate([
+        Meta.property("Desired input source number"),
+        Meta.min(PJLink_1.kMinInput),
+        Meta.max(PJLink_1.kMaxInput),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], PJLink.prototype, "input", null);
+    PJLink = PJLink_1 = __decorate([
+        Meta.driver('NetworkTCP', { port: 4352 }),
+        __metadata("design:paramtypes", [Object])
+    ], PJLink);
     exports.PJLink = PJLink;
+    var PJLink_1;
 });

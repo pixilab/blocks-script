@@ -17,16 +17,20 @@ export var Spot: {
  Items that can live in the root Spot object
  */
 interface SpotGroupItem {
+	isOfTypeName(typeName: string): SpotGroupItem|null;
 }
 
 export interface SpotGroup extends SpotGroupItem {
-	[name: string]: SpotGroupItem;
+	[name: string]: SpotGroupItem|any;
 }
 
 /**
  * Basic Spot properties available for most spot types.
  */
 export interface BaseSpot {
+	fullName: string;		// Full path name (read-only)
+	name: string;			// Leaf spot name (read only)
+
 	/**
 	 Default block name as "group/leaf", or empty string
 	 if none.
@@ -47,7 +51,7 @@ export interface BaseSpot {
 }
 
 export interface DisplaySpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name (e.g., "DisplaySpot")
+	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name ("DisplaySpot")
 
 	/**
 	 True if the spot is connected. Read only.
@@ -194,7 +198,7 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 
 
 export interface MobileSpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name (e.g., "MobileSpot")
+	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name ("MobileSpot")
 
 	subscribe(event: "spot", listener: (sender: MobileSpot, message:{
 		type:

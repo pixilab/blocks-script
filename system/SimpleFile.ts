@@ -19,6 +19,12 @@ export var SimpleFile: {
 	write(fileName:string, data:string): Promise<void>;
 
 	/**
+	 * Append data to file with fileName. Returns a promise that's resolved once done,
+	 * or rejected if the operation fails.
+	 */
+	append(fileName:string, data:string): Promise<void>;
+
+	/**
 	 * Read data from file with fileName, resolving the promise with the content
 	 * of the file once done, or rejecting it if the operation fails.
 	 */
