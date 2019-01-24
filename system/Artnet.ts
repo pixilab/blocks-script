@@ -51,4 +51,5 @@ export interface Range {
 	first: number;		// First channel value (0...255)
 	last: number;		// Last channel value (0...255)
 	discrete: boolean;	// This range takes no additional numeric value
+	defaultValue: number;	// Default value for this range's value (normalized 0...1)
 }
