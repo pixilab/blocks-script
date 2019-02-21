@@ -43,6 +43,7 @@ export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFa
 interface DriverFacade {
 	isOfTypeName(typeName: string): any|null;	// Check subtype by name
 	changed(prop: string|Function): void;
+	property(p1: any, p2?: any, p3?: any): void;
 	firePropChanged(prop: string): void;
 	subscribe(name: string, listener: Function): void;
 	unsubscribe(name: string, listener: Function): void;
