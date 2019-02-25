@@ -13,10 +13,11 @@ export interface SetterGetter<T> {
 }
 
 /**
- * Options for setter/getter.
+ * Options for property setter/getter.
  */
 export interface SGOptions {
 	type?: PrimTypeSpecifier;	// Default is string
+	description?: string;		// Descriptive text for property
 	readOnly?: boolean;			// Default is read/write
 }
 
