@@ -45,16 +45,16 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             var request = SimpleHTTP_1.SimpleHTTP.newRequest(Slack.SLACK_MSG_URL + this.accessToken);
             return request.post(jsonContent, 'application/json');
         };
-        Slack.CONFIG_FILE_NAME = "Slack.config.json";
-        Slack.SLACK_MSG_URL = "https://hooks.slack.com/services/";
-        __decorate([
-            Metadata_1.callable("Send message to Slack"),
-            __param(0, Metadata_1.parameter("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", Promise)
-        ], Slack.prototype, "sendMessage", null);
         return Slack;
     }(Script_1.Script));
+    Slack.CONFIG_FILE_NAME = "Slack.config.json";
+    Slack.SLACK_MSG_URL = "https://hooks.slack.com/services/";
+    __decorate([
+        Metadata_1.callable("Send message to Slack"),
+        __param(0, Metadata_1.parameter("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", Promise)
+    ], Slack.prototype, "sendMessage", null);
     exports.Slack = Slack;
 });
