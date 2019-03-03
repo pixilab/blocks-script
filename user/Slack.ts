@@ -32,7 +32,6 @@ export class Slack extends Script {
 			console.error("Can't read file", Slack.CONFIG_FILE_NAME, error)
 		);
 	}
-w
 
     @callable("Send message to Slack")
 	public sendMessage(
