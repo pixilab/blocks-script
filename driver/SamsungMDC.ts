@@ -33,7 +33,11 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 		return this.mPower;
 	}
 
-	@property("Input (source) number. HDMI1=0x21. HDMI2=0x22")
+	/**
+	 * Input source number. See page 46 in the protocol documentation
+	 * MDC_Protocol_2018_mdc_ppmxxm6x_protocol_v14.4c.pdf
+	 */
+	@property("Input (source) number; e.g. HDMI1=33, HDMI2=34")
 	@min(0x14) @max(0x40) // Somewhat arbitrary constraints
 	public set input(
 		input: number

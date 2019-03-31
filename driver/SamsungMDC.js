@@ -72,22 +72,22 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.socket.sendBytes(cmd);
             console.log(cmd);
         };
-        __decorate([
-            Metadata_1.property("Power on/off"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], SamsungMDC.prototype, "power", null);
-        __decorate([
-            Metadata_1.property("Input (source) number. HDMI1=0x21. HDMI2=0x22"),
-            Metadata_1.min(0x14), Metadata_1.max(0x40),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], SamsungMDC.prototype, "input", null);
-        SamsungMDC = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 1515 }),
-            __metadata("design:paramtypes", [Object])
-        ], SamsungMDC);
         return SamsungMDC;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.property("Power on/off"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], SamsungMDC.prototype, "power", null);
+    __decorate([
+        Metadata_1.property("Input (source) number; e.g. HDMI1=33, HDMI2=34"),
+        Metadata_1.min(0x14), Metadata_1.max(0x40),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], SamsungMDC.prototype, "input", null);
+    SamsungMDC = __decorate([
+        Metadata_1.driver('NetworkTCP', { port: 1515 }),
+        __metadata("design:paramtypes", [Object])
+    ], SamsungMDC);
     exports.SamsungMDC = SamsungMDC;
 });
