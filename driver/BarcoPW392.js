@@ -20,7 +20,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var BarcoPW392 = (function (_super) {
+    var BarcoPW392 = BarcoPW392_1 = (function (_super) {
         __extends(BarcoPW392, _super);
         function BarcoPW392(socket) {
             var _this = _super.call(this, socket) || this;
@@ -30,7 +30,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this.attemptConnect();
             return _this;
         }
-        BarcoPW392_1 = BarcoPW392;
         BarcoPW392.prototype.isOfTypeName = function (typeName) {
             return typeName === "BarcoPW392" ? this : _super.prototype.isOfTypeName.call(this, typeName);
         };
@@ -92,20 +91,20 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 this.requestFinished();
             }
         };
-        BarcoPW392.replyParser = /\%\d* (\S*) (\!?)(\d*)/;
-        BarcoPW392.kMaxInput = 25;
-        __decorate([
-            Meta.property("Desired input source number"),
-            Meta.min(0), Meta.max(BarcoPW392_1.kMaxInput),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BarcoPW392.prototype, "input", null);
-        BarcoPW392 = BarcoPW392_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 1025 }),
-            __metadata("design:paramtypes", [Object])
-        ], BarcoPW392);
         return BarcoPW392;
-        var BarcoPW392_1;
     }(NetworkProjector_1.NetworkProjector));
+    BarcoPW392.replyParser = /\%\d* (\S*) (\!?)(\d*)/;
+    BarcoPW392.kMaxInput = 25;
+    __decorate([
+        Meta.property("Desired input source number"),
+        Meta.min(0), Meta.max(BarcoPW392_1.kMaxInput),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BarcoPW392.prototype, "input", null);
+    BarcoPW392 = BarcoPW392_1 = __decorate([
+        Meta.driver('NetworkTCP', { port: 1025 }),
+        __metadata("design:paramtypes", [Object])
+    ], BarcoPW392);
     exports.BarcoPW392 = BarcoPW392;
+    var BarcoPW392_1;
 });

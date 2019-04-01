@@ -17,54 +17,50 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
+define(["require", "exports", "system/SimpleServer", "system_lib/Script", "system_lib/Metadata"], function (require, exports, SimpleServer_1, Script_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var NetRFID = (function (_super) {
-        __extends(NetRFID, _super);
-        function NetRFID(socket) {
-            var _this = _super.call(this, socket) || this;
-            _this.socket = socket;
-            socket.autoConnect();
-            socket.subscribe('textReceived', function (sender, message) {
-                return _this.scanned = message.text;
+    var SimpleInput = (function (_super) {
+        __extends(SimpleInput, _super);
+        function SimpleInput(env) {
+            var _this = _super.call(this, env) || this;
+            _this.mCommand = '';
+            SimpleServer_1.SimpleServer.newTextServer(4004, 5)
+                .subscribe('client', function (sender, socket) {
+                return socket.connection.subscribe('textReceived', function (sender, message) {
+                    return _this.command = message.text;
+                });
             });
             return _this;
         }
-        Object.defineProperty(NetRFID.prototype, "scanned", {
+        Object.defineProperty(SimpleInput.prototype, "command", {
             get: function () {
-                return this.mScanned;
+                return this.mCommand;
             },
-            set: function (value) {
-                this.mScanned = value;
-                if (value)
-                    this.startResetTimeout();
+            set: function (cmd) {
+                var _this = this;
+                this.mCommand = cmd;
+                if (this.mClearTimer) {
+                    this.mClearTimer.cancel();
+                    this.mClearTimer = undefined;
+                }
+                if (cmd) {
+                    this.mClearTimer = wait(300);
+                    this.mClearTimer.then(function () {
+                        _this.mClearTimer = undefined;
+                        _this.command = '';
+                    });
+                }
             },
             enumerable: true,
             configurable: true
         });
-        NetRFID.prototype.startResetTimeout = function () {
-            var _this = this;
-            this.stopResetTimer();
-            this.mResetValuePromise = wait(1000);
-            this.mResetValuePromise.then(function () { return _this.scanned = ""; });
-        };
-        NetRFID.prototype.stopResetTimer = function () {
-            if (this.mResetValuePromise) {
-                this.mResetValuePromise.cancel();
-                this.mResetValuePromise = undefined;
-            }
-        };
-        return NetRFID;
-    }(Driver_1.Driver));
+        return SimpleInput;
+    }(Script_1.Script));
     __decorate([
-        Metadata_1.property("Last scanned value, or empty string", true),
+        Metadata_1.property("The most recent command", true),
         __metadata("design:type", String),
         __metadata("design:paramtypes", [String])
-    ], NetRFID.prototype, "scanned", null);
-    NetRFID = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 50000 }),
-        __metadata("design:paramtypes", [Object])
-    ], NetRFID);
-    exports.NetRFID = NetRFID;
+    ], SimpleInput.prototype, "command", null);
+    exports.SimpleInput = SimpleInput;
 });

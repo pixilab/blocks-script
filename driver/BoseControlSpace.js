@@ -336,146 +336,146 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 });
             }
         };
-        __decorate([
-            Metadata_1.property("Standby power mode"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "standBy", null);
-        __decorate([
-            Metadata_1.property("Parameter set"),
-            Metadata_1.min(0), Metadata_1.max(255),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "parameterSet", null);
-        __decorate([
-            Metadata_1.property("Mute Mic1"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic1", null);
-        __decorate([
-            Metadata_1.property("Volume Mic1"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic1", null);
-        __decorate([
-            Metadata_1.property("Mute Mic2"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic2", null);
-        __decorate([
-            Metadata_1.property("Volume Mic2"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic2", null);
-        __decorate([
-            Metadata_1.property("Mute Mic3"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic3", null);
-        __decorate([
-            Metadata_1.property("Volume Mic3"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic3", null);
-        __decorate([
-            Metadata_1.property("Mute Mic4"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic4", null);
-        __decorate([
-            Metadata_1.property("Volume Mic4"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic4", null);
-        __decorate([
-            Metadata_1.property("Mute Mic5"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic5", null);
-        __decorate([
-            Metadata_1.property("Volume Mic5"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic5", null);
-        __decorate([
-            Metadata_1.property("Mute Mic6"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic6", null);
-        __decorate([
-            Metadata_1.property("Volume Mic6"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic6", null);
-        __decorate([
-            Metadata_1.property("Mute Mic7"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic7", null);
-        __decorate([
-            Metadata_1.property("Volume Mic7"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic7", null);
-        __decorate([
-            Metadata_1.property("Mute Mic8"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic8", null);
-        __decorate([
-            Metadata_1.property("Volume Mic8"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic8", null);
-        __decorate([
-            Metadata_1.property("Mute Mic9"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic9", null);
-        __decorate([
-            Metadata_1.property("Volume Mic9"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic9", null);
-        __decorate([
-            Metadata_1.property("Mute Mic10"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], BoseControlSpace.prototype, "muteMic10", null);
-        __decorate([
-            Metadata_1.property("Volume Mic10"), Metadata_1.min(-60), Metadata_1.max(12),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BoseControlSpace.prototype, "volumeMic10", null);
-        __decorate([
-            Metadata_1.callable("Send raw command string, automatically terminated by CR"),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", void 0)
-        ], BoseControlSpace.prototype, "sendString", null);
-        __decorate([
-            Metadata_1.callable("Set the volume of slot and channel to normalized value"),
-            __param(0, Metadata_1.parameter("Slot to set")),
-            __param(1, Metadata_1.parameter("Channel to set")),
-            __param(2, Metadata_1.parameter("Value (0…1.2)")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], BoseControlSpace.prototype, "setVolume", null);
-        __decorate([
-            Metadata_1.callable("Set the level of specified group to normalized value"),
-            __param(0, Metadata_1.parameter("Group to set (1…64)")),
-            __param(1, Metadata_1.parameter("Value (0…1.2)")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], BoseControlSpace.prototype, "setGroupLevel", null);
-        BoseControlSpace = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 10055 }),
-            __metadata("design:paramtypes", [Object])
-        ], BoseControlSpace);
         return BoseControlSpace;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.property("Standby power mode"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "standBy", null);
+    __decorate([
+        Metadata_1.property("Parameter set"),
+        Metadata_1.min(0), Metadata_1.max(255),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "parameterSet", null);
+    __decorate([
+        Metadata_1.property("Mute Mic1"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic1", null);
+    __decorate([
+        Metadata_1.property("Volume Mic1"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic1", null);
+    __decorate([
+        Metadata_1.property("Mute Mic2"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic2", null);
+    __decorate([
+        Metadata_1.property("Volume Mic2"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic2", null);
+    __decorate([
+        Metadata_1.property("Mute Mic3"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic3", null);
+    __decorate([
+        Metadata_1.property("Volume Mic3"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic3", null);
+    __decorate([
+        Metadata_1.property("Mute Mic4"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic4", null);
+    __decorate([
+        Metadata_1.property("Volume Mic4"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic4", null);
+    __decorate([
+        Metadata_1.property("Mute Mic5"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic5", null);
+    __decorate([
+        Metadata_1.property("Volume Mic5"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic5", null);
+    __decorate([
+        Metadata_1.property("Mute Mic6"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic6", null);
+    __decorate([
+        Metadata_1.property("Volume Mic6"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic6", null);
+    __decorate([
+        Metadata_1.property("Mute Mic7"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic7", null);
+    __decorate([
+        Metadata_1.property("Volume Mic7"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic7", null);
+    __decorate([
+        Metadata_1.property("Mute Mic8"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic8", null);
+    __decorate([
+        Metadata_1.property("Volume Mic8"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic8", null);
+    __decorate([
+        Metadata_1.property("Mute Mic9"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic9", null);
+    __decorate([
+        Metadata_1.property("Volume Mic9"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic9", null);
+    __decorate([
+        Metadata_1.property("Mute Mic10"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], BoseControlSpace.prototype, "muteMic10", null);
+    __decorate([
+        Metadata_1.property("Volume Mic10"), Metadata_1.min(-60), Metadata_1.max(12),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], BoseControlSpace.prototype, "volumeMic10", null);
+    __decorate([
+        Metadata_1.callable("Send raw command string, automatically terminated by CR"),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", void 0)
+    ], BoseControlSpace.prototype, "sendString", null);
+    __decorate([
+        Metadata_1.callable("Set the volume of slot and channel to normalized value"),
+        __param(0, Metadata_1.parameter("Slot to set")),
+        __param(1, Metadata_1.parameter("Channel to set")),
+        __param(2, Metadata_1.parameter("Value (0…1.2)")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Number, Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], BoseControlSpace.prototype, "setVolume", null);
+    __decorate([
+        Metadata_1.callable("Set the level of specified group to normalized value"),
+        __param(0, Metadata_1.parameter("Group to set (1…64)")),
+        __param(1, Metadata_1.parameter("Value (0…1.2)")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Number, Number]),
+        __metadata("design:returntype", void 0)
+    ], BoseControlSpace.prototype, "setGroupLevel", null);
+    BoseControlSpace = __decorate([
+        Metadata_1.driver('NetworkTCP', { port: 10055 }),
+        __metadata("design:paramtypes", [Object])
+    ], BoseControlSpace);
     exports.BoseControlSpace = BoseControlSpace;
     var Command = (function () {
         function Command(baseCmd) {

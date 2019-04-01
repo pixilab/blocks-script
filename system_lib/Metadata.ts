@@ -33,6 +33,16 @@ interface DriverInfo {
 }
 
 /**
+ * Annotation for user script class, specifying role required to set properties exposed
+ * by script.
+ */
+export function roleRequired(role: string) {
+	return function(target: any): void {
+		return Reflect.defineMetadata("pixi:roleRequired", role, target);
+	}
+}
+
+/**
  Annotation defining a property, for use on set or get pseudo-method defining the property.
  In addition to adding "pixi:property" metadata to the property, it also hooks up change
  notofication qualified by the name of the property when its value changes through the
@@ -76,7 +86,7 @@ export function property(description?: string, readOnly?: boolean) {
 }
 
 /**
- Annotation declaring a callable method, with optional description.
+ Annotation declaring a Task-callable method, with optional description.
  */
 export function callable(description?: string) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
@@ -128,10 +138,9 @@ export function max(max:number) {
  	rest/script/invoke/<user-script-name>/<method-name>
 
  with a JSON body payload deserialized and passed to the method as an Object.
- It returns the object or string returned from the method as JSON data back to
- the web client.
-
- The "authorization" parameter is not yet supported.
+ An object or string returned from the method will be seriallized as JSON data and
+ returned to the web client. May return a promise eventually resolving with the
+ result value.
  */
 export function resource(auhorization?: string) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {

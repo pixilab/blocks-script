@@ -54,16 +54,16 @@ define(["require", "exports", "system/SimpleFile", "system_lib/Driver", "system_
             enumerable: true,
             configurable: true
         });
-        __decorate([
-            Metadata_1.property("Persisted property"),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], PersistentDrvr.prototype, "stringo", null);
-        PersistentDrvr = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 1025 }),
-            __metadata("design:paramtypes", [Object])
-        ], PersistentDrvr);
         return PersistentDrvr;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.property("Persisted property"),
+        __metadata("design:type", String),
+        __metadata("design:paramtypes", [String])
+    ], PersistentDrvr.prototype, "stringo", null);
+    PersistentDrvr = __decorate([
+        Metadata_1.driver('NetworkTCP', { port: 1025 }),
+        __metadata("design:paramtypes", [Object])
+    ], PersistentDrvr);
     exports.PersistentDrvr = PersistentDrvr;
 });

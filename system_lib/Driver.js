@@ -42,12 +42,12 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
             enumerable: true,
             configurable: true
         });
-        __decorate([
-            Meta.property("Connected to peer"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [])
-        ], Driver.prototype, "connected", null);
         return Driver;
     }(ScriptBase_1.ScriptBase));
+    __decorate([
+        Meta.property("Connected to peer"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [])
+    ], Driver.prototype, "connected", null);
     exports.Driver = Driver;
 });

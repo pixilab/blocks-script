@@ -20,7 +20,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var ThreeM_Touch = (function (_super) {
+    var ThreeM_Touch = ThreeM_Touch_1 = (function (_super) {
         __extends(ThreeM_Touch, _super);
         function ThreeM_Touch(socket) {
             var _this = _super.call(this, socket) || this;
@@ -28,7 +28,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.autoConnect(true);
             return _this;
         }
-        ThreeM_Touch_1 = ThreeM_Touch;
         Object.defineProperty(ThreeM_Touch.prototype, "power", {
             get: function () {
                 return this.powered;
@@ -56,62 +55,61 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var cmd = buildCommand(cd.page, cd.code, param);
             return this.socket.sendBytes(cmd);
         };
-        ThreeM_Touch.kCommands = {
-            BRIGHTNESS: {
-                page: 0x01,
-                code: 0x10,
-                paramMax: 100
-            },
-            CONTRAST: {
-                page: 0x01,
-                code: 0x12,
-                paramMax: 100
-            },
-            COLOR_TEMP: {
-                page: 0x02,
-                code: 0x54,
-                paramMax: 2
-            },
-            VOLUME: {
-                page: 0x0,
-                code: 0x62,
-                paramMax: 30
-            },
-            MUTE: {
-                page: 0x0,
-                code: 0x8D,
-                paramMax: 1
-            },
-            INPUT: {
-                page: 0x02,
-                code: 0xCB,
-                paramMax: 3
-            },
-            POWER: {
-                page: 0x0,
-                code: 0x03,
-                paramMax: 1
-            }
-        };
-        __decorate([
-            Metadata_1.property("Display power"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], ThreeM_Touch.prototype, "power", null);
-        __decorate([
-            Metadata_1.property("Display brightness"),
-            Metadata_1.min(0),
-            Metadata_1.max(80),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], ThreeM_Touch.prototype, "brightness", null);
-        ThreeM_Touch = ThreeM_Touch_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 4001 }),
-            __metadata("design:paramtypes", [Object])
-        ], ThreeM_Touch);
         return ThreeM_Touch;
-        var ThreeM_Touch_1;
     }(Driver_1.Driver));
+    ThreeM_Touch.kCommands = {
+        BRIGHTNESS: {
+            page: 0x01,
+            code: 0x10,
+            paramMax: 100
+        },
+        CONTRAST: {
+            page: 0x01,
+            code: 0x12,
+            paramMax: 100
+        },
+        COLOR_TEMP: {
+            page: 0x02,
+            code: 0x54,
+            paramMax: 2
+        },
+        VOLUME: {
+            page: 0x0,
+            code: 0x62,
+            paramMax: 30
+        },
+        MUTE: {
+            page: 0x0,
+            code: 0x8D,
+            paramMax: 1
+        },
+        INPUT: {
+            page: 0x02,
+            code: 0xCB,
+            paramMax: 3
+        },
+        POWER: {
+            page: 0x0,
+            code: 0x03,
+            paramMax: 1
+        }
+    };
+    __decorate([
+        Metadata_1.property("Display power"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], ThreeM_Touch.prototype, "power", null);
+    __decorate([
+        Metadata_1.property("Display brightness"),
+        Metadata_1.min(0),
+        Metadata_1.max(80),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], ThreeM_Touch.prototype, "brightness", null);
+    ThreeM_Touch = ThreeM_Touch_1 = __decorate([
+        Metadata_1.driver('NetworkTCP', { port: 4001 }),
+        __metadata("design:paramtypes", [Object])
+    ], ThreeM_Touch);
     exports.ThreeM_Touch = ThreeM_Touch;
     function buildCommand(opcodePage, opcode, param) {
         var data = [];
@@ -148,4 +146,5 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     function toHex(num, numDigits) {
         return ('0000' + num.toString(16).toUpperCase()).slice(-numDigits);
     }
+    var ThreeM_Touch_1;
 });
