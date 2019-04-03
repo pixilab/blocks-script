@@ -88,43 +88,43 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         WOCustomUdpDrvr.prototype.tell = function (data) {
             this.socket.sendText(data + '\r');
         };
-        __decorate([
-            Meta.property("Layer condition flags"),
-            Meta.min(0),
-            Meta.max(65535),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], WOCustomUdpDrvr.prototype, "layerCond", null);
-        __decorate([
-            Meta.property("Main timeline playing"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomUdpDrvr.prototype, "playing", null);
-        __decorate([
-            Meta.property("Standby mode"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomUdpDrvr.prototype, "standBy", null);
-        __decorate([
-            Meta.property("Generic input level"),
-            Meta.min(0),
-            Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], WOCustomUdpDrvr.prototype, "input", null);
-        __decorate([
-            Meta.callable("Play or stop any auxiliary timeline"),
-            __param(0, Meta.parameter("Name of aux timeline to control")),
-            __param(1, Meta.parameter("Whether to start the timeline")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Boolean]),
-            __metadata("design:returntype", void 0)
-        ], WOCustomUdpDrvr.prototype, "playAuxTimeline", null);
-        WOCustomUdpDrvr = __decorate([
-            Meta.driver('NetworkUDP', { port: 3040 }),
-            __metadata("design:paramtypes", [Object])
-        ], WOCustomUdpDrvr);
         return WOCustomUdpDrvr;
     }(Driver_1.Driver));
+    __decorate([
+        Meta.property("Layer condition flags"),
+        Meta.min(0),
+        Meta.max(65535),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], WOCustomUdpDrvr.prototype, "layerCond", null);
+    __decorate([
+        Meta.property("Main timeline playing"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomUdpDrvr.prototype, "playing", null);
+    __decorate([
+        Meta.property("Standby mode"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomUdpDrvr.prototype, "standBy", null);
+    __decorate([
+        Meta.property("Generic input level"),
+        Meta.min(0),
+        Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], WOCustomUdpDrvr.prototype, "input", null);
+    __decorate([
+        Meta.callable("Play or stop any auxiliary timeline"),
+        __param(0, Meta.parameter("Name of aux timeline to control")),
+        __param(1, Meta.parameter("Whether to start the timeline")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Boolean]),
+        __metadata("design:returntype", void 0)
+    ], WOCustomUdpDrvr.prototype, "playAuxTimeline", null);
+    WOCustomUdpDrvr = __decorate([
+        Meta.driver('NetworkUDP', { port: 3040 }),
+        __metadata("design:paramtypes", [Object])
+    ], WOCustomUdpDrvr);
     exports.WOCustomUdpDrvr = WOCustomUdpDrvr;
 });

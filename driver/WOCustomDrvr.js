@@ -23,7 +23,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var WOCustomDrvr = (function (_super) {
+    var WOCustomDrvr = WOCustomDrvr_1 = (function (_super) {
         __extends(WOCustomDrvr, _super);
         function WOCustomDrvr(socket) {
             var _this = _super.call(this, socket) || this;
@@ -47,7 +47,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 _this.getInitialStatus();
             return _this;
         }
-        WOCustomDrvr_1 = WOCustomDrvr;
         Object.defineProperty(WOCustomDrvr.prototype, "connected", {
             get: function () {
                 return this.mConnected;
@@ -163,49 +162,48 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             this.pendingQueries = {};
         };
-        WOCustomDrvr.kReplyParser = /\[([^\]]+)\](\w*)[\s]?(.*)/;
-        __decorate([
-            Meta.property("Connected to WATCHOUT", true),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomDrvr.prototype, "connected", null);
-        __decorate([
-            Meta.property("Layer condition flags"),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], WOCustomDrvr.prototype, "layerCond", null);
-        __decorate([
-            Meta.property("Main timeline playing"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomDrvr.prototype, "playing", null);
-        __decorate([
-            Meta.property("Standby mode"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], WOCustomDrvr.prototype, "standBy", null);
-        __decorate([
-            Meta.property("Generic input level"),
-            Meta.min(0),
-            Meta.max(1),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], WOCustomDrvr.prototype, "input", null);
-        __decorate([
-            Meta.callable("Play or stop any auxiliary timeline"),
-            __param(0, Meta.parameter("Name of aux timeline to control")),
-            __param(1, Meta.parameter("Whether to start the timeline")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Boolean]),
-            __metadata("design:returntype", void 0)
-        ], WOCustomDrvr.prototype, "playAuxTimeline", null);
-        WOCustomDrvr = WOCustomDrvr_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 3040 }),
-            __metadata("design:paramtypes", [Object])
-        ], WOCustomDrvr);
         return WOCustomDrvr;
-        var WOCustomDrvr_1;
     }(Driver_1.Driver));
+    WOCustomDrvr.kReplyParser = /\[([^\]]+)\](\w*)[\s]?(.*)/;
+    __decorate([
+        Meta.property("Connected to WATCHOUT", true),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomDrvr.prototype, "connected", null);
+    __decorate([
+        Meta.property("Layer condition flags"),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], WOCustomDrvr.prototype, "layerCond", null);
+    __decorate([
+        Meta.property("Main timeline playing"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomDrvr.prototype, "playing", null);
+    __decorate([
+        Meta.property("Standby mode"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], WOCustomDrvr.prototype, "standBy", null);
+    __decorate([
+        Meta.property("Generic input level"),
+        Meta.min(0),
+        Meta.max(1),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], WOCustomDrvr.prototype, "input", null);
+    __decorate([
+        Meta.callable("Play or stop any auxiliary timeline"),
+        __param(0, Meta.parameter("Name of aux timeline to control")),
+        __param(1, Meta.parameter("Whether to start the timeline")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, Boolean]),
+        __metadata("design:returntype", void 0)
+    ], WOCustomDrvr.prototype, "playAuxTimeline", null);
+    WOCustomDrvr = WOCustomDrvr_1 = __decorate([
+        Meta.driver('NetworkTCP', { port: 3040 }),
+        __metadata("design:paramtypes", [Object])
+    ], WOCustomDrvr);
     exports.WOCustomDrvr = WOCustomDrvr;
     var Query = (function () {
         function Query(cmd) {
@@ -242,7 +240,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         Query.prototype.fail = function (error) {
             this.rejector(error);
         };
-        Query.prevId = 0;
         return Query;
     }());
+    Query.prevId = 0;
+    var WOCustomDrvr_1;
 });

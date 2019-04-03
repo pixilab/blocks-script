@@ -55,16 +55,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.mResetValuePromise = undefined;
             }
         };
-        __decorate([
-            Metadata_1.property("Last scanned value, or empty string", true),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], NetRFID.prototype, "scanned", null);
-        NetRFID = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 50000 }),
-            __metadata("design:paramtypes", [Object])
-        ], NetRFID);
         return NetRFID;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.property("Last scanned value, or empty string", true),
+        __metadata("design:type", String),
+        __metadata("design:paramtypes", [String])
+    ], NetRFID.prototype, "scanned", null);
+    NetRFID = __decorate([
+        Metadata_1.driver('NetworkTCP', { port: 50000 }),
+        __metadata("design:paramtypes", [Object])
+    ], NetRFID);
     exports.NetRFID = NetRFID;
 });
