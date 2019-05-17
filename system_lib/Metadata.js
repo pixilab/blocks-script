@@ -84,10 +84,10 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.max = max;
-    function resource(auhorization) {
+    function resource(roleRequired) {
         return function (target, propertyKey, descriptor) {
             var info = {
-                auth: auhorization || ""
+                auth: roleRequired || ""
             };
             return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
         };
