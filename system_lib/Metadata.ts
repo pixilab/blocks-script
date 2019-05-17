@@ -34,7 +34,8 @@ interface DriverInfo {
 
 /**
  * Annotation for user script class, specifying role required to set properties exposed
- * by script.
+ * by script, where role is one of the following: "Admin", "Manager", "Creator", "Editor",
+ * "Contributor", "Staff" or "Spot".
  */
 export function roleRequired(role: string) {
 	return function(target: any): void {

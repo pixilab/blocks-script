@@ -14,9 +14,9 @@ export var WATCHOUT: { [clusterName: string]: WATCHOUTCluster; };
  * Shared stuff provided both for the main timeline as well as aux timelines.
  */
 export interface Timeline {
-	connected: boolean;		// Read only
+	connected: boolean;		// Read only (indicates data is now available/relevant)
 	playing: boolean;		// Timeline is playing
-	timePosition: number;	// Timeline time position
+	timePosition: number;	// Timeline time position, in mS
 
 	subscribe(event: "connect", listener: (sender: Timeline, message:{
 		type:
