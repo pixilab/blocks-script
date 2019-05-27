@@ -131,10 +131,11 @@ interface NetworkBase extends ScriptBaseEnv {
 	isOfTypeName(typeName: string): NetworkBase|null;
 
 	// Read-only properties:
-	name: string;			// Name of this TCP port
+	name: string;			// Leaf name of this network device
 	fullName: string;		// Full name, including enclosing containers
 	enabled: boolean;		// True if I'm enabled (else won't send data)
 	address: string;		// Target IP address (e.g., "10.0.2.45")
+	port: number;			// Port number sending data to
 
 	/**
 	 * Send wake-on-LAN message to this device or device with specified MAC address,

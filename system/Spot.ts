@@ -17,16 +17,20 @@ export var Spot: {
  Items that can live in the root Spot object
  */
 interface SpotGroupItem {
+	isOfTypeName(typeName: string): SpotGroupItem|null;
 }
 
 export interface SpotGroup extends SpotGroupItem {
-	[name: string]: SpotGroupItem;
+	[name: string]: SpotGroupItem|any;
 }
 
 /**
  * Basic Spot properties available for most spot types.
  */
 export interface BaseSpot {
+	fullName: string;		// Full path name (read-only)
+	name: string;			// Leaf spot name (read only)
+
 	/**
 	 Default block name as "group/leaf", or empty string
 	 if none.
@@ -47,7 +51,7 @@ export interface BaseSpot {
 }
 
 export interface DisplaySpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name (e.g., "DisplaySpot")
+	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name ("DisplaySpot")
 
 	/**
 	 True if the spot is connected. Read only.
@@ -66,6 +70,13 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 * Turn power on/off, if possible.
 	 */
 	power: boolean;
+
+	/**
+	 * Current time position (e.g., in video), in seconds. Write to position the video.
+	 * Reading is supported only when spot has an active Synchronizer block which provides
+	 * this information (else returns NaN).
+	 */
+	time: number;
 
 	/**
 	 Ask display to reboot/reload. Not supported by all displays.
@@ -141,6 +152,14 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	forceTags(tags: string, ofSet?: string): void;
 
 	/**
+	 * Ask spot to scroll horizontally and/or vertically, to the specified position.
+	 * This assumes the existence of Scroller(s) on the client side, to do the actual
+	 * scrolling. The position is specified as a normalized value 0...1, where 0
+	 * is no scrolling, and 1 is the maximum amount of scrolling.
+	 */
+	scrollTo(x: number|undefined, y?:number): void;
+
+	/**
 	 * Event fired when interesting connection state event occurs.
 	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
@@ -179,7 +198,7 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 
 
 export interface MobileSpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name (e.g., "MobileSpot")
+	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name ("MobileSpot")
 
 	subscribe(event: "spot", listener: (sender: MobileSpot, message:{
 		type:

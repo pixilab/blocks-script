@@ -16,23 +16,6 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
         function Script() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
-        Script.prototype.property = function (name, options, setGetFunc) {
-            this.__scriptFacade.property(name, options, setGetFunc);
-            Object.defineProperty(this.constructor.prototype, name, {
-                get: function () {
-                    return setGetFunc();
-                },
-                set: function (value) {
-                    if (!options.readOnly) {
-                        var oldValue = setGetFunc();
-                        if (oldValue !== setGetFunc(value))
-                            this.__scriptFacade.firePropChanged(name);
-                    }
-                },
-                enumerable: true,
-                configurable: true
-            });
-        };
         Script.prototype.getProperty = function (fullPath, changeNotification) {
             return this.__scriptFacade.getProperty(fullPath, changeNotification);
         };

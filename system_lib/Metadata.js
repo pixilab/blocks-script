@@ -11,6 +11,12 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.driver = driver;
+    function roleRequired(role) {
+        return function (target) {
+            return Reflect.defineMetadata("pixi:roleRequired", role, target);
+        };
+    }
+    exports.roleRequired = roleRequired;
     function property(description, readOnly) {
         return function (target, propName, prop) {
             var origSetter = prop.set;
@@ -78,10 +84,10 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.max = max;
-    function resource(auhorization) {
+    function resource(roleRequired) {
         return function (target, propertyKey, descriptor) {
             var info = {
-                auth: auhorization || ""
+                auth: roleRequired || ""
             };
             return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
         };
