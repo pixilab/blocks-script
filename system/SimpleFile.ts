@@ -1,9 +1,9 @@
 /*
  * Basic functions for reading/writing/moving and deleting files.
- * By default (if a relative path or plain file name is specified), files are stored under script/files.
- * You may also specify one of the follwing absolute paths:
- * /public/*	Specifies a file path under public
- * /temp/*		Specifies a file path under temp
+ * By default (if a relative path or plain name is specified), files are assumed to live under script/files.
+ * Alternatively, you can specify one of the follwing absolute paths:
+ * /public/*	Specifies a path under public
+ * /temp/*		Specifies a path under temp
  *
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2017 by Mike Fahl.
@@ -45,9 +45,33 @@ export var SimpleFile: {
 	copy(src: string, dest: string, replace?: boolean): Promise<void>;
 
 	/**
-	 * Delete specified file. Will only delete file (not directory).
-	 * Succeeds also if the file doesn't exist. Returns a promise that's resolved once done,
-	 * or rejected if the operation fails.
+	 * Delete specified fileOrDirectory.
+	 * If directory, and not recirsive, it must be empty.
+	 * If file, it must not be "write protected" or "locked" by other means.
+	 * If recursive, deletes non-empty directory, including EVERYTHING INSIDE IT!
+	 * Succeeds also if fileOrDirectory doesn't exist. Returns a promise resolved
+	 * once done, or rejected if the operation fails.
 	 */
-	delete(file: string): Promise<void>;
+	delete(fileOrDirectory: string, recursive?:boolean): Promise<void>;
+
+	/**
+	 * List files and subdirectories in specified directory. Will reject promise
+	 * if directory doesn't exist or isn't a directory, or if an error occurs
+	 * during the operation.
+	 */
+	list(directory: string): Promise<DirInfo>;
+}
+
+/**
+ * Information returned by the list method. Reported files or subdirectories have the same
+ * form as the requested directory. I.e., if the requested directory is relative (and
+ * hence implicitly under script/files), the listed files will have a relative path.
+ * Likewise, if the requested directory is absolute, all results will be absolute.
+ *
+ * Only plain files and subdirectories will be returned. Not hidden files (including
+ * any . and .. entries) or symlinks.
+	 */
+export interface DirInfo {
+	files: string[];			// Plain files found in the specified directory
+	directories: string[];		// Subdirectories found in the specified directory
 }
