@@ -55,11 +55,18 @@ export var SimpleFile: {
 	delete(fileOrDirectory: string, recursive?:boolean): Promise<void>;
 
 	/**
-	 * List files and subdirectories in specified directory. Will reject promise
-	 * if directory doesn't exist or isn't a directory, or if an error occurs
-	 * during the operation.
+	 * List files and subdirectories in specified directory. Returns usable
+	 * path to each item, or name only (if leafNameOnly)
+	 *
+	 * Reject promise if directory doesn't exist or isn't a directory,
+	 * or if an error occurs during the operation.
 	 */
-	list(directory: string): Promise<DirInfo>;
+	list(directory: string, leafNameOnly?: boolean): Promise<DirInfo>;
+
+	/**
+	 * Get the last-modified timestamp of specified file or directory.
+	 */
+	lastModified(path: string): Promise<Date>;
 }
 
 /**
