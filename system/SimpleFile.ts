@@ -56,7 +56,7 @@ export var SimpleFile: {
 
 	/**
 	 * List files and subdirectories in specified directory. Returns usable
-	 * path to each item, or name only (if leafNameOnly)
+	 * path to each item, or name only (if leafNameOnly).
 	 *
 	 * Reject promise if directory doesn't exist or isn't a directory,
 	 * or if an error occurs during the operation.
@@ -77,7 +77,7 @@ export var SimpleFile: {
  *
  * Only plain files and subdirectories will be returned. Not hidden files (including
  * any . and .. entries) or symlinks.
-	 */
+ */
 export interface DirInfo {
 	files: string[];			// Plain files found in the specified directory
 	directories: string[];		// Subdirectories found in the specified directory

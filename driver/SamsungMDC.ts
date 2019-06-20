@@ -1,18 +1,18 @@
 /*
- * Driver for Samsung MDC compatible displays.
+ * Basic driver for Samsung MDC displays.
+ * Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {driver, max, min, property} from "system_lib/Metadata";
 
-/**	Basic driver for sending keystrokes through a Global Caché iTach
-	Ethernet IR sender.
-*/
 @driver('NetworkTCP', { port: 1515 })
 export class SamsungMDC extends Driver<NetworkTCP> {
-	private mPower: boolean;
-	private mInput: number;
+	// Arbitrary initial value - we really have no idea
+	private mPower: boolean = false;
+	private mInput: number = 0x14;
+	private mVolume: number = 0.5;
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
@@ -33,11 +33,20 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 		return this.mPower;
 	}
 
-	/**
-	 * Input source number. See page 46 in the protocol documentation
-	 * MDC_Protocol_2018_mdc_ppmxxm6x_protocol_v14.4c.pdf
-	 */
-	@property("Input (source) number; e.g. HDMI1=33, HDMI2=34")
+	@property("Volume level, normalized 0...1")
+	@min(0) @max(1)
+	public set volume(
+		volume: number
+	) {
+		volume = Math.max(0, Math.min(1, volume));
+		this.mVolume = volume;
+		this.sendCommand(0x12, Math.round(volume * 100));
+	}
+	public get volume(): number {
+		return this.mVolume;
+	}
+
+	@property("Input (source) number. HDMI1=0x21. HDMI2=0x22")
 	@min(0x14) @max(0x40) // Somewhat arbitrary constraints
 	public set input(
 		input: number
