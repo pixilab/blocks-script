@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -25,10 +28,21 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function SamsungMDC(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.mId = 0;
             socket.enableWakeOnLAN();
             socket.autoConnect(true);
             return _this;
         }
+        Object.defineProperty(SamsungMDC.prototype, "id", {
+            get: function () {
+                return this.mId;
+            },
+            set: function (id) {
+                this.mId = id;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(SamsungMDC.prototype, "power", {
             get: function () {
                 return this.mPower;
@@ -57,7 +71,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var cmd = [];
             cmd.push(0xAA);
             cmd.push(cmdByte);
-            cmd.push(0);
+            cmd.push(this.mId);
             if (paramByte !== undefined) {
                 cmd.push(1);
                 cmd.push(paramByte);
@@ -72,22 +86,28 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.socket.sendBytes(cmd);
             console.log(cmd);
         };
+        __decorate([
+            Metadata_1.property("The target ID"),
+            Metadata_1.min(0), Metadata_1.max(254),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SamsungMDC.prototype, "id", null);
+        __decorate([
+            Metadata_1.property("Power on/off"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], SamsungMDC.prototype, "power", null);
+        __decorate([
+            Metadata_1.property("Input (source) number. HDMI1=0x21. HDMI2=0x22"),
+            Metadata_1.min(0x14), Metadata_1.max(0x40),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SamsungMDC.prototype, "input", null);
+        SamsungMDC = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 1515 }),
+            __metadata("design:paramtypes", [Object])
+        ], SamsungMDC);
         return SamsungMDC;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.property("Power on/off"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], SamsungMDC.prototype, "power", null);
-    __decorate([
-        Metadata_1.property("Input (source) number. HDMI1=0x21. HDMI2=0x22"),
-        Metadata_1.min(0x14), Metadata_1.max(0x40),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], SamsungMDC.prototype, "input", null);
-    SamsungMDC = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 1515 }),
-        __metadata("design:paramtypes", [Object])
-    ], SamsungMDC);
     exports.SamsungMDC = SamsungMDC;
 });
