@@ -25,6 +25,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function SamsungMDC(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.mId = 0;
             _this.mPower = false;
             _this.mInput = 0x14;
             _this.mVolume = 0.5;
@@ -32,6 +33,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.autoConnect(true);
             return _this;
         }
+        Object.defineProperty(SamsungMDC.prototype, "id", {
+            get: function () {
+                return this.mId;
+            },
+            set: function (id) {
+                this.mId = id;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(SamsungMDC.prototype, "power", {
             get: function () {
                 return this.mPower;
@@ -72,7 +83,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var cmd = [];
             cmd.push(0xAA);
             cmd.push(cmdByte);
-            cmd.push(0);
+            cmd.push(this.mId);
             if (paramByte !== undefined) {
                 cmd.push(1);
                 cmd.push(paramByte);
@@ -89,6 +100,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         return SamsungMDC;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.property("The target ID"),
+        Metadata_1.min(0), Metadata_1.max(254),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [Number])
+    ], SamsungMDC.prototype, "id", null);
     __decorate([
         Metadata_1.property("Power on/off"),
         __metadata("design:type", Boolean),
