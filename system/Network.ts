@@ -89,7 +89,6 @@ export interface NetworkTCP extends NetworkBase {
 
 	// Object is being shut down
 	subscribe(event: 'finish', listener: (sender: NetworkTCP)=>void): void;
-
 }
 
 /**
