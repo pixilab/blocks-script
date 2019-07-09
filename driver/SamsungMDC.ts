@@ -9,6 +9,9 @@ import {driver, max, min, property} from "system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 1515 })
 export class SamsungMDC extends Driver<NetworkTCP> {
+
+	private mId: number = 0;
+
 	// Arbitrary initial value - we really have no idea
 	private mPower: boolean = false;
 	private mInput: number = 0x14;
@@ -18,6 +21,17 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 		super(socket);
 		socket.enableWakeOnLAN();
 		socket.autoConnect(true);
+	}
+
+	@property("The target ID")
+	@min(0) @max(254)
+	public set id(
+		id: number
+	) {
+		this.mId = id;
+	}
+	public get id(): number {
+		return this.mId;
 	}
 
 	@property("Power on/off")
@@ -63,9 +77,9 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 	*/
 	private sendCommand(cmdByte: number, paramByte?:number) {
 		const cmd: number[] = [];
-		cmd.push(0xAA);	// Start of commanf marker (not part of checksum)
+		cmd.push(0xAA);	// Start of command marker (not part of checksum)
 		cmd.push(cmdByte);
-		cmd.push(0);	// 0 is default. 0xFE targets ALL (can't make that work)
+		cmd.push(this.mId);
 		if (paramByte !== undefined) {
 			cmd.push(1);
 			cmd.push(paramByte);
