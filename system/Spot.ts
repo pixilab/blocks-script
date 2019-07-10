@@ -190,6 +190,14 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 		foundPath: string	// Resulting absolute (//-style) and canonized path
 	})=>void): void;
 
+	/**
+	 *	Event fired when keyboard faux-GPIO (numeric key 0...9) changes state.
+	 */
+	subscribe(event: 'keyPress', listener: (sender: DisplaySpot, message: {
+		input: number,		// Input that changed; 0...9
+		active: boolean		// Input is active (pressed)
+	})=>void): void;
+
 	// Object is being shut down
 	subscribe(event: 'finish', listener: (sender: DisplaySpot)=>void): void;
 
