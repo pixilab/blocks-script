@@ -30,7 +30,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.socket = socket;
             _this.propList = [];
             socket.subscribe('connect', function (sender, message) {
-                _this.connectStateChanged();
+                if (message.type === 'Connection')
+                    _this.connectStateChanged();
             });
             socket.subscribe('textReceived', function (sender, msg) {
                 return _this.textReceived(msg.text);

@@ -35,7 +35,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		super(socket);
 		this.propList = [];
 		socket.subscribe('connect', (sender, message)=> {
-			// console.info('connect msg', message.type);
+			if (message.type === 'Connection')
 			this.connectStateChanged()
 		});
 		socket.subscribe('textReceived', (sender, msg)=>

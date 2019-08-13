@@ -19,6 +19,8 @@ export interface SGOptions {
 	type?: PrimTypeSpecifier;	// Default is string
 	description?: string;		// Descriptive text for property
 	readOnly?: boolean;			// Default is read/write
+	min?: number;				// Allowed range (Number property type only)
+	max?:number;
 }
 
 /**
