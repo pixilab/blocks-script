@@ -30,6 +30,16 @@ export interface NetworkTCP extends NetworkBase {
 	 */
 	setReceiveFraming(sequence: string, includeInData?: boolean): void;
 
+	/**
+	 * Specify the maximum line length that can be received in text mode. The default value
+	 * is 256 bytes. Call this function if you need to accept longer strings. Note that it's
+	 * specified in BYTES, not characters (which may vary when using UTF-8 encoding, but
+	 * is the same as long as the text received is ASCII).
+	 *
+	 * IMPORTANT: To have any effect, call this function BEFORE connect/autoConnect.
+	 */
+	setMaxLineLength(maxLineLength: number): void;
+
 	/*	Request auto-connection behavior (default is OFF for a driver).
 		Optionally set "raw" data mode if not already opened in text mode.
 	 */
