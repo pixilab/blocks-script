@@ -11,7 +11,7 @@ import {resource} from "system_lib/Metadata";
 /**
  * A user script publishing "persistent variables" and making those available to be requested
  * using an XHR call. The value of those variables is written to a
- * file in script/files/Persistent. The content of that file also determines which variables
+ * file in script/files/StringProvider.json. The content of that file also determines which variables
  * that are available. Thus, to add more variables, shut down the server, add entries to the
  * script/files/Persistent file (make sure you follow the JSON syntax properly), then restart the
  * server.
@@ -38,7 +38,9 @@ export class StringProvider extends Script {
 				//  Likely had no file. Init to some sample data
 				this.data = {
 					"alpha": "A",
-					"beta": "B"
+					"beta": "B",
+					"numeric": 42,
+					"bool": true
 				}
 				this.publishProperties();
 			}

@@ -36,7 +36,9 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
                 console.error("Failed reading file; use initial sample data", StringProvider.kFileName, error);
                 _this.data = {
                     "alpha": "A",
-                    "beta": "B"
+                    "beta": "B",
+                    "numeric": 42,
+                    "bool": true
                 };
                 _this.publishProperties();
             });
