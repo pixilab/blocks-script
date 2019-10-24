@@ -18,7 +18,7 @@ export class LGDisplay extends Driver<NetworkTCP> {
 		private mColor: number|undefined;
 
 	// Input names used as property value, using this lookup table to convert
-	static readonly nameToInput = {
+	static readonly nameToInput:Dictionary<number> = {
 		"DTV": 0x00,
 		"CADTV": 0x01,
 		"ATV": 0x10,
@@ -135,4 +135,9 @@ export class LGDisplay extends Driver<NetworkTCP> {
 		command = command + paramStr;
 		this.socket.sendText(command);
 	}
+}
+
+// A simple typed dictionary type, using a string as key
+export interface Dictionary<TElem> {
+	[id: string]: TElem;
 }
