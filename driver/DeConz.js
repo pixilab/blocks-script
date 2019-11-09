@@ -1,17 +1,3 @@
-/*	Driver for the Dresden Electronicx DeConz zigbee gateway, based on its REST API
-    https://github.com/dresden-elektronik/deconz-rest-plugin
-
-    Provides functions for controlling lights and groups individually
-    Publishes a number of dynamic properties per light group, allowing buttons/sliders
-    to be bound to those.
-
-    IMPORTANT: To use this driver, you must first add it to Blocks and configure it so
-    its "Connected" status turns green. Then, in the PhosCon web app, under Gateway,
-    Advanced, click the button to authorize the control. Successful authorization is
-    indicated by my "authorized" property.
-
-    Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -42,22 +28,19 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
         function DeConz(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
-            _this.mConnected = false; // Until I know
+            _this.mConnected = false;
             _this.mAuthorized = false;
-            _this.whenSentlast = new Date(); // When command was last sent, to not send too often
-            _this.kMinTimeBetweenCommands = 160; // Minimum mS time between back-to-back commands
-            // Commands ready to send, keyed by target device/group name
+            _this.whenSentlast = new Date();
+            _this.kMinTimeBetweenCommands = 160;
             _this.pendingCommands = {};
-            // I explicitly do NOT auto-connect since I use discrete HTTP requests
             _this.configFileName = 'DeConzDriver_' + socket.name;
             _this.alive = true;
             _this.baseUrl = 'http://' + socket.address + ':' + socket.port + '/api';
-            // read auth code from file, containing a Config object
             SimpleFile_1.SimpleFile.read(_this.configFileName).then(function (rawData) {
                 var config = JSON.parse(rawData);
                 if (config && config.authCode)
                     _this.config = config;
-            }); // Else config will be obtained by 1st poll
+            });
             if (socket.enabled) {
                 socket.subscribe('finish', function (sender) {
                     _this.alive = false;
@@ -71,10 +54,6 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
             return _this;
         }
         Object.defineProperty(DeConz.prototype, "authorized", {
-            /*	Indicates that the DeCONZ gateway has responded favorably to request.
-                If not, the driver will attempt to call the top level /api endpoint
-                every now and then until it succeeds.
-             */
             get: function () {
                 return this.mAuthorized;
             },
@@ -118,12 +97,10 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
         DeConz.prototype.setColorTemperature = function (target, kelvin, time) {
             var kMin = 2000;
             var kMax = 6500;
-            var kOutMin = 153; // These seem to map backwards to input range
+            var kOutMin = 153;
             var kOutMax = 500;
-            // Clip to allowed range
             kelvin = Math.max(kMin, Math.min(kMax, kelvin));
             var state = this.sendCommandSoon(target);
-            // I inverse the normalized value to account for the backward mapping
             var normalized = 1 - (kelvin - kMin) / (kMax - kMin);
             state.ct = Math.floor(normalized * (kOutMax - kOutMin) + kOutMin);
             this.setTime(state, time, 0.1);
@@ -143,9 +120,6 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
             state.sat = Math.floor(clip(normalizedSat) * 255);
             return state;
         };
-        /**
-         * Set transitiontime in state to specified time (if any), else to default time.
-         */
         DeConz.prototype.setTime = function (onState, timeInSeconds, defaultTimeInSeconds) {
             if (defaultTimeInSeconds === void 0) { defaultTimeInSeconds = 0; }
             if (timeInSeconds !== undefined)
@@ -158,19 +132,15 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
             if (!this.poller && this.alive) {
                 this.poller = wait(howSoon);
                 this.poller.then(function () {
-                    _this.poller = undefined; // Now taken
+                    _this.poller = undefined;
                     if (_this.config)
                         _this.regularPoll();
                     else
                         _this.authenticationPoll();
-                    _this.requestPoll(3000); // Set up to poll again soon
+                    _this.requestPoll(3000);
                 });
             }
         };
-        /**
-         * Attempt to authenticate with the device, thus obtaining the autCode for
-         * my config.
-         */
         DeConz.prototype.authenticationPoll = function () {
             var _this = this;
             SimpleHTTP_1.SimpleHTTP.newRequest(this.baseUrl).post('{"devicetype": "pixilab-blocks" }').then(function (response) {
@@ -187,25 +157,18 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                     if (response.status === 403) {
                         if (!_this.loggedAuthFail) {
                             console.error("In Phoscon app, click Settings, Gateway, Advanced, Authenticate app");
-                            _this.loggedAuthFail = true; // Log that error only once per session
+                            _this.loggedAuthFail = true;
                         }
                     }
                 }
             }).catch(function (error) { return _this.requestFailed(error); });
         };
-        /**
-         * Received authorization code - set as my config, consider me authorized
-         * and persist config to file.
-         */
         DeConz.prototype.gotAuthCode = function (authCode) {
             this.config = { authCode: authCode };
-            this.keyedBasedUrl = undefined; // Must be recomputed
+            this.keyedBasedUrl = undefined;
             SimpleFile_1.SimpleFile.write(this.configFileName, JSON.stringify(this.config));
             this.authorized = true;
         };
-        /**
-         * Do some polling of the gateway to see if it's still there.
-         */
         DeConz.prototype.regularPoll = function () {
             if (!this.devices)
                 this.getDevices();
@@ -213,24 +176,17 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 this.getGroups();
             this.checkReadyToSend();
         };
-        /*	See if I'm all up and running. If so, send any pending commands that may have arrived
-            during startup.
-         */
         DeConz.prototype.checkReadyToSend = function () {
             if (this.devices && this.groups && this.connected && this.authorized)
                 this.sendPendingCommands();
         };
-        /**
-         * Register a command (with data poked into returned DeviceState) for
-         * destination, which may be a device or a group.
-         */
         DeConz.prototype.sendCommandSoon = function (destination) {
             var result = this.pendingCommands[destination];
             if (!result)
                 result = this.pendingCommands[destination] = {};
             if (!this.sendInProgress()) {
                 this.sendPendingCommandsSoon();
-            } // Else transmission already in progress - will tag along later
+            }
             return result;
         };
         DeConz.prototype.sendPendingCommandsSoon = function () {
@@ -238,12 +194,10 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
             if (this.havePendingCommands()) {
                 var now = new Date();
                 var howLongAgo = now.getTime() - this.whenSentlast.getTime();
-                var delay = 50; // Send this soon if no recent send
-                // Extra wait if positive (negative if waited long enough already)
+                var delay = 50;
                 var extraWait = this.kMinTimeBetweenCommands - howLongAgo;
                 if (extraWait > 0) {
-                    delay += extraWait; // Add in extra wait
-                    // console.log("Extra wait", delay);
+                    delay += extraWait;
                 }
                 this.deferredSender = wait(delay);
                 this.deferredSender.then(function () {
@@ -253,38 +207,24 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 });
             }
         };
-        /**
-         * return true if there are pending commands to send.
-         */
         DeConz.prototype.havePendingCommands = function () {
             for (var cmd in this.pendingCommands)
                 return true;
             return false;
         };
-        /**
-         * I consider command transmission in progress if there's either
-         * a deferredSender waiting to fire or a cmdInFlight. In both
-         * these cases, the next command will be sent soon automatically
-         * without any further ado.
-         */
         DeConz.prototype.sendInProgress = function () {
             return !!this.deferredSender || this.cmdInFlight;
         };
-        /**
-         * Send any commands waiting to be sent.
-         */
         DeConz.prototype.sendPendingCommands = function () {
             var _this = this;
             if (!this.alive) {
-                this.pendingCommands = {}; // Just discard all commands
+                this.pendingCommands = {};
                 return;
             }
             var _loop_1 = function () {
                 if (this_1.pendingCommands.hasOwnProperty(dest)) {
-                    // console.info("Sending to", dest);
                     var cmd = this_1.pendingCommands[dest];
-                    delete this_1.pendingCommands[dest]; // Now taken
-                    // Look for device name first, then group name
+                    delete this_1.pendingCommands[dest];
                     if (targetItem = this_1.devices.byName[dest]) {
                         typeUrlSeg = 'lights/';
                         cmdUrlSeg = '/state';
@@ -300,13 +240,11 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                     var url_1 = this_1.getKeyedUrlBase() + typeUrlSeg + targetItem.id + cmdUrlSeg;
                     this_1.cmdInFlight = true;
                     var cmdStr_1 = JSON.stringify(cmd);
-                    // console.log("Sent command",url);
                     SimpleHTTP_1.SimpleHTTP.newRequest(url_1).put(cmdStr_1).catch(function (error) {
                         return console.warn("Failed sending command", error, url_1, cmdStr_1);
                     }).finally(function () {
-                        _this.cmdInFlight = false; // Done with that command
-                        // console.warn("Sent", dest);
-                        _this.sendPendingCommandsSoon(); // Send any newly accumulated commands
+                        _this.cmdInFlight = false;
+                        _this.sendPendingCommandsSoon();
                     });
                     return { value: void 0 };
                 }
@@ -318,9 +256,6 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                     return state_1.value;
             }
         };
-        /**
-         * get and cache the complete list of lights
-         */
         DeConz.prototype.getDevices = function () {
             var _this = this;
             SimpleHTTP_1.SimpleHTTP.newRequest(this.getKeyedUrlBase() + 'lights').get().then(function (response) {
@@ -340,15 +275,12 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 }
             }).catch(function (error) { return _this.requestFailed(error); });
         };
-        /**
-         * get and cache the complete list of groups
-         */
         DeConz.prototype.getGroups = function () {
             var _this = this;
             SimpleHTTP_1.SimpleHTTP.newRequest(this.getKeyedUrlBase() + 'groups').get().then(function (response) {
                 _this.connected = true;
                 if (response.status === 200) {
-                    var oldGroups = _this.groups ? _this.groups.byName : {}; // To publish props for newly added
+                    var oldGroups = _this.groups ? _this.groups.byName : {};
                     var groups = JSON.parse(response.data);
                     if (groups) {
                         _this.groups = new NamedItems(groups);
@@ -364,18 +296,12 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 }
             }).catch(function (error) { return _this.requestFailed(error); });
         };
-        /**
-         * Publish props for all groups not in oldGroups.
-         */
         DeConz.prototype.publishGroupPropsForNew = function (oldGroups) {
             for (var newGroupName in this.groups.byName) {
                 if (!oldGroups[newGroupName])
                     this.publishGroupProps(newGroupName);
             }
         };
-        /**
-         * Make composite name for each group property
-         */
         DeConz.grpPropNameBrightness = function (groupName) {
             return groupName + '_brt';
         };
@@ -388,17 +314,8 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
         DeConz.grpPropNameSaturation = function (groupName) {
             return groupName + '_sat';
         };
-        /**
-         * Publish props for specified group.
-         */
         DeConz.prototype.publishGroupProps = function (newGroupName) {
-            // console.log("Group added", newGroupName);
             var _this = this;
-            /*	We really have no idea on the initial/current state of group properties...
-                Also, we may want to unify this statis with what's set by functions above,
-                in which case it may make more sense to effectuate through these properties
-                from those functions rather than the other way around. Later...
-            */
             var on = true;
             var brightess = 1;
             var hue = 1;
@@ -432,17 +349,11 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 return saturation;
             });
         };
-        /**
-         * Force me to become unauthorized, dropping my config data, to force re-authorization.
-         */
         DeConz.prototype.unauthorize = function () {
             this.authorized = false;
             this.config = undefined;
             console.warn("Unauthorized due to 403");
         };
-        /*	Get the request URI base, including the authorization code, with a terminating
-            slash.
-         */
         DeConz.prototype.getKeyedUrlBase = function () {
             if (!this.keyedBasedUrl && this.config)
                 this.keyedBasedUrl = this.baseUrl + '/' + this.config.authCode + '/';
@@ -513,24 +424,17 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
         __metadata("design:paramtypes", [Object])
     ], DeConz);
     exports.DeConz = DeConz;
-    /**
-     * Clip value to normalized 0...1 range.
-     */
     function clip(value) {
-        value = value || 0; // Default to 0 if no value passed in
+        value = value || 0;
         return Math.max(0, Math.min(1, value));
     }
-    /**
-     * A double-map providing access to items either by ID or by name.
-     */
     var NamedItems = (function () {
         function NamedItems(items) {
-            this.byId = items; // Keyed by ID in src data - use as is
-            // Also keyed ny name
+            this.byId = items;
             this.byName = {};
             for (var key in items) {
                 var item = items[key];
-                item.id = key; // Make sure ID is set
+                item.id = key;
                 this.byName[item.name] = item;
             }
         }

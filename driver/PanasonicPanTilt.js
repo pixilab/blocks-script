@@ -1,11 +1,3 @@
-/*
- * A skeleton driver for sending data to devices supporting REST-style commands over HTTP,
- * such as the Panasonic "HD Integrated Camera". I'm not actually a "real" driver. I don't
- * connect to the socket.  Instead I pick up its address, then use SimpleHTTP to do the
- * communicaiton instead.
- *
- * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -33,11 +25,8 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
         function PanasonicPanTilt(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
-            /*	Some devide state. Initial value could be read back from device
-                rather than hard-coded.
-             */
             _this.mPower = false;
-            _this.mPan = 0.5; // Initial/center position
+            _this.mPan = 0.5;
             _this.mTilt = 0.5;
             _this.processor = new CmdProcessor(socket.address);
             return _this;
@@ -79,11 +68,6 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
             enumerable: true,
             configurable: true
         });
-        /**
-         * Send a pan/tilt command soon. I expose those as separate properties, but they
-         * are sent as one command. Defer sending a bit to allow both values to be combined
-         * if changed closely together.
-         */
         PanasonicPanTilt.prototype.sendPanTiltSoon = function () {
             var _this = this;
             if (!this.panTiltPending) {
@@ -97,10 +81,6 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
                 });
             }
         };
-        /**
-         * Send "raw" command to the device. Mainly for testing purposes. Use properties
-         * for most "real" device state, and callable functions when you must.
-         */
         PanasonicPanTilt.prototype.sendRawCommand = function (rawCommand) {
             var result = this.processor.sendCommand(rawCommand);
             result.then(function (response) { return log("Response", response); });
@@ -138,20 +118,11 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
         __metadata("design:paramtypes", [Object])
     ], PanasonicPanTilt);
     exports.PanasonicPanTilt = PanasonicPanTilt;
-    /**
-     * Queue up commands to be sent, spacing them out to be sent no faster than
-     * kMillisPerCmd, according to the protocol spec.
-     */
     var CmdProcessor = (function () {
         function CmdProcessor(server) {
             this.server = server;
-            this.cmdQueue = []; // Waiting commands
+            this.cmdQueue = [];
         }
-        /**
-         * Send a command. Return a promise that will be resolved once the command
-         * has been promised successfully, where the result of the promise contains
-         * the data returned from the other side.
-         */
         CmdProcessor.prototype.sendCommand = function (command) {
             log("sendCommand", command);
             var cmd = new Cmd(command);
@@ -161,9 +132,6 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
             this.doNextCommand();
             return cmd.getPromise();
         };
-        /**
-         * If no command currently in flight, initiate one.
-         */
         CmdProcessor.prototype.doNextCommand = function () {
             var _this = this;
             if (!this.currCmd && this.cmdQueue.length) {
@@ -178,32 +146,20 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
                 }).finally(function () {
                     log("Finally");
                     _this.currCmd = undefined;
-                    // Proceed with next command, if any
                     _this.doNextCommand();
                 });
             }
         };
         return CmdProcessor;
     }());
-    CmdProcessor.kMillisPerCmd = 130; // Milliseconds to space commands apart
-    /**
-    Internal log function, making my logging easy to turn on/off.
-    */
+    CmdProcessor.kMillisPerCmd = 130;
     function log() {
         var toLog = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             toLog[_i] = arguments[_i];
         }
-        // console.log(toLog);	// Uncomment to enable logging
     }
-    /**
-     * Maintain the state and life-cycle of a single command.
-     */
     var Cmd = (function () {
-        /**
-         * Create a command, where the command string is what needs to follow after the
-         * initial / in the request. Must ONLY contain URL-compatible characters.
-         */
         function Cmd(command) {
             var _this = this;
             this.command = command;
@@ -220,23 +176,14 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
             log("URL", url);
             return SimpleHTTP_1.SimpleHTTP.newRequest(url);
         };
-        /**
-         * Accumulate any response data received from the other end
-         */
         Cmd.prototype.handleResponse = function (response) {
             this.resolver(response);
         };
-        /**
-         * Final death-knell of this command, rejecting it with the specified error.
-         */
         Cmd.prototype.fail = function (error) {
             this.rejector(error);
         };
         return Cmd;
     }());
-    /**
-     * Convert num to exactly four hex digit (upper case).
-     */
     function toFourHex(num) {
         num = Math.round(num);
         var hexDigits = num.toString(16).toUpperCase();
