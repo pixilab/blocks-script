@@ -67,7 +67,7 @@ export var SimpleFile: {
 	 * Get the last-modified timestamp of specified file or directory.
 	 */
 	lastModified(path: string): Promise<Date>;
-}
+};
 
 /**
  * Information returned by the list method. Reported files or subdirectories have the same
@@ -77,6 +77,10 @@ export var SimpleFile: {
  *
  * Only plain files and subdirectories will be returned. Not hidden files (including
  * any . and .. entries) or symlinks.
+ *
+ * IMPORTANT: The files and directories entries are "array-like" in that they
+ * have length and can be indexed into, but they aren't true JavaScript
+ * arrays (e.g., they don't support forEach, etc methods).
  */
 export interface DirInfo {
 	files: string[];			// Plain files found in the specified directory
