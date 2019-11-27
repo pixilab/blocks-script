@@ -15,25 +15,43 @@ export class PJLink extends NetworkProjector {
 	protected _input: NumState;
 	private static kMinInput = 11;
 	private static kMaxInput = 59;
-
+	private busyHoldoff?: CancelablePromise<void>;	// See projectorBusy()
+	private recentCmdHoldoff?: CancelablePromise<void>;	// See sentCommand()
 
 	constructor(socket: NetworkTCP) {
 		super(socket);
 		this.addState(this._power = new BoolState('POWR', 'power'));
 		this.addState(this._input = new NumState(
 			'INPT', 'input',
-			PJLink.kMinInput, PJLink.kMaxInput
+			PJLink.kMinInput, PJLink.kMaxInput, () => this._power.getCurrent()
 		));
 
 		this.poll();	// Get polling going
 		this.attemptConnect();	// Attempt initial connection
+		// console.info("inited");
 	}
 
     /**
-	 	Poll for status regularly.
+	 	Poll for status regularly. This keeps me somewhat in the loop with manual control
+	 	of projector. It also helps with detecting projector unplugged.
 	 */
     protected pollStatus(): boolean {
-		return true;
+		if (this.okToSendCommand()) {	// Don't interfere with command already in flight
+			this.request('POWR').then(
+				reply => {
+					const on = (parseInt(reply) & 1) != 0;
+					if (!this.inCmdHoldoff())
+						this._power.updateCurrent(on);
+					if (on && this.okToSendCommand()) // Attempt input too on case never done
+						this.getInputState(true);
+				}
+			).catch(error => {
+				this.warnMsg("pollStatus error", error);
+				this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
+			});
+			// console.info("pollStatus");
+		}
+		return true;	// Check back again in a bit
 	}
 
 	/**
@@ -67,7 +85,8 @@ export class PJLink extends NetworkProjector {
 		this.connected = false;	// Mark me as not yet fully awake, to hold off commands
 		this.request('POWR').then(
 			reply => {
-				this._power.updateCurrent((parseInt(reply) & 1) != 0);
+				if (!this.inCmdHoldoff())
+					this._power.updateCurrent((parseInt(reply) & 1) != 0);
 				if (this._power.get()) // Power on - proceed quering input
 					this.getInputState();
 				else {
@@ -85,22 +104,46 @@ export class PJLink extends NetworkProjector {
 	/**
 	 Once we know power is on, proceed quering input state.
 	 */
-	private getInputState() {
+	private getInputState(ignoreError?: boolean) {
 		this.request('INPT').then(
 			reply => {
-				this._input.updateCurrent(parseInt(reply));
+				if (!this.inCmdHoldoff())
+					this._input.updateCurrent(parseInt(reply));
 				this.connected = true;
 				this.sendCorrection();
 			},
 			error => {
 				// May fail for "normal" reasons, eg, during power up/down
 				this.warnMsg("getInitialState INPT error", error);
-				this.connected = true; // Allow things to proceed anyway
-				this.sendCorrection();
+				if (!ignoreError) {
+					this.connected = true; // Allow things to proceed anyway
+					this.sendCorrection();
+				}
 			}
 		);
 	}
 
+
+	protected sendCorrection(): boolean {
+		const didSend = super.sendCorrection();
+		if (didSend) {
+			if (this.recentCmdHoldoff)
+				this.recentCmdHoldoff.cancel();
+			this.recentCmdHoldoff = wait(10000);
+			this.recentCmdHoldoff.then(() => this.recentCmdHoldoff = undefined);
+		}
+		return didSend;
+	}
+
+	/**
+	 * Return truthy if sent a command recently, meaning that any status replies from
+	 * the projector may be unreliable, due to the way the projector
+	 * answers with the "actual" rather than the "wanted" status, e.g., still
+	 * saying it's ON even after you asked it to turn OFF.
+	 */
+	private inCmdHoldoff() {
+		return this.recentCmdHoldoff
+	}
 
 	/**
 	 Send a question or command to the projector, and wait for the response. The
@@ -114,7 +157,9 @@ export class PJLink extends NetworkProjector {
 		toSend += ' ';
 		toSend += (param === undefined) ? '?' : param;
 		// console.info("request", toSend);
-		this.socket.sendText(toSend).catch(err=>this.sendFailed(err));
+		this.socket.sendText(toSend).catch(
+			err=>this.sendFailed(err)
+		);
 		const result = this.startRequest(toSend);
 		result.finally(()=> {
 			asap(()=> {	// Send further corrections soon, once this cycle settled
@@ -138,6 +183,12 @@ export class PJLink extends NetworkProjector {
 		}
 
 		// console.info("textReceived", text);
+
+		// Strip ogg any leading garbage characters seen occasionally, up to expected %
+		const msgStart = text.indexOf('%');
+		if (msgStart > 0)
+			text = text.substring(msgStart);
+
 		const currCmd = this.currCmd.substring(0, 6);	// Initial part %1XXXX of command
 		if (currCmd) {
 			const expectedResponse = currCmd + '=';
@@ -162,6 +213,10 @@ export class PJLink extends NetworkProjector {
 						this.errorMsg("Bad command parameter", this.currCmd);
 						treatAsOk = true;
 						break;
+					case 'ERR3':	// Bad time for this command (usually in standby or not yet awake)
+						// console.info("PJLink ERR3");
+						this.projectorBusy();
+						// Deliberate fallthrough
 					default:
 						this.warnMsg("PJLink response", currCmd, text);
 						break;
@@ -178,10 +233,28 @@ export class PJLink extends NetworkProjector {
 				if (treatAsOk)
 					this.requestSuccess(text);
 			} else
-				this.requestFailure("Unexpected reply " + text + ", expected " + currCmd);
+				this.requestFailure("Expected reply " + expectedResponse + ", got " + text);
 		} else
 			this.warnMsg("Unexpected data", text);
 		this.requestFinished();
 	}
 
+	/**
+	 * Called on receiveing ERR3, meaning that the command was OK, but the projector
+	 * currently isn't in a state where it can handle it. E.g., asking for the input
+	 * or attempting to switch input, while in standby or not yet fully awake.
+	 */
+	private projectorBusy() {
+		if (!this.busyHoldoff) {
+			this.busyHoldoff = wait(4000);
+			this.busyHoldoff.then(() => this.busyHoldoff = undefined);
+		}
+	}
+
+	/**
+	 * Override to hold off commands also while busyHoldoff.
+	 */
+	protected okToSendCommand(): boolean {
+		return !this.busyHoldoff && super.okToSendCommand();
+	}
 }

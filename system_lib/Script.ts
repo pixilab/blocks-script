@@ -21,7 +21,9 @@ export class Script extends ScriptBase<ScriptEnv> {
 	 * The value associated with the property varies with the type of property.
 	 */
 	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType> {
-		return this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification);
+		return changeNotification ?
+			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
+			this.__scriptFacade.getProperty<PropType>(fullPath);
 	}
 
 	/**
@@ -50,7 +52,7 @@ export class Script extends ScriptBase<ScriptEnv> {
  * It may in some cases take some time for a property to become available. Check
  * "available" to be true if you need to know. Once you no longer need
  * this property, call close() to terminate the connection. No further change
- * notification callbacks will be received) after calling close().
+ * notification callbacks will be received after calling close().
  */
 export interface PropertyAccessor<PropType> {
 	value: PropType;	// Current property value (read only if property is read only)

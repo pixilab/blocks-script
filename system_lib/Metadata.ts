@@ -34,7 +34,8 @@ interface DriverInfo {
 
 /**
  * Annotation for user script class, specifying role required to set properties exposed
- * by script.
+ * by script, where role is one of the following: "Admin", "Manager", "Creator", "Editor",
+ * "Contributor", "Staff" or "Spot".
  */
 export function roleRequired(role: string) {
 	return function(target: any): void {
@@ -141,11 +142,14 @@ export function max(max:number) {
  An object or string returned from the method will be seriallized as JSON data and
  returned to the web client. May return a promise eventually resolving with the
  result value.
+
+ The roleRequired parameter, if specified, limits who can call the resource from the
+ outside, and accepts the same values as the roleRequired annotation.
  */
-export function resource(auhorization?: string) {
+export function resource(roleRequired?: string) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
 		const info = {	// Information provided about this resource
-			auth: auhorization || ""
+			auth: roleRequired || ""
 		};
 		return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
 	}

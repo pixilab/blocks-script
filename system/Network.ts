@@ -22,7 +22,7 @@ export interface NetworkTCP extends NetworkBase {
 
 	/**
 	 * Specify end-of-data framing for textReceived. If not set, this defaults to any of CR/LF,
-	 * CR, or LF. Example, to read data terminated by a > character, call setEoln('>').
+	 * CR, or LF. Example, to read data terminated by a > character, call setReceiveFraming('>').
 	 * If you want the termination sequencde to be included in the data received, pass
 	 * true in includeInData. Otherwise, the termination sequence will NOT be included.
 	 *
@@ -30,13 +30,23 @@ export interface NetworkTCP extends NetworkBase {
 	 */
 	setReceiveFraming(sequence: string, includeInData?: boolean): void;
 
+	/**
+	 * Specify the maximum line length that can be received in text mode. The default value
+	 * is 256 bytes. Call this function if you need to accept longer strings. Note that it's
+	 * specified in BYTES, not characters (which may vary when using UTF-8 encoding, but
+	 * is the same as long as the text received is ASCII).
+	 *
+	 * IMPORTANT: To have any effect, call this function BEFORE connect/autoConnect.
+	 */
+	setMaxLineLength(maxLineLength: number): void;
+
 	/*	Request auto-connection behavior (default is OFF for a driver).
-		Optionally set "raw" data mode if not already open in other mode.
+		Optionally set "raw" data mode if not already opened in text mode.
 	 */
 	autoConnect(rawBytesMode?: boolean): void;
 
 	/*	Explicit connection. Returns a "connect finished" promise.
-		Optionally set "raw" data mode if not already open in other mode.
+		Optionally set "raw" data mode if not already opened in text mode.
 	 */
 	connect(rawBytesMode?: boolean): Promise<any>;
 
@@ -59,14 +69,13 @@ export interface NetworkTCP extends NetworkBase {
 
 	// // // // Notification subscription management // // // //
 
-	/*	Read text data string (single line), interpreted as ASCII/UTF-8, by default up to (but not including)
-		the end of line (which may be CR, CR/LF or LF). This default termination may be overridden
-		by calling setReceiveFraming.
+	/*	Read text data string (single line), interpreted as ASCII/UTF-8, by default
+		up to (but not including) the end of line (which may be CR, CR/LF or LF).
+		This default termination may be overridden by calling setReceiveFraming.
 		NOT applicable when connected in rawBytesMode.
-
 	 */
 	subscribe(event: 'textReceived', listener: (sender: NetworkTCP, message: {
-		text: string				// The text string that was received (excluding line terminator)
+		text: string			// The text string that was received (excluding line terminator)
 	}) => void): void;
 
 	/*	Read "raw" data. Only applicable when connected in rawBytesMode. Note that data received
@@ -89,7 +98,6 @@ export interface NetworkTCP extends NetworkBase {
 
 	// Object is being shut down
 	subscribe(event: 'finish', listener: (sender: NetworkTCP)=>void): void;
-
 }
 
 /**
