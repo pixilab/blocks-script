@@ -26,11 +26,20 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var MAX_SAFE_INTEGER = 9007199254740991;
+    var MIN_INT32 = -0x80000000;
+    var MAX_INT32 = +0x7FFFFFFF;
+    var MIN_INT64 = -0x8000000000000000;
+    var MAX_INT64 = +0x7FFFFFFFFFFFFFFF;
+    var MIN_ABS_FLOAT32 = 1.1754943508e-38;
+    var MAX_SAFE_FLOAT32 = 8388607;
+    var MIN_SAFE_INT = -0x1FFFFFFFFFFFFF;
+    var MAX_SAFE_INT = +0x1FFFFFFFFFFFFF;
     var OSC_TYPE_TAG_INT32 = 'i';
     var OSC_TYPE_TAG_FLOAT32 = 'f';
     var OSC_TYPE_TAG_OSC_STRING = 's';
     var OSC_TYPE_TAG_OSC_BLOB = 'b';
+    var OSC_TYPE_TAG_INT64 = 'h';
+    var OSC_TYPE_TAG_FLOAT64 = 'd';
     var OSC_TYPE_TAG_BOOLEAN_TRUE = 'T';
     var OSC_TYPE_TAG_BOOLEAN_FALSE = 'F';
     var split = require("lib/split-string");
@@ -50,7 +59,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var data = JSON.parse(values);
             for (var i = 0; i < data.length; i++) {
                 var dataEntry = data[i];
-                var dataString = messageStringParts[i];
+                var dataString = messageStringParts[i].trim();
                 var typeName = typeof dataEntry;
                 if (typeName === 'number') {
                     this.addNumber(message, dataEntry, dataString);
@@ -79,16 +88,31 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.addInteger(message, value);
             }
             else {
-                this.addFloat(message, value);
+                this.addFloat(message, value, valueString);
             }
         };
         OSCviaUDP.prototype.addInteger = function (message, value) {
-            var bytes = this.getInt32Bytes(value);
-            this.addValue(message, OSC_TYPE_TAG_INT32, bytes);
+            if (value >= MIN_INT32 &&
+                value <= MAX_INT32) {
+                var bytes = this.getInt32Bytes(value);
+                this.addValue(message, OSC_TYPE_TAG_INT32, bytes);
+            }
+            else {
+                var bytes = this.getFloat64Bytes(value);
+                this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+            }
         };
-        OSCviaUDP.prototype.addFloat = function (message, value) {
-            var bytes = this.getFloat32Bytes(value);
-            this.addValue(message, OSC_TYPE_TAG_FLOAT32, bytes);
+        OSCviaUDP.prototype.addFloat = function (message, value, valueString) {
+            var abs = Math.abs(value);
+            if (abs > MIN_ABS_FLOAT32 &&
+                valueString.length <= 7) {
+                var bytes = this.getFloat32Bytes(value);
+                this.addValue(message, OSC_TYPE_TAG_FLOAT32, bytes);
+            }
+            else {
+                var bytes = this.getFloat64Bytes(value);
+                this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+            }
         };
         OSCviaUDP.prototype.addString = function (message, value) {
             var bytes = this.toOSCStringBytes(value);
@@ -155,8 +179,27 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             } while (i);
             return bytes;
         };
+        OSCviaUDP.prototype.getInt64Bytes = function (integer) {
+            var bytes = [];
+            var i = 8;
+            do {
+                bytes[--i] = integer & (255);
+                integer = integer >> 8;
+            } while (i);
+            return bytes;
+        };
         OSCviaUDP.prototype.getFloat32Bytes = function (float) {
             var floatArray = new Float32Array(1);
+            floatArray[0] = float;
+            var byteArray = new Int8Array(floatArray.buffer);
+            var bytes = [];
+            for (var i = byteArray.length - 1; i >= 0; i--) {
+                bytes.push(byteArray[i]);
+            }
+            return bytes;
+        };
+        OSCviaUDP.prototype.getFloat64Bytes = function (float) {
+            var floatArray = new Float64Array(1);
             floatArray[0] = float;
             var byteArray = new Int8Array(floatArray.buffer);
             var bytes = [];
@@ -172,7 +215,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         OSCviaUDP.prototype.isSafeInteger = function (value) {
             return this.isInteger(value) &&
-                Math.abs(value) <= MAX_SAFE_INTEGER;
+                Math.abs(value) <= MAX_SAFE_INT;
         };
         __decorate([
             Meta.callable('send OSC message'),

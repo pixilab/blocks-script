@@ -9,12 +9,22 @@
   - supported data types: int32, float32, string, boolean
  */
 
-const MAX_SAFE_INTEGER = 9007199254740991; // Math.pow(2, 53) - 1;
-const OSC_TYPE_TAG_INT32 = 'i';
-const OSC_TYPE_TAG_FLOAT32 = 'f';
+const MIN_INT32 = -0x80000000; // -2,147,483,648
+const MAX_INT32 = +0x7FFFFFFF; // +2,147,483,647
+const MIN_INT64 = -0x8000000000000000; // -9,223,372,036,854,775,808
+const MAX_INT64 = +0x7FFFFFFFFFFFFFFF; // +9,223,372,036,854,775,807
+const MIN_ABS_FLOAT32 = 1.1754943508e-38;
+const MAX_SAFE_FLOAT32 = 8388607;
+const MIN_SAFE_INT = -0x1FFFFFFFFFFFFF; // -9,007,199,254,740,991 // -(Math.pow(2, 53) - 1)
+const MAX_SAFE_INT = +0x1FFFFFFFFFFFFF; // +9,007,199,254,740,991 // +(Math.pow(2, 53) - 1)
+
+const OSC_TYPE_TAG_INT32 = 'i';   // 32-bit big-endian two's complement integer
+const OSC_TYPE_TAG_FLOAT32 = 'f'; // 32-bit big-endian IEEE 754 floating point number
 const OSC_TYPE_TAG_OSC_STRING = 's';
 const OSC_TYPE_TAG_OSC_BLOB = 'b';
 
+const OSC_TYPE_TAG_INT64 = 'h'; // 64 bit big-endian two's complement integer
+const OSC_TYPE_TAG_FLOAT64 = 'd'; // 64 bit ("double") IEEE 754 floating point number
 const OSC_TYPE_TAG_BOOLEAN_TRUE = 'T';
 const OSC_TYPE_TAG_BOOLEAN_FALSE = 'F';
 const split: any = require("lib/split-string");
@@ -50,7 +60,7 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         var data: [] = JSON.parse(values);
         for (var i = 0; i < data.length; i++) {
             const dataEntry = data[i];
-            const dataString = messageStringParts[i];
+            const dataString = messageStringParts[i].trim();
             const typeName: string = typeof dataEntry;
             if (typeName === 'number') {
                 this.addNumber(message, dataEntry, dataString);
@@ -95,7 +105,7 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
             this.addInteger(message, value);
         }
         else {
-            this.addFloat(message, value);
+            this.addFloat(message, value, valueString);
         }
     }
 
@@ -103,16 +113,36 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         message: [],
         value: number
     ) {
-        var bytes: number[] = this.getInt32Bytes(value);
-        this.addValue(message, OSC_TYPE_TAG_INT32, bytes);
+        if (value >= MIN_INT32 &&
+            value <= MAX_INT32) {
+            var bytes: number[] = this.getInt32Bytes(value);
+            this.addValue(message, OSC_TYPE_TAG_INT32, bytes);
+        }
+        else {
+            // TODO: getInt64Bytes is not correct
+            // var bytes: number[] = this.getInt64Bytes(value);
+            // this.addValue(message, OSC_TYPE_TAG_INT64, bytes);
+            var bytes: number[] = this.getFloat64Bytes(value);
+            this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+        }
+
     }
 
     public addFloat(
         message: [],
-        value: number
+        value: number,
+        valueString: string
     ) {
-        var bytes: number[] = this.getFloat32Bytes(value);
-        this.addValue(message, OSC_TYPE_TAG_FLOAT32, bytes);
+        var abs: number = Math.abs(value);
+        if (abs > MIN_ABS_FLOAT32 &&
+            valueString.length <= 7) {
+            var bytes: number[] = this.getFloat32Bytes(value);
+            this.addValue(message, OSC_TYPE_TAG_FLOAT32, bytes);
+        }
+        else {
+            var bytes: number[] = this.getFloat64Bytes(value);
+            this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+        }
     }
 
     public addString(
@@ -192,9 +222,35 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         } while (i)
         return bytes;
     }
-
+    private getInt64Bytes(integer: number): number[] {
+        var bytes = [];
+        var i = 8;
+        do {
+            bytes[--i] = integer & (255);
+            integer = integer >> 8;
+        } while (i)
+        return bytes;
+        // var intArray = new BigInt64Array(1);
+        // intArray[0] = integer;
+        // var byteArray = new Int8Array(intArray.buffer);
+        // var bytes = [];
+        // for (var i = byteArray.length - 1; i >= 0; i--) {
+        //     bytes.push(byteArray[i]);
+        // }
+        // return bytes;
+    }
     private getFloat32Bytes(float: number): number[] {
         var floatArray = new Float32Array(1);
+        floatArray[0] = float;
+        var byteArray = new Int8Array(floatArray.buffer);
+        var bytes = [];
+        for (var i = byteArray.length - 1; i >= 0; i--) {
+            bytes.push(byteArray[i]);
+        }
+        return bytes;
+    }
+    private getFloat64Bytes(float: number): number[] {
+        var floatArray = new Float64Array(1);
         floatArray[0] = float;
         var byteArray = new Int8Array(floatArray.buffer);
         var bytes = [];
@@ -211,6 +267,6 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
     }
     isSafeInteger(value: number): boolean {
         return this.isInteger(value) &&
-            Math.abs(value) <= MAX_SAFE_INTEGER;
+            Math.abs(value) <= MAX_SAFE_INT;
     }
 }
