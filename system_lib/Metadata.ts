@@ -136,7 +136,7 @@ export function max(max:number) {
 /**
  Annotation declaring a method as accessible from a web client under
 
- 	rest/script/invoke/<user-script-name>/<method-name>
+ 	/rest/script/invoke/<user-script-name>/<method-name>
 
  with a JSON body payload deserialized and passed to the method as an Object.
  An object or string returned from the method will be seriallized as JSON data and

@@ -1,10 +1,7 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -174,19 +171,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return this.isInteger(value) &&
                 Math.abs(value) <= MAX_SAFE_INTEGER;
         };
-        __decorate([
-            Meta.callable('send OSC message'),
-            __param(0, Meta.parameter('OSC address')),
-            __param(1, Meta.parameter('JSON array /wo brackets. fx to send the values 1 (int), 2.0 (float), and "hello" (string) \'1, 2.0, "hello"\' or "1, 2.0, \\"hello\\"".')),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String]),
-            __metadata("design:returntype", void 0)
-        ], OSCviaUDP.prototype, "sendMessage", null);
-        OSCviaUDP = __decorate([
-            Meta.driver('NetworkUDP', { port: 8000 }),
-            __metadata("design:paramtypes", [Object])
-        ], OSCviaUDP);
         return OSCviaUDP;
     }(Driver_1.Driver));
+    __decorate([
+        Meta.callable('send OSC message'),
+        __param(0, Meta.parameter('OSC address')),
+        __param(1, Meta.parameter('JSON array /wo brackets. fx to send the values 1 (int), 2.0 (float), and "hello" (string) \'1, 2.0, "hello"\' or "1, 2.0, \\"hello\\"".')),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, String]),
+        __metadata("design:returntype", void 0)
+    ], OSCviaUDP.prototype, "sendMessage", null);
+    OSCviaUDP = __decorate([
+        Meta.driver('NetworkUDP', { port: 8000 }),
+        __metadata("design:paramtypes", [Object])
+    ], OSCviaUDP);
     exports.OSCviaUDP = OSCviaUDP;
 });

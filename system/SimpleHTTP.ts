@@ -5,7 +5,7 @@
  */
 
 /**
- * Top level object you can import to make requesrs.
+ * Top level object you can import to make requests.
  */
 export var SimpleHTTP: {
 	newRequest(url:string): Request;
