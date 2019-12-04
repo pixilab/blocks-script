@@ -1,19 +1,17 @@
 /*
+ * Artnet (DMX-512) subsystem with lighting fixtures and their channels.
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2018 by Mike Fahl.
  */
 
 /// <reference path = 'PIXI.d.ts' />
 
-/**
- * Artnet (DMX-512) subsystem with lighting fixtures and their channels.
- */
 export var Artnet: { [fixtureName: string]: Fixture; };
 
 export interface Fixture { [channelName: string]: AnalogChannel|RangeChannel; }
 
 /**
- * Common channel stuff.
+ * Common channel stuff, regardless of channel type.
  */
 export interface Channel {
 	isOfTypeName(typeName: string): Channel|null;	// Check subtype by name
@@ -53,4 +51,5 @@ export interface Range {
 	first: number;		// First channel value (0...255)
 	last: number;		// Last channel value (0...255)
 	discrete: boolean;	// This range takes no additional numeric value
+	defaultValue: number;	// Default value for this range's value (normalized 0...1)
 }

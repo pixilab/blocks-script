@@ -3,7 +3,7 @@
  */
 import {NetworkTCP} from "system/Network";
 import {PJLink} from "driver/PJLink";
-import {BoolState, NetworkProjector, NumState} from "driver/NetworkProjector";
+import {NumState} from "driver/NetworkProjector";
 import * as Meta from "system_lib/Metadata";
 
 /*
@@ -67,7 +67,7 @@ export class PJLinkPlus extends PJLink {
         { cmd: CMD_INFO, dynamic: false },
         { cmd: CMD_FILT, dynamic: true }
     ];
-    private skipDeviceParameters = [];
+    private skipDeviceParameters: string[] = [];
     // line break for e.g. detailed status report
     private _lineBreak = '\n';
 
@@ -125,7 +125,7 @@ export class PJLinkPlus extends PJLink {
     private _hasError = false;
     private _hasWarning = false;
 
-    private _currentParameterFetchList = [];
+    private _currentParameterFetchList: any = [];
     private _currentParameter : {cmd: string, dynamic: boolean};
 
 
@@ -327,16 +327,17 @@ export class PJLinkPlus extends PJLink {
     /* special properties */
     @Meta.property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)")
     public get isOnline () : boolean {
+    	const now = new Date();
         if (this.socket.connected) {
-            this._lastKnownConnectionDate = new Date();
+            this._lastKnownConnectionDate = now;
             return true;
         }
         if (!this._lastKnownConnectionDateSet) {
             console.warn('last known connection date unknown');
             return false;
         }
-        var msSinceLastConnection = (new Date()).getTime() - this._lastKnownConnectionDate.getTime();
-        console.warn(msSinceLastConnection);
+        var msSinceLastConnection = now.getTime() - this._lastKnownConnectionDate.getTime();
+        // console.warn(msSinceLastConnection);
         return msSinceLastConnection < 42000;
     }
 
@@ -431,13 +432,13 @@ export class PJLinkPlus extends PJLink {
         if (this.fetchDeviceInfoResolver) {
             this.fetchDeviceInfoResolver(true);
             this._infoFetchDate = new Date();
-            console.info("got device info");
+            // console.info("got device info");
             delete this.fetchingDeviceInfo;
             delete this.fetchDeviceInfoResolver;
         }
     }
     private pollDeviceStatus() {
-        console.warn('pollDeviceStatus');
+        // console.warn('pollDeviceStatus');
         // status interval minus up to 10% (to create some variation)
 		this.statusPoller = wait(STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1));
 		this.statusPoller.then(()=> {
@@ -516,7 +517,7 @@ export class PJLinkPlus extends PJLink {
                         list[i] = parseInt(reply[i]);
                         error = error || list[i] == 2;
                         warning = warning || list[i] == 1;
-                        this['_errorStatus' + errorNames[0]] = list[i];
+						(<any>this)['_errorStatus' + errorNames[0]] = list[i];
                     }
                     if (this._hasError != error) {
                         this._hasError = error;
@@ -538,12 +539,12 @@ export class PJLinkPlus extends PJLink {
                 for (let i = 0; i < this._lampCount; i++) {
                     var newHours = parseInt(lampData[i * 2]);
                     var newActive = parseInt(lampData[i * 2 + 1]) == 1;
-                    if (this['_lamp' + lampNames[i] + 'Hours'] != newHours) {
-                        this['_lamp' + lampNames[i] + 'Hours'] = newHours;
-                        this.changed('lamp' + lampNames[i] + 'Hours');
+                    if ((<any>this)['_lamp' + lampNames[i] + 'Hours'] != newHours) {
+						(<any>this)['_lamp' + lampNames[i] + 'Hours'] = newHours;
+						(<any>this).changed('lamp' + lampNames[i] + 'Hours');
                     }
-                    if (this['_lamp' + lampNames[i] + 'Active'] != newActive) {
-                        this['_lamp' + lampNames[i] + 'Active'] = newActive;
+                    if ((<any>this)['_lamp' + lampNames[i] + 'Active'] != newActive) {
+						(<any>this)['_lamp' + lampNames[i] + 'Active'] = newActive;
                         this.changed('lamp' + lampNames[i] + 'Active');
                     }
                 }

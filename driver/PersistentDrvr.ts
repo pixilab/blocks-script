@@ -2,10 +2,10 @@
  * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP} from "../system/Network";
-import {SimpleFile} from "../system/SimpleFile";
-import {Driver} from "../system_lib/Driver";
-import {driver, property} from "../system_lib/Metadata";
+import {NetworkTCP} from "system/Network";
+import {SimpleFile} from "system/SimpleFile";
+import {Driver} from "system_lib/Driver";
+import {driver, property} from "system_lib/Metadata";
 
 /**	A do-nothing driver that illustrates how a driver can store persistent data in a file
 * named by the asociated port.

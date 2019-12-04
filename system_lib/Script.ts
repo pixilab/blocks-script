@@ -3,7 +3,6 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {SetterGetter, SGOptions} from "system/PubSub";
 import {ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
 
 /**
@@ -11,26 +10,20 @@ import {ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
  */
 export class Script extends ScriptBase<ScriptEnv> {
 
-	/** Expose a dynamic property of type T with specified options and name.
-	 */
-	property<T>(name: string, options: SGOptions, setGetFunc: SetterGetter<T>): void {
-		this.__scriptFacade.property(name, options, setGetFunc);
 
-		// A little dance to make this work also for direct JS-style assignment
-		Object.defineProperty(this.constructor.prototype, name, {
-			get: function () {
-				return setGetFunc();
-			},
-			set: function (value) {
-				if (!options.readOnly) {
-					const oldValue = setGetFunc();
-					if (oldValue !== setGetFunc(value))
-						this.__scriptFacade.firePropChanged(name);
-				}
-			},
-			enumerable: true,
-			configurable: true
-		});
+	/**
+	 * Connect to the property at the specified full (dot-separated) path. Pass
+	 * a callback function to be notified when the value of the property changes.
+	 * Returns an object that can be used to read/write the property's value,
+	 * as well as close down the connection to the property once no longer
+	 * needed.
+	 *
+	 * The value associated with the property varies with the type of property.
+	 */
+	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType> {
+		return changeNotification ?
+			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
+			this.__scriptFacade.getProperty<PropType>(fullPath);
 	}
 
 	/**
@@ -54,12 +47,24 @@ export class Script extends ScriptBase<ScriptEnv> {
 	}
 }
 
+/**
+ * What's returned from getProperty. Allows the property's value to be read/written.
+ * It may in some cases take some time for a property to become available. Check
+ * "available" to be true if you need to know. Once you no longer need
+ * this property, call close() to terminate the connection. No further change
+ * notification callbacks will be received after calling close().
+ */
+export interface PropertyAccessor<PropType> {
+	value: PropType;	// Current property value (read only if property is read only)
+	available: boolean;	// Property has been attached and is now live (read only)
+	close(): void;	// Close down this accessor - can no longer be used
+}
 
 // Internal implementation - not for direct client access
 export interface ScriptEnv extends ScriptBaseEnv {
-	property(p1: any, p2?: any, p3?: any): void;
 
 	establishChannel(name: string):void;
 	establishChannel(name: string, listener: Function): void;
 	sendOnChannel(name: string, data: string):void;
+	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
 }

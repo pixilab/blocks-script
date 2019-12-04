@@ -5,6 +5,23 @@ define(["require", "exports"], function (require, exports) {
         function ScriptBase(scriptFacade) {
             this.__scriptFacade = scriptFacade;
         }
+        ScriptBase.prototype.property = function (name, options, setGetFunc) {
+            this.__scriptFacade.property(name, options, setGetFunc);
+            Object.defineProperty(this.constructor.prototype, name, {
+                get: function () {
+                    return setGetFunc();
+                },
+                set: function (value) {
+                    if (!options.readOnly) {
+                        var oldValue = setGetFunc();
+                        if (oldValue !== setGetFunc(value))
+                            this.__scriptFacade.firePropChanged(name);
+                    }
+                },
+                enumerable: true,
+                configurable: true
+            });
+        };
         ScriptBase.prototype.changed = function (prop) {
             this.__scriptFacade.changed(prop);
         };

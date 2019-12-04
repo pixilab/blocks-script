@@ -1,0 +1,20 @@
+You can place shared code into the lib folder.
+There's a CSV parser already in here (borrowed from https://github.com/mholt/PapaParse).
+Such code can then be included in drivers and user scripts like this:
+
+	const Papa:any = require("lib/papaparse");
+
+or, if you have the a TypeScript definition available, you can type it properly:
+
+	const Papa:PapaParse.Static = require("lib/papaparse");
+
+You can then call it to parse a CSV file like this:
+
+	const result = Papa.parse(fileData, {dynamicTyping: true, header: true});
+
+See the papaparse documentation for details.
+
+* * *
+
+Also includes split-string by Jon Schlinkert (https://github.com/jonschlinkert/split-string),
+for splitting strings (such as device replies) respecting quotes and escape characters.

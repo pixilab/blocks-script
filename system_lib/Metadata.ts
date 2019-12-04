@@ -33,6 +33,17 @@ interface DriverInfo {
 }
 
 /**
+ * Annotation for user script class, specifying role required to set properties exposed
+ * by script, where role is one of the following: "Admin", "Manager", "Creator", "Editor",
+ * "Contributor", "Staff" or "Spot".
+ */
+export function roleRequired(role: string) {
+	return function(target: any): void {
+		return Reflect.defineMetadata("pixi:roleRequired", role, target);
+	}
+}
+
+/**
  Annotation defining a property, for use on set or get pseudo-method defining the property.
  In addition to adding "pixi:property" metadata to the property, it also hooks up change
  notofication qualified by the name of the property when its value changes through the
@@ -76,7 +87,7 @@ export function property(description?: string, readOnly?: boolean) {
 }
 
 /**
- Annotation declaring a callable method, with optional description.
+ Annotation declaring a Task-callable method, with optional description.
  */
 export function callable(description?: string) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
@@ -121,6 +132,29 @@ export function max(max:number) {
 		Reflect.defineMetadata("pixi:max", max, target, propertyKey);
     };
 }
+
+/**
+ Annotation declaring a method as accessible from a web client under
+
+ 	rest/script/invoke/<user-script-name>/<method-name>
+
+ with a JSON body payload deserialized and passed to the method as an Object.
+ An object or string returned from the method will be seriallized as JSON data and
+ returned to the web client. May return a promise eventually resolving with the
+ result value.
+
+ The roleRequired parameter, if specified, limits who can call the resource from the
+ outside, and accepts the same values as the roleRequired annotation.
+ */
+export function resource(roleRequired?: string) {
+	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
+		const info = {	// Information provided about this resource
+			auth: roleRequired || ""
+		};
+		return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
+	}
+}
+
 
 /*	Get the formal parameter names of func as an array.
  */

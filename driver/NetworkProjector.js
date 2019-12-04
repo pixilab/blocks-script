@@ -30,7 +30,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.socket = socket;
             _this.propList = [];
             socket.subscribe('connect', function (sender, message) {
-                _this.connectStateChanged();
+                if (message.type === 'Connection')
+                    _this.connectStateChanged();
             });
             socket.subscribe('textReceived', function (sender, msg) {
                 return _this.textReceived(msg.text);
@@ -105,10 +106,13 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                     return p;
             }
         };
+        NetworkProjector.prototype.okToSendCommand = function () {
+            return !this.currCmd;
+        };
         NetworkProjector.prototype.sendCorrection = function () {
             var _this = this;
-            if (this.currCmd || !this.awake) {
-                return;
+            if (!this.okToSendCommand() || !this.awake) {
+                return false;
             }
             var req = this.reqToSend();
             if (req) {
@@ -122,8 +126,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                         if (_this.reqToSend())
                             _this.retryCorrectionSoon();
                     });
+                    return true;
                 }
             }
+            return false;
         };
         NetworkProjector.prototype.retryCorrectionSoon = function () {
             var _this = this;
@@ -171,7 +177,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.poll = function () {
             var _this = this;
-            this.poller = wait(60000);
+            this.poller = wait(21333);
             this.poller.then(function () {
                 var continuePolling = true;
                 if (!_this.socket.connected) {
@@ -207,7 +213,9 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 _this.currRejector = reject;
             });
             this.cmdTimeout = wait(4000);
-            this.cmdTimeout.then(function () { return _this.requestFailure("Timeout for " + cmd); });
+            this.cmdTimeout.then(function () {
+                return _this.requestFailure("Timeout for " + cmd);
+            });
             return result;
         };
         NetworkProjector.prototype.requestSuccess = function (result) {
@@ -217,10 +225,11 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.requestFailure = function (msg) {
             if (this.power)
-                console.warn("Request failed", msg);
-            if (this.currRejector)
-                this.currRejector(msg);
+                this.warnMsg("Request failed", msg);
+            var rejector = this.currRejector;
             this.requestClear();
+            if (rejector)
+                rejector(msg);
         };
         NetworkProjector.prototype.requestFinished = function () {
             if (this.currRejector)
@@ -234,30 +243,31 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             delete this.currRejector;
             delete this.currResolver;
         };
-        __decorate([
-            Metadata_1.property("Power on/off"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], NetworkProjector.prototype, "power", null);
-        __decorate([
-            Metadata_1.callable("Send raw command string to device"),
-            __param(0, Metadata_1.parameter("What to send")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", Promise)
-        ], NetworkProjector.prototype, "sendText", null);
-        __decorate([
-            Metadata_1.property("True if projector is online", true),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], NetworkProjector.prototype, "connected", null);
         return NetworkProjector;
     }(Driver_1.Driver));
+    __decorate([
+        Metadata_1.property("Power on/off"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], NetworkProjector.prototype, "power", null);
+    __decorate([
+        Metadata_1.callable("Send raw command string to device"),
+        __param(0, Metadata_1.parameter("What to send")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", Promise)
+    ], NetworkProjector.prototype, "sendText", null);
+    __decorate([
+        Metadata_1.property("True if projector is online", true),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], NetworkProjector.prototype, "connected", null);
     exports.NetworkProjector = NetworkProjector;
     var State = (function () {
-        function State(baseCmd, propName) {
+        function State(baseCmd, propName, correctionApprover) {
             this.baseCmd = baseCmd;
             this.propName = propName;
+            this.correctionApprover = correctionApprover;
         }
         State.prototype.setDriver = function (driver) {
             this.driver = driver;
@@ -282,12 +292,17 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                     this.notifyListeners();
             }
         };
+        State.prototype.getCurrent = function () {
+            return this.current;
+        };
         State.prototype.notifyListeners = function () {
             if (this.driver && this.propName)
                 this.driver.changed(this.propName);
         };
         State.prototype.needsCorrection = function () {
-            return this.wanted !== undefined && this.current !== this.wanted;
+            return this.wanted !== undefined &&
+                this.current !== this.wanted &&
+                (!this.correctionApprover || this.correctionApprover());
         };
         State.prototype.correct2 = function (drvr, arg) {
             var _this = this;
@@ -314,8 +329,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     exports.BoolState = BoolState;
     var NumState = (function (_super) {
         __extends(NumState, _super);
-        function NumState(baseCmd, propName, min, max) {
-            var _this = _super.call(this, baseCmd, propName) || this;
+        function NumState(baseCmd, propName, min, max, correctionApprover) {
+            var _this = _super.call(this, baseCmd, propName, correctionApprover) || this;
             _this.baseCmd = baseCmd;
             _this.min = min;
             _this.max = max;

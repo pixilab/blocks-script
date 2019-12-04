@@ -1,61 +1,8 @@
 /*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2017 by Mike Fahl.
- */
-
-/*	Object required by scripts to access the PubSub mechanism.
- */
-
-/*	Main entry point for me.
- */
-export var PubSub: PubSubber;
-
-
-/**
- * An object of this class can be required under the PubSub name, allowing you
- * to hook up script properties and listeners.
+ * Miscellaneous declarations related to property publish/subscribe script implementation.
  *
- * DEPRECATED! The functions in this class should *not* be used for class-based
- * custom script development. Use property() and changed() as provided by the
- * Script base-class instead, and use the @callable annotation to expose
- * functions.
+ * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
-interface PubSubber {
-
-	/**    Expose a property of type T with specified options and name.
-	 */
-	property<T>(name: string, options: SGOptions, setGetFunc: SetterGetter<T>): void;
-
-	/**    Expose a property of type T with specified options and its name
-	 defined by the name of the setGetFunction.
-	 */
-	property<T>(options: SGOptions, setGetFunc: SetterGetter<T>): void;
-
-	/**    Expose a property of type T with default options and its name defined
-	 by the name of the setGetFunction.
-	 */
-	property<T>(setGetFunc: SetterGetter<T>): void;
-
-	/**
-	 * Inform others that property with propName has changed, causing any
-	 * subscribers to be notified soon.
-	 */
-	changed(propName: string): void;
-
-	/**
-	 * Expose a callable function with specified name, accepting a single parameter
-	 * of type T.
-	 * DEPRECATED: Use @callable instead.
-	 */
-	listener<T>(name: string, listenerFunc: Listener<T>): void;
-
-	/**
-	 * Expose a callable function with its name defined by the name of the listenerFunc,
-	 * accepting a single parameter of type T.
-	 * DEPRECATED: Use @callable instead.
-	 */
-	listener<T>(listenerFunc: Listener<T>): void;
-}
 
 
 /**
@@ -66,11 +13,14 @@ export interface SetterGetter<T> {
 }
 
 /**
- * Options for setter/getter.
+ * Options for property setter/getter.
  */
 export interface SGOptions {
 	type?: PrimTypeSpecifier;	// Default is string
+	description?: string;		// Descriptive text for property
 	readOnly?: boolean;			// Default is read/write
+	min?: number;				// Allowed range (Number property type only)
+	max?:number;
 }
 
 /**
@@ -85,10 +35,22 @@ export type PrimTypeSpecifier =
 	| "Boolean"
 	| "String";
 
-/**
- * A callable function accepting a single parameter of type T.
+
+/*
+ * REMAINDER IS DEPRECATED! These features should *not* be used for class-based
+ * custom script development. Use property() and changed() provided through the
+ * base-class instead, and use the @property and @callable annotations
+ * to expose static properties and functions.
  */
-interface Listener<T> {
-	(message?: T): void;
+
+interface PubSubber {
+	property<T>(name: string, options: SGOptions, setGetFunc: SetterGetter<T>): void;
+	property<T>(options: SGOptions, setGetFunc: SetterGetter<T>): void;
+	property<T>(setGetFunc: SetterGetter<T>): void;
+	changed(propName: string): void;
+	listener<T>(name: string, listenerFunc: Listener<T>): void;
+	listener<T>(listenerFunc: Listener<T>): void;
 }
+export var PubSub: PubSubber;
+interface Listener<T> {(message?: T): void;}
 

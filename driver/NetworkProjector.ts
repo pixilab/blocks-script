@@ -23,7 +23,11 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	// Remember to add to propList if you add more states here
 	private readonly propList: State<any>[];		// States I attempt to apply to the projector
 
-	// Most recent command sent to projector, with associated resolver/rejector callbacks
+	/*	Most recent command sent to projector, with associated resolver/rejector callbacks.
+		I'm designed to operate with a single command at a time, since most protocols
+		don't provide any command/response ID to associate a command with its possible
+		response. So don't fire off a command if commandInProgress() returns true.
+	 */
 	protected currCmd: string;	// Command in flight, if any
 	private currResolver: (value?: string | Thenable<string>) => void;
 	private currRejector: (error?: any) => void;
@@ -35,8 +39,8 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		super(socket);
 		this.propList = [];
 		socket.subscribe('connect', (sender, message)=> {
-			// console.info('connect msg', message.type);
-			this.connectStateChanged()
+			if (message.type === 'Connection')
+				this.connectStateChanged()
 		});
 		socket.subscribe('textReceived', (sender, msg)=>
 			this.textReceived(msg.text)
@@ -157,13 +161,21 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 If at all possible, and any pending, attempt to send a single correction command.
+	 * Return true if there's no command in progress and otherwise OK to send a command.
 	 */
-	protected sendCorrection() {
+	protected okToSendCommand(): boolean {
+		return !this.currCmd;
+	}
+
+	/**
+	 If at all possible, and any pending, attempt to send a single correction command.
+	 Ret true if actually sent a correction command this time.
+	 */
+	protected sendCorrection(): boolean {
 		// Don't even try if there's any command in flight or we're not yet fully awake
-		if (this.currCmd || !this.awake) {
+		if (!this.okToSendCommand() || !this.awake) {
 			// console.info("sendCorrection NOT", this.currCmd, this.awake);
-			return;	// No can do
+			return false;	// No can do
 		}
 
 		const req = this.reqToSend();	// Get pending request, if any
@@ -171,7 +183,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 			if (!this.socket.connected) {	// Must connect that first
 				if (!this.connectDly)		// No delay in progress
 					this.attemptConnect();
-				// Else a commection attempt will happen after delay
+				// Else a connection attempt will happen after delay
 			} else {
 				// console.info("req", req.current, req.get());
 				req.correct(this)
@@ -182,8 +194,10 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 							this.retryCorrectionSoon();	// Re-try in a while
 					}
 				);
+				return true;	// Did send this time
 			}
 		}
+		return false;
 	}
 
 	/**
@@ -225,7 +239,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected connectStateChanged() {
 		this.connecting = false;
-		// console.info("connectStateChanged", this.socket.isConnected());
+		// console.info("connectStateChanged", this.socket.connected);
 		if (!this.socket.connected) {
 			this.connected = false;	// Tell clients connection dropped
 			if (this.correctionRetry)
@@ -265,7 +279,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 of sync if status changed behind our back.
 	 */
 	protected poll() {
-		this.poller = wait(60000);
+		this.poller = wait(21333);
 		this.poller.then(()=> {
 			var continuePolling = true;
 			if (!this.socket.connected) {
@@ -318,7 +332,9 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 			this.currRejector = reject;
 		});
 		this.cmdTimeout = wait(4000);	// Should be ample time to respond
-		this.cmdTimeout.then(() => this.requestFailure("Timeout for " + cmd));
+		this.cmdTimeout.then(() =>
+			this.requestFailure("Timeout for " + cmd)
+		);
 		return result;
 	}
 
@@ -337,10 +353,11 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected requestFailure(msg?: string) {
 		// Suppress warning if power is off. Many projectors behave erratic then.
 		if (this.power)
-			console.warn("Request failed", msg);
-		if (this.currRejector)
-			this.currRejector(msg);
+			this.warnMsg("Request failed", msg);
+		const rejector = this.currRejector;
 		this.requestClear();
+		if (rejector)
+			rejector(msg);
 	}
 
 	/**
@@ -363,7 +380,6 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		delete this.currRejector;
 		delete this.currResolver;
 	}
-
 }
 
 
@@ -376,7 +392,11 @@ export abstract class State<T> {
 	protected wanted: T;		// Desired (set by user) state, if any
 	private driver: Driver<any>;		// Associated driver
 
-	constructor(protected baseCmd: string, private propName: string) {}
+	constructor(
+		protected baseCmd: string, 	// Base part of command to send
+		private propName: string, 	// Name of associated property
+		private correctionApprover?: ()=>boolean // If specified, do NOT attempt to correct if returns false
+	) {}
 
 	/**
 	 * Set the driver I'm associated with, allowing me to fire property changes when
@@ -431,6 +451,13 @@ export abstract class State<T> {
 		}
 	}
 
+	/**
+	 * If have a current value, then return it, else return undefined.
+	 */
+	getCurrent(): T {
+		return this.current;
+	}
+
 	private notifyListeners() {
 		if (this.driver && this.propName)
 			this.driver.changed(this.propName);	// Let others know
@@ -440,7 +467,9 @@ export abstract class State<T> {
 	 Return true if I have pending correction to send.
 	 */
 	needsCorrection(): boolean {
-		return this.wanted !== undefined && this.current !== this.wanted;
+		return	this.wanted !== undefined &&
+				this.current !== this.wanted &&
+				(!this.correctionApprover || this.correctionApprover());
 	}
 
 	abstract correct(drvr: NetworkProjector): Promise<string>;	// Make current desired
@@ -471,13 +500,15 @@ export class BoolState extends State<boolean> {
  Manage a numeric state, including limits.
  */
 export class NumState extends State<number> {
-	private min: number;
-	private max: number;
 
-	constructor(protected baseCmd: string, propName: string, min: number, max: number) {
-		super(baseCmd, propName);
-		this.min = min;
-		this.max = max;
+	constructor(
+		protected baseCmd: string,
+		propName: string,
+		private readonly min: number,
+		private readonly max: number,
+		correctionApprover?: ()=>boolean
+	) {
+		super(baseCmd, propName, correctionApprover);
 	}
 
 	correct(drvr: NetworkProjector): Promise<string> {
