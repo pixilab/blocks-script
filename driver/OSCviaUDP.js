@@ -48,97 +48,92 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function OSCviaUDP(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.regExFloat = /^[-\+]?\d+\.\d+$/;
+            _this.regExInteger = /^[-\+]?\d+$/;
+            _this.regExBoolean = /^false|true$/;
             return _this;
         }
-        OSCviaUDP.prototype.sendMessage = function (address, values) {
-            var messageStringParts = split(values, { separator: ',', quotes: true });
-            if (values[0] != '[') {
-                values = '[' + values + ']';
-            }
-            var message = [];
-            var data = JSON.parse(values);
-            for (var i = 0; i < data.length; i++) {
-                var dataEntry = data[i];
-                var dataString = messageStringParts[i].trim();
-                var typeName = typeof dataEntry;
-                if (typeName === 'number') {
-                    this.addNumber(message, dataEntry, dataString);
-                }
-                if (typeName === 'string') {
-                    this.addString(message, dataEntry);
-                }
-                if (typeName === 'boolean') {
-                    this.addBoolean(message, dataEntry);
-                }
-                if (typeName == 'bigint') {
-                }
-            }
+        OSCviaUDP.prototype.sendMessage = function (address, valueList) {
+            var tagsAndBytes = {
+                tags: ',',
+                bytes: []
+            };
+            this.parseValueList(valueList, tagsAndBytes);
             var bytes = [];
+            console.log(tagsAndBytes['tags']);
             this.addRange(bytes, this.toOSCStringBytes(address));
-            this.addRange(bytes, this.toOSCStringBytes(this.renderDataTags(message)));
-            this.addRange(bytes, this.renderData(message));
+            this.addRange(bytes, this.toOSCStringBytes(tagsAndBytes['tags']));
+            this.addRange(bytes, tagsAndBytes['bytes']);
             this.socket.sendBytes(bytes);
         };
-        OSCviaUDP.prototype.addBoolean = function (message, value) {
-            this.addValue(message, value ? OSC_TYPE_TAG_BOOLEAN_TRUE : OSC_TYPE_TAG_BOOLEAN_FALSE, []);
-        };
-        OSCviaUDP.prototype.addNumber = function (message, value, valueString) {
-            if (this.isInteger(value) &&
-                valueString.indexOf('.') < 0) {
-                this.addInteger(message, value);
+        OSCviaUDP.prototype.parseValueList = function (valueList, tagsAndBytes) {
+            var valueListParts = split(valueList, { separator: ',', quotes: true, brackets: { '[': ']' } });
+            for (var i = 0; i < valueListParts.length; i++) {
+                var valueString = valueListParts[i].trim();
+                if (this.isFloat(valueString)) {
+                    var value = +valueString;
+                    this.addFloat(value, valueString, tagsAndBytes);
+                }
+                else if (this.isInteger(valueString)) {
+                    var value = +valueString;
+                    this.addInteger(value, tagsAndBytes);
+                }
+                else if (this.isBoolean(valueString)) {
+                    var value = (valueString == 'true');
+                    this.addBoolean(value, tagsAndBytes);
+                }
+                else if (this.isString(valueString)) {
+                    var value = valueString.substr(1, valueString.length - 2);
+                    this.addString(value, tagsAndBytes);
+                }
             }
-            else {
-                this.addFloat(message, value, valueString);
-            }
         };
-        OSCviaUDP.prototype.addInteger = function (message, value) {
+        OSCviaUDP.prototype.isFloat = function (valueString) {
+            return this.regExFloat.test(valueString);
+        };
+        OSCviaUDP.prototype.isInteger = function (valueString) {
+            return this.regExInteger.test(valueString);
+        };
+        OSCviaUDP.prototype.isBoolean = function (valueString) {
+            return this.regExBoolean.test(valueString);
+        };
+        OSCviaUDP.prototype.isString = function (valueString) {
+            var length = valueString.length;
+            if (length < 2)
+                return false;
+            var lastPos = length - 1;
+            return (valueString[0] == '\'' && valueString[lastPos] == '\'') ||
+                (valueString[0] == '"' && valueString[lastPos] == '"');
+        };
+        OSCviaUDP.prototype.addBoolean = function (value, tagsAndBytes) {
+            tagsAndBytes['tags'] += value ? OSC_TYPE_TAG_BOOLEAN_TRUE : OSC_TYPE_TAG_BOOLEAN_FALSE;
+        };
+        OSCviaUDP.prototype.addInteger = function (value, tagsAndBytes) {
             if (value >= MIN_INT32 &&
                 value <= MAX_INT32) {
-                var bytes = this.getInt32Bytes(value);
-                this.addValue(message, OSC_TYPE_TAG_INT32, bytes);
+                tagsAndBytes['tags'] += OSC_TYPE_TAG_INT32;
+                this.addRange(tagsAndBytes['bytes'], this.getInt32Bytes(value));
             }
             else {
-                var bytes = this.getFloat64Bytes(value);
-                this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+                tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT64;
+                this.addRange(tagsAndBytes['bytes'], this.getFloat64Bytes(value));
             }
         };
-        OSCviaUDP.prototype.addFloat = function (message, value, valueString) {
+        OSCviaUDP.prototype.addFloat = function (value, valueString, tagsAndBytes) {
             var abs = Math.abs(value);
             if (abs > MIN_ABS_FLOAT32 &&
                 valueString.length <= 7) {
-                var bytes = this.getFloat32Bytes(value);
-                this.addValue(message, OSC_TYPE_TAG_FLOAT32, bytes);
+                tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT32;
+                this.addRange(tagsAndBytes['bytes'], this.getFloat32Bytes(value));
             }
             else {
-                var bytes = this.getFloat64Bytes(value);
-                this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+                tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT64;
+                this.addRange(tagsAndBytes['bytes'], this.getFloat64Bytes(value));
             }
         };
-        OSCviaUDP.prototype.addString = function (message, value) {
-            var bytes = this.toOSCStringBytes(value);
-            this.addValue(message, OSC_TYPE_TAG_OSC_STRING, bytes);
-        };
-        OSCviaUDP.prototype.renderData = function (message) {
-            var bytes = [];
-            var messageData = message;
-            for (var i = 0; i < messageData.length; i++) {
-                this.addRange(bytes, messageData[i]['bytes']);
-            }
-            return bytes;
-        };
-        OSCviaUDP.prototype.renderDataTags = function (message) {
-            var dataTags = ',';
-            var messageData = message;
-            for (var i = 0; i < messageData.length; i++) {
-                dataTags += messageData[i]['type'];
-            }
-            return dataTags;
-        };
-        OSCviaUDP.prototype.addValue = function (message, valueType, bytes) {
-            message.push({
-                'type': valueType,
-                'bytes': bytes
-            });
+        OSCviaUDP.prototype.addString = function (value, tagsAndBytes) {
+            tagsAndBytes['tags'] += OSC_TYPE_TAG_OSC_STRING;
+            this.addRange(tagsAndBytes['bytes'], this.toOSCStringBytes(value));
         };
         OSCviaUDP.prototype.toOSCStringBytes = function (str) {
             var bytes = this.toBytesString(str);
@@ -208,19 +203,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             return bytes;
         };
-        OSCviaUDP.prototype.isInteger = function (value) {
+        OSCviaUDP.prototype.isInt = function (value) {
             return typeof value === 'number' &&
                 isFinite(value) &&
                 Math.floor(value) === value;
         };
         OSCviaUDP.prototype.isSafeInteger = function (value) {
-            return this.isInteger(value) &&
+            return this.isInt(value) &&
                 Math.abs(value) <= MAX_SAFE_INT;
         };
         __decorate([
             Meta.callable('send OSC message'),
             __param(0, Meta.parameter('OSC address')),
-            __param(1, Meta.parameter('JSON array /wo brackets. fx to send the values 1 (int), 2.0 (float), and "hello" (string) \'1, 2.0, "hello"\' or "1, 2.0, \\"hello\\"".')),
+            __param(1, Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", void 0)

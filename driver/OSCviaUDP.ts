@@ -38,6 +38,10 @@ import * as Meta from "system_lib/Metadata";
 @Meta.driver('NetworkUDP', { port: 8000 })
 export class OSCviaUDP extends Driver<NetworkUDP> {
 
+    regExFloat : RegExp = /^[-\+]?\d+\.\d+$/;
+    regExInteger : RegExp = /^[-\+]?\d+$/;
+    regExBoolean : RegExp = /^false|true$/;
+
     public constructor(private socket: NetworkUDP) {
         super(socket);
         // socket.subscribe('textReceived', (sender, message) => {
@@ -47,137 +51,156 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
 
     @Meta.callable('send OSC message')
     public sendMessage(
-        @Meta.parameter('OSC address') address: string,
-        @Meta.parameter('JSON array /wo brackets. fx to send the values 1 (int), 2.0 (float), and "hello" (string) \'1, 2.0, "hello"\' or "1, 2.0, \\"hello\\"".') values: string,
+        @Meta.parameter('OSC address')
+        address: string,
+        @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".')
+        valueList: string,
     ) {
-        var messageStringParts = split(values, { separator: ',', quotes: true })
-        if (values[0] != '[') {
-            values = '[' + values + ']';
-        }
-        var message: [] = [];
-
-        // read JSON in
-        var data: [] = JSON.parse(values);
-        for (var i = 0; i < data.length; i++) {
-            const dataEntry = data[i];
-            const dataString = messageStringParts[i].trim();
-            const typeName: string = typeof dataEntry;
-            if (typeName === 'number') {
-                this.addNumber(message, dataEntry, dataString);
-            }
-            if (typeName === 'string') {
-                this.addString(message, dataEntry);
-            }
-            if (typeName === 'boolean') {
-                this.addBoolean(message, dataEntry);
-            }
-            if (typeName == 'bigint') {
-
-            }
+        var tagsAndBytes : {} =
+        {
+            tags : ',',
+            bytes : []
         }
 
-        var bytes: number[] = [];
+
+        this.parseValueList(valueList, tagsAndBytes);
+
+        // for (var i = 0; i < data.length; i++) {
+        //     const dataEntry = data[i];
+        //     const dataString = messageStringParts[i].trim();
+        //     const typeName: string = typeof dataEntry;
+        //     if (typeName === 'number') {
+        //         this.addNumber(message, dataEntry, dataString);
+        //     }
+        //     if (typeName === 'string') {
+        //         this.addString(message, dataEntry);
+        //     }
+        //     if (typeName === 'boolean') {
+        //         this.addBoolean(message, dataEntry);
+        //     }
+        //     if (typeName == 'bigint') {
+        //
+        //     }
+        // }
+
+        var bytes : number[] = [];
+
+        console.log(tagsAndBytes['tags']);
+
         // first address
         this.addRange(bytes, this.toOSCStringBytes(address));
         // then data type tags
-        this.addRange(bytes, this.toOSCStringBytes(this.renderDataTags(message)));
+        this.addRange(bytes, this.toOSCStringBytes(tagsAndBytes['tags']));
         // finally the data
-        this.addRange(bytes, this.renderData(message));
+        this.addRange(bytes, tagsAndBytes['bytes']);
 
         // send message
         this.socket.sendBytes(bytes);
     }
 
-    public addBoolean(
-        message: [],
-        value: boolean
-    ) {
-        this.addValue(message, value ? OSC_TYPE_TAG_BOOLEAN_TRUE : OSC_TYPE_TAG_BOOLEAN_FALSE, []);
+    private parseValueList (valueList : string, tagsAndBytes : {})
+    {
+        var valueListParts = split(valueList, { separator: ',', quotes: true, brackets: {'[': ']'} });
+        for (var i = 0; i < valueListParts.length; i++)
+        {
+            var valueString : string = valueListParts[i].trim();
+            if (this.isFloat(valueString))
+            {
+                const value : number = +valueString;
+                this.addFloat(value, valueString, tagsAndBytes);
+            }
+            else if (this.isInteger(valueString))
+            {
+                const value : number = +valueString;
+                this.addInteger(value, tagsAndBytes);
+            }
+            else if (this.isBoolean(valueString))
+            {
+                const value : boolean = (valueString == 'true');
+                this.addBoolean(value, tagsAndBytes);
+            }
+            else if (this.isString(valueString))
+            {
+                const value : string = valueString.substr(1, valueString.length - 2);
+                this.addString(value, tagsAndBytes);
+            }
+        }
     }
 
-    public addNumber(
-        message: [],
-        value: number,
-        valueString: string
+    private isFloat (valueString : string) : boolean
+    {
+        return this.regExFloat.test(valueString);
+    }
+    private isInteger (valueString : string) : boolean
+    {
+        return this.regExInteger.test(valueString);
+    }
+    private isBoolean (valueString : string) : boolean
+    {
+      return this.regExBoolean.test(valueString);
+    }
+    private isString (valueString : string) : boolean
+    {
+      var length : number = valueString.length;
+      if (length < 2) return false;
+      var lastPos : number = length - 1;
+      return (valueString[0] == '\'' && valueString[lastPos] == '\'') ||
+             (valueString[0] == '"' && valueString[lastPos] == '"');
+    }
+
+
+    public addBoolean(
+        value: boolean,
+        tagsAndBytes : {}
     ) {
-        if (this.isInteger(value) &&
-            valueString.indexOf('.') < 0) {
-            this.addInteger(message, value);
-        }
-        else {
-            this.addFloat(message, value, valueString);
-        }
+        tagsAndBytes['tags'] += value ? OSC_TYPE_TAG_BOOLEAN_TRUE : OSC_TYPE_TAG_BOOLEAN_FALSE;
     }
 
     public addInteger(
-        message: [],
-        value: number
+        value: number,
+        tagsAndBytes : {}
     ) {
         if (value >= MIN_INT32 &&
             value <= MAX_INT32) {
-            var bytes: number[] = this.getInt32Bytes(value);
-            this.addValue(message, OSC_TYPE_TAG_INT32, bytes);
+            tagsAndBytes['tags'] += OSC_TYPE_TAG_INT32;
+            this.addRange(tagsAndBytes['bytes'], this.getInt32Bytes(value));
         }
         else {
             // TODO: getInt64Bytes is not correct
             // var bytes: number[] = this.getInt64Bytes(value);
             // this.addValue(message, OSC_TYPE_TAG_INT64, bytes);
-            var bytes: number[] = this.getFloat64Bytes(value);
-            this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+            tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT64;
+            this.addRange(tagsAndBytes['bytes'], this.getFloat64Bytes(value));
         }
 
     }
 
     public addFloat(
-        message: [],
         value: number,
-        valueString: string
+        valueString: string,
+        tagsAndBytes : {}
     ) {
         var abs: number = Math.abs(value);
         if (abs > MIN_ABS_FLOAT32 &&
             valueString.length <= 7) {
-            var bytes: number[] = this.getFloat32Bytes(value);
-            this.addValue(message, OSC_TYPE_TAG_FLOAT32, bytes);
+            tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT32;
+            this.addRange(tagsAndBytes['bytes'], this.getFloat32Bytes(value));
         }
         else {
-            var bytes: number[] = this.getFloat64Bytes(value);
-            this.addValue(message, OSC_TYPE_TAG_FLOAT64, bytes);
+            tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT64;
+            this.addRange(tagsAndBytes['bytes'], this.getFloat64Bytes(value));
         }
     }
 
     public addString(
-        message: [],
-        value: string
+        value: string,
+        tagsAndBytes : {}
     ) {
-        var bytes: number[] = this.toOSCStringBytes(value);
-        this.addValue(message, OSC_TYPE_TAG_OSC_STRING, bytes);
+        tagsAndBytes['tags'] += OSC_TYPE_TAG_OSC_STRING;
+        this.addRange(tagsAndBytes['bytes'], this.toOSCStringBytes(value));
     }
 
-    private renderData(message: []): number[] {
-        var bytes: number[] = [];
-        var messageData: [] = message;
-        for (var i = 0; i < messageData.length; i++) {
-            this.addRange(bytes, messageData[i]['bytes']);
-        }
-        return bytes;
-    }
-    private renderDataTags(message: []): string {
-        var dataTags: string = ',';
-        var messageData: [] = message;
-        for (var i = 0; i < messageData.length; i++) {
-            dataTags += messageData[i]['type'];
-        }
-        return dataTags;
-    }
-
-    private addValue(message: {}[], valueType: string, bytes: number[]) {
-        message.push({
-            'type': valueType,
-            'bytes': bytes
-        });
-    }
-
-    private toOSCStringBytes(str: string): number[] {
+    private toOSCStringBytes(str: string, ): number[] {
         var bytes = this.toBytesString(str);
         // string has to end on zero char
         if (bytes.length > 0 &&
@@ -260,13 +283,13 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         return bytes;
     }
 
-    isInteger(value: number): boolean {
+    isInt(value: number): boolean {
         return typeof value === 'number' &&
             isFinite(value) &&
             Math.floor(value) === value;
     }
     isSafeInteger(value: number): boolean {
-        return this.isInteger(value) &&
+        return this.isInt(value) &&
             Math.abs(value) <= MAX_SAFE_INT;
     }
 }
