@@ -60,7 +60,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             };
             this.parseValueList(valueList, tagsAndBytes);
             var bytes = [];
-            console.log(tagsAndBytes['tags']);
             this.addRange(bytes, this.toOSCStringBytes(address));
             this.addRange(bytes, this.toOSCStringBytes(tagsAndBytes['tags']));
             this.addRange(bytes, tagsAndBytes['bytes']);

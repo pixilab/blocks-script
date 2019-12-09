@@ -27,6 +27,7 @@ const OSC_TYPE_TAG_INT64 = 'h'; // 64 bit big-endian two's complement integer
 const OSC_TYPE_TAG_FLOAT64 = 'd'; // 64 bit ("double") IEEE 754 floating point number
 const OSC_TYPE_TAG_BOOLEAN_TRUE = 'T';
 const OSC_TYPE_TAG_BOOLEAN_FALSE = 'F';
+
 const split: any = require("lib/split-string");
 
 import { NetworkUDP } from "system/Network";
@@ -38,9 +39,9 @@ import * as Meta from "system_lib/Metadata";
 @Meta.driver('NetworkUDP', { port: 8000 })
 export class OSCviaUDP extends Driver<NetworkUDP> {
 
-    regExFloat : RegExp = /^[-\+]?\d+\.\d+$/;
-    regExInteger : RegExp = /^[-\+]?\d+$/;
-    regExBoolean : RegExp = /^false|true$/;
+    regExFloat: RegExp = /^[-\+]?\d+\.\d+$/;
+    regExInteger: RegExp = /^[-\+]?\d+$/;
+    regExBoolean: RegExp = /^false|true$/;
 
     public constructor(private socket: NetworkUDP) {
         super(socket);
@@ -56,36 +57,16 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".')
         valueList: string,
     ) {
-        var tagsAndBytes : {} =
+        var tagsAndBytes: {} =
         {
-            tags : ',',
-            bytes : []
+            tags: ',',
+            bytes: []
         }
-
-
         this.parseValueList(valueList, tagsAndBytes);
 
-        // for (var i = 0; i < data.length; i++) {
-        //     const dataEntry = data[i];
-        //     const dataString = messageStringParts[i].trim();
-        //     const typeName: string = typeof dataEntry;
-        //     if (typeName === 'number') {
-        //         this.addNumber(message, dataEntry, dataString);
-        //     }
-        //     if (typeName === 'string') {
-        //         this.addString(message, dataEntry);
-        //     }
-        //     if (typeName === 'boolean') {
-        //         this.addBoolean(message, dataEntry);
-        //     }
-        //     if (typeName == 'bigint') {
-        //
-        //     }
-        // }
+        var bytes: number[] = [];
 
-        var bytes : number[] = [];
-
-        console.log(tagsAndBytes['tags']);
+        // console.log(tagsAndBytes['tags']);
 
         // first address
         this.addRange(bytes, this.toOSCStringBytes(address));
@@ -98,67 +79,57 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         this.socket.sendBytes(bytes);
     }
 
-    private parseValueList (valueList : string, tagsAndBytes : {})
-    {
-        var valueListParts = split(valueList, { separator: ',', quotes: true, brackets: {'[': ']'} });
-        for (var i = 0; i < valueListParts.length; i++)
-        {
-            var valueString : string = valueListParts[i].trim();
-            if (this.isFloat(valueString))
-            {
-                const value : number = +valueString;
+    private parseValueList(valueList: string, tagsAndBytes: {}) {
+        var valueListParts = split(valueList, { separator: ',', quotes: true, brackets: { '[': ']' } });
+        for (var i = 0; i < valueListParts.length; i++) {
+            var valueString: string = valueListParts[i].trim();
+            if (this.isFloat(valueString)) {
+                const value: number = +valueString;
                 this.addFloat(value, valueString, tagsAndBytes);
             }
-            else if (this.isInteger(valueString))
-            {
-                const value : number = +valueString;
+            else if (this.isInteger(valueString)) {
+                const value: number = +valueString;
                 this.addInteger(value, tagsAndBytes);
             }
-            else if (this.isBoolean(valueString))
-            {
-                const value : boolean = (valueString == 'true');
+            else if (this.isBoolean(valueString)) {
+                const value: boolean = (valueString == 'true');
                 this.addBoolean(value, tagsAndBytes);
             }
-            else if (this.isString(valueString))
-            {
-                const value : string = valueString.substr(1, valueString.length - 2);
+            else if (this.isString(valueString)) {
+                const value: string = valueString.substr(1, valueString.length - 2);
                 this.addString(value, tagsAndBytes);
             }
         }
     }
 
-    private isFloat (valueString : string) : boolean
-    {
+    private isFloat(valueString: string): boolean {
         return this.regExFloat.test(valueString);
     }
-    private isInteger (valueString : string) : boolean
-    {
+    private isInteger(valueString: string): boolean {
         return this.regExInteger.test(valueString);
     }
-    private isBoolean (valueString : string) : boolean
-    {
-      return this.regExBoolean.test(valueString);
+    private isBoolean(valueString: string): boolean {
+        return this.regExBoolean.test(valueString);
     }
-    private isString (valueString : string) : boolean
-    {
-      var length : number = valueString.length;
-      if (length < 2) return false;
-      var lastPos : number = length - 1;
-      return (valueString[0] == '\'' && valueString[lastPos] == '\'') ||
-             (valueString[0] == '"' && valueString[lastPos] == '"');
+    private isString(valueString: string): boolean {
+        var length: number = valueString.length;
+        if (length < 2) return false;
+        var lastPos: number = length - 1;
+        return (valueString[0] == '\'' && valueString[lastPos] == '\'') ||
+            (valueString[0] == '"' && valueString[lastPos] == '"');
     }
 
 
     public addBoolean(
         value: boolean,
-        tagsAndBytes : {}
+        tagsAndBytes: {}
     ) {
         tagsAndBytes['tags'] += value ? OSC_TYPE_TAG_BOOLEAN_TRUE : OSC_TYPE_TAG_BOOLEAN_FALSE;
     }
 
     public addInteger(
         value: number,
-        tagsAndBytes : {}
+        tagsAndBytes: {}
     ) {
         if (value >= MIN_INT32 &&
             value <= MAX_INT32) {
@@ -178,7 +149,7 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
     public addFloat(
         value: number,
         valueString: string,
-        tagsAndBytes : {}
+        tagsAndBytes: {}
     ) {
         var abs: number = Math.abs(value);
         if (abs > MIN_ABS_FLOAT32 &&
@@ -194,7 +165,7 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
 
     public addString(
         value: string,
-        tagsAndBytes : {}
+        tagsAndBytes: {}
     ) {
         tagsAndBytes['tags'] += OSC_TYPE_TAG_OSC_STRING;
         this.addRange(tagsAndBytes['bytes'], this.toOSCStringBytes(value));
