@@ -82,14 +82,12 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             }
         };
         ArtnetGroups.prototype.fadeFixture = function (fixtureName, value, duration) {
-            if (!Artnet_1.Artnet[fixtureName])
-                return;
-            var channelNameList = this.getFixtureChannelNames(fixtureName);
-            this.fadeFixtureByChannelNames(fixtureName, channelNameList, value, duration);
+            var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, ''));
+            this.fadeChannels(channels, value, duration);
         };
         ArtnetGroups.prototype.fadeFixtureChannels = function (fixtureName, channelNames, value, duration) {
-            var channelNameList = this.getStringArray(channelNames);
-            this.fadeFixtureByChannelNames(fixtureName, channelNameList, value, duration);
+            var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, channelNames));
+            this.fadeChannels(channels, value, duration);
         };
         ArtnetGroups.prototype.fadeGroupTo = function (groupName, value, duration) {
             var _a;
@@ -115,31 +113,16 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetGroups.prototype.addFixtures = function (fixtureNames, groupName) {
             var fixtureNameList = this.getStringArray(fixtureNames);
             for (var i = 0; i < fixtureNameList.length; i++) {
-                var fixtureName = fixtureNameList[i];
-                var channelNameList = this.getFixtureChannelNames(fixtureName);
-                this.getGroup(groupName).addChannels(fixtureName, channelNameList);
+                var channels = this.getFixtureChannels(fixtureNameList[i]);
+                this.getGroup(groupName).addChannels(channels);
             }
         };
         ArtnetGroups.prototype.addFixtureChannels = function (fixtureNames, channelNames, groupName) {
             var fixtureNameList = this.getStringArray(fixtureNames);
-            var channelNameList = this.getStringArray(channelNames);
             for (var f = 0; f < fixtureNameList.length; f++) {
-                var fixtureName = fixtureNameList[f];
-                for (var i = 0; i < channelNameList.length; i++) {
-                    this.addChannel(fixtureName, channelNameList[i], groupName);
-                }
+                var channels = this.getFixtureChannels(fixtureNameList[f], channelNames);
+                this.getGroup(groupName).addChannels(channels);
             }
-        };
-        ArtnetGroups.prototype.addChannels = function (fixtureChannelList, groupName) {
-            var fixtureChannelParts = this.getStringArrayArray(fixtureChannelList);
-            for (var i = 0; i < fixtureChannelParts.length; i++) {
-                var fixtureName = fixtureChannelParts[i][0].trim();
-                var channelName = fixtureChannelParts[i][1].trim();
-                this.addChannel(fixtureName, channelName, groupName);
-            }
-        };
-        ArtnetGroups.prototype.addChannel = function (fixtureName, channelName, groupName) {
-            this.getGroup(groupName).addChannel(fixtureName, channelName);
         };
         ArtnetGroups.prototype.massFadeTo = function (value, duration) {
             if (value > 1.0)
@@ -161,7 +144,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         };
         ArtnetGroups.prototype.animateFixture = function (fixtureName, delay, style) {
             if (style == 'chase') {
-                var channels = this.getFixtureChannels(fixtureName, '');
+                var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, ''));
                 this.recursiveChase(channels, delay);
             }
         };
@@ -170,7 +153,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             if (pos == channels.length)
                 return;
             wait(delay / 2 * 1000).then(function () {
-                channels[pos].fadeTo(value, delay);
+                var channel = channels[pos];
+                channel.fadeTo(value * channel.maxValue, delay);
                 _this.recursiveValue(channels, pos + 1, value, delay);
             });
         };
@@ -181,12 +165,10 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 _this.recursiveValue(channels, 0, _this.mLightOffValue, delay);
             });
         };
-        ArtnetGroups.prototype.fadeFixtureByChannelNames = function (fixtureName, channelNames, value, duration) {
-            var _a;
-            if (!Artnet_1.Artnet[fixtureName])
-                return;
-            for (var i = 0; i < channelNames.length; i++) {
-                (_a = Artnet_1.Artnet[fixtureName][channelNames[i]]) === null || _a === void 0 ? void 0 : _a.fadeTo(value, duration);
+        ArtnetGroups.prototype.fadeChannels = function (channels, value, duration) {
+            for (var i = 0; i < channels.length; i++) {
+                var channel = channels[i];
+                channel.fadeTo(value * channel.maxValue, duration);
             }
         };
         ArtnetGroups.prototype.padStart = function (value, minLength, padWith) {
@@ -195,17 +177,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 result = padWith + result;
             }
             return result;
-        };
-        ArtnetGroups.prototype.getFixtures = function (fixtureNames) {
-            var fixtureNameList = this.getStringArray(fixtureNames);
-            var fixtures = [];
-            for (var i = 0; i < fixtureNameList.length; i++) {
-                var fixtureName = fixtureNameList[i];
-                var fixture = Artnet_1.Artnet[fixtureName];
-                if (fixture)
-                    fixtures.push(fixture);
-            }
-            return fixtures;
         };
         ArtnetGroups.prototype.getFixtureChannels = function (fixtureName, channelNames) {
             var fixture = Artnet_1.Artnet[fixtureName];
@@ -220,6 +191,17 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                     channels.push(channel);
             }
             return channels;
+        };
+        ArtnetGroups.prototype.getAnalogChannels = function (channels) {
+            var analogChannels = [];
+            for (var i = 0; i < channels.length; i++) {
+                var channel = channels[i];
+                if (!channel.isOfTypeName('AnalogChannel'))
+                    return;
+                var analogChannel = channel;
+                analogChannels.push(analogChannel);
+            }
+            return analogChannels;
         };
         ArtnetGroups.prototype.getFixtureChannelNames = function (fixtureName) {
             var channelNameList = [];
@@ -248,41 +230,25 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         };
         ArtnetGroups.prototype.getStringArray = function (list) {
             var result = [];
-            try {
-                result = JSON.parse('[' + list + ']');
-                return result;
-            }
-            catch (e) {
-            }
-            var listParts = split(list, { separator: ',', quotes: true, brackets: { '[': ']' } });
+            var listParts = split(list, { separator: ',', quotes: ['"', '\''], brackets: { '[': ']' } });
             for (var i = 0; i < listParts.length; i++) {
-                var listPart = listParts[i].trim();
+                var listPart = this.removeQuotes(listParts[i].trim());
                 result.push(listPart);
             }
             return result;
         };
-        ArtnetGroups.prototype.getStringArrayArray = function (list) {
-            var result = [];
-            try {
-                result = JSON.parse('[' + list + ']');
-                return result;
+        ArtnetGroups.prototype.removeQuotes = function (value) {
+            if (value.length < 2)
+                return value;
+            var QUOTATION = '"';
+            var APOSTROPHE = '\'';
+            var first = value.charAt(0);
+            var last = value.charAt(value.length - 1);
+            if ((first == QUOTATION && last == QUOTATION) ||
+                (first == APOSTROPHE && last == APOSTROPHE)) {
+                return value.substr(1, value.length - 2);
             }
-            catch (e) {
-            }
-            var listParts = split(list, { separator: ',', quotes: true, brackets: { '[': ']' } });
-            for (var i = 0; i < listParts.length; i++) {
-                var listPart = listParts[i].trim();
-                if (this.isEncodedArray(listPart)) {
-                    var array = split(listPart.substr(1, listPart.length - 2), { separator: ',', quotes: true, brackets: { '[': ']' } });
-                    result.push(array);
-                }
-            }
-            return result;
-        };
-        ArtnetGroups.prototype.isEncodedArray = function (possibleArray) {
-            if (possibleArray.length < 2)
-                return false;
-            return possibleArray[0] == '[' && possibleArray[possibleArray.length - 1] == ']';
+            return value;
         };
         ArtnetGroups.prototype.random = function (min, max) {
             return Math.random() * (max - min) + min;
@@ -313,8 +279,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         __decorate([
             Metadata_1.callable('fade fixture'),
             __param(0, Metadata_1.parameter('fixture name')),
-            __param(1, Metadata_1.parameter("Wanted Value")),
-            __param(2, Metadata_1.parameter("Fade Duration in seconds")),
+            __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(2, Metadata_1.parameter('duration in seconds')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
             __metadata("design:returntype", void 0)
@@ -322,9 +288,9 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         __decorate([
             Metadata_1.callable('fade fixture'),
             __param(0, Metadata_1.parameter('fixture name')),
-            __param(1, Metadata_1.parameter('"channelName, channelName, channelName"')),
-            __param(2, Metadata_1.parameter("Wanted Value")),
-            __param(3, Metadata_1.parameter("Fade Duration in seconds")),
+            __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
+            __param(2, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(3, Metadata_1.parameter('duration in seconds')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String, Number, Number]),
             __metadata("design:returntype", void 0)
@@ -332,7 +298,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         __decorate([
             Metadata_1.callable('fade group'),
             __param(0, Metadata_1.parameter('group name')),
-            __param(1, Metadata_1.parameter('target value')),
+            __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
             __param(2, Metadata_1.parameter('fade duration in seconds')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
@@ -341,7 +307,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         __decorate([
             Metadata_1.callable('set group value'),
             __param(0, Metadata_1.parameter('group name')),
-            __param(1, Metadata_1.parameter('value')),
+            __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number]),
             __metadata("design:returntype", void 0)
@@ -373,33 +339,16 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         __decorate([
             Metadata_1.callable('Add channels of fixture to group'),
             __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-            __param(1, Metadata_1.parameter('"channelName, channelName, channelName"')),
+            __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
             __param(2, Metadata_1.parameter('name of group')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String, String]),
             __metadata("design:returntype", void 0)
         ], ArtnetGroups.prototype, "addFixtureChannels", null);
         __decorate([
-            Metadata_1.callable('Add channels of fixture to group'),
-            __param(0, Metadata_1.parameter('"[fixtureName, channelName],[fixtureName, channelName]"')),
-            __param(1, Metadata_1.parameter('name of group')),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String]),
-            __metadata("design:returntype", void 0)
-        ], ArtnetGroups.prototype, "addChannels", null);
-        __decorate([
-            Metadata_1.callable('Add specific channel to group'),
-            __param(0, Metadata_1.parameter('name of fixture')),
-            __param(1, Metadata_1.parameter('name of channel')),
-            __param(2, Metadata_1.parameter('name of group')),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String, String]),
-            __metadata("design:returntype", void 0)
-        ], ArtnetGroups.prototype, "addChannel", null);
-        __decorate([
-            Metadata_1.callable("Fade all lights To Value"),
-            __param(0, Metadata_1.parameter("Wanted Value")),
-            __param(1, Metadata_1.parameter("Fade Duration in seconds")),
+            Metadata_1.callable('Fade all lights To Value'),
+            __param(0, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(1, Metadata_1.parameter('duration in seconds')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Number]),
             __metadata("design:returntype", void 0)
@@ -433,7 +382,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             set: function (value) {
                 for (var i = 0; i < this.mChannels.length; i++) {
                     var channel = this.mChannels[i];
-                    channel.value = channel.maxValue > 1 ? value * 255.0 : value;
+                    channel.value = value * channel.maxValue;
                 }
             },
             enumerable: true,
@@ -446,37 +395,21 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             enumerable: true,
             configurable: true
         });
-        ArtnetGroup.prototype.addFixture = function (fixtureName, channelNamePrefix, min, max) {
-            if (!Artnet_1.Artnet[fixtureName])
-                return;
-            for (var i = min; i < max; i++) {
-                var channelName = channelNamePrefix + (i < 10 ? '0' : '') + i;
-                this.addChannel(fixtureName, channelName);
-            }
-        };
-        ArtnetGroup.prototype.addChannels = function (fixtureName, channelNames) {
-            if (!Artnet_1.Artnet[fixtureName])
-                return;
-            for (var i = 0; i < channelNames.length; i++) {
-                this.addChannel(fixtureName, channelNames[i]);
-            }
-        };
-        ArtnetGroup.prototype.addChannel = function (fixtureName, channelName) {
-            var fixture = Artnet_1.Artnet[fixtureName];
-            if (!fixture)
-                return;
-            var channel = fixture[channelName];
-            if (!channel)
-                return;
+        ArtnetGroup.prototype.addChannel = function (channel) {
             if (!channel.isOfTypeName('AnalogChannel'))
                 return;
             var analogChannel = channel;
             this.mChannels.push(analogChannel);
         };
+        ArtnetGroup.prototype.addChannels = function (channels) {
+            for (var i = 0; i < channels.length; i++) {
+                this.addChannel(channels[i]);
+            }
+        };
         ArtnetGroup.prototype.fadeTo = function (value, duration) {
             for (var i = 0; i < this.mChannels.length; i++) {
                 var channel = this.mChannels[i];
-                channel.fadeTo(channel.maxValue > 1 ? value * 255.0 : value, duration);
+                channel.fadeTo(value * channel.maxValue, duration);
             }
         };
         return ArtnetGroup;

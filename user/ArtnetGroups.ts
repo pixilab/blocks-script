@@ -78,29 +78,28 @@ export class ArtnetGroups extends Script {
     @callable('fade fixture')
     public fadeFixture(
         @parameter('fixture name') fixtureName: string,
-        @parameter("Wanted Value") value: number,
-        @parameter("Fade Duration in seconds") duration: number
+        @parameter('target value. Normalised range: 0 .. 1') value: number,
+        @parameter('duration in seconds') duration: number
     ) {
-        if (!Artnet[fixtureName]) return;
-        var channelNameList: string[] = this.getFixtureChannelNames(fixtureName);
-        this.fadeFixtureByChannelNames(fixtureName, channelNameList, value, duration);
+        var channels: AnalogChannel[] = this.getAnalogChannels(this.getFixtureChannels(fixtureName, ''));
+        this.fadeChannels(channels, value, duration);
     }
 
     @callable('fade fixture')
     public fadeFixtureChannels(
         @parameter('fixture name') fixtureName: string,
-        @parameter('"channelName, channelName, channelName"') channelNames: string,
-        @parameter("Wanted Value") value: number,
-        @parameter("Fade Duration in seconds") duration: number
+        @parameter('channelName, channelName, channelName') channelNames: string,
+        @parameter('target value. Normalised range: 0 .. 1') value: number,
+        @parameter('duration in seconds') duration: number
     ) {
-        var channelNameList: string[] = this.getStringArray(channelNames);
-        this.fadeFixtureByChannelNames(fixtureName, channelNameList, value, duration);
+        var channels: AnalogChannel[] = this.getAnalogChannels(this.getFixtureChannels(fixtureName, channelNames));
+        this.fadeChannels(channels, value, duration);
     }
 
     @callable('fade group')
     public fadeGroupTo(
         @parameter('group name') groupName: string,
-        @parameter('target value') value: number,
+        @parameter('target value. Normalised range: 0 .. 1') value: number,
         @parameter('fade duration in seconds') duration: number
     ) {
         this.getGroup(groupName) ?.fadeTo(value, duration);
@@ -109,7 +108,7 @@ export class ArtnetGroups extends Script {
     @callable('set group value')
     public setGroupValue(
         @parameter('group name') groupName: string,
-        @parameter('value') value: number
+        @parameter('target value. Normalised range: 0 .. 1') value: number
     ) {
         var group: ArtnetGroup = this.getGroup(groupName);
         if (!group) return;
@@ -143,59 +142,28 @@ export class ArtnetGroups extends Script {
     ) {
         var fixtureNameList: string[] = this.getStringArray(fixtureNames);
         for (let i = 0; i < fixtureNameList.length; i++) {
-            var fixtureName: string = fixtureNameList[i];
-            var channelNameList: string[] = this.getFixtureChannelNames(fixtureName);
-            this.getGroup(groupName).addChannels(fixtureName, channelNameList);
+            var channels: Channel[] = this.getFixtureChannels(fixtureNameList[i]);
+            this.getGroup(groupName).addChannels(channels);
         }
-
     }
 
     @callable('Add channels of fixture to group')
     public addFixtureChannels(
         @parameter('fixtureName, fixtureName, fixtureName') fixtureNames: string,
-        @parameter('"channelName, channelName, channelName"') channelNames: string,
+        @parameter('channelName, channelName, channelName') channelNames: string,
         @parameter('name of group') groupName: string
     ) {
         var fixtureNameList: string[] = this.getStringArray(fixtureNames);
-        var channelNameList: string[] = this.getStringArray(channelNames);
         for (let f = 0; f < fixtureNameList.length; f++) {
-            var fixtureName: string = fixtureNameList[f];
-            for (let i = 0; i < channelNameList.length; i++) {
-                this.addChannel(fixtureName, channelNameList[i], groupName);
-            }
+            var channels: Channel[] = this.getFixtureChannels(fixtureNameList[f], channelNames);
+            this.getGroup(groupName).addChannels(channels);
         }
     }
 
-    @callable('Add channels of fixture to group')
-    public addChannels(
-        @parameter('"[fixtureName, channelName],[fixtureName, channelName]"') fixtureChannelList: string,
-        @parameter('name of group') groupName: string
-    ) {
-        var fixtureChannelParts: string[][] = this.getStringArrayArray(fixtureChannelList);
-        for (let i = 0; i < fixtureChannelParts.length; i++) {
-            var fixtureName: string = fixtureChannelParts[i][0].trim();
-            var channelName: string = fixtureChannelParts[i][1].trim();
-            this.addChannel(fixtureName, channelName, groupName);
-        }
-
-    }
-
-    @callable('Add specific channel to group')
-    public addChannel(
-        @parameter('name of fixture') fixtureName: string,
-        @parameter('name of channel') channelName: string,
-        @parameter('name of group') groupName: string
-    ) {
-        this.getGroup(groupName).addChannel(fixtureName, channelName);
-    }
-
-
-
-
-    @callable("Fade all lights To Value")
+    @callable('Fade all lights To Value')
     public massFadeTo(
-        @parameter("Wanted Value") value: number,
-        @parameter("Fade Duration in seconds") duration: number
+        @parameter('target value. Normalised range: 0 .. 1') value: number,
+        @parameter('duration in seconds') duration: number
     ): void {
         if (value > 1.0) value = value / 255.0;
         for (var key in this.groups) {
@@ -221,35 +189,31 @@ export class ArtnetGroups extends Script {
     @callable("Animate Fixture ('chase')")
     public animateFixture(fixtureName: string, delay: number, style: string): void {
         if (style == 'chase') {
-            var channels: Channel[] = this.getFixtureChannels(fixtureName, '');
+            var channels: AnalogChannel[] = this.getAnalogChannels(this.getFixtureChannels(fixtureName, ''));
             this.recursiveChase(channels, delay);
         }
     }
 
-    private recursiveValue(channels: Channel[], pos: number, value: number, delay: number) {
+    private recursiveValue(channels: AnalogChannel[], pos: number, value: number, delay: number) {
         if (pos == channels.length) return;
         wait(delay / 2 * 1000).then(() => {
-            channels[pos].fadeTo(value, delay);
+            var channel: AnalogChannel = channels[pos];
+            channel.fadeTo(value * channel.maxValue, delay);
             this.recursiveValue(channels, pos + 1, value, delay);
         });
     }
 
-    private recursiveChase(channels: Channel[], delay: number) {
+    private recursiveChase(channels: AnalogChannel[], delay: number) {
         this.recursiveValue(channels, 0, 1, delay);
         wait(delay * 1000).then(() => {
             this.recursiveValue(channels, 0, this.mLightOffValue, delay);
         });
     }
 
-    private fadeFixtureByChannelNames(
-        fixtureName: string,
-        channelNames: string[],
-        value: number,
-        duration: number
-    ) {
-        if (!Artnet[fixtureName]) return;
-        for (let i = 0; i < channelNames.length; i++) {
-            Artnet[fixtureName][channelNames[i]] ?.fadeTo(value, duration);
+    private fadeChannels(channels: AnalogChannel[], value: number, duration: number) {
+        for (let i = 0; i < channels.length; i++) {
+            var channel: AnalogChannel = channels[i];
+            channel.fadeTo(value * channel.maxValue, duration);
         }
     }
 
@@ -261,18 +225,7 @@ export class ArtnetGroups extends Script {
         return result;
     }
 
-    private getFixtures(fixtureNames: string): Fixture[] {
-        var fixtureNameList: string[] = this.getStringArray(fixtureNames);
-        var fixtures: Fixture[] = [];
-        for (let i = 0; i < fixtureNameList.length; i++) {
-            var fixtureName: string = fixtureNameList[i];
-            var fixture: Fixture = Artnet[fixtureName];
-            if (fixture) fixtures.push(fixture);
-        }
-        return fixtures;
-    }
-
-    private getFixtureChannels(fixtureName: string, channelNames: string): Channel[] {
+    private getFixtureChannels(fixtureName: string, channelNames?: string): Channel[] {
         var fixture = Artnet[fixtureName];
         if (!fixture) return [];
         var channels: Channel[] = [];
@@ -283,6 +236,17 @@ export class ArtnetGroups extends Script {
             if (channel) channels.push(channel);
         }
         return channels;
+    }
+
+    private getAnalogChannels(channels: Channel[]): AnalogChannel[] {
+        var analogChannels: AnalogChannel[] = [];
+        for (let i = 0; i < channels.length; i++) {
+            var channel: Channel = channels[i];
+            if (!channel.isOfTypeName('AnalogChannel')) return;
+            const analogChannel: AnalogChannel = channel as AnalogChannel;
+            analogChannels.push(analogChannel);
+        }
+        return analogChannels;
     }
 
     private getFixtureChannelNames(fixtureName: string): string[] {
@@ -314,43 +278,29 @@ export class ArtnetGroups extends Script {
 
     private getStringArray(list: string): string[] {
         var result: string[] = [];
-        try {
-            result = JSON.parse('[' + list + ']');
-            return result;
-        }
-        catch (e) {
-        }
-        var listParts: string[] = split(list, { separator: ',', quotes: true, brackets: { '[': ']' } });
+        var listParts: string[] = split(list,
+            { separator: ',', quotes: ['"', '\''], brackets: { '[': ']' } }
+        );
         for (let i = 0; i < listParts.length; i++) {
-            var listPart: string = listParts[i].trim();
+            var listPart: string = this.removeQuotes(listParts[i].trim());
             result.push(listPart);
         }
         return result;
     }
 
-    private getStringArrayArray(list: string): string[][] {
-        var result: string[][] = [];
-        try {
-            result = JSON.parse('[' + list + ']');
-            return result;
+    private removeQuotes(value: string): string {
+        if (value.length < 2) return value;
+        const QUOTATION = '"';
+        const APOSTROPHE = '\'';
+        var first: string = value.charAt(0);
+        var last: string = value.charAt(value.length - 1);
+        if (
+            (first == QUOTATION && last == QUOTATION) ||
+            (first == APOSTROPHE && last == APOSTROPHE)
+        ) {
+            return value.substr(1, value.length - 2);
         }
-        catch (e) {
-        }
-        var listParts: string[] = split(list, { separator: ',', quotes: true, brackets: { '[': ']' } });
-        for (let i = 0; i < listParts.length; i++) {
-            var listPart: string = listParts[i].trim();
-            if (this.isEncodedArray(listPart)) {
-                var array: string[] = split(listPart.substr(1, listPart.length - 2), { separator: ',', quotes: true, brackets: { '[': ']' } });
-
-                result.push(array);
-            }
-        }
-        return result;
-    }
-
-    private isEncodedArray(possibleArray: string): boolean {
-        if (possibleArray.length < 2) return false;
-        return possibleArray[0] == '[' && possibleArray[possibleArray.length - 1] == ']';
+        return value;
     }
 
     private random(
@@ -377,7 +327,7 @@ class ArtnetGroup {
     set value(value: number) {
         for (let i = 0; i < this.mChannels.length; i++) {
             var channel: AnalogChannel = this.mChannels[i];
-            channel.value = channel.maxValue > 1 ? value * 255.0 : value;
+            channel.value = value * channel.maxValue;
         }
     }
 
@@ -385,36 +335,22 @@ class ArtnetGroup {
         return this.mChannels;
     }
 
-
-    public addFixture(fixtureName: string, channelNamePrefix: string, min: number, max: number) {
-        if (!Artnet[fixtureName]) return;
-
-        for (let i = min; i < max; i++) {
-            const channelName = channelNamePrefix + (i < 10 ? '0' : '') + i;
-            this.addChannel(fixtureName, channelName);
-        }
-    }
-    public addChannels(fixtureName: string, channelNames: string[]) {
-        if (!Artnet[fixtureName]) return;
-        for (let i = 0; i < channelNames.length; i++) {
-            this.addChannel(fixtureName, channelNames[i]);
-        }
-    }
-    public addChannel(fixtureName: string, channelName: string) {
-        var fixture: Fixture = Artnet[fixtureName];
-        if (!fixture) return;
-        var channel = fixture[channelName];
-        if (!channel) return;
+    public addChannel(channel: Channel) {
         if (!channel.isOfTypeName('AnalogChannel')) return;
         const analogChannel: AnalogChannel = channel as AnalogChannel;
         this.mChannels.push(analogChannel);
     }
 
-    public fadeTo(value: number, duration: number
-    ): void {
+    public addChannels(channels: Channel[]) {
+        for (let i = 0; i < channels.length; i++) {
+            this.addChannel(channels[i]);
+        }
+    }
+
+    public fadeTo(value: number, duration: number) {
         for (let i = 0; i < this.mChannels.length; i++) {
             var channel: AnalogChannel = this.mChannels[i];
-            channel.fadeTo(channel.maxValue > 1 ? value * 255.0 : value, duration);
+            channel.fadeTo(value * channel.maxValue, duration);
         }
     }
 
