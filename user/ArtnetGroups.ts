@@ -115,6 +115,29 @@ export class ArtnetGroups extends Script {
         group.value = value;
     }
 
+    @callable('set group power')
+    public setGroupPower (
+      @parameter('group name') groupName: string,
+      @parameter('power on/off : true/false') power: boolean
+    ) {
+      var group: ArtnetGroup = this.getGroup(groupName);
+      if (!group) return;
+      group.power = power;
+    }
+
+    @callable('group settings')
+    public setGroupDefaults (
+      @parameter('group name') groupName: string,
+      @parameter('fade on duration (seconds)') fadeOnDuration: number,
+      @parameter('fade off duration (seconds)') fadeOffDuration: number,
+      @parameter('on value (0..1)') onValue: number,
+      @parameter('off value (0..1)') offValue: number,
+    ) {
+      var group: ArtnetGroup = this.getGroup(groupName);
+      if (!group) return;
+      group.setDefaults(fadeOnDuration, fadeOffDuration, onValue, offValue);
+    }
+
     @callable('settings for addFixture and addFixtures')
     public addFixtureSettings(
         @parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"') channelNamePrefix: string,
@@ -194,6 +217,39 @@ export class ArtnetGroups extends Script {
         }
     }
 
+    /**
+  	 * Make composite names for group properties
+  	 */
+  	private static grpPropNameValue(groupName: string) {
+  		return 'g_' + groupName + '_val';
+  	}
+    private static grpPropNamePower (groupName : string) {
+      return 'g_' + groupName + '_pwr';
+    }
+
+    /**
+  	 * Publish properties for specified group
+  	 */
+  	private publishGroupProps(groupName: string) {
+  		var value = 0;
+      var power = false;
+
+  		this.property<number>(ArtnetGroups.grpPropNameValue(groupName), {type: Number, description: "Group Value 0..1"}, setValue => {
+  			if (setValue !== undefined) {
+  				value = setValue;
+  				this.setGroupValue(groupName, setValue)
+  			}
+  			return value;
+  		});
+      this.property<boolean>(ArtnetGroups.grpPropNamePower(groupName), {type: Boolean, description: "Group Power on/off"}, setValue => {
+  			if (setValue !== undefined) {
+  				power = setValue;
+  				this.setGroupPower(groupName, power)
+  			}
+  			return power;
+  		});
+  	}
+
     private recursiveValue(channels: AnalogChannel[], pos: number, value: number, delay: number) {
         if (pos == channels.length) return;
         wait(delay / 2 * 1000).then(() => {
@@ -266,6 +322,7 @@ export class ArtnetGroups extends Script {
     private getGroup(groupName: string): ArtnetGroup {
         if (!this.groups[groupName]) {
             this.groups[groupName] = new ArtnetGroup();
+            this.publishGroupProps(groupName);
         }
         return this.groups[groupName];
     }
@@ -323,12 +380,30 @@ export class ArtnetGroups extends Script {
 
 class ArtnetGroup {
     private mChannels: AnalogChannel[] = [];
+    private mFadeOnDuration : number = 1;
+    private mFadeOffDuration : number = 1;
+    private mOnValue : number = 1;
+    private mOffValue : number = 0;
+    private mPowerOn : boolean = false;
 
     set value(value: number) {
         for (let i = 0; i < this.mChannels.length; i++) {
             var channel: AnalogChannel = this.mChannels[i];
             channel.value = value * channel.maxValue;
         }
+    }
+
+    set power(on : boolean) {
+      var value : number = on ? this.mOnValue : this.mOffValue;
+      var duration : number = on ? this.mFadeOnDuration : this.mFadeOffDuration;
+      for (let i = 0; i < this.mChannels.length; i++) {
+          var channel: AnalogChannel = this.mChannels[i];
+          channel.fadeTo(value * channel.maxValue, duration);
+      }
+      this.mPowerOn = on;
+    }
+    get power () : boolean {
+      return this.mPowerOn;
     }
 
     get channels(): AnalogChannel[] {
@@ -354,8 +429,23 @@ class ArtnetGroup {
         }
     }
 
+    public setDefaults (
+      fadeOnDuration: number,
+      fadeOffDuration: number,
+      onValue: number,
+      offValue: number,
+    ) {
+      this.mFadeOnDuration = fadeOnDuration;
+      this.mFadeOffDuration = fadeOffDuration;
+      this.mOnValue = onValue;
+      this.mOffValue = offValue;
+    }
+}
+class ArtnetScene {
 
 }
+
+
 interface Dictionary<Group> {
     [id: string]: Group;
 }

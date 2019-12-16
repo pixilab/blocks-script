@@ -99,6 +99,18 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 return;
             group.value = value;
         };
+        ArtnetGroups.prototype.setGroupPower = function (groupName, power) {
+            var group = this.getGroup(groupName);
+            if (!group)
+                return;
+            group.power = power;
+        };
+        ArtnetGroups.prototype.setGroupDefaults = function (groupName, fadeOnDuration, fadeOffDuration, onValue, offValue) {
+            var group = this.getGroup(groupName);
+            if (!group)
+                return;
+            group.setDefaults(fadeOnDuration, fadeOffDuration, onValue, offValue);
+        };
         ArtnetGroups.prototype.addFixtureSettings = function (channelNamePrefix, minChannel, maxChannel, channelNameDigits) {
             this.mChannelNamePrefix = channelNamePrefix;
             this.mMinChannel = minChannel;
@@ -147,6 +159,31 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, ''));
                 this.recursiveChase(channels, delay);
             }
+        };
+        ArtnetGroups.grpPropNameValue = function (groupName) {
+            return 'g_' + groupName + '_val';
+        };
+        ArtnetGroups.grpPropNamePower = function (groupName) {
+            return 'g_' + groupName + '_pwr';
+        };
+        ArtnetGroups.prototype.publishGroupProps = function (groupName) {
+            var _this = this;
+            var value = 0;
+            var power = false;
+            this.property(ArtnetGroups.grpPropNameValue(groupName), { type: Number, description: "Group Value 0..1" }, function (setValue) {
+                if (setValue !== undefined) {
+                    value = setValue;
+                    _this.setGroupValue(groupName, setValue);
+                }
+                return value;
+            });
+            this.property(ArtnetGroups.grpPropNamePower(groupName), { type: Boolean, description: "Group Power on/off" }, function (setValue) {
+                if (setValue !== undefined) {
+                    power = setValue;
+                    _this.setGroupPower(groupName, power);
+                }
+                return power;
+            });
         };
         ArtnetGroups.prototype.recursiveValue = function (channels, pos, value, delay) {
             var _this = this;
@@ -219,6 +256,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetGroups.prototype.getGroup = function (groupName) {
             if (!this.groups[groupName]) {
                 this.groups[groupName] = new ArtnetGroup();
+                this.publishGroupProps(groupName);
             }
             return this.groups[groupName];
         };
@@ -313,6 +351,25 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", void 0)
         ], ArtnetGroups.prototype, "setGroupValue", null);
         __decorate([
+            Metadata_1.callable('set group power'),
+            __param(0, Metadata_1.parameter('group name')),
+            __param(1, Metadata_1.parameter('power on/off : true/false')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Boolean]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGroups.prototype, "setGroupPower", null);
+        __decorate([
+            Metadata_1.callable('group settings'),
+            __param(0, Metadata_1.parameter('group name')),
+            __param(1, Metadata_1.parameter('fade on duration (seconds)')),
+            __param(2, Metadata_1.parameter('fade off duration (seconds)')),
+            __param(3, Metadata_1.parameter('on value (0..1)')),
+            __param(4, Metadata_1.parameter('off value (0..1)')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGroups.prototype, "setGroupDefaults", null);
+        __decorate([
             Metadata_1.callable('settings for addFixture and addFixtures'),
             __param(0, Metadata_1.parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"')),
             __param(1, Metadata_1.parameter('defaults to ' + MIN_CHANNEL)),
@@ -377,6 +434,11 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
     var ArtnetGroup = (function () {
         function ArtnetGroup() {
             this.mChannels = [];
+            this.mFadeOnDuration = 1;
+            this.mFadeOffDuration = 1;
+            this.mOnValue = 1;
+            this.mOffValue = 0;
+            this.mPowerOn = false;
         }
         Object.defineProperty(ArtnetGroup.prototype, "value", {
             set: function (value) {
@@ -384,6 +446,22 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                     var channel = this.mChannels[i];
                     channel.value = value * channel.maxValue;
                 }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ArtnetGroup.prototype, "power", {
+            get: function () {
+                return this.mPowerOn;
+            },
+            set: function (on) {
+                var value = on ? this.mOnValue : this.mOffValue;
+                var duration = on ? this.mFadeOnDuration : this.mFadeOffDuration;
+                for (var i = 0; i < this.mChannels.length; i++) {
+                    var channel = this.mChannels[i];
+                    channel.fadeTo(value * channel.maxValue, duration);
+                }
+                this.mPowerOn = on;
             },
             enumerable: true,
             configurable: true
@@ -412,6 +490,17 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 channel.fadeTo(value * channel.maxValue, duration);
             }
         };
+        ArtnetGroup.prototype.setDefaults = function (fadeOnDuration, fadeOffDuration, onValue, offValue) {
+            this.mFadeOnDuration = fadeOnDuration;
+            this.mFadeOffDuration = fadeOffDuration;
+            this.mOnValue = onValue;
+            this.mOffValue = offValue;
+        };
         return ArtnetGroup;
+    }());
+    var ArtnetScene = (function () {
+        function ArtnetScene() {
+        }
+        return ArtnetScene;
     }());
 });
