@@ -3,7 +3,7 @@
 
  	Copyright (c) 2019 No Parking Production ApS, Denmark (https://noparking.dk). All Rights Reserved.
 	Created by: Samuel Walz <mail@samwalz.com>
-  Version: 0.1
+  Version: 0.85
   Features:
   - groups (grouping fixtures and channels)
   - master fade all channels of a fixture
