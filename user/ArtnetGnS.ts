@@ -5,10 +5,10 @@
 	Created by: Samuel Walz <mail@samwalz.com>
   Version: 0.1
   Features:
-  - group channels
+  - groups (grouping fixtures and channels)
   - master fade all channels of a fixture
+  - scenes (adding fixtures & channels to scenes)
 
-  advice: ideally all used channels should be normalised
  */
 
 import { Artnet, Fixture, Channel, AnalogChannel } from "system/Artnet";
