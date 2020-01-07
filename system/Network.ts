@@ -160,6 +160,4 @@ interface NetworkBase extends ScriptBaseEnv {
 	 * point in time, thus initiating acquisition of the devices MAC address.
 	 */
 	enableWakeOnLAN(): void
-
-	unsubscribe(event: string, listener: Function): void;
 }

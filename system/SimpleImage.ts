@@ -52,4 +52,4 @@ export var SimpleImage: {
 		cropLeft: number, cropTop: number, cropWidth: number, cropHeight: number,
 		scaleToWidth: number, scaleToHeight: number
 	) : Promise<void>;
-}
+};

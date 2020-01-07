@@ -60,11 +60,14 @@ export interface PropertyAccessor<PropType> {
 	close(): void;	// Close down this accessor - can no longer be used
 }
 
-// Internal implementation - not for direct client access
 export interface ScriptEnv extends ScriptBaseEnv {
+	// Script is being shut down
+	subscribe(event: 'finish', listener: ()=>void): void;
 
+	// Following are internal implementation details - not for direct client access
 	establishChannel(name: string):void;
 	establishChannel(name: string, listener: Function): void;
 	sendOnChannel(name: string, data: string):void;
 	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
+
 }

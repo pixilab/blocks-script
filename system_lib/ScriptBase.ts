@@ -44,8 +44,11 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 	}
 }
 
-// Internal implementation - not for direct client access
+// Common script environment used by all script objects
 export interface ScriptBaseEnv {
+	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
+
+	// Following are internal implementation details - not for direct client access
 	property(p1: any, p2?: any, p3?: any): void;
 	changed(prop: string|Function): void;
 	firePropChanged(prop: string): void;

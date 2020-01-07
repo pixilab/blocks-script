@@ -67,6 +67,12 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	loadPriorityBlock(name: string): Promise<any>;
 
 	/**
+	 * Reload the current block. Occasionally useful after making server-side changes to
+	 * a block programmatically, or to reload a WebBlock that changed for other reasons.
+	 */
+	reload(): void;
+
+	/**
 	 * Turn power on/off, if possible.
 	 */
 	power: boolean;
@@ -160,6 +166,22 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	scrollTo(x: number|undefined, y?:number): void;
 
 	/**
+	 * Tell any active Locator on this Spot to locate the location ID
+	 * or spot path specified by "location". This performs the same
+	 * function as manually entering the specified Location ID on
+	 * the numeric keypad of the Locator (if isSpotPath is falsey).
+	 * If isSpotPath is true, then location specifies the full
+	 * path to the Spot (dot separated if inside a Spot group)
+	 * to locate to, bypassing the Location-ID-to-Spot lookup
+	 * step. This is useful if you already know the name of the
+	 * spot.
+	 *
+	 * To cancel any current location, pass empty string
+	 * as location.
+	 */
+	locateSpot(location: string, isSpotPath?: boolean): void;
+
+	/**
 	 * Event fired when interesting connection state event occurs.
 	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
@@ -196,6 +218,13 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	subscribe(event: 'keyPress', listener: (sender: DisplaySpot, message: {
 		input: number,		// Input that changed; 0...9
 		active: boolean		// Input is active (pressed)
+	})=>void): void;
+
+	/**
+	 *	Event fired when on RFID/QR scanner input (keyboard text entry).
+	 */
+	subscribe(event: 'scannerInput', listener: (sender: DisplaySpot, message: {
+		code: string,		// Scanned code, or empty string at end of scan
 	})=>void): void;
 
 	// Object is being shut down

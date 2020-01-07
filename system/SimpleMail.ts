@@ -31,8 +31,8 @@ export var SimpleMail: {
 	 * such as <h1> and <br>
 	 *
 	 * Takes an optional "enclose" parameter, allowing files to be enclosed
-	 * with the email. This can be either a single path, or an array of paths to
-	 * enclose multiple files. By default (if a relative path or plain
+	 * with the email. This can be either a single server file, or an array of
+	 * paths to enclose multiple files. By default (if a relative path or plain
 	 * file name is specified), files are expected to reside under script/files.
 	 * You may also specify one of the follwing absolute paths:
 	 * /public/*	Specifies a file path under public
@@ -42,4 +42,4 @@ export var SimpleMail: {
 	 * rejected with any send error.
 	 */
 	send(destEmailAddr: string, subject: string, body: string, enclose?: string|string[]): Promise<void>;
-}
+};
