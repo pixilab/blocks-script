@@ -17,26 +17,24 @@ import { NetworkTCP } from "system/Network";
 import {SimpleHTTP} from "system/SimpleHTTP";
 import { SimpleFile } from "system/SimpleFile";
 import { Driver } from "system_lib/Driver";
-import * as Meta from "system_lib/Metadata";
+import { callable, max, min, parameter, property, driver } from "system_lib/Metadata";
 
-@Meta.driver('NetworkTCP', { port: 8000 })
+@driver('NetworkTCP', { port: 8000 })
 export class Xicato extends Driver<NetworkTCP> {
 
+    private mUsername : string;
+    private mPassword : string;
+    private mAuthToken : string;
+    private mAuthorized : boolean;
 
+    private mAlive : boolean;
+    private mBaseURL : string;
+    private mConnected : boolean;
 
-    private _username : string;
-    private _password : string;
-    private _authToken : string;
-    private _authorized : boolean;
+    private mLoggedAuthFail : boolean;
 
-    private _alive : boolean;
-    private _baseURL : string;
-    private _connected : boolean;
-
-    private _loggedAuthFail : boolean;
-
-    private _poller: CancelablePromise<void>;	// Polling timer, if any
-    private _deferredSender: CancelablePromise<void>;	// Send commands soon
+    private mPoller: CancelablePromise<void>;	// Polling timer, if any
+    private mDeferredSender: CancelablePromise<void>;	// Send commands soon
 
     public constructor(private socket: NetworkTCP) {
         super(socket);
@@ -49,11 +47,11 @@ export class Xicato extends Driver<NetworkTCP> {
         // try read configuration. if not present, write example file
     		SimpleFile.read(settingsFileName).then(readValue => {
           var settings : XicatoSettings = JSON.parse(readValue);
-          this._username = settings.username;
-          this._password = settings.password;
+          this.mUsername = settings.username;
+          this.mPassword = settings.password;
 
-          this._alive = true;
-      		this._baseURL = 'http://' + socket.address + ':' + socket.port + '/';
+          this.mAlive = true;
+      		this.mBaseURL = 'http://' + socket.address + ':' + socket.port + '/';
 
           if (socket.enabled) {
       			socket.subscribe('finish', sender => {
@@ -69,21 +67,33 @@ export class Xicato extends Driver<NetworkTCP> {
 
     }
 
-    @Meta.property("Connected successfully to device", true)
+    @property('Connected successfully to device', true)
   	public get connected(): boolean {
-  		return this._connected;
+  		return this.mConnected;
   	}
   	public set connected(value: boolean) {
-  		this._connected = value;
+      if (this.mConnected == value) return;
+      this.mConnected = value;
+      this.changed('connected');
   		// this.checkReadyToSend();
   	}
 
+    @property('Current bearer token issued by gateway')
+    public get token() : string {
+      return this.mAuthToken;
+    }
+    public set token(value: string) {
+      if (this.mAuthToken == value) return;
+      this.mAuthToken = value;
+      this.changed('token');
+    }
+
     private requestPoll(delay: number) {
-  		if (!this._poller && this._alive) {
-  			this._poller = wait(delay);
-  			this._poller.then(() => {
-  				this._poller = undefined;
-  				if (this._authToken) {
+  		if (!this.mPoller && this.mAlive) {
+  			this.mPoller = wait(delay);
+  			this.mPoller.then(() => {
+  				this.mPoller = undefined;
+  				if (this.mAuthToken) {
             this.regularPoll();
           }
   				else {
@@ -96,14 +106,14 @@ export class Xicato extends Driver<NetworkTCP> {
   	}
 
     private gotAuthCode(authCode: string) {
-  		this._authToken = authCode;
+  		this.mAuthToken = authCode;
       // console.log(authCode);
-  		this._authorized = true;
+  		this.mAuthorized = true;
   	}
 
   	private unauthorize() {
-  		this._authorized = false;
-      this._authToken = undefined;
+  		this.mAuthorized = false;
+      this.mAuthToken = undefined;
   		// this.config = undefined;
   		console.warn("Unauthorized due to 403");
   	}
@@ -121,7 +131,7 @@ export class Xicato extends Driver<NetworkTCP> {
         // this.devices &&
         // this.groups &&
         this.connected &&
-        this._authorized
+        this.mAuthorized
       )
       {
 
@@ -130,8 +140,8 @@ export class Xicato extends Driver<NetworkTCP> {
   	}
 
     private authenticationPoll() {
-  		SimpleHTTP.newRequest(this._baseURL + 'api/token').
-        header('Authorization', 'Basic ' + this.toBase64(this._username + ':' + this._password)).
+  		SimpleHTTP.newRequest(this.mBaseURL + 'api/token').
+        header('Authorization', 'Basic ' + this.toBase64(this.mUsername + ':' + this.mPassword)).
         get().
         then(response=> {
   			this.connected = true;
@@ -141,11 +151,11 @@ export class Xicato extends Driver<NetworkTCP> {
   						this.gotAuthCode(authResponse);
   				}
   			} else {
-  				this._authorized = false;
+  				this.mAuthorized = false;
   				if (response.status === 403) {
-  					if (!this._loggedAuthFail) {
+  					if (!this.mLoggedAuthFail) {
   						console.error("enter correct username & password in Xicato config file")
-  						this._loggedAuthFail = true;	// Log that error only once per session
+  						this.mLoggedAuthFail = true;	// Log that error only once per session
   					}
   				}
   			}
@@ -172,14 +182,14 @@ export class Xicato extends Driver<NetworkTCP> {
   	}
 
     private onFinish () {
-      this._alive = false;
-      if (this._poller)	{
+      this.mAlive = false;
+      if (this.mPoller)	{
         // Stop any poll in flight
-        this._poller.cancel();
+        this.mPoller.cancel();
       }
-      if (this._deferredSender) {
+      if (this.mDeferredSender) {
         // Stop any deferred transmission
-        this._deferredSender.cancel();
+        this.mDeferredSender.cancel();
       }
     }
 

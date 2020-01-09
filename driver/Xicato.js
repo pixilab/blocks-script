@@ -20,7 +20,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Driver_1, Meta) {
+define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ASCII = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
@@ -32,10 +32,10 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             var settingsFileName = 'xicato.config/' + socket.name + '.config';
             SimpleFile_1.SimpleFile.read(settingsFileName).then(function (readValue) {
                 var settings = JSON.parse(readValue);
-                _this._username = settings.username;
-                _this._password = settings.password;
-                _this._alive = true;
-                _this._baseURL = 'http://' + socket.address + ':' + socket.port + '/';
+                _this.mUsername = settings.username;
+                _this.mPassword = settings.password;
+                _this.mAlive = true;
+                _this.mBaseURL = 'http://' + socket.address + ':' + socket.port + '/';
                 if (socket.enabled) {
                     socket.subscribe('finish', function (sender) {
                         _this.onFinish();
@@ -50,21 +50,37 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         }
         Object.defineProperty(Xicato.prototype, "connected", {
             get: function () {
-                return this._connected;
+                return this.mConnected;
             },
             set: function (value) {
-                this._connected = value;
+                if (this.mConnected == value)
+                    return;
+                this.mConnected = value;
+                this.changed('connected');
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Xicato.prototype, "token", {
+            get: function () {
+                return this.mAuthToken;
+            },
+            set: function (value) {
+                if (this.mAuthToken == value)
+                    return;
+                this.mAuthToken = value;
+                this.changed('token');
             },
             enumerable: true,
             configurable: true
         });
         Xicato.prototype.requestPoll = function (delay) {
             var _this = this;
-            if (!this._poller && this._alive) {
-                this._poller = wait(delay);
-                this._poller.then(function () {
-                    _this._poller = undefined;
-                    if (_this._authToken) {
+            if (!this.mPoller && this.mAlive) {
+                this.mPoller = wait(delay);
+                this.mPoller.then(function () {
+                    _this.mPoller = undefined;
+                    if (_this.mAuthToken) {
                         _this.regularPoll();
                     }
                     else {
@@ -75,12 +91,12 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             }
         };
         Xicato.prototype.gotAuthCode = function (authCode) {
-            this._authToken = authCode;
-            this._authorized = true;
+            this.mAuthToken = authCode;
+            this.mAuthorized = true;
         };
         Xicato.prototype.unauthorize = function () {
-            this._authorized = false;
-            this._authToken = undefined;
+            this.mAuthorized = false;
+            this.mAuthToken = undefined;
             console.warn("Unauthorized due to 403");
         };
         Xicato.prototype.regularPoll = function () {
@@ -88,13 +104,13 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         };
         Xicato.prototype.checkReadyToSend = function () {
             if (this.connected &&
-                this._authorized) {
+                this.mAuthorized) {
             }
         };
         Xicato.prototype.authenticationPoll = function () {
             var _this = this;
-            SimpleHTTP_1.SimpleHTTP.newRequest(this._baseURL + 'api/token').
-                header('Authorization', 'Basic ' + this.toBase64(this._username + ':' + this._password)).
+            SimpleHTTP_1.SimpleHTTP.newRequest(this.mBaseURL + 'api/token').
+                header('Authorization', 'Basic ' + this.toBase64(this.mUsername + ':' + this.mPassword)).
                 get().
                 then(function (response) {
                 _this.connected = true;
@@ -105,11 +121,11 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                     }
                 }
                 else {
-                    _this._authorized = false;
+                    _this.mAuthorized = false;
                     if (response.status === 403) {
-                        if (!_this._loggedAuthFail) {
+                        if (!_this.mLoggedAuthFail) {
                             console.error("enter correct username & password in Xicato config file");
-                            _this._loggedAuthFail = true;
+                            _this.mLoggedAuthFail = true;
                         }
                     }
                 }
@@ -120,12 +136,12 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             console.warn(error);
         };
         Xicato.prototype.onFinish = function () {
-            this._alive = false;
-            if (this._poller) {
-                this._poller.cancel();
+            this.mAlive = false;
+            if (this.mPoller) {
+                this.mPoller.cancel();
             }
-            if (this._deferredSender) {
-                this._deferredSender.cancel();
+            if (this.mDeferredSender) {
+                this.mDeferredSender.cancel();
             }
         };
         Xicato.prototype.toBase64 = function (data) {
@@ -147,12 +163,17 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         };
         ;
         __decorate([
-            Meta.property("Connected successfully to device", true),
+            Metadata_1.property('Connected successfully to device', true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], Xicato.prototype, "connected", null);
+        __decorate([
+            Metadata_1.property('Current bearer token issued by gateway'),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], Xicato.prototype, "token", null);
         Xicato = __decorate([
-            Meta.driver('NetworkTCP', { port: 8000 }),
+            Metadata_1.driver('NetworkTCP', { port: 8000 }),
             __metadata("design:paramtypes", [Object])
         ], Xicato);
         return Xicato;
