@@ -131,7 +131,12 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             var msgStart = text.indexOf('%');
             if (msgStart > 0)
                 text = text.substring(msgStart);
-            var currCmd = this.currCmd.substring(0, 6);
+            var currCmd = this.currCmd;
+            if (!currCmd) {
+                this.warnMsg("Unsolicited data", text);
+                return;
+            }
+            currCmd = currCmd.substring(0, 6);
             if (currCmd) {
                 var expectedResponse = currCmd + '=';
                 if (text.indexOf(expectedResponse) === 0) {

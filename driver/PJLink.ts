@@ -189,7 +189,14 @@ export class PJLink extends NetworkProjector {
 		if (msgStart > 0)
 			text = text.substring(msgStart);
 
-		const currCmd = this.currCmd.substring(0, 6);	// Initial part %1XXXX of command
+		// If no query in flight - log a warning and ignore data
+		let currCmd = this.currCmd;
+		if (!currCmd) {
+			this.warnMsg("Unsolicited data", text);
+			return;
+		}
+
+		currCmd = currCmd.substring(0, 6);	// Initial part %1XXXX of command
 		if (currCmd) {
 			const expectedResponse = currCmd + '=';
 			if (text.indexOf(expectedResponse) === 0) {
