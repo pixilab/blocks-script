@@ -93,7 +93,7 @@ export class PJLinkPlus extends PJLink {
     private _isCooling = false;
     private _isWarmingUp = false;
     // audio / video mute
-    private _mute : NumState;
+    private readonly _mute : NumState;
     // various information
     private _deviceName : string;
     private _manufactureName : string;
@@ -135,10 +135,15 @@ export class PJLinkPlus extends PJLink {
 	private static kMaxMute = 31;
 	constructor(socket: NetworkTCP) {
 		super(socket);
-        this.addState(this._mute = new NumState(
+		this._mute = new NumState(
 			'AVMT', 'mute',
 			PJLinkPlus.kMinMute, PJLinkPlus.kMaxMute
-		));
+		);
+		/*	Set some reasonable default value to not return undefined, as the mute value
+			isn't read back from the projector.
+		 */
+		this._mute.set(PJLinkPlus.kMinMute);
+        this.addState(this._mute);
         socket.subscribe('connect', (sender, message)=> {
 			this.onConnectStateChange();
 		});

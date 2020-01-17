@@ -95,7 +95,9 @@ define(["require", "exports", "driver/PJLink", "driver/NetworkProjector", "syste
             _this._hasError = false;
             _this._hasWarning = false;
             _this._currentParameterFetchList = [];
-            _this.addState(_this._mute = new NetworkProjector_1.NumState('AVMT', 'mute', PJLinkPlus_1.kMinMute, PJLinkPlus_1.kMaxMute));
+            _this._mute = new NetworkProjector_1.NumState('AVMT', 'mute', PJLinkPlus_1.kMinMute, PJLinkPlus_1.kMaxMute);
+            _this._mute.set(PJLinkPlus_1.kMinMute);
+            _this.addState(_this._mute);
             socket.subscribe('connect', function (sender, message) {
                 _this.onConnectStateChange();
             });
