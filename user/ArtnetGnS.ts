@@ -97,7 +97,7 @@ export class ArtnetGnS extends Script {
         @parameter('target value. Normalised range: 0 .. 1') value: number,
         @parameter('fade duration in seconds', true) duration?: number
     ): Promise<void> {
-        return this.getGroup(groupName, false) ?.fadeTo(value, duration ? duration : this.mFadeDuration);
+        return this.getGroup(groupName, false)?.fadeTo(value, duration ? duration : this.mFadeDuration);
     }
 
     @callable('set group value')
@@ -201,7 +201,7 @@ export class ArtnetGnS extends Script {
     public sceneCall(
         @parameter('scene name') sceneName: string
     ): Promise<void> {
-        return this.getScene(sceneName, false) ?.call();
+        return this.getScene(sceneName, false)?.call();
     }
 
     @callable('fade all groups to value')
@@ -424,21 +424,21 @@ export class ArtnetGnS extends Script {
         return value;
     }
 
-    private random(
-        min: number,
-        max: number
-    ): number {
-        return Math.random() * (max - min) + min;
-    }
-
-    private randomInt(
-        min: number,
-        max: number
-    ): number {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    // private random(
+    //     min: number,
+    //     max: number
+    // ): number {
+    //     return Math.random() * (max - min) + min;
+    // }
+    //
+    // private randomInt(
+    //     min: number,
+    //     max: number
+    // ): number {
+    //     min = Math.ceil(min);
+    //     max = Math.floor(max);
+    //     return Math.floor(Math.random() * (max - min + 1)) + min;
+    // }
 
 }
 
