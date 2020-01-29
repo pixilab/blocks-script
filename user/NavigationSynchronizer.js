@@ -58,20 +58,20 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
             }
             return navigationMaster;
         };
-        __decorate([
-            Meta.callable("Start Spot Synchronisation"),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String, String]),
-            __metadata("design:returntype", void 0)
-        ], NavigationSynchronizer.prototype, "start", null);
-        __decorate([
-            Meta.callable("Stop Spot Synchronisation"),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String, String]),
-            __metadata("design:returntype", void 0)
-        ], NavigationSynchronizer.prototype, "stop", null);
         return NavigationSynchronizer;
     }(Script_1.Script));
+    __decorate([
+        Meta.callable("Start Spot Synchronisation"),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, String, String]),
+        __metadata("design:returntype", void 0)
+    ], NavigationSynchronizer.prototype, "start", null);
+    __decorate([
+        Meta.callable("Stop Spot Synchronisation"),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String, String, String]),
+        __metadata("design:returntype", void 0)
+    ], NavigationSynchronizer.prototype, "stop", null);
     exports.NavigationSynchronizer = NavigationSynchronizer;
     var NavigationMaster = (function () {
         function NavigationMaster(spotGroup, sourceSpotName) {
@@ -146,7 +146,7 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
             }
             return undefined;
         };
-        NavigationMaster.masters = [];
         return NavigationMaster;
     }());
+    NavigationMaster.masters = [];
 });

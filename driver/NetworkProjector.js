@@ -346,6 +346,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             }
             return _super.prototype.set.call(this, v);
         };
+        NumState.prototype.get = function () {
+            var result = _super.prototype.get.call(this);
+            if (typeof result !== 'number') {
+                console.error("Value invalid for", this.baseCmd, result);
+                result = this.min || 0;
+            }
+            return result;
+        };
         return NumState;
     }(State));
     exports.NumState = NumState;

@@ -1,10 +1,7 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -132,36 +129,36 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.changed("lastEventID");
             this.changed("lastEventPlayerID");
         };
-        __decorate([
-            Meta.callable("Play Zone"),
-            __param(0, Meta.parameter("Zone to play")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number]),
-            __metadata("design:returntype", void 0)
-        ], EmZ_IP.prototype, "playZone", null);
-        __decorate([
-            Meta.callable("Send raw command to device"),
-            __param(0, Meta.parameter("What to send")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", void 0)
-        ], EmZ_IP.prototype, "sendText", null);
-        __decorate([
-            Meta.property("ID of last received event. (Also: counter for received events)"),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [])
-        ], EmZ_IP.prototype, "lastEventID", null);
-        __decorate([
-            Meta.property("ID of player triggering last received event"),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [])
-        ], EmZ_IP.prototype, "lastEventPlayerID", null);
-        EmZ_IP = __decorate([
-            Meta.driver('NetworkUDP', { port: PORT_UNICAST }),
-            __metadata("design:paramtypes", [Object])
-        ], EmZ_IP);
         return EmZ_IP;
     }(Driver_1.Driver));
+    __decorate([
+        Meta.callable("Play Zone"),
+        __param(0, Meta.parameter("Zone to play")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Number]),
+        __metadata("design:returntype", void 0)
+    ], EmZ_IP.prototype, "playZone", null);
+    __decorate([
+        Meta.callable("Send raw command to device"),
+        __param(0, Meta.parameter("What to send")),
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", void 0)
+    ], EmZ_IP.prototype, "sendText", null);
+    __decorate([
+        Meta.property("ID of last received event. (Also: counter for received events)"),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [])
+    ], EmZ_IP.prototype, "lastEventID", null);
+    __decorate([
+        Meta.property("ID of player triggering last received event"),
+        __metadata("design:type", Number),
+        __metadata("design:paramtypes", [])
+    ], EmZ_IP.prototype, "lastEventPlayerID", null);
+    EmZ_IP = __decorate([
+        Meta.driver('NetworkUDP', { port: PORT_UNICAST }),
+        __metadata("design:paramtypes", [Object])
+    ], EmZ_IP);
     exports.EmZ_IP = EmZ_IP;
     var EmZIPMessage = (function () {
         function EmZIPMessage(message) {
@@ -241,15 +238,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.RenderMessageField(LABEL_IDDOM) +
                 this.RenderMessageField(LABEL_CDE);
         };
-        EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY = 1;
-        EmZIPMessage.MESSAGE_TYPE_CONTROL = 4;
-        EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL = 5;
-        EmZIPMessage.MESSAGE_TYPE_EVENT = 8;
-        EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER = 9;
-        EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP = 32;
-        EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT = 64;
         return EmZIPMessage;
     }());
+    EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY = 1;
+    EmZIPMessage.MESSAGE_TYPE_CONTROL = 4;
+    EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL = 5;
+    EmZIPMessage.MESSAGE_TYPE_EVENT = 8;
+    EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER = 9;
+    EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP = 32;
+    EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT = 64;
     var EmZIPEvent = (function (_super) {
         __extends(EmZIPEvent, _super);
         function EmZIPEvent(message) {
@@ -399,13 +396,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.RenderMessageField(LABEL_OFFSET) +
                 MESSAGE_LINE_BREAK;
         };
-        EmZIPSimpleControl.ORDRE_STOP = 1;
-        EmZIPSimpleControl.ORDRE_PLAY_CURRENT = 2;
-        EmZIPSimpleControl.ORDRE_PLAY_ZONE = 3;
-        EmZIPSimpleControl.ORDRE_SET_ZONE = 4;
-        EmZIPSimpleControl.ORDRE_SYNC_ZONE = 5;
         return EmZIPSimpleControl;
     }(EmZIPMessage));
+    EmZIPSimpleControl.ORDRE_STOP = 1;
+    EmZIPSimpleControl.ORDRE_PLAY_CURRENT = 2;
+    EmZIPSimpleControl.ORDRE_PLAY_ZONE = 3;
+    EmZIPSimpleControl.ORDRE_SET_ZONE = 4;
+    EmZIPSimpleControl.ORDRE_SYNC_ZONE = 5;
     var EmZIPControl = (function (_super) {
         __extends(EmZIPControl, _super);
         function EmZIPControl(message) {
@@ -451,9 +448,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.RenderMessageField(LABEL_PORT) +
                 MESSAGE_LINE_BREAK;
         };
-        EmZIPUnicastSetup.CDEUNICAST_INIT = 1;
         return EmZIPUnicastSetup;
     }(EmZIPMessage));
+    EmZIPUnicastSetup.CDEUNICAST_INIT = 1;
     var EmZIPAcknowledgment = (function (_super) {
         __extends(EmZIPAcknowledgment, _super);
         function EmZIPAcknowledgment(message) {

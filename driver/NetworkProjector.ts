@@ -525,4 +525,15 @@ export class NumState extends State<number> {
 		}
 		return super.set(v);
 	}
+
+
+	get(): number {
+		var result = super.get();
+		// Better return min/0 than undefined or some invalid type of data
+		if (typeof result !== 'number') {
+			console.error("Value invalid for", this.baseCmd, result);
+			result = this.min || 0;
+		}
+		return result;
+	}
 }
