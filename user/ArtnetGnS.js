@@ -31,6 +31,9 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
     var MIN_CHANNEL = 1;
     var MAX_CHANNEL = 42;
     var MS_PER_S = 1000;
+    var PUBLISH_GROUP_PROPERTIES = true;
+    var PUBLISH_SCENE_PROPERTIES = true;
+    var PUBLISH_CROSSFADER_PROPERTIES = true;
     var split = require("lib/split-string");
     var ArtnetGnS = (function (_super) {
         __extends(ArtnetGnS, _super);
@@ -46,7 +49,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             _this.groups = {};
             _this.scenes = {};
             _this.fixtureChannelNames = {};
-            _this.crossfadeGroups = {};
+            _this.crossfaders = {};
             return _this;
         }
         Object.defineProperty(ArtnetGnS.prototype, "groupValue", {
@@ -54,8 +57,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 return this.mValue;
             },
             set: function (value) {
-                if (value > 1.0)
-                    value = value / 255.0;
                 for (var key in this.groups) {
                     this.groups[key].value = value;
                 }
@@ -79,9 +80,22 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureName, channelNames));
             return this.fadeChannels(channels, value, duration ? duration : this.mFadeDuration);
         };
+        ArtnetGnS.prototype.fixtureSetDefaults = function (channelNamePrefix, minChannel, maxChannel, channelNameDigits) {
+            this.mChannelNamePrefix = channelNamePrefix;
+            this.mMinChannel = minChannel;
+            this.mMaxChannel = maxChannel;
+            var neededDigits = maxChannel.toString().length;
+            this.mChannelNameDigits = Math.max(channelNameDigits, neededDigits);
+        };
         ArtnetGnS.prototype.groupFadeTo = function (groupName, value, duration) {
             var group = this.getGroup(groupName, false);
             return group ? group.fadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
+        };
+        ArtnetGnS.prototype.groupDuck = function (groupName, value, duration) {
+            var group = this.getGroup(groupName, false);
+            if (!group)
+                return;
+            group.duck(value, duration ? duration : this.mFadeDuration);
         };
         ArtnetGnS.prototype.groupSetValue = function (groupName, value) {
             var group = this.getGroup(groupName, false);
@@ -99,19 +113,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var group = this.getGroup(groupName, true);
             group.setDefaults(fadeOnDuration, fadeOffDuration, onValue, offValue);
         };
-        ArtnetGnS.prototype.fixtureSetDefaults = function (channelNamePrefix, minChannel, maxChannel, channelNameDigits) {
-            this.mChannelNamePrefix = channelNamePrefix;
-            this.mMinChannel = minChannel;
-            this.mMaxChannel = maxChannel;
-            var neededDigits = maxChannel.toString().length;
-            this.mChannelNameDigits = Math.max(channelNameDigits, neededDigits);
-        };
-        ArtnetGnS.prototype.reset = function () {
-            this.fixtureChannelNames = {};
-            this.groups = {};
-            this.scenes = {};
-            this.crossfadeGroups = {};
-        };
         ArtnetGnS.prototype.groupAddFixtures = function (fixtureNames, groupName) {
             var channels = this.getFixturesChannels(fixtureNames);
             this.getGroup(groupName, true).addChannels(channels);
@@ -120,33 +121,30 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var channels = this.getFixturesChannels(fixtureNames, channelNames);
             this.getGroup(groupName, true).addChannels(channels);
         };
-        ArtnetGnS.prototype.crossfadeAdd = function (groupName, groupNameA, groupNameB, maxValueA, maxValueB) {
+        ArtnetGnS.prototype.crossfaderAdd = function (crossfaderName, groupNameA, groupNameB, maxValueA, maxValueB) {
             var groupA = this.getGroup(groupNameA, false);
             var groupB = this.getGroup(groupNameB, false);
             if (groupA && groupB) {
-                this.crossfadeGroups[groupName] = new CrossfadeGroup(groupA, groupB, maxValueA, maxValueB);
-                this.publishCrossfadeGroupProps(groupName);
+                this.crossfaders[crossfaderName] = new ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB);
+                if (PUBLISH_CROSSFADER_PROPERTIES)
+                    this.publishCrossfaderProps(crossfaderName);
             }
         };
-        ArtnetGnS.prototype.crossfadeSetCrossfade = function (groupName, value) {
-            var crossfadeGroup = this.crossfadeGroups[groupName];
-            if (!crossfadeGroup)
+        ArtnetGnS.prototype.crossfaderSetFadeValue = function (crossfaderName, fadeValue) {
+            var crossfader = this.crossfaders[crossfaderName];
+            if (!crossfader)
                 return;
-            crossfadeGroup.crossfade = value;
+            crossfader.fadeTo(fadeValue, -1, 0);
         };
-        ArtnetGnS.prototype.crossfadeSetMasterValue = function (groupName, value) {
-            var crossfadeGroup = this.crossfadeGroups[groupName];
-            if (!crossfadeGroup)
+        ArtnetGnS.prototype.crossfaderSetMasterValue = function (crossfaderName, masterValue) {
+            var crossfader = this.crossfaders[crossfaderName];
+            if (!crossfader)
                 return;
-            crossfadeGroup.masterValue = value;
+            crossfader.fadeTo(-1, masterValue, 0);
         };
-        ArtnetGnS.prototype.crossfadeTo = function (groupName, value, duration) {
-            var group = this.crossfadeGroups[groupName];
-            return group ? group.crossfadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
-        };
-        ArtnetGnS.prototype.crossfadeMasterValueTo = function (groupName, value, duration) {
-            var group = this.crossfadeGroups[groupName];
-            return group ? group.masterValueTo(value, duration ? duration : this.mFadeDuration) : undefined;
+        ArtnetGnS.prototype.crossfaderFadeTo = function (crossfaderName, fadeValue, masterValue, duration) {
+            var crossfader = this.crossfaders[crossfaderName];
+            return crossfader ? crossfader.fadeTo(fadeValue, masterValue ? masterValue : -1, duration ? duration : this.mFadeDuration) : undefined;
         };
         ArtnetGnS.prototype.sceneAddFixtures = function (sceneName, fixtureNames, value, duration, delay) {
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureNames));
@@ -155,6 +153,14 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetGnS.prototype.sceneAddChannels = function (sceneName, fixtureNames, channelNames, value, duration, delay) {
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureNames, channelNames));
             this.getScene(sceneName, true).addChannels(channels, value, duration, delay);
+        };
+        ArtnetGnS.prototype.sceneAddGroups = function (sceneName, groupNames, value, duration, delay) {
+            var groups = this.getGroups(groupNames);
+            this.getScene(sceneName, true).addGroups(groups, value, duration, delay);
+        };
+        ArtnetGnS.prototype.sceneAddCrossfaders = function (sceneName, crossfaderNames, fadeValue, masterValue, duration, delay) {
+            var crossfaders = this.getCrossfaders(crossfaderNames);
+            this.getScene(sceneName, true).addCrossfaders(crossfaders, fadeValue, masterValue, duration, delay);
         };
         ArtnetGnS.prototype.sceneCall = function (sceneName, timefactor) {
             var scene = this.getScene(sceneName, false);
@@ -173,12 +179,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             }
             return wait(duration * MS_PER_S);
         };
-        ArtnetGnS.prototype.groupAllLightsReset = function () {
-            for (var key in this.groups) {
-                this.groups[key].fadeTo(this.mLightOffValue, this.mFadeDuration);
-            }
-            return wait(this.mFadeDuration * MS_PER_S);
-        };
         ArtnetGnS.prototype.groupAnimate = function (groupName, delay, style) {
             if (style == 'chase') {
                 var channels = this.getGroupChannels(groupName);
@@ -191,36 +191,53 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 this.recursiveChase(channels, delay);
             }
         };
+        ArtnetGnS.prototype.reset = function () {
+            this.fixtureChannelNames = {};
+            this.groups = {};
+            this.scenes = {};
+            this.crossfaders = {};
+        };
         ArtnetGnS.sanitizePropName = function (propName) {
             return propName.replace(/[^\w\-]/g, '-');
         };
+        ArtnetGnS.grpPropNameDuck = function (groupName) {
+            return this.sanitizePropName('_gr_' + groupName + '_dck');
+        };
         ArtnetGnS.grpPropNameValue = function (groupName) {
-            return this.sanitizePropName('gr_' + groupName + '_val');
+            return this.sanitizePropName('_gr_' + groupName + '_val');
         };
         ArtnetGnS.grpPropNamePower = function (groupName) {
-            return this.sanitizePropName('gr_' + groupName + '_pwr');
+            return this.sanitizePropName('_gr_' + groupName + '_pwr');
         };
         ArtnetGnS.scnPropNameTrigger = function (sceneName) {
-            return this.sanitizePropName('sc_' + sceneName + '_trigger');
+            return this.sanitizePropName('_sc_' + sceneName + '_trigger');
         };
-        ArtnetGnS.cfgrpPropNameCrossfade = function (groupName) {
-            return this.sanitizePropName('cfgr_' + groupName + '_crossfade');
+        ArtnetGnS.cfdrPropNameFadeValue = function (crossfaderName) {
+            return this.sanitizePropName('_cfdr_' + crossfaderName + '_fade');
         };
-        ArtnetGnS.cfgrpPropNameMasterValue = function (groupName) {
-            return this.sanitizePropName('cfgr_' + groupName + '_master');
+        ArtnetGnS.cfdrPropNameMasterValue = function (crossfaderName) {
+            return this.sanitizePropName('_cfdr_' + crossfaderName + '_master');
         };
         ArtnetGnS.prototype.publishGroupProps = function (groupName) {
             var _this = this;
+            var duck = 0;
             var value = 0;
             var power = false;
-            this.property(ArtnetGnS.grpPropNameValue(groupName), { type: Number, description: "Group Value 0..1" }, function (setValue) {
+            this.property(ArtnetGnS.grpPropNameDuck(groupName), { type: Number, description: "duck group (temporarily dampen group value: 0..1)" }, function (setValue) {
+                if (setValue !== undefined) {
+                    duck = setValue;
+                    _this.groupDuck(groupName, setValue);
+                }
+                return duck;
+            });
+            this.property(ArtnetGnS.grpPropNameValue(groupName), { type: Number, description: "group value 0..1 (normalised range)" }, function (setValue) {
                 if (setValue !== undefined) {
                     value = setValue;
                     _this.groupSetValue(groupName, setValue);
                 }
                 return value;
             });
-            this.property(ArtnetGnS.grpPropNamePower(groupName), { type: Boolean, description: "Group Power on/off" }, function (setValue) {
+            this.property(ArtnetGnS.grpPropNamePower(groupName), { type: Boolean, description: "group power on/off" }, function (setValue) {
                 if (setValue !== undefined) {
                     power = setValue;
                     _this.groupSetPower(groupName, power);
@@ -228,23 +245,23 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 return power;
             });
         };
-        ArtnetGnS.prototype.publishCrossfadeGroupProps = function (groupName) {
+        ArtnetGnS.prototype.publishCrossfaderProps = function (crossfaderName) {
             var _this = this;
             var masterValue = 0;
-            var crossfade = 0;
-            this.property(ArtnetGnS.cfgrpPropNameMasterValue(groupName), { type: Number, description: "Master Value 0..1" }, function (setValue) {
+            var fadeValue = 0;
+            this.property(ArtnetGnS.cfdrPropNameMasterValue(crossfaderName), { type: Number, description: "Master Value 0..1" }, function (setValue) {
                 if (setValue !== undefined) {
                     masterValue = setValue;
-                    _this.crossfadeSetMasterValue(groupName, masterValue);
+                    _this.crossfaderSetMasterValue(crossfaderName, masterValue);
                 }
                 return masterValue;
             });
-            this.property(ArtnetGnS.cfgrpPropNameCrossfade(groupName), { type: Number, description: "Crossfade 0..1" }, function (setValue) {
+            this.property(ArtnetGnS.cfdrPropNameFadeValue(crossfaderName), { type: Number, description: "Crossfade 0..1" }, function (setValue) {
                 if (setValue !== undefined) {
-                    crossfade = setValue;
-                    _this.crossfadeSetCrossfade(groupName, crossfade);
+                    fadeValue = setValue;
+                    _this.crossfaderSetFadeValue(crossfaderName, fadeValue);
                 }
-                return crossfade;
+                return fadeValue;
             });
         };
         ArtnetGnS.prototype.publishSceneProps = function (sceneName) {
@@ -338,9 +355,30 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetGnS.prototype.getGroup = function (groupName, createIfMissing) {
             if (!this.groups[groupName] && createIfMissing) {
                 this.groups[groupName] = new ArtnetGroup();
-                this.publishGroupProps(groupName);
+                if (PUBLISH_GROUP_PROPERTIES)
+                    this.publishGroupProps(groupName);
             }
             return this.groups[groupName];
+        };
+        ArtnetGnS.prototype.getGroups = function (groupNames) {
+            var groupNameList = this.getStringArray(groupNames);
+            var groups = [];
+            for (var i = 0; i < groupNameList.length; i++) {
+                var group = this.groups[groupNameList[i]];
+                if (group)
+                    groups.push(group);
+            }
+            return groups;
+        };
+        ArtnetGnS.prototype.getCrossfaders = function (crossfaderNames) {
+            var crossfaderNameList = this.getStringArray(crossfaderNames);
+            var crossfaders = [];
+            for (var i = 0; i < crossfaderNameList.length; i++) {
+                var crossfader = this.crossfaders[crossfaderNameList[i]];
+                if (crossfader)
+                    crossfaders.push(crossfader);
+            }
+            return crossfaders;
         };
         ArtnetGnS.prototype.getGroupChannels = function (groupName) {
             var group = this.getGroup(groupName, false);
@@ -351,7 +389,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetGnS.prototype.getScene = function (sceneName, createIfMissing) {
             if (!this.scenes[sceneName] && createIfMissing) {
                 this.scenes[sceneName] = new ArtnetScene();
-                this.publishSceneProps(sceneName);
+                if (PUBLISH_SCENE_PROPERTIES)
+                    this.publishSceneProps(sceneName);
             }
             return this.scenes[sceneName];
         };
@@ -379,6 +418,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         };
         __decorate([
             Metadata_1.property('all groups to value'),
+            Metadata_1.min(0), Metadata_1.max(1),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], ArtnetGnS.prototype, "groupValue", null);
@@ -410,14 +450,33 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "fixtureChannelsFadeTo", null);
         __decorate([
+            Metadata_1.callable('settings for groupAddFixtures and sceneAddFixtures'),
+            __param(0, Metadata_1.parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"')),
+            __param(1, Metadata_1.parameter('defaults to ' + MIN_CHANNEL)),
+            __param(2, Metadata_1.parameter('defaults to ' + MAX_CHANNEL)),
+            __param(3, Metadata_1.parameter('defaults to ' + CHANNEL_NAME_DIGITS + '. If maxChannel is too large, this value will be automatically adjusted to fit maxChannel')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "fixtureSetDefaults", null);
+        __decorate([
             Metadata_1.callable('fade group'),
             __param(0, Metadata_1.parameter('group name')),
-            __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(1, Metadata_1.parameter('target value. Normalised range: 0..1')),
             __param(2, Metadata_1.parameter('fade duration in seconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
             __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "groupFadeTo", null);
+        __decorate([
+            Metadata_1.callable('duck group (temporarily dampen group value: 0..1)'),
+            __param(0, Metadata_1.parameter('group name')),
+            __param(1, Metadata_1.parameter('duck amount. Percentage: 0..1 (0% - 100%)')),
+            __param(2, Metadata_1.parameter('fade duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "groupDuck", null);
         __decorate([
             Metadata_1.callable('set group value'),
             __param(0, Metadata_1.parameter('group name')),
@@ -446,22 +505,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "groupSetDefaults", null);
         __decorate([
-            Metadata_1.callable('settings for groupAddFixtures and sceneAddFixtures'),
-            __param(0, Metadata_1.parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"')),
-            __param(1, Metadata_1.parameter('defaults to ' + MIN_CHANNEL)),
-            __param(2, Metadata_1.parameter('defaults to ' + MAX_CHANNEL)),
-            __param(3, Metadata_1.parameter('defaults to ' + CHANNEL_NAME_DIGITS + '. If maxChannel is too large, this value will be automatically adjusted to fit maxChannel')),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], ArtnetGnS.prototype, "fixtureSetDefaults", null);
-        __decorate([
-            Metadata_1.callable('Reset setup (delete all groups and scenes)'),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", []),
-            __metadata("design:returntype", void 0)
-        ], ArtnetGnS.prototype, "reset", null);
-        __decorate([
             Metadata_1.callable('Add complete fixtures to group (channel names have to follow the naming scheme "L_01, L_02, L_03, L_04, L_05")'),
             __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
             __param(1, Metadata_1.parameter('name of group')),
@@ -479,8 +522,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "groupAddChannels", null);
         __decorate([
-            Metadata_1.callable('Add crossfade group. Allows crossfade between group A and B. Features master value.'),
-            __param(0, Metadata_1.parameter('name for crossfade group')),
+            Metadata_1.callable('Add crossfader. Allows crossfade between group A and B. Features master value.'),
+            __param(0, Metadata_1.parameter('name for crossfader group')),
             __param(1, Metadata_1.parameter('name of group A')),
             __param(2, Metadata_1.parameter('name of group B')),
             __param(3, Metadata_1.parameter('max value group A (0..1)', true)),
@@ -488,39 +531,31 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String, String, Number, Number]),
             __metadata("design:returntype", void 0)
-        ], ArtnetGnS.prototype, "crossfadeAdd", null);
+        ], ArtnetGnS.prototype, "crossfaderAdd", null);
         __decorate([
-            __param(0, Metadata_1.parameter('name of crossfade group')),
-            __param(1, Metadata_1.parameter('crossfade (0..1)')),
+            __param(0, Metadata_1.parameter('name of crossfader')),
+            __param(1, Metadata_1.parameter('fade value (0..1)')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number]),
             __metadata("design:returntype", void 0)
-        ], ArtnetGnS.prototype, "crossfadeSetCrossfade", null);
+        ], ArtnetGnS.prototype, "crossfaderSetFadeValue", null);
         __decorate([
-            __param(0, Metadata_1.parameter('name of crossfade group')),
+            __param(0, Metadata_1.parameter('name of crossfader')),
             __param(1, Metadata_1.parameter('master value (0..1)')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number]),
             __metadata("design:returntype", void 0)
-        ], ArtnetGnS.prototype, "crossfadeSetMasterValue", null);
+        ], ArtnetGnS.prototype, "crossfaderSetMasterValue", null);
         __decorate([
-            Metadata_1.callable('Crossfade group crossfade'),
+            Metadata_1.callable('Animate crossfade'),
             __param(0, Metadata_1.parameter('name of crossfade group')),
-            __param(1, Metadata_1.parameter('crossfade (0..1)')),
-            __param(2, Metadata_1.parameter('fade duration in seconds', true)),
+            __param(1, Metadata_1.parameter('fade value (0..1) | -1 : ignore')),
+            __param(2, Metadata_1.parameter('master value (0..1) | -1 : ignore', true)),
+            __param(3, Metadata_1.parameter('fade duration in seconds', true)),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", void 0)
-        ], ArtnetGnS.prototype, "crossfadeTo", null);
-        __decorate([
-            Metadata_1.callable('Crossfade group master value'),
-            __param(0, Metadata_1.parameter('name of crossfade group')),
-            __param(1, Metadata_1.parameter('master value (0..1)')),
-            __param(2, Metadata_1.parameter('fade duration in seconds', true)),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number, Number]),
-            __metadata("design:returntype", void 0)
-        ], ArtnetGnS.prototype, "crossfadeMasterValueTo", null);
+        ], ArtnetGnS.prototype, "crossfaderFadeTo", null);
         __decorate([
             Metadata_1.callable('add fixtures to scene'),
             __param(0, Metadata_1.parameter('scene name')),
@@ -545,6 +580,29 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "sceneAddChannels", null);
         __decorate([
+            Metadata_1.callable('add groups to scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('groupName, groupName, groupName')),
+            __param(2, Metadata_1.parameter('value (0..1)')),
+            __param(3, Metadata_1.parameter('duration in seconds', true)),
+            __param(4, Metadata_1.parameter('delay in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneAddGroups", null);
+        __decorate([
+            Metadata_1.callable('add crossfaders to scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('crossfaderName, crossfaderName, crossfaderName')),
+            __param(2, Metadata_1.parameter('fade value (0..1) | -1 : ignore')),
+            __param(3, Metadata_1.parameter('master value (0..1) | -1 : ignore', true)),
+            __param(4, Metadata_1.parameter('duration in seconds', true)),
+            __param(5, Metadata_1.parameter('delay in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneAddCrossfaders", null);
+        __decorate([
             Metadata_1.callable('call scene'),
             __param(0, Metadata_1.parameter('scene name')),
             __param(1, Metadata_1.parameter('time factor (> 1 faster, < 1 slower)', true)),
@@ -561,12 +619,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "groupAllFadeTo", null);
         __decorate([
-            Metadata_1.callable("Reset All Lights"),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", []),
-            __metadata("design:returntype", Promise)
-        ], ArtnetGnS.prototype, "groupAllLightsReset", null);
-        __decorate([
             Metadata_1.callable("Animate Group ('chase')"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, String]),
@@ -578,15 +630,21 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:paramtypes", [String, Number, String]),
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "fixtureAnimate", null);
+        __decorate([
+            Metadata_1.callable('Reset setup (delete all groups and scenes)'),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "reset", null);
         return ArtnetGnS;
     }(Script_1.Script));
     exports.ArtnetGnS = ArtnetGnS;
-    var CrossfadeGroup = (function () {
-        function CrossfadeGroup(groupA, groupB, maxValueA, maxValueB) {
+    var ArtnetCrossfader = (function () {
+        function ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB) {
             this.maxValueA = 1;
             this.maxValueB = 1;
-            this.currentCrossfade = 0;
-            this.currentMasterValue = 0;
+            this.fadeValue = 0;
+            this.masterValue = 0;
             this.groupA = groupA;
             this.groupB = groupB;
             if (maxValueA)
@@ -594,33 +652,18 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             if (maxValueB)
                 this.maxValueB = maxValueB;
         }
-        Object.defineProperty(CrossfadeGroup.prototype, "crossfade", {
-            set: function (value) {
-                this.crossfadeTo(value, 0);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(CrossfadeGroup.prototype, "masterValue", {
-            set: function (value) {
-                this.masterValueTo(value, 0);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        CrossfadeGroup.prototype.crossfadeTo = function (value, duration) {
-            this.currentCrossfade = value;
+        ArtnetCrossfader.prototype.fadeTo = function (fadeValue, masterValue, duration) {
+            if (fadeValue >= 0)
+                this.fadeValue = fadeValue;
+            if (masterValue >= 0)
+                this.masterValue = masterValue;
             this.applyChanges(duration);
         };
-        CrossfadeGroup.prototype.masterValueTo = function (value, duration) {
-            this.currentMasterValue = value;
-            this.applyChanges(duration);
+        ArtnetCrossfader.prototype.applyChanges = function (duration) {
+            this.groupA.fadeTo(this.masterValue * this.maxValueA * (1.0 - this.fadeValue), duration);
+            this.groupB.fadeTo(this.masterValue * this.maxValueB * this.fadeValue, duration);
         };
-        CrossfadeGroup.prototype.applyChanges = function (duration) {
-            this.groupA.fadeTo(this.currentMasterValue * this.maxValueA * (1.0 - this.currentCrossfade), duration);
-            this.groupB.fadeTo(this.currentMasterValue * this.maxValueB * this.currentCrossfade, duration);
-        };
-        return CrossfadeGroup;
+        return ArtnetCrossfader;
     }());
     var ArtnetGroup = (function () {
         function ArtnetGroup() {
@@ -630,12 +673,16 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             this.mOnValue = 1;
             this.mOffValue = 0;
             this.mPowerOn = false;
+            this.currentValue = 0;
+            this.duckValue = 0;
         }
         Object.defineProperty(ArtnetGroup.prototype, "value", {
             set: function (value) {
+                this.currentValue = value;
+                var effectiveValue = (1 - this.duckValue) * this.currentValue;
                 for (var i = 0; i < this.mChannels.length; i++) {
                     var channel = this.mChannels[i];
-                    channel.value = value * channel.maxValue;
+                    channel.value = effectiveValue * channel.maxValue;
                 }
             },
             enumerable: true,
@@ -646,11 +693,12 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 return this.mPowerOn;
             },
             set: function (on) {
-                var value = on ? this.mOnValue : this.mOffValue;
+                this.currentValue = on ? this.mOnValue : this.mOffValue;
+                var effectiveValue = (1 - this.duckValue) * this.currentValue;
                 var duration = on ? this.mFadeOnDuration : this.mFadeOffDuration;
                 for (var i = 0; i < this.mChannels.length; i++) {
                     var channel = this.mChannels[i];
-                    channel.fadeTo(value * channel.maxValue, duration);
+                    channel.fadeTo(effectiveValue * channel.maxValue, duration);
                 }
                 this.mPowerOn = on;
             },
@@ -675,10 +723,16 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 this.addChannel(channels[i]);
             }
         };
+        ArtnetGroup.prototype.duck = function (duckValue, duration) {
+            this.duckValue = duckValue;
+            this.fadeTo(this.currentValue, duration);
+        };
         ArtnetGroup.prototype.fadeTo = function (value, duration) {
+            this.currentValue = value;
+            var effectiveValue = (1 - this.duckValue) * this.currentValue;
             for (var i = 0; i < this.mChannels.length; i++) {
                 var channel = this.mChannels[i];
-                channel.fadeTo(value * channel.maxValue, duration);
+                channel.fadeTo(effectiveValue * channel.maxValue, duration);
             }
             return wait(duration * MS_PER_S);
         };
@@ -692,13 +746,13 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
     }());
     var ArtnetScene = (function () {
         function ArtnetScene() {
-            this.sceneChannels = [];
+            this.sceneItems = [];
         }
         Object.defineProperty(ArtnetScene.prototype, "duration", {
             get: function () {
                 var max = 0;
-                for (var i = 0; i < this.sceneChannels.length; i++) {
-                    var channel = this.sceneChannels[i];
+                for (var i = 0; i < this.sceneItems.length; i++) {
+                    var channel = this.sceneItems[i];
                     var total = channel.delay + channel.duration;
                     if (total > max)
                         max = total;
@@ -708,18 +762,38 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             enumerable: true,
             configurable: true
         });
+        ArtnetScene.prototype.addChannel = function (channel, value, duration, delay) {
+            this.addChannelInternal(channel, value, duration, delay);
+            this.applyChanges();
+        };
         ArtnetScene.prototype.addChannels = function (channels, value, duration, delay) {
             for (var i = 0; i < channels.length; i++) {
                 this.addChannelInternal(channels[i], value, duration, delay);
             }
             this.applyChanges();
         };
-        ArtnetScene.prototype.addChannel = function (channel, value, duration, delay) {
-            this.addChannelInternal(channel, value, duration, delay);
+        ArtnetScene.prototype.addGroup = function (group, value, duration, delay) {
+            this.addGroupInternal(group, value, duration, delay);
+            this.applyChanges();
+        };
+        ArtnetScene.prototype.addGroups = function (groups, value, duration, delay) {
+            for (var i = 0; i < groups.length; i++) {
+                this.addGroupInternal(groups[i], value, duration, delay);
+            }
+            this.applyChanges();
+        };
+        ArtnetScene.prototype.addCrossfader = function (crossfader, fadeValue, masterValue, duration, delay) {
+            this.addCrossfaderInternal(crossfader, fadeValue, masterValue, duration, delay);
+            this.applyChanges();
+        };
+        ArtnetScene.prototype.addCrossfaders = function (crossfaders, fadeValue, masterValue, duration, delay) {
+            for (var i = 0; i < crossfaders.length; i++) {
+                this.addCrossfaderInternal(crossfaders[i], fadeValue, masterValue, duration, delay);
+            }
             this.applyChanges();
         };
         ArtnetScene.prototype.applyChanges = function () {
-            this.sceneChannels.sort(function (a, b) {
+            this.sceneItems.sort(function (a, b) {
                 if (a.delay > b.delay)
                     return 1;
                 if (b.delay > a.delay)
@@ -728,7 +802,13 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             });
         };
         ArtnetScene.prototype.addChannelInternal = function (channel, value, duration, delay) {
-            this.sceneChannels.push(new ArtnetSceneChannel(channel, value, duration, delay));
+            this.sceneItems.push(new ArtnetSceneChannel(channel, value, duration, delay));
+        };
+        ArtnetScene.prototype.addGroupInternal = function (group, value, duration, delay) {
+            this.sceneItems.push(new ArtnetSceneGroup(group, value, duration, delay));
+        };
+        ArtnetScene.prototype.addCrossfaderInternal = function (crossfader, fadeValue, masterValue, duration, delay) {
+            this.sceneItems.push(new ArtnetSceneCrossfade(crossfader, fadeValue, masterValue, duration, delay));
         };
         ArtnetScene.prototype.call = function (timefactor) {
             var _this = this;
@@ -755,13 +835,13 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var _this = this;
             var nowMs = Date.now();
             var deltaTimeMs = nowMs - this.sceneCallStartMs;
-            var sceneChannel;
+            var sceneItem;
             var _loop_1 = function (i) {
-                sceneChannel = this_1.sceneChannels[i];
-                delay = sceneChannel.delay * timefactor;
+                sceneItem = this_1.sceneItems[i];
+                delay = sceneItem.delay * timefactor;
                 deltaDelay = delay * MS_PER_S - deltaTimeMs;
                 if (deltaDelay <= 0) {
-                    sceneChannel.call(timefactor);
+                    sceneItem.call(timefactor);
                 }
                 else {
                     wait(deltaDelay).then(function () {
@@ -771,7 +851,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 }
             };
             var this_1 = this, delay, deltaDelay;
-            for (var i = channelPos; i < this.sceneChannels.length; i++) {
+            for (var i = channelPos; i < this.sceneItems.length; i++) {
                 var state_1 = _loop_1(i);
                 if (typeof state_1 === "object")
                     return state_1.value;
@@ -785,16 +865,51 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         };
         return ArtnetScene;
     }());
-    var ArtnetSceneChannel = (function () {
-        function ArtnetSceneChannel(channel, value, duration, delay) {
-            this.channel = channel;
-            this.value = value;
+    var ArtnetSceneItem = (function () {
+        function ArtnetSceneItem(duration, delay) {
             this.duration = duration ? duration : 0;
             this.delay = delay ? delay : 0;
+        }
+        return ArtnetSceneItem;
+    }());
+    var ArtnetSceneChannel = (function (_super) {
+        __extends(ArtnetSceneChannel, _super);
+        function ArtnetSceneChannel(channel, value, duration, delay) {
+            var _this = _super.call(this, duration, delay) || this;
+            _this.channel = channel;
+            _this.value = value;
+            return _this;
         }
         ArtnetSceneChannel.prototype.call = function (timefactor) {
             this.channel.fadeTo(this.value * this.channel.maxValue, timefactor ? timefactor * this.duration : this.duration);
         };
         return ArtnetSceneChannel;
-    }());
+    }(ArtnetSceneItem));
+    var ArtnetSceneGroup = (function (_super) {
+        __extends(ArtnetSceneGroup, _super);
+        function ArtnetSceneGroup(group, value, duration, delay) {
+            var _this = _super.call(this, duration, delay) || this;
+            _this.group = group;
+            _this.value = value;
+            return _this;
+        }
+        ArtnetSceneGroup.prototype.call = function (timefactor) {
+            this.group.fadeTo(this.value, timefactor ? timefactor * this.duration : this.duration);
+        };
+        return ArtnetSceneGroup;
+    }(ArtnetSceneItem));
+    var ArtnetSceneCrossfade = (function (_super) {
+        __extends(ArtnetSceneCrossfade, _super);
+        function ArtnetSceneCrossfade(crossfader, fadeValue, masterValue, duration, delay) {
+            var _this = _super.call(this, duration, delay) || this;
+            _this.crossfader = crossfader;
+            _this.fadeValue = fadeValue;
+            _this.masterValue = masterValue;
+            return _this;
+        }
+        ArtnetSceneCrossfade.prototype.call = function (timefactor) {
+            this.crossfader.fadeTo(this.fadeValue, this.masterValue, timefactor ? timefactor * this.duration : this.duration);
+        };
+        return ArtnetSceneCrossfade;
+    }(ArtnetSceneItem));
 });

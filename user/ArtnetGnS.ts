@@ -8,6 +8,7 @@
   - groups (grouping fixtures and channels)
   - master fade all channels of a fixture
   - scenes (adding fixtures & channels to scenes)
+  - crossfade between two groups (fx between cold and warm lights)
 
  */
 
@@ -22,6 +23,10 @@ const MIN_CHANNEL = 1;
 const MAX_CHANNEL = 42;
 
 const MS_PER_S = 1000;
+
+const PUBLISH_GROUP_PROPERTIES = true;
+const PUBLISH_SCENE_PROPERTIES = true;
+const PUBLISH_CROSSFADER_PROPERTIES = true;
 
 const split: any = require("lib/split-string");
 
@@ -42,15 +47,15 @@ export class ArtnetGnS extends Script {
     private scenes: Dictionary<ArtnetScene> = {};
     private fixtureChannelNames: Dictionary<string[]> = {};
 
-    private crossfadeGroups: Dictionary<CrossfadeGroup> = {};
+    private crossfaders: Dictionary<ArtnetCrossfader> = {};
 
     public constructor(env: ScriptEnv) {
         super(env);
     }
 
     @property('all groups to value')
+    @min(0) @max(1)
     set groupValue(value: number) {
-        if (value > 1.0) value = value / 255.0;
         for (var key in this.groups) {
             this.groups[key].value = value;
         }
@@ -92,15 +97,38 @@ export class ArtnetGnS extends Script {
         var channels: AnalogChannel[] = this.getAnalogChannels(this.getFixturesChannels(fixtureName, channelNames));
         return this.fadeChannels(channels, value, duration ? duration : this.mFadeDuration);
     }
+    @callable('settings for groupAddFixtures and sceneAddFixtures')
+    public fixtureSetDefaults(
+        @parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"') channelNamePrefix: string,
+        @parameter('defaults to ' + MIN_CHANNEL) minChannel: number,
+        @parameter('defaults to ' + MAX_CHANNEL) maxChannel: number,
+        @parameter('defaults to ' + CHANNEL_NAME_DIGITS + '. If maxChannel is too large, this value will be automatically adjusted to fit maxChannel') channelNameDigits: number,
+    ) {
+        this.mChannelNamePrefix = channelNamePrefix;
+        this.mMinChannel = minChannel;
+        this.mMaxChannel = maxChannel;
+        var neededDigits: number = maxChannel.toString().length;
+        this.mChannelNameDigits = Math.max(channelNameDigits, neededDigits);
+    }
 
     @callable('fade group')
     public groupFadeTo(
         @parameter('group name') groupName: string,
-        @parameter('target value. Normalised range: 0 .. 1') value: number,
+        @parameter('target value. Normalised range: 0..1') value: number,
         @parameter('fade duration in seconds', true) duration?: number
     ): Promise<void> {
     	const group = this.getGroup(groupName, false);
         return group ? group.fadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
+    }
+    @callable('duck group (temporarily dampen group value: 0..1)')
+    public groupDuck(
+        @parameter('group name') groupName: string,
+        @parameter('duck amount. Percentage: 0..1 (0% - 100%)') value: number,
+        @parameter('fade duration in seconds', true) duration?: number
+    ): void {
+    	const group = this.getGroup(groupName, false);
+        if (!group) return;
+        group.duck(value, duration ? duration : this.mFadeDuration);
     }
 
     @callable('set group value')
@@ -135,28 +163,6 @@ export class ArtnetGnS extends Script {
         group.setDefaults(fadeOnDuration, fadeOffDuration, onValue, offValue);
     }
 
-    @callable('settings for groupAddFixtures and sceneAddFixtures')
-    public fixtureSetDefaults(
-        @parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"') channelNamePrefix: string,
-        @parameter('defaults to ' + MIN_CHANNEL) minChannel: number,
-        @parameter('defaults to ' + MAX_CHANNEL) maxChannel: number,
-        @parameter('defaults to ' + CHANNEL_NAME_DIGITS + '. If maxChannel is too large, this value will be automatically adjusted to fit maxChannel') channelNameDigits: number,
-    ) {
-        this.mChannelNamePrefix = channelNamePrefix;
-        this.mMinChannel = minChannel;
-        this.mMaxChannel = maxChannel;
-        var neededDigits: number = maxChannel.toString().length;
-        this.mChannelNameDigits = Math.max(channelNameDigits, neededDigits);
-    }
-
-    @callable('Reset setup (delete all groups and scenes)')
-    public reset() {
-        this.fixtureChannelNames = {};
-        this.groups = {};
-        this.scenes = {};
-        this.crossfadeGroups = {};
-    }
-
     @callable('Add complete fixtures to group (channel names have to follow the naming scheme "L_01, L_02, L_03, L_04, L_05")')
     public groupAddFixtures(
         @parameter('fixtureName, fixtureName, fixtureName') fixtureNames: string,
@@ -176,9 +182,9 @@ export class ArtnetGnS extends Script {
         this.getGroup(groupName, true).addChannels(channels);
     }
 
-    @callable('Add crossfade group. Allows crossfade between group A and B. Features master value.')
-    public crossfadeAdd(
-      @parameter('name for crossfade group') groupName: string,
+    @callable('Add crossfader. Allows crossfade between group A and B. Features master value.')
+    public crossfaderAdd(
+      @parameter('name for crossfader group') crossfaderName: string,
       @parameter('name of group A') groupNameA: string,
       @parameter('name of group B') groupNameB: string,
       @parameter('max value group A (0..1)', true) maxValueA?: number,
@@ -187,43 +193,39 @@ export class ArtnetGnS extends Script {
       var groupA = this.getGroup(groupNameA, false);
       var groupB = this.getGroup(groupNameB, false);
       if (groupA && groupB) {
-          this.crossfadeGroups[groupName] = new CrossfadeGroup(groupA, groupB, maxValueA, maxValueB);
-          this.publishCrossfadeGroupProps(groupName);
+          this.crossfaders[crossfaderName] = new ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB);
+          if (PUBLISH_CROSSFADER_PROPERTIES) this.publishCrossfaderProps(crossfaderName);
       }
     }
-    private crossfadeSetCrossfade(
-      @parameter('name of crossfade group') groupName: string,
-      @parameter('crossfade (0..1)') value: number
+    private crossfaderSetFadeValue(
+      @parameter('name of crossfader') crossfaderName: string,
+      @parameter('fade value (0..1)') fadeValue: number
     ) {
-        const crossfadeGroup = this.crossfadeGroups[groupName];
-        if (!crossfadeGroup) return;
-        crossfadeGroup.crossfade = value;
+        const crossfader = this.crossfaders[crossfaderName];
+        if (!crossfader) return;
+        crossfader.fadeTo(fadeValue, -1, 0);
     }
-    private crossfadeSetMasterValue(
-      @parameter('name of crossfade group') groupName: string,
-      @parameter('master value (0..1)') value: number
+    private crossfaderSetMasterValue(
+      @parameter('name of crossfader') crossfaderName: string,
+      @parameter('master value (0..1)') masterValue: number
     ) {
-      const crossfadeGroup = this.crossfadeGroups[groupName];
-      if (!crossfadeGroup) return;
-      crossfadeGroup.masterValue = value;
+      const crossfader = this.crossfaders[crossfaderName];
+      if (!crossfader) return;
+      crossfader.fadeTo(-1, masterValue, 0);
     }
-    @callable('Crossfade group crossfade')
-    public crossfadeTo (
-      @parameter('name of crossfade group') groupName: string,
-      @parameter('crossfade (0..1)') value: number,
+    @callable('Animate crossfade')
+    public crossfaderFadeTo (
+      @parameter('name of crossfade group') crossfaderName: string,
+      @parameter('fade value (0..1) | -1 : ignore') fadeValue: number,
+      @parameter('master value (0..1) | -1 : ignore', true) masterValue?: number,
       @parameter('fade duration in seconds', true) duration?: number
     ) {
-        const group = this.crossfadeGroups[groupName];
-        return group ? group.crossfadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
-    }
-    @callable('Crossfade group master value')
-    public crossfadeMasterValueTo (
-      @parameter('name of crossfade group') groupName: string,
-      @parameter('master value (0..1)') value: number,
-      @parameter('fade duration in seconds', true) duration?: number
-    ) {
-        const group = this.crossfadeGroups[groupName];
-        return group ? group.masterValueTo(value, duration ? duration : this.mFadeDuration) : undefined;
+        const crossfader = this.crossfaders[crossfaderName];
+        return crossfader ? crossfader.fadeTo(
+            fadeValue,
+            masterValue ? masterValue : -1,
+            duration ? duration : this.mFadeDuration
+        ) : undefined;
     }
 
     @callable('add fixtures to scene')
@@ -237,7 +239,6 @@ export class ArtnetGnS extends Script {
         var channels: AnalogChannel[] = this.getAnalogChannels(this.getFixturesChannels(fixtureNames));
         this.getScene(sceneName, true).addChannels(channels, value, duration, delay);
     }
-
     @callable('add channels to scene')
     public sceneAddChannels(
         @parameter('scene name') sceneName: string,
@@ -249,6 +250,29 @@ export class ArtnetGnS extends Script {
     ) {
         var channels: AnalogChannel[] = this.getAnalogChannels(this.getFixturesChannels(fixtureNames, channelNames));
         this.getScene(sceneName, true).addChannels(channels, value, duration, delay);
+    }
+    @callable('add groups to scene')
+    public sceneAddGroups(
+        @parameter('scene name') sceneName: string,
+        @parameter('groupName, groupName, groupName') groupNames: string,
+        @parameter('value (0..1)') value: number,
+        @parameter('duration in seconds', true) duration?: number,
+        @parameter('delay in seconds', true) delay?: number
+    ) {
+        var groups: ArtnetGroup[] = this.getGroups(groupNames);
+        this.getScene(sceneName, true).addGroups(groups, value, duration, delay);
+    }
+    @callable('add crossfaders to scene')
+    public sceneAddCrossfaders (
+        @parameter('scene name') sceneName: string,
+        @parameter('crossfaderName, crossfaderName, crossfaderName') crossfaderNames: string,
+        @parameter('fade value (0..1) | -1 : ignore') fadeValue: number,
+        @parameter('master value (0..1) | -1 : ignore', true) masterValue?: number,
+        @parameter('duration in seconds', true) duration?: number,
+        @parameter('delay in seconds', true) delay?: number
+    ) {
+        var crossfaders: ArtnetCrossfader[] = this.getCrossfaders(crossfaderNames);
+        this.getScene(sceneName, true).addCrossfaders(crossfaders, fadeValue, masterValue, duration, delay);
     }
 
     @callable('call scene')
@@ -276,14 +300,6 @@ export class ArtnetGnS extends Script {
         return wait(duration * MS_PER_S);
     }
 
-    @callable("Reset All Lights")
-    public groupAllLightsReset(): Promise<void> {
-        for (var key in this.groups) {
-            this.groups[key].fadeTo(this.mLightOffValue, this.mFadeDuration);
-        }
-        return wait(this.mFadeDuration * MS_PER_S);
-    }
-
     @callable("Animate Group ('chase')")
     public groupAnimate(groupName: string, delay: number, style: string): void {
         if (style == 'chase') {
@@ -300,43 +316,61 @@ export class ArtnetGnS extends Script {
         }
     }
 
+    @callable('Reset setup (delete all groups and scenes)')
+    public reset() {
+        this.fixtureChannelNames = {};
+        this.groups = {};
+        this.scenes = {};
+        this.crossfaders = {};
+    }
+
     /**
   	 * Make composite names for group and scene properties
   	 */
-    private static sanitizePropName(propName: string) {
+    private static sanitizePropName(propName: string) : string {
         return propName.replace(/[^\w\-]/g, '-');
     }
-    private static grpPropNameValue(groupName: string) {
-        return this.sanitizePropName('gr_' + groupName + '_val');
+    private static grpPropNameDuck(groupName: string) : string {
+        return this.sanitizePropName('_gr_' + groupName + '_dck');
     }
-    private static grpPropNamePower(groupName: string) {
-        return this.sanitizePropName('gr_' + groupName + '_pwr');
+    private static grpPropNameValue(groupName: string) : string {
+        return this.sanitizePropName('_gr_' + groupName + '_val');
     }
-    private static scnPropNameTrigger(sceneName: string) {
-        return this.sanitizePropName('sc_' + sceneName + '_trigger');
+    private static grpPropNamePower(groupName: string) : string {
+        return this.sanitizePropName('_gr_' + groupName + '_pwr');
     }
-    private static cfgrpPropNameCrossfade(groupName: string) {
-        return this.sanitizePropName('cfgr_' + groupName + '_crossfade');
+    private static scnPropNameTrigger(sceneName: string) : string {
+        return this.sanitizePropName('_sc_' + sceneName + '_trigger');
     }
-    private static cfgrpPropNameMasterValue(groupName: string) {
-        return this.sanitizePropName('cfgr_' + groupName + '_master');
+    private static cfdrPropNameFadeValue(crossfaderName: string) : string {
+        return this.sanitizePropName('_cfdr_' + crossfaderName + '_fade');
+    }
+    private static cfdrPropNameMasterValue(crossfaderName: string) : string {
+        return this.sanitizePropName('_cfdr_' + crossfaderName + '_master');
     }
 
     /**
   	 * Publish properties for specified group
   	 */
-    private publishGroupProps(groupName: string) {
+    private publishGroupProps(groupName: string) : void {
+        var duck = 0;
         var value = 0;
         var power = false;
-
-        this.property<number>(ArtnetGnS.grpPropNameValue(groupName), { type: Number, description: "Group Value 0..1" }, setValue => {
+        this.property<number>(ArtnetGnS.grpPropNameDuck(groupName), { type: Number, description: "duck group (temporarily dampen group value: 0..1)" }, setValue => {
+            if (setValue !== undefined) {
+                duck = setValue;
+                this.groupDuck(groupName, setValue)
+            }
+            return duck;
+        });
+        this.property<number>(ArtnetGnS.grpPropNameValue(groupName), { type: Number, description: "group value 0..1 (normalised range)" }, setValue => {
             if (setValue !== undefined) {
                 value = setValue;
                 this.groupSetValue(groupName, setValue)
             }
             return value;
         });
-        this.property<boolean>(ArtnetGnS.grpPropNamePower(groupName), { type: Boolean, description: "Group Power on/off" }, setValue => {
+        this.property<boolean>(ArtnetGnS.grpPropNamePower(groupName), { type: Boolean, description: "group power on/off" }, setValue => {
             if (setValue !== undefined) {
                 power = setValue;
                 this.groupSetPower(groupName, power)
@@ -345,32 +379,31 @@ export class ArtnetGnS extends Script {
         });
     }
     /**
-     * Publish properties for specified crossfade group
+     * Publish properties for specified crossfader
      */
-     private publishCrossfadeGroupProps (groupName: string) {
+     private publishCrossfaderProps (crossfaderName: string) : void {
        var masterValue = 0;
-       var crossfade = 0;
-       this.property<number>(ArtnetGnS.cfgrpPropNameMasterValue(groupName), { type: Number, description: "Master Value 0..1" }, setValue => {
+       var fadeValue = 0;
+       this.property<number>(ArtnetGnS.cfdrPropNameMasterValue(crossfaderName), { type: Number, description: "Master Value 0..1" }, setValue => {
            if (setValue !== undefined) {
                masterValue = setValue;
-               this.crossfadeSetMasterValue(groupName, masterValue)
+               this.crossfaderSetMasterValue(crossfaderName, masterValue)
            }
            return masterValue;
        });
-       this.property<number>(ArtnetGnS.cfgrpPropNameCrossfade(groupName), { type: Number, description: "Crossfade 0..1" }, setValue => {
+       this.property<number>(ArtnetGnS.cfdrPropNameFadeValue(crossfaderName), { type: Number, description: "Crossfade 0..1" }, setValue => {
            if (setValue !== undefined) {
-               crossfade = setValue;
-               this.crossfadeSetCrossfade(groupName, crossfade)
+               fadeValue = setValue;
+               this.crossfaderSetFadeValue(crossfaderName, fadeValue)
            }
-           return crossfade;
+           return fadeValue;
        });
      }
     /**
      * Publish properties for specified scene
      */
-    private publishSceneProps(sceneName: string) {
+    private publishSceneProps(sceneName: string) : void {
         var trigger = false;
-
         this.property<boolean>(ArtnetGnS.scnPropNameTrigger(sceneName), { type: Boolean, description: "Trigger Scene" }, setValue => {
             if (setValue !== undefined) {
                 trigger = setValue;
@@ -379,7 +412,6 @@ export class ArtnetGnS extends Script {
             return trigger;
         });
     }
-
 
     private recursiveValue(channels: AnalogChannel[], pos: number, value: number, delay: number) {
         if (pos == channels.length) return;
@@ -421,9 +453,8 @@ export class ArtnetGnS extends Script {
         }
         return channels;
     }
-
     private getFixtureChannels(fixtureName: string, channelNames?: string): Channel[] {
-        var fixture = Artnet[fixtureName];
+        var fixture : Fixture = Artnet[fixtureName];
         if (!fixture) return [];
         var channels: Channel[] = [];
         var channelNameList: string[] = channelNames && channelNames.trim().length > 0 ?
@@ -434,7 +465,6 @@ export class ArtnetGnS extends Script {
         }
         return channels;
     }
-
     private getAnalogChannels(channels: Channel[]): AnalogChannel[] {
         var analogChannels: AnalogChannel[] = [];
         for (let i = 0; i < channels.length; i++) {
@@ -445,7 +475,6 @@ export class ArtnetGnS extends Script {
         }
         return analogChannels;
     }
-
     private getFixtureChannelNames(fixtureName: string): string[] {
         var channelNameList: string[] = [];
         if (this.fixtureChannelNames[fixtureName]) {
@@ -463,9 +492,27 @@ export class ArtnetGnS extends Script {
     private getGroup(groupName: string, createIfMissing: boolean): ArtnetGroup|undefined {
         if (!this.groups[groupName] && createIfMissing) {
             this.groups[groupName] = new ArtnetGroup();
-            this.publishGroupProps(groupName);
+            if (PUBLISH_GROUP_PROPERTIES) this.publishGroupProps(groupName);
         }
         return this.groups[groupName];
+    }
+    private getGroups(groupNames: string): ArtnetGroup[] {
+        var groupNameList: string[] = this.getStringArray(groupNames);
+        var groups: ArtnetGroup[] = [];
+        for (let i = 0; i < groupNameList.length; i++) {
+            var group = this.groups[groupNameList[i]];
+            if (group) groups.push(group);
+        }
+        return groups;
+    }
+    private getCrossfaders(crossfaderNames: string): ArtnetCrossfader[] {
+        var crossfaderNameList: string[] = this.getStringArray(crossfaderNames);
+        var crossfaders: ArtnetCrossfader[] = [];
+        for (let i = 0; i < crossfaderNameList.length; i++) {
+            var crossfader = this.crossfaders[crossfaderNameList[i]];
+            if (crossfader) crossfaders.push(crossfader);
+        }
+        return crossfaders;
     }
     private getGroupChannels(groupName: string): AnalogChannel[] {
         var group: ArtnetGroup = this.getGroup(groupName, false);
@@ -475,11 +522,10 @@ export class ArtnetGnS extends Script {
     private getScene(sceneName: string, createIfMissing: boolean): ArtnetScene|undefined {
         if (!this.scenes[sceneName] && createIfMissing) {
             this.scenes[sceneName] = new ArtnetScene();
-            this.publishSceneProps(sceneName);
+            if (PUBLISH_SCENE_PROPERTIES) this.publishSceneProps(sceneName);
         }
         return this.scenes[sceneName];
     }
-
 
     private getStringArray(list: string): string[] {
         var result: string[] = [];
@@ -526,13 +572,13 @@ export class ArtnetGnS extends Script {
 
 }
 
-class CrossfadeGroup {
+class ArtnetCrossfader {
     private groupA: ArtnetGroup;
     private groupB: ArtnetGroup;
     private maxValueA: number = 1;
     private maxValueB: number = 1;
-    private currentCrossfade: number = 0;
-    private currentMasterValue: number = 0;
+    private fadeValue: number = 0;
+    private masterValue: number = 0;
 
     public constructor(
         groupA: ArtnetGroup,
@@ -545,26 +591,14 @@ class CrossfadeGroup {
         if (maxValueA) this.maxValueA = maxValueA;
         if (maxValueB) this.maxValueB = maxValueB;
     }
-
-    set crossfade(value: number) {
-      this.crossfadeTo(value, 0);
-    }
-    set masterValue(value: number) {
-      this.masterValueTo(value, 0);
-    }
-
-    crossfadeTo (value: number, duration: number) {
-      this.currentCrossfade = value;
+    public fadeTo (fadeValue: number, masterValue: number, duration: number) {
+      if (fadeValue >= 0) this.fadeValue = fadeValue;
+      if (masterValue >= 0) this.masterValue = masterValue;
       this.applyChanges(duration);
     }
-    masterValueTo (value: number, duration: number) {
-      this.currentMasterValue = value;
-      this.applyChanges(duration);
-    }
-
     private applyChanges (duration: number) {
-      this.groupA.fadeTo(this.currentMasterValue * this.maxValueA * (1.0 - this.currentCrossfade), duration);
-      this.groupB.fadeTo(this.currentMasterValue * this.maxValueB * this.currentCrossfade, duration);
+      this.groupA.fadeTo(this.masterValue * this.maxValueA * (1.0 - this.fadeValue), duration);
+      this.groupB.fadeTo(this.masterValue * this.maxValueB * this.fadeValue, duration);
     }
 
 }
@@ -575,27 +609,30 @@ class ArtnetGroup {
     private mOnValue: number = 1;
     private mOffValue: number = 0;
     private mPowerOn: boolean = false;
+    private currentValue: number = 0;
+    private duckValue: number = 0;
 
     set value(value: number) {
+        this.currentValue = value;
+        var effectiveValue = (1 - this.duckValue) * this.currentValue;
         for (let i = 0; i < this.mChannels.length; i++) {
             var channel: AnalogChannel = this.mChannels[i];
-            channel.value = value * channel.maxValue;
+            channel.value = effectiveValue * channel.maxValue;
         }
     }
-
     set power(on: boolean) {
-        var value: number = on ? this.mOnValue : this.mOffValue;
+        this.currentValue = on ? this.mOnValue : this.mOffValue;
+        var effectiveValue = (1 - this.duckValue) * this.currentValue;
         var duration: number = on ? this.mFadeOnDuration : this.mFadeOffDuration;
         for (let i = 0; i < this.mChannels.length; i++) {
             var channel: AnalogChannel = this.mChannels[i];
-            channel.fadeTo(value * channel.maxValue, duration);
+            channel.fadeTo(effectiveValue * channel.maxValue, duration);
         }
         this.mPowerOn = on;
     }
     get power(): boolean {
         return this.mPowerOn;
     }
-
     get channels(): AnalogChannel[] {
         return this.mChannels;
     }
@@ -605,27 +642,27 @@ class ArtnetGroup {
         const analogChannel: AnalogChannel = channel as AnalogChannel;
         this.mChannels.push(analogChannel);
     }
-
     public addChannels(channels: Channel[]) {
         for (let i = 0; i < channels.length; i++) {
             this.addChannel(channels[i]);
         }
     }
 
+    public duck (duckValue: number, duration: number) : void {
+        this.duckValue = duckValue;
+        this.fadeTo(this.currentValue, duration);
+    }
     public fadeTo(value: number, duration: number): Promise<void> {
+        this.currentValue = value;
+        var effectiveValue = (1 - this.duckValue) * this.currentValue;
         for (let i = 0; i < this.mChannels.length; i++) {
             var channel: AnalogChannel = this.mChannels[i];
-            channel.fadeTo(value * channel.maxValue, duration);
+            channel.fadeTo(effectiveValue * channel.maxValue, duration);
         }
         return wait(duration * MS_PER_S);
     }
 
-    public setDefaults(
-        fadeOnDuration: number,
-        fadeOffDuration: number,
-        onValue: number,
-        offValue: number,
-    ) {
+    public setDefaults(fadeOnDuration: number, fadeOffDuration: number, onValue: number, offValue: number) {
         this.mFadeOnDuration = fadeOnDuration;
         this.mFadeOffDuration = fadeOffDuration;
         this.mOnValue = onValue;
@@ -633,8 +670,7 @@ class ArtnetGroup {
     }
 }
 class ArtnetScene {
-    private sceneChannels: ArtnetSceneChannel[] = [];
-
+    private sceneItems: ArtnetSceneItem[] = [];
     private sceneCallStartMs: number;
     private callingScene: Promise<void>;
     private callingSceneResolver: (value?: any) => void;
@@ -643,51 +679,60 @@ class ArtnetScene {
     /** duration in seconds */
     get duration(): number {
         var max: number = 0;
-        for (let i = 0; i < this.sceneChannels.length; i++) {
-            var channel = this.sceneChannels[i];
+        for (let i = 0; i < this.sceneItems.length; i++) {
+            var channel = this.sceneItems[i];
             var total: number = channel.delay + channel.duration;
             if (total > max) max = total;
         }
         return max;
     }
 
-    public addChannels(
-        channels: AnalogChannel[],
-        value: number,
-        duration?: number,
-        delay?: number
-    ) {
+    public addChannel(channel: AnalogChannel, value: number, duration?: number, delay?: number) {
+        this.addChannelInternal(channel, value, duration, delay);
+        this.applyChanges();
+    }
+    public addChannels(channels: AnalogChannel[], value: number, duration?: number, delay?: number) {
         for (let i = 0; i < channels.length; i++) {
             this.addChannelInternal(channels[i], value, duration, delay);
         }
         this.applyChanges();
     }
-
-    public addChannel(
-        channel: AnalogChannel,
-        value: number,
-        duration?: number,
-        delay?: number
-    ) {
-        this.addChannelInternal(channel, value, duration, delay);
+    public addGroup(group: ArtnetGroup, value: number, duration?: number, delay?: number) {
+        this.addGroupInternal(group, value, duration, delay);
         this.applyChanges();
     }
-
+    public addGroups(groups: ArtnetGroup[], value: number, duration?: number, delay?: number) {
+        for (let i = 0; i < groups.length; i++) {
+            this.addGroupInternal(groups[i], value, duration, delay);
+        }
+        this.applyChanges();
+    }
+    public addCrossfader(crossfader: ArtnetCrossfader, fadeValue: number, masterValue?: number, duration?: number, delay?: number) {
+        this.addCrossfaderInternal(crossfader, fadeValue, masterValue, duration, delay);
+        this.applyChanges();
+    }
+    public addCrossfaders(crossfaders: ArtnetCrossfader[], fadeValue: number, masterValue?: number, duration?: number, delay?: number) {
+        for (let i = 0; i < crossfaders.length; i++) {
+            this.addCrossfaderInternal(crossfaders[i], fadeValue, masterValue, duration, delay);
+        }
+        this.applyChanges();
+    }
     private applyChanges() {
-        this.sceneChannels.sort((a, b) => {
+        this.sceneItems.sort((a, b) => {
             if (a.delay > b.delay) return 1;
             if (b.delay > a.delay) return -1;
             return 0;
         });
     }
 
-    private addChannelInternal(
-        channel: AnalogChannel,
-        value: number,
-        duration?: number,
-        delay?: number
-    ) {
-        this.sceneChannels.push(new ArtnetSceneChannel(channel, value, duration, delay));
+    private addChannelInternal(channel: AnalogChannel, value: number, duration?: number, delay?: number) {
+        this.sceneItems.push(new ArtnetSceneChannel(channel, value, duration, delay));
+    }
+    private addGroupInternal(group: ArtnetGroup, value: number, duration?: number, delay?: number) {
+        this.sceneItems.push(new ArtnetSceneGroup(group, value, duration, delay));
+    }
+    private addCrossfaderInternal(crossfader: ArtnetCrossfader, fadeValue: number, masterValue?: number, duration?: number, delay?: number) {
+        this.sceneItems.push(new ArtnetSceneCrossfade(crossfader, fadeValue, masterValue, duration, delay));
     }
 
     public call(timefactor? : number): Promise<void> {
@@ -713,13 +758,13 @@ class ArtnetScene {
     private executeScene(channelPos: number, timefactor: number) {
         var nowMs: number = Date.now();
         var deltaTimeMs: number = nowMs - this.sceneCallStartMs;
-        var sceneChannel: ArtnetSceneChannel;
-        for (let i = channelPos; i < this.sceneChannels.length; i++) {
-            sceneChannel = this.sceneChannels[i];
-            var delay = sceneChannel.delay * timefactor;
+        var sceneItem: ArtnetSceneItem;
+        for (let i = channelPos; i < this.sceneItems.length; i++) {
+            sceneItem = this.sceneItems[i];
+            var delay = sceneItem.delay * timefactor;
             var deltaDelay: number = delay * MS_PER_S - deltaTimeMs;
             if (deltaDelay <= 0) {
-                sceneChannel.call(timefactor);
+                sceneItem.call(timefactor);
             } else {
                 wait(deltaDelay).then(() => {
                     this.executeScene(i, timefactor);
@@ -738,27 +783,72 @@ class ArtnetScene {
 
 }
 
-class ArtnetSceneChannel {
-    public readonly channel: AnalogChannel;
-    public value: number;
-    public duration: number;
-    public delay: number;
-
+/*
+ * different types of supported scene items
+ */
+ abstract class ArtnetSceneItem {
+   readonly duration: number;
+   readonly delay: number;
+   public constructor(
+       duration: number,
+       delay: number
+   ) {
+       this.duration = duration ? duration : 0;
+       this.delay = delay ? delay : 0;
+   }
+   abstract call(timefactor? : number) : void;
+ }
+class ArtnetSceneChannel extends ArtnetSceneItem {
+    public readonly duration: number;
+    public readonly delay: number;
+    private readonly channel: AnalogChannel;
+    private value: number;
     public constructor(
         channel: AnalogChannel,
         value: number,
         duration?: number,
         delay?: number
     ) {
+        super(duration, delay);
         this.channel = channel;
         this.value = value;
-        this.duration = duration ? duration : 0;
-        this.delay = delay ? delay : 0;
     }
-
     public call(timefactor? : number) {
         this.channel.fadeTo(
           this.value * this.channel.maxValue,
+          timefactor ? timefactor * this.duration : this.duration
+        );
+    }
+}
+class ArtnetSceneGroup extends ArtnetSceneItem {
+    public readonly group: ArtnetGroup;
+    private value: number;
+    public constructor(group: ArtnetGroup, value: number, duration?: number, delay?: number) {
+        super(duration, delay);
+        this.group = group;
+        this.value = value;
+    }
+    public call(timefactor? : number) {
+        this.group.fadeTo(
+          this.value,
+          timefactor ? timefactor * this.duration : this.duration
+        );
+    }
+}
+class ArtnetSceneCrossfade extends ArtnetSceneItem {
+    public readonly crossfader: ArtnetCrossfader;
+    private fadeValue: number;
+    private masterValue: number;
+    public constructor(crossfader: ArtnetCrossfader, fadeValue: number, masterValue: number, duration?: number, delay?: number) {
+        super(duration, delay);
+        this.crossfader = crossfader;
+        this.fadeValue = fadeValue;
+        this.masterValue = masterValue;
+    }
+    public call(timefactor? : number) {
+        this.crossfader.fadeTo(
+          this.fadeValue,
+          this.masterValue,
           timefactor ? timefactor * this.duration : this.duration
         );
     }
