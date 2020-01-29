@@ -42,6 +42,8 @@ export class ArtnetGnS extends Script {
     private scenes: Dictionary<ArtnetScene> = {};
     private fixtureChannelNames: Dictionary<string[]> = {};
 
+    private crossfadeGroups: Dictionary<CrossfadeGroup> = {};
+
     public constructor(env: ScriptEnv) {
         super(env);
     }
@@ -152,6 +154,7 @@ export class ArtnetGnS extends Script {
         this.fixtureChannelNames = {};
         this.groups = {};
         this.scenes = {};
+        this.crossfadeGroups = {};
     }
 
     @callable('Add complete fixtures to group (channel names have to follow the naming scheme "L_01, L_02, L_03, L_04, L_05")')
@@ -171,6 +174,56 @@ export class ArtnetGnS extends Script {
     ) {
         var channels: Channel[] = this.getFixturesChannels(fixtureNames, channelNames);
         this.getGroup(groupName, true).addChannels(channels);
+    }
+
+    @callable('Add crossfade group. Allows crossfade between group A and B. Features master value.')
+    public crossfadeAdd(
+      @parameter('name for crossfade group') groupName: string,
+      @parameter('name of group A') groupNameA: string,
+      @parameter('name of group B') groupNameB: string,
+      @parameter('max value group A (0..1)', true) maxValueA?: number,
+      @parameter('max value group B (0..1)', true) maxValueB?: number,
+    ) {
+      var groupA = this.getGroup(groupNameA, false);
+      var groupB = this.getGroup(groupNameB, false);
+      if (groupA && groupB) {
+          this.crossfadeGroups[groupName] = new CrossfadeGroup(groupA, groupB, maxValueA, maxValueB);
+          this.publishCrossfadeGroupProps(groupName);
+      }
+    }
+    private crossfadeSetCrossfade(
+      @parameter('name of crossfade group') groupName: string,
+      @parameter('crossfade (0..1)') value: number
+    ) {
+        const crossfadeGroup = this.crossfadeGroups[groupName];
+        if (!crossfadeGroup) return;
+        crossfadeGroup.crossfade = value;
+    }
+    private crossfadeSetMasterValue(
+      @parameter('name of crossfade group') groupName: string,
+      @parameter('master value (0..1)') value: number
+    ) {
+      const crossfadeGroup = this.crossfadeGroups[groupName];
+      if (!crossfadeGroup) return;
+      crossfadeGroup.masterValue = value;
+    }
+    @callable('Crossfade group crossfade')
+    public crossfadeTo (
+      @parameter('name of crossfade group') groupName: string,
+      @parameter('crossfade (0..1)') value: number,
+      @parameter('fade duration in seconds', true) duration?: number
+    ) {
+        const group = this.crossfadeGroups[groupName];
+        return group ? group.crossfadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
+    }
+    @callable('Crossfade group master value')
+    public crossfadeMasterValueTo (
+      @parameter('name of crossfade group') groupName: string,
+      @parameter('master value (0..1)') value: number,
+      @parameter('fade duration in seconds', true) duration?: number
+    ) {
+        const group = this.crossfadeGroups[groupName];
+        return group ? group.masterValueTo(value, duration ? duration : this.mFadeDuration) : undefined;
     }
 
     @callable('add fixtures to scene')
@@ -200,10 +253,15 @@ export class ArtnetGnS extends Script {
 
     @callable('call scene')
     public sceneCall(
-        @parameter('scene name') sceneName: string
+        @parameter('scene name') sceneName: string,
+        @parameter('time factor (> 1 faster, < 1 slower)', true) timefactor?: number
     ): Promise<void> {
-    	const scene = this.getScene(sceneName, false);
-        return scene ? scene.call() : undefined;
+    	  const scene = this.getScene(sceneName, false);
+        if (timefactor) {
+            if (timefactor <= 0.0) return;
+            timefactor = 1.0 / timefactor;
+        }
+        return scene ? scene.call(timefactor) : undefined;
     }
 
     @callable('fade all groups to value')
@@ -242,8 +300,6 @@ export class ArtnetGnS extends Script {
         }
     }
 
-
-
     /**
   	 * Make composite names for group and scene properties
   	 */
@@ -258,6 +314,12 @@ export class ArtnetGnS extends Script {
     }
     private static scnPropNameTrigger(sceneName: string) {
         return this.sanitizePropName('sc_' + sceneName + '_trigger');
+    }
+    private static cfgrpPropNameCrossfade(groupName: string) {
+        return this.sanitizePropName('cfgr_' + groupName + '_crossfade');
+    }
+    private static cfgrpPropNameMasterValue(groupName: string) {
+        return this.sanitizePropName('cfgr_' + groupName + '_master');
     }
 
     /**
@@ -282,6 +344,27 @@ export class ArtnetGnS extends Script {
             return power;
         });
     }
+    /**
+     * Publish properties for specified crossfade group
+     */
+     private publishCrossfadeGroupProps (groupName: string) {
+       var masterValue = 0;
+       var crossfade = 0;
+       this.property<number>(ArtnetGnS.cfgrpPropNameMasterValue(groupName), { type: Number, description: "Master Value 0..1" }, setValue => {
+           if (setValue !== undefined) {
+               masterValue = setValue;
+               this.crossfadeSetMasterValue(groupName, masterValue)
+           }
+           return masterValue;
+       });
+       this.property<number>(ArtnetGnS.cfgrpPropNameCrossfade(groupName), { type: Number, description: "Crossfade 0..1" }, setValue => {
+           if (setValue !== undefined) {
+               crossfade = setValue;
+               this.crossfadeSetCrossfade(groupName, crossfade)
+           }
+           return crossfade;
+       });
+     }
     /**
      * Publish properties for specified scene
      */
@@ -390,13 +473,13 @@ export class ArtnetGnS extends Script {
         return group.channels;
     }
     private getScene(sceneName: string, createIfMissing: boolean): ArtnetScene|undefined {
-        if (!this.scenes[sceneName] &&
-            createIfMissing) {
+        if (!this.scenes[sceneName] && createIfMissing) {
             this.scenes[sceneName] = new ArtnetScene();
             this.publishSceneProps(sceneName);
         }
         return this.scenes[sceneName];
     }
+
 
     private getStringArray(list: string): string[] {
         var result: string[] = [];
@@ -443,6 +526,48 @@ export class ArtnetGnS extends Script {
 
 }
 
+class CrossfadeGroup {
+    private groupA: ArtnetGroup;
+    private groupB: ArtnetGroup;
+    private maxValueA: number = 1;
+    private maxValueB: number = 1;
+    private currentCrossfade: number = 0;
+    private currentMasterValue: number = 0;
+
+    public constructor(
+        groupA: ArtnetGroup,
+        groupB: ArtnetGroup,
+        maxValueA: number,
+        maxValueB: number
+    ) {
+        this.groupA = groupA;
+        this.groupB = groupB;
+        if (maxValueA) this.maxValueA = maxValueA;
+        if (maxValueB) this.maxValueB = maxValueB;
+    }
+
+    set crossfade(value: number) {
+      this.crossfadeTo(value, 0);
+    }
+    set masterValue(value: number) {
+      this.masterValueTo(value, 0);
+    }
+
+    crossfadeTo (value: number, duration: number) {
+      this.currentCrossfade = value;
+      this.applyChanges(duration);
+    }
+    masterValueTo (value: number, duration: number) {
+      this.currentMasterValue = value;
+      this.applyChanges(duration);
+    }
+
+    private applyChanges (duration: number) {
+      this.groupA.fadeTo(this.currentMasterValue * this.maxValueA * (1.0 - this.currentCrossfade), duration);
+      this.groupB.fadeTo(this.currentMasterValue * this.maxValueB * this.currentCrossfade, duration);
+    }
+
+}
 class ArtnetGroup {
     private mChannels: AnalogChannel[] = [];
     private mFadeOnDuration: number = 1;
@@ -565,36 +690,39 @@ class ArtnetScene {
         this.sceneChannels.push(new ArtnetSceneChannel(channel, value, duration, delay));
     }
 
-    public call(): Promise<void> {
+    public call(timefactor? : number): Promise<void> {
         this.sceneCallStartMs = Date.now();
         if (!this.callingScene) {
             this.callingScene = new Promise<void>((resolve, reject) => {
                 this.callingSceneResolver = resolve;
                 this.callingSceneRejector = reject;
-                wait(this.duration * MS_PER_S + MS_PER_S).then(() => {
+                if (!timefactor) timefactor = 1.0;
+                var duration = this.duration * timefactor;
+                wait(duration * MS_PER_S + MS_PER_S).then(() => {
                     reject('scene timeout! (did not finish on time)');
                 });
-                wait(this.duration * MS_PER_S).then(() => {
+                wait(duration * MS_PER_S).then(() => {
                     this.resolveSceneExecution();
                 });
             });
-            this.executeScene(0);
+            this.executeScene(0, timefactor);
         }
         return this.callingScene;
     }
 
-    private executeScene(channelPos: number) {
+    private executeScene(channelPos: number, timefactor: number) {
         var nowMs: number = Date.now();
         var deltaTimeMs: number = nowMs - this.sceneCallStartMs;
         var sceneChannel: ArtnetSceneChannel;
         for (let i = channelPos; i < this.sceneChannels.length; i++) {
             sceneChannel = this.sceneChannels[i];
-            var deltaDelay: number = sceneChannel.delay * MS_PER_S - deltaTimeMs;
+            var delay = sceneChannel.delay * timefactor;
+            var deltaDelay: number = delay * MS_PER_S - deltaTimeMs;
             if (deltaDelay <= 0) {
-                sceneChannel.call();
+                sceneChannel.call(timefactor);
             } else {
                 wait(deltaDelay).then(() => {
-                    this.executeScene(i);
+                    this.executeScene(i, timefactor);
                 });
                 return;
             }
@@ -628,8 +756,11 @@ class ArtnetSceneChannel {
         this.delay = delay ? delay : 0;
     }
 
-    public call() {
-        this.channel.fadeTo(this.value * this.channel.maxValue, this.duration);
+    public call(timefactor? : number) {
+        this.channel.fadeTo(
+          this.value * this.channel.maxValue,
+          timefactor ? timefactor * this.duration : this.duration
+        );
     }
 }
 

@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -43,6 +46,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             _this.groups = {};
             _this.scenes = {};
             _this.fixtureChannelNames = {};
+            _this.crossfadeGroups = {};
             return _this;
         }
         Object.defineProperty(ArtnetGnS.prototype, "groupValue", {
@@ -106,6 +110,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             this.fixtureChannelNames = {};
             this.groups = {};
             this.scenes = {};
+            this.crossfadeGroups = {};
         };
         ArtnetGnS.prototype.groupAddFixtures = function (fixtureNames, groupName) {
             var channels = this.getFixturesChannels(fixtureNames);
@@ -115,6 +120,34 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var channels = this.getFixturesChannels(fixtureNames, channelNames);
             this.getGroup(groupName, true).addChannels(channels);
         };
+        ArtnetGnS.prototype.crossfadeAdd = function (groupName, groupNameA, groupNameB, maxValueA, maxValueB) {
+            var groupA = this.getGroup(groupNameA, false);
+            var groupB = this.getGroup(groupNameB, false);
+            if (groupA && groupB) {
+                this.crossfadeGroups[groupName] = new CrossfadeGroup(groupA, groupB, maxValueA, maxValueB);
+                this.publishCrossfadeGroupProps(groupName);
+            }
+        };
+        ArtnetGnS.prototype.crossfadeSetCrossfade = function (groupName, value) {
+            var crossfadeGroup = this.crossfadeGroups[groupName];
+            if (!crossfadeGroup)
+                return;
+            crossfadeGroup.crossfade = value;
+        };
+        ArtnetGnS.prototype.crossfadeSetMasterValue = function (groupName, value) {
+            var crossfadeGroup = this.crossfadeGroups[groupName];
+            if (!crossfadeGroup)
+                return;
+            crossfadeGroup.masterValue = value;
+        };
+        ArtnetGnS.prototype.crossfadeTo = function (groupName, value, duration) {
+            var group = this.crossfadeGroups[groupName];
+            return group ? group.crossfadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
+        };
+        ArtnetGnS.prototype.crossfadeMasterValueTo = function (groupName, value, duration) {
+            var group = this.crossfadeGroups[groupName];
+            return group ? group.masterValueTo(value, duration ? duration : this.mFadeDuration) : undefined;
+        };
         ArtnetGnS.prototype.sceneAddFixtures = function (sceneName, fixtureNames, value, duration, delay) {
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureNames));
             this.getScene(sceneName, true).addChannels(channels, value, duration, delay);
@@ -123,9 +156,14 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureNames, channelNames));
             this.getScene(sceneName, true).addChannels(channels, value, duration, delay);
         };
-        ArtnetGnS.prototype.sceneCall = function (sceneName) {
+        ArtnetGnS.prototype.sceneCall = function (sceneName, timefactor) {
             var scene = this.getScene(sceneName, false);
-            return scene ? scene.call() : undefined;
+            if (timefactor) {
+                if (timefactor <= 0.0)
+                    return;
+                timefactor = 1.0 / timefactor;
+            }
+            return scene ? scene.call(timefactor) : undefined;
         };
         ArtnetGnS.prototype.groupAllFadeTo = function (value, duration) {
             if (value > 1.0)
@@ -165,6 +203,12 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetGnS.scnPropNameTrigger = function (sceneName) {
             return this.sanitizePropName('sc_' + sceneName + '_trigger');
         };
+        ArtnetGnS.cfgrpPropNameCrossfade = function (groupName) {
+            return this.sanitizePropName('cfgr_' + groupName + '_crossfade');
+        };
+        ArtnetGnS.cfgrpPropNameMasterValue = function (groupName) {
+            return this.sanitizePropName('cfgr_' + groupName + '_master');
+        };
         ArtnetGnS.prototype.publishGroupProps = function (groupName) {
             var _this = this;
             var value = 0;
@@ -182,6 +226,25 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                     _this.groupSetPower(groupName, power);
                 }
                 return power;
+            });
+        };
+        ArtnetGnS.prototype.publishCrossfadeGroupProps = function (groupName) {
+            var _this = this;
+            var masterValue = 0;
+            var crossfade = 0;
+            this.property(ArtnetGnS.cfgrpPropNameMasterValue(groupName), { type: Number, description: "Master Value 0..1" }, function (setValue) {
+                if (setValue !== undefined) {
+                    masterValue = setValue;
+                    _this.crossfadeSetMasterValue(groupName, masterValue);
+                }
+                return masterValue;
+            });
+            this.property(ArtnetGnS.cfgrpPropNameCrossfade(groupName), { type: Number, description: "Crossfade 0..1" }, function (setValue) {
+                if (setValue !== undefined) {
+                    crossfade = setValue;
+                    _this.crossfadeSetCrossfade(groupName, crossfade);
+                }
+                return crossfade;
             });
         };
         ArtnetGnS.prototype.publishSceneProps = function (sceneName) {
@@ -286,8 +349,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             return group.channels;
         };
         ArtnetGnS.prototype.getScene = function (sceneName, createIfMissing) {
-            if (!this.scenes[sceneName] &&
-                createIfMissing) {
+            if (!this.scenes[sceneName] && createIfMissing) {
                 this.scenes[sceneName] = new ArtnetScene();
                 this.publishSceneProps(sceneName);
             }
@@ -315,166 +377,251 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             }
             return value;
         };
+        __decorate([
+            Metadata_1.property('all groups to value'),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], ArtnetGnS.prototype, "groupValue", null);
+        __decorate([
+            Metadata_1.callable('set channel names for fixtures (fx with of type)'),
+            __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
+            __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "fixtureSetChannelNames", null);
+        __decorate([
+            Metadata_1.callable('fade fixture'),
+            __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
+            __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(2, Metadata_1.parameter('duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], ArtnetGnS.prototype, "fixtureFadeTo", null);
+        __decorate([
+            Metadata_1.callable('fade fixture channels'),
+            __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
+            __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
+            __param(2, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(3, Metadata_1.parameter('duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], ArtnetGnS.prototype, "fixtureChannelsFadeTo", null);
+        __decorate([
+            Metadata_1.callable('fade group'),
+            __param(0, Metadata_1.parameter('group name')),
+            __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(2, Metadata_1.parameter('fade duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], ArtnetGnS.prototype, "groupFadeTo", null);
+        __decorate([
+            Metadata_1.callable('set group value'),
+            __param(0, Metadata_1.parameter('group name')),
+            __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "groupSetValue", null);
+        __decorate([
+            Metadata_1.callable('set group power'),
+            __param(0, Metadata_1.parameter('group name')),
+            __param(1, Metadata_1.parameter('power on/off : true/false')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Boolean]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "groupSetPower", null);
+        __decorate([
+            Metadata_1.callable('group settings'),
+            __param(0, Metadata_1.parameter('group name')),
+            __param(1, Metadata_1.parameter('fade on duration (seconds)')),
+            __param(2, Metadata_1.parameter('fade off duration (seconds)')),
+            __param(3, Metadata_1.parameter('on value (0..1)')),
+            __param(4, Metadata_1.parameter('off value (0..1)')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "groupSetDefaults", null);
+        __decorate([
+            Metadata_1.callable('settings for groupAddFixtures and sceneAddFixtures'),
+            __param(0, Metadata_1.parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"')),
+            __param(1, Metadata_1.parameter('defaults to ' + MIN_CHANNEL)),
+            __param(2, Metadata_1.parameter('defaults to ' + MAX_CHANNEL)),
+            __param(3, Metadata_1.parameter('defaults to ' + CHANNEL_NAME_DIGITS + '. If maxChannel is too large, this value will be automatically adjusted to fit maxChannel')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "fixtureSetDefaults", null);
+        __decorate([
+            Metadata_1.callable('Reset setup (delete all groups and scenes)'),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "reset", null);
+        __decorate([
+            Metadata_1.callable('Add complete fixtures to group (channel names have to follow the naming scheme "L_01, L_02, L_03, L_04, L_05")'),
+            __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
+            __param(1, Metadata_1.parameter('name of group')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "groupAddFixtures", null);
+        __decorate([
+            Metadata_1.callable('Add channels of fixture to group'),
+            __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
+            __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
+            __param(2, Metadata_1.parameter('name of group')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "groupAddChannels", null);
+        __decorate([
+            Metadata_1.callable('Add crossfade group. Allows crossfade between group A and B. Features master value.'),
+            __param(0, Metadata_1.parameter('name for crossfade group')),
+            __param(1, Metadata_1.parameter('name of group A')),
+            __param(2, Metadata_1.parameter('name of group B')),
+            __param(3, Metadata_1.parameter('max value group A (0..1)', true)),
+            __param(4, Metadata_1.parameter('max value group B (0..1)', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "crossfadeAdd", null);
+        __decorate([
+            __param(0, Metadata_1.parameter('name of crossfade group')),
+            __param(1, Metadata_1.parameter('crossfade (0..1)')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "crossfadeSetCrossfade", null);
+        __decorate([
+            __param(0, Metadata_1.parameter('name of crossfade group')),
+            __param(1, Metadata_1.parameter('master value (0..1)')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "crossfadeSetMasterValue", null);
+        __decorate([
+            Metadata_1.callable('Crossfade group crossfade'),
+            __param(0, Metadata_1.parameter('name of crossfade group')),
+            __param(1, Metadata_1.parameter('crossfade (0..1)')),
+            __param(2, Metadata_1.parameter('fade duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "crossfadeTo", null);
+        __decorate([
+            Metadata_1.callable('Crossfade group master value'),
+            __param(0, Metadata_1.parameter('name of crossfade group')),
+            __param(1, Metadata_1.parameter('master value (0..1)')),
+            __param(2, Metadata_1.parameter('fade duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "crossfadeMasterValueTo", null);
+        __decorate([
+            Metadata_1.callable('add fixtures to scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
+            __param(2, Metadata_1.parameter('value (0..1)')),
+            __param(3, Metadata_1.parameter('duration in seconds', true)),
+            __param(4, Metadata_1.parameter('delay in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneAddFixtures", null);
+        __decorate([
+            Metadata_1.callable('add channels to scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
+            __param(2, Metadata_1.parameter('channelName, channelName, channelName')),
+            __param(3, Metadata_1.parameter('value (0..1)')),
+            __param(4, Metadata_1.parameter('duration in seconds', true)),
+            __param(5, Metadata_1.parameter('delay in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneAddChannels", null);
+        __decorate([
+            Metadata_1.callable('call scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('time factor (> 1 faster, < 1 slower)', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number]),
+            __metadata("design:returntype", Promise)
+        ], ArtnetGnS.prototype, "sceneCall", null);
+        __decorate([
+            Metadata_1.callable('fade all groups to value'),
+            __param(0, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
+            __param(1, Metadata_1.parameter('duration in seconds')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], ArtnetGnS.prototype, "groupAllFadeTo", null);
+        __decorate([
+            Metadata_1.callable("Reset All Lights"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", Promise)
+        ], ArtnetGnS.prototype, "groupAllLightsReset", null);
+        __decorate([
+            Metadata_1.callable("Animate Group ('chase')"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "groupAnimate", null);
+        __decorate([
+            Metadata_1.callable("Animate Fixture ('chase')"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "fixtureAnimate", null);
         return ArtnetGnS;
     }(Script_1.Script));
-    __decorate([
-        Metadata_1.property('all groups to value'),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], ArtnetGnS.prototype, "groupValue", null);
-    __decorate([
-        Metadata_1.callable('set channel names for fixtures (fx with of type)'),
-        __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-        __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "fixtureSetChannelNames", null);
-    __decorate([
-        Metadata_1.callable('fade fixture'),
-        __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-        __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
-        __param(2, Metadata_1.parameter('duration in seconds', true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Number]),
-        __metadata("design:returntype", Promise)
-    ], ArtnetGnS.prototype, "fixtureFadeTo", null);
-    __decorate([
-        Metadata_1.callable('fade fixture channels'),
-        __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-        __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
-        __param(2, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
-        __param(3, Metadata_1.parameter('duration in seconds', true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String, Number, Number]),
-        __metadata("design:returntype", Promise)
-    ], ArtnetGnS.prototype, "fixtureChannelsFadeTo", null);
-    __decorate([
-        Metadata_1.callable('fade group'),
-        __param(0, Metadata_1.parameter('group name')),
-        __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
-        __param(2, Metadata_1.parameter('fade duration in seconds', true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Number]),
-        __metadata("design:returntype", Promise)
-    ], ArtnetGnS.prototype, "groupFadeTo", null);
-    __decorate([
-        Metadata_1.callable('set group value'),
-        __param(0, Metadata_1.parameter('group name')),
-        __param(1, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "groupSetValue", null);
-    __decorate([
-        Metadata_1.callable('set group power'),
-        __param(0, Metadata_1.parameter('group name')),
-        __param(1, Metadata_1.parameter('power on/off : true/false')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Boolean]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "groupSetPower", null);
-    __decorate([
-        Metadata_1.callable('group settings'),
-        __param(0, Metadata_1.parameter('group name')),
-        __param(1, Metadata_1.parameter('fade on duration (seconds)')),
-        __param(2, Metadata_1.parameter('fade off duration (seconds)')),
-        __param(3, Metadata_1.parameter('on value (0..1)')),
-        __param(4, Metadata_1.parameter('off value (0..1)')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "groupSetDefaults", null);
-    __decorate([
-        Metadata_1.callable('settings for groupAddFixtures and sceneAddFixtures'),
-        __param(0, Metadata_1.parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"')),
-        __param(1, Metadata_1.parameter('defaults to ' + MIN_CHANNEL)),
-        __param(2, Metadata_1.parameter('defaults to ' + MAX_CHANNEL)),
-        __param(3, Metadata_1.parameter('defaults to ' + CHANNEL_NAME_DIGITS + '. If maxChannel is too large, this value will be automatically adjusted to fit maxChannel')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "fixtureSetDefaults", null);
-    __decorate([
-        Metadata_1.callable('Reset setup (delete all groups and scenes)'),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", []),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "reset", null);
-    __decorate([
-        Metadata_1.callable('Add complete fixtures to group (channel names have to follow the naming scheme "L_01, L_02, L_03, L_04, L_05")'),
-        __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-        __param(1, Metadata_1.parameter('name of group')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "groupAddFixtures", null);
-    __decorate([
-        Metadata_1.callable('Add channels of fixture to group'),
-        __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-        __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
-        __param(2, Metadata_1.parameter('name of group')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String, String]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "groupAddChannels", null);
-    __decorate([
-        Metadata_1.callable('add fixtures to scene'),
-        __param(0, Metadata_1.parameter('scene name')),
-        __param(1, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-        __param(2, Metadata_1.parameter('value (0..1)')),
-        __param(3, Metadata_1.parameter('duration in seconds', true)),
-        __param(4, Metadata_1.parameter('delay in seconds', true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String, Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "sceneAddFixtures", null);
-    __decorate([
-        Metadata_1.callable('add channels to scene'),
-        __param(0, Metadata_1.parameter('scene name')),
-        __param(1, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
-        __param(2, Metadata_1.parameter('channelName, channelName, channelName')),
-        __param(3, Metadata_1.parameter('value (0..1)')),
-        __param(4, Metadata_1.parameter('duration in seconds', true)),
-        __param(5, Metadata_1.parameter('delay in seconds', true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String, String, Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "sceneAddChannels", null);
-    __decorate([
-        Metadata_1.callable('call scene'),
-        __param(0, Metadata_1.parameter('scene name')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", Promise)
-    ], ArtnetGnS.prototype, "sceneCall", null);
-    __decorate([
-        Metadata_1.callable('fade all groups to value'),
-        __param(0, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
-        __param(1, Metadata_1.parameter('duration in seconds')),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, Number]),
-        __metadata("design:returntype", Promise)
-    ], ArtnetGnS.prototype, "groupAllFadeTo", null);
-    __decorate([
-        Metadata_1.callable("Reset All Lights"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", []),
-        __metadata("design:returntype", Promise)
-    ], ArtnetGnS.prototype, "groupAllLightsReset", null);
-    __decorate([
-        Metadata_1.callable("Animate Group ('chase')"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, String]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "groupAnimate", null);
-    __decorate([
-        Metadata_1.callable("Animate Fixture ('chase')"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, String]),
-        __metadata("design:returntype", void 0)
-    ], ArtnetGnS.prototype, "fixtureAnimate", null);
     exports.ArtnetGnS = ArtnetGnS;
+    var CrossfadeGroup = (function () {
+        function CrossfadeGroup(groupA, groupB, maxValueA, maxValueB) {
+            this.maxValueA = 1;
+            this.maxValueB = 1;
+            this.currentCrossfade = 0;
+            this.currentMasterValue = 0;
+            this.groupA = groupA;
+            this.groupB = groupB;
+            if (maxValueA)
+                this.maxValueA = maxValueA;
+            if (maxValueB)
+                this.maxValueB = maxValueB;
+        }
+        Object.defineProperty(CrossfadeGroup.prototype, "crossfade", {
+            set: function (value) {
+                this.crossfadeTo(value, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(CrossfadeGroup.prototype, "masterValue", {
+            set: function (value) {
+                this.masterValueTo(value, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        CrossfadeGroup.prototype.crossfadeTo = function (value, duration) {
+            this.currentCrossfade = value;
+            this.applyChanges(duration);
+        };
+        CrossfadeGroup.prototype.masterValueTo = function (value, duration) {
+            this.currentMasterValue = value;
+            this.applyChanges(duration);
+        };
+        CrossfadeGroup.prototype.applyChanges = function (duration) {
+            this.groupA.fadeTo(this.currentMasterValue * this.maxValueA * (1.0 - this.currentCrossfade), duration);
+            this.groupB.fadeTo(this.currentMasterValue * this.maxValueB * this.currentCrossfade, duration);
+        };
+        return CrossfadeGroup;
+    }());
     var ArtnetGroup = (function () {
         function ArtnetGroup() {
             this.mChannels = [];
@@ -583,43 +730,47 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetScene.prototype.addChannelInternal = function (channel, value, duration, delay) {
             this.sceneChannels.push(new ArtnetSceneChannel(channel, value, duration, delay));
         };
-        ArtnetScene.prototype.call = function () {
+        ArtnetScene.prototype.call = function (timefactor) {
             var _this = this;
             this.sceneCallStartMs = Date.now();
             if (!this.callingScene) {
                 this.callingScene = new Promise(function (resolve, reject) {
                     _this.callingSceneResolver = resolve;
                     _this.callingSceneRejector = reject;
-                    wait(_this.duration * MS_PER_S + MS_PER_S).then(function () {
+                    if (!timefactor)
+                        timefactor = 1.0;
+                    var duration = _this.duration * timefactor;
+                    wait(duration * MS_PER_S + MS_PER_S).then(function () {
                         reject('scene timeout! (did not finish on time)');
                     });
-                    wait(_this.duration * MS_PER_S).then(function () {
+                    wait(duration * MS_PER_S).then(function () {
                         _this.resolveSceneExecution();
                     });
                 });
-                this.executeScene(0);
+                this.executeScene(0, timefactor);
             }
             return this.callingScene;
         };
-        ArtnetScene.prototype.executeScene = function (channelPos) {
+        ArtnetScene.prototype.executeScene = function (channelPos, timefactor) {
             var _this = this;
             var nowMs = Date.now();
             var deltaTimeMs = nowMs - this.sceneCallStartMs;
             var sceneChannel;
             var _loop_1 = function (i) {
                 sceneChannel = this_1.sceneChannels[i];
-                deltaDelay = sceneChannel.delay * MS_PER_S - deltaTimeMs;
+                delay = sceneChannel.delay * timefactor;
+                deltaDelay = delay * MS_PER_S - deltaTimeMs;
                 if (deltaDelay <= 0) {
-                    sceneChannel.call();
+                    sceneChannel.call(timefactor);
                 }
                 else {
                     wait(deltaDelay).then(function () {
-                        _this.executeScene(i);
+                        _this.executeScene(i, timefactor);
                     });
                     return { value: void 0 };
                 }
             };
-            var this_1 = this, deltaDelay;
+            var this_1 = this, delay, deltaDelay;
             for (var i = channelPos; i < this.sceneChannels.length; i++) {
                 var state_1 = _loop_1(i);
                 if (typeof state_1 === "object")
@@ -641,8 +792,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             this.duration = duration ? duration : 0;
             this.delay = delay ? delay : 0;
         }
-        ArtnetSceneChannel.prototype.call = function () {
-            this.channel.fadeTo(this.value * this.channel.maxValue, this.duration);
+        ArtnetSceneChannel.prototype.call = function (timefactor) {
+            this.channel.fadeTo(this.value * this.channel.maxValue, timefactor ? timefactor * this.duration : this.duration);
         };
         return ArtnetSceneChannel;
     }());
