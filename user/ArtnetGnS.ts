@@ -97,7 +97,8 @@ export class ArtnetGnS extends Script {
         @parameter('target value. Normalised range: 0 .. 1') value: number,
         @parameter('fade duration in seconds', true) duration?: number
     ): Promise<void> {
-        return this.getGroup(groupName, false) ?.fadeTo(value, duration ? duration : this.mFadeDuration);
+    	const group = this.getGroup(groupName, false);
+        return group ? group.fadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
     }
 
     @callable('set group value')
@@ -201,7 +202,8 @@ export class ArtnetGnS extends Script {
     public sceneCall(
         @parameter('scene name') sceneName: string
     ): Promise<void> {
-        return this.getScene(sceneName, false) ?.call();
+    	const scene = this.getScene(sceneName, false);
+        return scene ? scene.call() : undefined;
     }
 
     @callable('fade all groups to value')
@@ -375,9 +377,8 @@ export class ArtnetGnS extends Script {
         return channelNameList;
     }
 
-    private getGroup(groupName: string, createIfMissing: boolean): ArtnetGroup {
-        if (!this.groups[groupName] &&
-            createIfMissing) {
+    private getGroup(groupName: string, createIfMissing: boolean): ArtnetGroup|undefined {
+        if (!this.groups[groupName] && createIfMissing) {
             this.groups[groupName] = new ArtnetGroup();
             this.publishGroupProps(groupName);
         }
@@ -388,7 +389,7 @@ export class ArtnetGnS extends Script {
         if (!group) return [];
         return group.channels;
     }
-    private getScene(sceneName: string, createIfMissing: boolean): ArtnetScene {
+    private getScene(sceneName: string, createIfMissing: boolean): ArtnetScene|undefined {
         if (!this.scenes[sceneName] &&
             createIfMissing) {
             this.scenes[sceneName] = new ArtnetScene();
@@ -424,21 +425,21 @@ export class ArtnetGnS extends Script {
         return value;
     }
 
-    private random(
-        min: number,
-        max: number
-    ): number {
-        return Math.random() * (max - min) + min;
-    }
-
-    private randomInt(
-        min: number,
-        max: number
-    ): number {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    // private random(
+    //     min: number,
+    //     max: number
+    // ): number {
+    //     return Math.random() * (max - min) + min;
+    // }
+    //
+    // private randomInt(
+    //     min: number,
+    //     max: number
+    // ): number {
+    //     min = Math.ceil(min);
+    //     max = Math.floor(max);
+    //     return Math.floor(Math.random() * (max - min + 1)) + min;
+    // }
 
 }
 

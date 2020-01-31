@@ -76,7 +76,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             return this.fadeChannels(channels, value, duration ? duration : this.mFadeDuration);
         };
         ArtnetGnS.prototype.groupFadeTo = function (groupName, value, duration) {
-            return this.getGroup(groupName, false) ? .fadeTo(value, duration ? duration : this.mFadeDuration) : ;
+            var group = this.getGroup(groupName, false);
+            return group ? group.fadeTo(value, duration ? duration : this.mFadeDuration) : undefined;
         };
         ArtnetGnS.prototype.groupSetValue = function (groupName, value) {
             var group = this.getGroup(groupName, false);
@@ -123,7 +124,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             this.getScene(sceneName, true).addChannels(channels, value, duration, delay);
         };
         ArtnetGnS.prototype.sceneCall = function (sceneName) {
-            return this.getScene(sceneName, false) ? .call() : ;
+            var scene = this.getScene(sceneName, false);
+            return scene ? scene.call() : undefined;
         };
         ArtnetGnS.prototype.groupAllFadeTo = function (value, duration) {
             if (value > 1.0)
@@ -271,8 +273,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             return channelNameList;
         };
         ArtnetGnS.prototype.getGroup = function (groupName, createIfMissing) {
-            if (!this.groups[groupName] &&
-                createIfMissing) {
+            if (!this.groups[groupName] && createIfMissing) {
                 this.groups[groupName] = new ArtnetGroup();
                 this.publishGroupProps(groupName);
             }
@@ -313,14 +314,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 return value.substr(1, value.length - 2);
             }
             return value;
-        };
-        ArtnetGnS.prototype.random = function (min, max) {
-            return Math.random() * (max - min) + min;
-        };
-        ArtnetGnS.prototype.randomInt = function (min, max) {
-            min = Math.ceil(min);
-            max = Math.floor(max);
-            return Math.floor(Math.random() * (max - min + 1)) + min;
         };
         return ArtnetGnS;
     }(Script_1.Script));
