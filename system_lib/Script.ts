@@ -20,7 +20,7 @@ export class Script extends ScriptBase<ScriptEnv> {
 	 *
 	 * The value associated with the property varies with the type of property.
 	 */
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType> {
+	getProperty<PropType>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
 		return changeNotification ?
 			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
 			this.__scriptFacade.getProperty<PropType>(fullPath);

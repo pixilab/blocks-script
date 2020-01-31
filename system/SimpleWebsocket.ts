@@ -24,6 +24,10 @@ interface Dictionary<TElem> {
 	[id: string]: TElem;
 }
 
+export interface TextMessage {
+	text:string;				// The text string that was received
+}
+
 export interface WebsocketConnection {
 	/*	Send text string (append \r or other framing before calling, if needed).
 	 */
@@ -35,9 +39,7 @@ export interface WebsocketConnection {
 	// // // // Notifications // // // //
 
 	// Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
-	subscribe(event: 'textReceived', listener: (sender: WebsocketConnection, message:{
-		text:string				// The text string that was received
-	})=>void): void;
+	subscribe(event: 'textReceived', listener: (sender: WebsocketConnection, message:TextMessage)=>void): void;
 
 	/*	Connection was closed (by server or due to error, which then is logged).
 		Release any connections to it immediately. It can no longer be used
