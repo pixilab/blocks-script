@@ -19,6 +19,8 @@ import { SimpleFile } from "system/SimpleFile";
 import { Driver } from "system_lib/Driver";
 import { callable, max, min, parameter, property, driver } from "system_lib/Metadata";
 
+const XICATO_CONFIG_BASE_PATH = 'xicato.config';
+
 @driver('NetworkTCP', { port: 8000 })
 export class Xicato extends Driver<NetworkTCP> {
 
@@ -36,13 +38,22 @@ export class Xicato extends Driver<NetworkTCP> {
     private mPoller: CancelablePromise<void>;	// Polling timer, if any
     private mDeferredSender: CancelablePromise<void>;	// Send commands soon
 
+    private devices: XicDevices;
+    private groups: XicGroups;
+
+    private readonly devicesFileName: string;
+    private readonly groupsFileName: string;
+
     public constructor(private socket: NetworkTCP) {
         super(socket);
 
         // no auto-connect needed since REST API
 
 
-        const settingsFileName = 'xicato.config/' + socket.name + '.config';
+        const settingsFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '.config';
+        this.devicesFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '/devices.json';
+        this.groupsFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '/groups.json';
+
 
         // try read configuration. if not present, write example file
     		SimpleFile.read(settingsFileName).then(readValue => {
@@ -62,7 +73,7 @@ export class Xicato extends Driver<NetworkTCP> {
 
     		}).catch(error => {
     			console.warn("Can't read file", settingsFileName, error);
-          SimpleFile.write(settingsFileName, JSON.stringify(new XicatoSettings()));
+                SimpleFile.write(settingsFileName, JSON.stringify(new XicatoSettings()));
     		});
 
     }
@@ -88,18 +99,27 @@ export class Xicato extends Driver<NetworkTCP> {
       this.changed('token');
     }
 
+    @callable('recall a scene')
+    public recallScene (
+        @parameter('network name') network: string,
+        @parameter('group id') groupId: number,
+        @parameter('target scene number (an integer)') sceneId: number,
+        @parameter('fade time, in milliseconds', true) fading?: number
+    ) : Promise<void> {
+        return this.recallSceneREST(network, groupId, sceneId, fading);
+    }
+
     private requestPoll(delay: number) {
   		if (!this.mPoller && this.mAlive) {
   			this.mPoller = wait(delay);
   			this.mPoller.then(() => {
   				this.mPoller = undefined;
   				if (this.mAuthToken) {
-            this.regularPoll();
-          }
-  				else {
-            // no auth token: get auth token
-            this.authenticationPoll();
-          }
+                    this.regularPoll();
+                } else {
+                    // no auth token: get auth token
+                    this.authenticationPoll();
+                }
   				this.requestPoll(3000);	// Set up to poll again soon
   			});
   		}
@@ -113,31 +133,81 @@ export class Xicato extends Driver<NetworkTCP> {
 
   	private unauthorize() {
   		this.mAuthorized = false;
-      this.mAuthToken = undefined;
+        this.mAuthToken = undefined;
   		// this.config = undefined;
-  		console.warn("Unauthorized due to 403");
+  		console.warn("Unauthorized due to 401/403");
   	}
 
     private regularPoll() {
-  		// if (!this.devices)
-  		// 	this.getDevices();
-  		// else if (!this.groups)
-  		// 	this.getGroups();
+  		if (!this.devices)
+  			this.getDevices();
+  		else if (!this.groups)
+  			this.getGroups();
   		this.checkReadyToSend();
   	}
 
     private checkReadyToSend() {
   		if (
-        // this.devices &&
-        // this.groups &&
+        this.devices &&
+        this.groups &&
         this.connected &&
         this.mAuthorized
       )
       {
 
       }
-  			// this.sendPendingCommands();
+      // this.sendPendingCommands();
   	}
+
+    private recallSceneREST (network: string, group: number, scene: number, fading?: number) : Promise<void> {
+        var deviceId : number = 49152 + group;
+        network = encodeURI(network);
+        var url = this.mBaseURL + '/device/recallscene/' + network + '/' + deviceId + '/' + scene + '/' + (fading ? fading : '');
+        return new Promise<void>((resolve, reject) => {
+            this.authorizedGet(url)
+            .then(_result => {
+                resolve();
+            }).catch(error => {
+                console.warn(error);
+                reject(error);
+            });
+        });
+    }
+
+    private showDevicesREST () : Promise<string> {
+        var url = this.mBaseURL + '/devices';
+        return this.authorizedGet(url);
+    }
+
+    private showGroupsREST () : Promise<string> {
+        var url = this.mBaseURL + '/groups';
+        return this.authorizedGet(url);
+    }
+
+    private authorizedGet (url: string) : Promise<string> {
+        const promise = new Promise<string>((resolve, reject) => {
+            SimpleHTTP.newRequest(url).
+            header('Authorization', 'Bearer ' + this.mAuthToken).
+            get().
+            then(response => {
+                this.connected = true;
+                if (response.status === 200) {
+                    resolve(response.data);
+                } else if (response.status === 401 || response.status === 403) {
+                    // token likely invalid
+                    this.unauthorize();
+                    reject(response.data);
+                } else {
+                    console.warn(response.status + ': ' + response.data);
+                    reject(response.data);
+                }
+            }).catch(error => {
+                this.requestFailed(error);
+                reject();
+            });
+        });
+        return promise;
+    }
 
     private authenticationPoll() {
   		SimpleHTTP.newRequest(this.mBaseURL + 'api/token').
@@ -148,10 +218,17 @@ export class Xicato extends Driver<NetworkTCP> {
   			if (response.status === 200) {
   				var authResponse: string = response.data;
   				if (authResponse && authResponse.length) {
-  						this.gotAuthCode(authResponse);
+                    // console.log('got auth response: ' + authResponse);
+  					this.gotAuthCode(authResponse);
   				}
   			} else {
   				this.mAuthorized = false;
+                if (response.status === 401) {
+                    if (!this.mLoggedAuthFail) {
+                        console.error('auth request failed: ' + response.status + ': ' + response.data);
+                        this.mLoggedAuthFail = true;	// Log that error only once per session
+                    }
+                }
   				if (response.status === 403) {
   					if (!this.mLoggedAuthFail) {
   						console.error("enter correct username & password in Xicato config file")
@@ -162,19 +239,26 @@ export class Xicato extends Driver<NetworkTCP> {
   		}).catch(error => this.requestFailed(error));
   	}
 
-  	// private getDevices() {
-  	// 	SimpleHTTP.newRequest(this.getKeyedUrlBase() + 'lights').get().then(response => {
-  	// 		this.connected = true;
-  	// 		if (response.status === 200) {
-  	// 			// var devices: Dictionary<Device> = JSON.parse(response.data);
-  	// 			// if (devices) this.devices = new NamedItems<Device>(devices);
-  	// 			// else console.warn("Missing lights data");
-  	// 		} else {
-  	// 			console.warn("Lights error response", response.status);
-  	// 			if (response.status === 403) this.unauthorize();
-  	// 		}
-  	// 	}).catch(error => this.requestFailed(error));
-  	// }
+  	private getDevices() {
+  		this.showDevicesREST()
+        .then(result => {
+            this.devices = JSON.parse(result);
+            // thought: instead of stringify, one could also just store the response
+            SimpleFile.write(this.devicesFileName, JSON.stringify(this.devices));
+        }).catch(error => {
+            console.warn(error);
+        });
+  	}
+    private getGroups() {
+        this.showGroupsREST()
+        .then(result => {
+            this.groups = JSON.parse(result);
+            // thought: instead of stringify, one could also just store the response
+            SimpleFile.write(this.groupsFileName, JSON.stringify(this.groups));
+        }).catch(error => {
+            console.warn(error);
+        });;
+    }
 
     private requestFailed(error: string) {
   		this.connected = false;
@@ -223,4 +307,73 @@ class XicatoSettings {
 
 }
 
+class XicDeviceBase {
+    public "01. Device ID" : string;
+    public "02. Name" : string | null;
+    public "03. Device" : string | null;
+    public  NetworkName : string | null;
+}
+class XicDeviceOrSensor extends XicDeviceBase {
+    public "07. supply_voltage" : number | null;
+    public "09. signal_strength" : number | null;
+    public "10. status" : number | null;
+    public "11. Last Update" : number | null;
+    public "12. Adv Interval" : number | null;
+}
 /* Xicato REST API responses */
+class XicDevice extends XicDeviceOrSensor {
+    public "04. Intensity" : number;
+    public "05. Power" : number | null;
+    /** Integer */
+    public "06. Tc temperature" : number;
+    /** Nullable Integer */
+    public "08. on_hours" : number | null;
+}
+class XicSensor extends XicDeviceOrSensor {
+    /** Nullable Integer */
+    public  "04. Lux" : number[];
+    public  "05. Motion" : number[];
+    /** Nullable Integer */
+    public  "06. Temperature" : number | null;
+    public  "08. Humidity" : number | null;
+    public  "LuxHours" : number[];
+}
+class XicSwitchData {
+    public last_press: number | null;
+    public last_release: number | null;
+    public state: boolean;
+}
+class XicSwitch extends XicDeviceBase {
+    public "04. Button Data" : XicSwitchData[];
+    /** Nullable Integer */
+    public "05. PCB temperature" : number | null;
+    public "06. supply_voltage" : number | null;
+    /** Nullable Integer */
+    public "07. signal_strength" : number | null;
+    /** Nullable Integer */
+    public "08. status" : number | null;
+    public "09. Last Update" : number | null;
+    public "10. Last Press" : number | null;
+}
+class XicDevices {
+    public network : string | null;
+    public networks : string[];
+    public connectable : boolean;
+    public devices : XicDevice[];
+    public sensors : XicSensor[];
+    public switches : XicSwitch[];
+    public temperature : number;
+}
+class XicGroup {
+    public devices: XicDevice[];
+    /** integer; null indicates devices without any group membership */
+    public groupId : number | null;
+    public groupName : string;
+}
+class XicGroups {
+    public network : string | null;
+    public networks : string[];
+    public connectable : boolean;
+    public groups : XicGroup[];
+    public temperature : number;
+}

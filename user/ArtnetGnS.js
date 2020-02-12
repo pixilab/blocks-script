@@ -23,7 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/Metadata"], function (require, exports, Artnet_1, Script_1, Metadata_1) {
+define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Script", "system_lib/Metadata"], function (require, exports, Artnet_1, Realm_1, Script_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var CHANNEL_NAME_PREFIX = 'L_';
@@ -46,10 +46,6 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             _this.mValue = 0.0;
             _this.mChannelNamePrefix = CHANNEL_NAME_PREFIX;
             _this.mChannelNameDigits = CHANNEL_NAME_DIGITS;
-            _this.groups = {};
-            _this.scenes = {};
-            _this.fixtureChannelNames = {};
-            _this.crossfaders = {};
             return _this;
         }
         Object.defineProperty(ArtnetGnS.prototype, "groupValue", {
@@ -57,8 +53,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                 return this.mValue;
             },
             set: function (value) {
-                for (var key in this.groups) {
-                    this.groups[key].value = value;
+                for (var key in ArtnetGnS.groups) {
+                    ArtnetGnS.groups[key].value = value;
                 }
                 this.mValue = value;
             },
@@ -69,7 +65,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var fixtureNameList = this.getStringArray(fixtureNames);
             var channelNameList = this.getStringArray(channelNames);
             for (var i = 0; i < fixtureNameList.length; i++) {
-                this.fixtureChannelNames[fixtureNameList[i]] = channelNameList;
+                ArtnetGnS.fixtureChannelNames[fixtureNameList[i]] = channelNameList;
             }
         };
         ArtnetGnS.prototype.fixtureFadeTo = function (fixtureName, value, duration) {
@@ -125,25 +121,25 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var groupA = this.getGroup(groupNameA, false);
             var groupB = this.getGroup(groupNameB, false);
             if (groupA && groupB) {
-                this.crossfaders[crossfaderName] = new ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB);
+                ArtnetGnS.crossfaders[crossfaderName] = new ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB);
                 if (PUBLISH_CROSSFADER_PROPERTIES)
                     this.publishCrossfaderProps(crossfaderName);
             }
         };
         ArtnetGnS.prototype.crossfaderSetFadeValue = function (crossfaderName, fadeValue) {
-            var crossfader = this.crossfaders[crossfaderName];
+            var crossfader = ArtnetGnS.crossfaders[crossfaderName];
             if (!crossfader)
                 return;
             crossfader.fadeTo(fadeValue, -1, 0);
         };
         ArtnetGnS.prototype.crossfaderSetMasterValue = function (crossfaderName, masterValue) {
-            var crossfader = this.crossfaders[crossfaderName];
+            var crossfader = ArtnetGnS.crossfaders[crossfaderName];
             if (!crossfader)
                 return;
             crossfader.fadeTo(-1, masterValue, 0);
         };
         ArtnetGnS.prototype.crossfaderFadeTo = function (crossfaderName, fadeValue, masterValue, duration) {
-            var crossfader = this.crossfaders[crossfaderName];
+            var crossfader = ArtnetGnS.crossfaders[crossfaderName];
             return crossfader ? crossfader.fadeTo(fadeValue, masterValue ? masterValue : -1, duration ? duration : this.mFadeDuration) : undefined;
         };
         ArtnetGnS.prototype.sceneAddFixtures = function (sceneName, fixtureNames, value, duration, delay) {
@@ -162,27 +158,45 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var crossfaders = this.getCrossfaders(crossfaderNames);
             this.getScene(sceneName, true).addCrossfaders(crossfaders, fadeValue, masterValue, duration, delay);
         };
-        ArtnetGnS.prototype.sceneCall = function (sceneName, timefactor) {
+        ArtnetGnS.prototype.sceneAddExecute = function (sceneName, realmName, groupName, taskName, delay) {
+            this.getScene(sceneName, true).addExecute(realmName, groupName, taskName, delay);
+        };
+        ArtnetGnS.prototype.sceneCall = function (sceneName, timefactor, seekTo, force) {
             var scene = this.getScene(sceneName, false);
             if (timefactor) {
                 if (timefactor <= 0.0)
                     return;
                 timefactor = 1.0 / timefactor;
             }
-            return scene ? scene.call(timefactor) : undefined;
+            scene.call(timefactor, seekTo, force);
+            return undefined;
+        };
+        ArtnetGnS.prototype.sceneCancel = function (sceneName) {
+            var scene = this.getScene(sceneName, false);
+            if (!scene)
+                return;
+            scene.cancel();
+        };
+        ArtnetGnS.prototype.sceneIsRunning = function (sceneName) {
+            var scene = this.getScene(sceneName, false);
+            return scene ? scene.isRunning : false;
         };
         ArtnetGnS.prototype.groupAllFadeTo = function (value, duration) {
             if (value > 1.0)
                 value = value / 255.0;
-            for (var key in this.groups) {
-                this.groups[key].fadeTo(value, duration);
+            for (var key in ArtnetGnS.groups) {
+                ArtnetGnS.groups[key].fadeTo(value, duration);
             }
             return wait(duration * MS_PER_S);
         };
         ArtnetGnS.prototype.groupAnimate = function (groupName, delay, style) {
             if (style == 'chase') {
                 var channels = this.getGroupChannels(groupName);
-                this.recursiveChase(channels, delay);
+                return this.recursiveChase(channels, delay);
+            }
+            if (style == 'chase backwards') {
+                var channels = this.getGroupChannels(groupName);
+                return this.recursiveChase(channels, delay, true);
             }
         };
         ArtnetGnS.prototype.fixtureAnimate = function (fixtureName, delay, style) {
@@ -192,10 +206,14 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             }
         };
         ArtnetGnS.prototype.reset = function () {
-            this.fixtureChannelNames = {};
-            this.groups = {};
-            this.scenes = {};
-            this.crossfaders = {};
+            ArtnetGnS.fixtureChannelNames = {};
+            ArtnetGnS.groups = {};
+            for (var key in ArtnetGnS.scenes) {
+                var scene = ArtnetGnS.scenes[key];
+                scene.cancel();
+            }
+            ArtnetGnS.scenes = {};
+            ArtnetGnS.crossfaders = {};
         };
         ArtnetGnS.sanitizePropName = function (propName) {
             return propName.replace(/[^\w\-]/g, '-');
@@ -279,17 +297,30 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var _this = this;
             if (pos == channels.length)
                 return;
-            wait(delay / 2 * 1000).then(function () {
+            wait(delay * MS_PER_S).then(function () {
                 var channel = channels[pos];
                 channel.fadeTo(value * channel.maxValue, delay);
                 _this.recursiveValue(channels, pos + 1, value, delay);
             });
         };
-        ArtnetGnS.prototype.recursiveChase = function (channels, delay) {
+        ArtnetGnS.prototype.recursiveChase = function (channels, delay, backwards) {
             var _this = this;
-            this.recursiveValue(channels, 0, 1, delay);
-            wait(delay * 1000).then(function () {
-                _this.recursiveValue(channels, 0, _this.mLightOffValue, delay);
+            var channelsCopy = channels.slice();
+            if (backwards)
+                channelsCopy = channelsCopy.reverse();
+            this.recursiveValue(channelsCopy, 0, 1, delay);
+            var waitDelay = delay * 2 * MS_PER_S;
+            wait(waitDelay).then(function () {
+                _this.recursiveValue(channelsCopy, 0, _this.mLightOffValue, delay);
+            });
+            return new Promise(function (resolve, reject) {
+                var total = channelsCopy.length * delay * MS_PER_S + waitDelay;
+                wait(total + MS_PER_S).then(function () {
+                    reject('scene timeout! (did not finish on time)');
+                });
+                wait(total).then(function () {
+                    resolve();
+                });
             });
         };
         ArtnetGnS.prototype.fadeChannels = function (channels, value, duration) {
@@ -341,8 +372,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         };
         ArtnetGnS.prototype.getFixtureChannelNames = function (fixtureName) {
             var channelNameList = [];
-            if (this.fixtureChannelNames[fixtureName]) {
-                channelNameList = this.fixtureChannelNames[fixtureName];
+            if (ArtnetGnS.fixtureChannelNames[fixtureName]) {
+                channelNameList = ArtnetGnS.fixtureChannelNames[fixtureName];
             }
             else {
                 for (var i = this.mMinChannel; i < this.mMaxChannel; i++) {
@@ -353,18 +384,18 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             return channelNameList;
         };
         ArtnetGnS.prototype.getGroup = function (groupName, createIfMissing) {
-            if (!this.groups[groupName] && createIfMissing) {
-                this.groups[groupName] = new ArtnetGroup();
+            if (!ArtnetGnS.groups[groupName] && createIfMissing) {
+                ArtnetGnS.groups[groupName] = new ArtnetGroup();
                 if (PUBLISH_GROUP_PROPERTIES)
                     this.publishGroupProps(groupName);
             }
-            return this.groups[groupName];
+            return ArtnetGnS.groups[groupName];
         };
         ArtnetGnS.prototype.getGroups = function (groupNames) {
             var groupNameList = this.getStringArray(groupNames);
             var groups = [];
             for (var i = 0; i < groupNameList.length; i++) {
-                var group = this.groups[groupNameList[i]];
+                var group = ArtnetGnS.groups[groupNameList[i]];
                 if (group)
                     groups.push(group);
             }
@@ -374,7 +405,7 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             var crossfaderNameList = this.getStringArray(crossfaderNames);
             var crossfaders = [];
             for (var i = 0; i < crossfaderNameList.length; i++) {
-                var crossfader = this.crossfaders[crossfaderNameList[i]];
+                var crossfader = ArtnetGnS.crossfaders[crossfaderNameList[i]];
                 if (crossfader)
                     crossfaders.push(crossfader);
             }
@@ -387,12 +418,12 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             return group.channels;
         };
         ArtnetGnS.prototype.getScene = function (sceneName, createIfMissing) {
-            if (!this.scenes[sceneName] && createIfMissing) {
-                this.scenes[sceneName] = new ArtnetScene();
+            if (!ArtnetGnS.scenes[sceneName] && createIfMissing) {
+                ArtnetGnS.scenes[sceneName] = new ArtnetScene();
                 if (PUBLISH_SCENE_PROPERTIES)
                     this.publishSceneProps(sceneName);
             }
-            return this.scenes[sceneName];
+            return ArtnetGnS.scenes[sceneName];
         };
         ArtnetGnS.prototype.getStringArray = function (list) {
             var result = [];
@@ -416,6 +447,10 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             }
             return value;
         };
+        ArtnetGnS.groups = {};
+        ArtnetGnS.scenes = {};
+        ArtnetGnS.fixtureChannelNames = {};
+        ArtnetGnS.crossfaders = {};
         __decorate([
             Metadata_1.property('all groups to value'),
             Metadata_1.min(0), Metadata_1.max(1),
@@ -603,13 +638,40 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "sceneAddCrossfaders", null);
         __decorate([
+            Metadata_1.callable('add task execute to scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('realm')),
+            __param(2, Metadata_1.parameter('group')),
+            __param(3, Metadata_1.parameter('task')),
+            __param(4, Metadata_1.parameter('delay in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String, String, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneAddExecute", null);
+        __decorate([
             Metadata_1.callable('call scene'),
             __param(0, Metadata_1.parameter('scene name')),
             __param(1, Metadata_1.parameter('time factor (> 1 faster, < 1 slower)', true)),
+            __param(2, Metadata_1.parameter('seek to position in seconds', true)),
+            __param(3, Metadata_1.parameter('force execution (usually a scene has to finish before it can be called again)', true)),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number]),
+            __metadata("design:paramtypes", [String, Number, Number, Boolean]),
             __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "sceneCall", null);
+        __decorate([
+            Metadata_1.callable('cancel scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneCancel", null);
+        __decorate([
+            Metadata_1.callable('is scene running?'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneIsRunning", null);
         __decorate([
             Metadata_1.callable('fade all groups to value'),
             __param(0, Metadata_1.parameter('target value. Normalised range: 0 .. 1')),
@@ -619,10 +681,10 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "groupAllFadeTo", null);
         __decorate([
-            Metadata_1.callable("Animate Group ('chase')"),
+            Metadata_1.callable("Animate Group ('chase', 'chase backwards')"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, String]),
-            __metadata("design:returntype", void 0)
+            __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "groupAnimate", null);
         __decorate([
             Metadata_1.callable("Animate Fixture ('chase')"),
@@ -747,6 +809,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
     var ArtnetScene = (function () {
         function ArtnetScene() {
             this.sceneItems = [];
+            this.runObject = null;
+            this.runCounter = 0;
         }
         Object.defineProperty(ArtnetScene.prototype, "duration", {
             get: function () {
@@ -758,6 +822,13 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                         max = total;
                 }
                 return max;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ArtnetScene.prototype, "isRunning", {
+            get: function () {
+                return this.runObject !== null;
             },
             enumerable: true,
             configurable: true
@@ -792,6 +863,10 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             }
             this.applyChanges();
         };
+        ArtnetScene.prototype.addExecute = function (realm, group, task, delay) {
+            this.sceneItems.push(new ArtnetSceneExecute(realm, group, task, 0, delay));
+            this.applyChanges();
+        };
         ArtnetScene.prototype.applyChanges = function () {
             this.sceneItems.sort(function (a, b) {
                 if (a.delay > b.delay)
@@ -810,9 +885,16 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
         ArtnetScene.prototype.addCrossfaderInternal = function (crossfader, fadeValue, masterValue, duration, delay) {
             this.sceneItems.push(new ArtnetSceneCrossfade(crossfader, fadeValue, masterValue, duration, delay));
         };
-        ArtnetScene.prototype.call = function (timefactor) {
+        ArtnetScene.prototype.call = function (timefactor, seekTo, force) {
             var _this = this;
             this.sceneCallStartMs = Date.now();
+            if (seekTo)
+                this.sceneCallStartMs -= seekTo * MS_PER_S;
+            if (this.callingScene && force) {
+                if (this.debug)
+                    console.log('stopping previous scene call');
+                this.resolveSceneExecution();
+            }
             if (!this.callingScene) {
                 this.callingScene = new Promise(function (resolve, reject) {
                     _this.callingSceneResolver = resolve;
@@ -820,6 +902,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                     if (!timefactor)
                         timefactor = 1.0;
                     var duration = _this.duration * timefactor;
+                    if (seekTo)
+                        duration -= seekTo;
                     wait(duration * MS_PER_S + MS_PER_S).then(function () {
                         reject('scene timeout! (did not finish on time)');
                     });
@@ -827,25 +911,42 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
                         _this.resolveSceneExecution();
                     });
                 });
-                this.executeScene(0, timefactor);
+                this.runObject = new Object();
+                this.runCounter++;
+                this.executeScene(0, timefactor, this.runObject, this.runCounter);
             }
             return this.callingScene;
         };
-        ArtnetScene.prototype.executeScene = function (channelPos, timefactor) {
+        ArtnetScene.prototype.cancel = function () {
+            if (this.callingScene) {
+                this.resolveSceneExecution();
+                this.runObject = null;
+            }
+        };
+        ArtnetScene.prototype.executeScene = function (channelPos, timefactor, runObject, runCounter) {
             var _this = this;
             var nowMs = Date.now();
             var deltaTimeMs = nowMs - this.sceneCallStartMs;
             var sceneItem;
+            if (this.debug)
+                console.log('continuing scene at ' + deltaTimeMs + 'ms (#' + runCounter + ')');
+            if (runObject !== this.runObject) {
+                console.log('runID is wrong ' + runObject + ' vs ' + this.runObject);
+                return;
+            }
             var _loop_1 = function (i) {
                 sceneItem = this_1.sceneItems[i];
                 delay = sceneItem.delay * timefactor;
                 deltaDelay = delay * MS_PER_S - deltaTimeMs;
                 if (deltaDelay <= 0) {
-                    sceneItem.call(timefactor);
+                    sceneItem.call(timefactor * (deltaDelay < -MS_PER_S ? 0.001 : 1));
+                    if (this_1.debug)
+                        console.log('calling scene item ' + i + ' at ' + deltaTimeMs + 'ms (#' + runCounter + ')');
                 }
                 else {
                     wait(deltaDelay).then(function () {
-                        _this.executeScene(i, timefactor);
+                        var offset = i;
+                        _this.executeScene(offset, timefactor, runObject, runCounter);
                     });
                     return { value: void 0 };
                 }
@@ -858,7 +959,8 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             }
         };
         ArtnetScene.prototype.resolveSceneExecution = function () {
-            this.callingSceneResolver(true);
+            if (this.callingSceneResolver)
+                this.callingSceneResolver(true);
             delete this.callingSceneResolver;
             delete this.callingSceneRejector;
             delete this.callingScene;
@@ -911,5 +1013,21 @@ define(["require", "exports", "system/Artnet", "system_lib/Script", "system_lib/
             this.crossfader.fadeTo(this.fadeValue, this.masterValue, timefactor ? timefactor * this.duration : this.duration);
         };
         return ArtnetSceneCrossfade;
+    }(ArtnetSceneItem));
+    var ArtnetSceneExecute = (function (_super) {
+        __extends(ArtnetSceneExecute, _super);
+        function ArtnetSceneExecute(realm, group, task, duration, delay) {
+            var _this = _super.call(this, duration, delay) || this;
+            _this.realm = realm;
+            _this.group = group;
+            _this.task = task;
+            return _this;
+        }
+        ArtnetSceneExecute.prototype.call = function (factor) {
+            if (factor > 0.9 && factor < 1.1) {
+                Realm_1.Realm[this.realm].group[this.group][this.task].running = true;
+            }
+        };
+        return ArtnetSceneExecute;
     }(ArtnetSceneItem));
 });

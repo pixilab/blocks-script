@@ -13,6 +13,7 @@
  */
 
 import { Artnet, Fixture, Channel, AnalogChannel } from "system/Artnet";
+import { Realm } from "system/Realm";
 import { Script, ScriptEnv } from "system_lib/Script";
 import { callable, max, min, parameter, property } from "system_lib/Metadata";
 
@@ -43,11 +44,10 @@ export class ArtnetGnS extends Script {
     private mChannelNamePrefix = CHANNEL_NAME_PREFIX;
     private mChannelNameDigits = CHANNEL_NAME_DIGITS;
 
-    private groups: Dictionary<ArtnetGroup> = {};
-    private scenes: Dictionary<ArtnetScene> = {};
-    private fixtureChannelNames: Dictionary<string[]> = {};
-
-    private crossfaders: Dictionary<ArtnetCrossfader> = {};
+    private static groups: Dictionary<ArtnetGroup> = {};
+    private static scenes: Dictionary<ArtnetScene> = {};
+    private static fixtureChannelNames: Dictionary<string[]> = {};
+    private static crossfaders: Dictionary<ArtnetCrossfader> = {};
 
     public constructor(env: ScriptEnv) {
         super(env);
@@ -56,8 +56,8 @@ export class ArtnetGnS extends Script {
     @property('all groups to value')
     @min(0) @max(1)
     set groupValue(value: number) {
-        for (var key in this.groups) {
-            this.groups[key].value = value;
+        for (var key in ArtnetGnS.groups) {
+            ArtnetGnS.groups[key].value = value;
         }
         this.mValue = value;
     }
@@ -73,7 +73,7 @@ export class ArtnetGnS extends Script {
         var fixtureNameList: string[] = this.getStringArray(fixtureNames);
         var channelNameList: string[] = this.getStringArray(channelNames);
         for (let i = 0; i < fixtureNameList.length; i++) {
-            this.fixtureChannelNames[fixtureNameList[i]] = channelNameList;
+            ArtnetGnS.fixtureChannelNames[fixtureNameList[i]] = channelNameList;
         }
     }
 
@@ -193,7 +193,7 @@ export class ArtnetGnS extends Script {
       var groupA = this.getGroup(groupNameA, false);
       var groupB = this.getGroup(groupNameB, false);
       if (groupA && groupB) {
-          this.crossfaders[crossfaderName] = new ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB);
+          ArtnetGnS.crossfaders[crossfaderName] = new ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB);
           if (PUBLISH_CROSSFADER_PROPERTIES) this.publishCrossfaderProps(crossfaderName);
       }
     }
@@ -201,7 +201,7 @@ export class ArtnetGnS extends Script {
       @parameter('name of crossfader') crossfaderName: string,
       @parameter('fade value (0..1)') fadeValue: number
     ) {
-        const crossfader = this.crossfaders[crossfaderName];
+        const crossfader = ArtnetGnS.crossfaders[crossfaderName];
         if (!crossfader) return;
         crossfader.fadeTo(fadeValue, -1, 0);
     }
@@ -209,7 +209,7 @@ export class ArtnetGnS extends Script {
       @parameter('name of crossfader') crossfaderName: string,
       @parameter('master value (0..1)') masterValue: number
     ) {
-      const crossfader = this.crossfaders[crossfaderName];
+      const crossfader = ArtnetGnS.crossfaders[crossfaderName];
       if (!crossfader) return;
       crossfader.fadeTo(-1, masterValue, 0);
     }
@@ -220,7 +220,7 @@ export class ArtnetGnS extends Script {
       @parameter('master value (0..1) | -1 : ignore', true) masterValue?: number,
       @parameter('fade duration in seconds', true) duration?: number
     ) {
-        const crossfader = this.crossfaders[crossfaderName];
+        const crossfader = ArtnetGnS.crossfaders[crossfaderName];
         return crossfader ? crossfader.fadeTo(
             fadeValue,
             masterValue ? masterValue : -1,
@@ -274,18 +274,47 @@ export class ArtnetGnS extends Script {
         var crossfaders: ArtnetCrossfader[] = this.getCrossfaders(crossfaderNames);
         this.getScene(sceneName, true).addCrossfaders(crossfaders, fadeValue, masterValue, duration, delay);
     }
+    @callable('add task execute to scene')
+    public sceneAddExecute (
+        @parameter('scene name') sceneName: string,
+        @parameter('realm') realmName: string,
+        @parameter('group') groupName: string,
+        @parameter('task') taskName: string,
+        @parameter('delay in seconds', true) delay?: number
+    ) {
+        this.getScene(sceneName, true).addExecute(realmName, groupName, taskName, delay);
+    }
 
     @callable('call scene')
     public sceneCall(
         @parameter('scene name') sceneName: string,
-        @parameter('time factor (> 1 faster, < 1 slower)', true) timefactor?: number
+        @parameter('time factor (> 1 faster, < 1 slower)', true) timefactor?: number,
+        @parameter('seek to position in seconds', true) seekTo?: number,
+        @parameter('force execution (usually a scene has to finish before it can be called again)', true) force?: boolean
     ): Promise<void> {
     	  const scene = this.getScene(sceneName, false);
         if (timefactor) {
             if (timefactor <= 0.0) return;
             timefactor = 1.0 / timefactor;
         }
-        return scene ? scene.call(timefactor) : undefined;
+        // return scene ? scene.call(timefactor, seekTo, force) : undefined;
+        scene.call(timefactor, seekTo, force);
+        return undefined;
+    }
+    @callable('cancel scene')
+    public sceneCancel(
+        @parameter('scene name') sceneName: string
+    ): void {
+        const scene = this.getScene(sceneName, false);
+        if (!scene) return;
+        scene.cancel();
+    }
+    @callable('is scene running?')
+    public sceneIsRunning (
+        @parameter('scene name') sceneName: string
+    ) {
+        const scene = this.getScene(sceneName, false);
+        return scene ? scene.isRunning : false;
     }
 
     @callable('fade all groups to value')
@@ -294,17 +323,21 @@ export class ArtnetGnS extends Script {
         @parameter('duration in seconds') duration: number
     ): Promise<void> {
         if (value > 1.0) value = value / 255.0;
-        for (var key in this.groups) {
-            this.groups[key].fadeTo(value, duration);
+        for (var key in ArtnetGnS.groups) {
+            ArtnetGnS.groups[key].fadeTo(value, duration);
         }
         return wait(duration * MS_PER_S);
     }
 
-    @callable("Animate Group ('chase')")
-    public groupAnimate(groupName: string, delay: number, style: string): void {
+    @callable("Animate Group ('chase', 'chase backwards')")
+    public groupAnimate(groupName: string, delay: number, style: string): Promise<void> {
         if (style == 'chase') {
             var channels: AnalogChannel[] = this.getGroupChannels(groupName);
-            this.recursiveChase(channels, delay);
+            return this.recursiveChase(channels, delay);
+        }
+        if (style == 'chase backwards') {
+            var channels: AnalogChannel[] = this.getGroupChannels(groupName);
+            return this.recursiveChase(channels, delay, true);
         }
     }
 
@@ -318,10 +351,15 @@ export class ArtnetGnS extends Script {
 
     @callable('Reset setup (delete all groups and scenes)')
     public reset() {
-        this.fixtureChannelNames = {};
-        this.groups = {};
-        this.scenes = {};
-        this.crossfaders = {};
+        ArtnetGnS.fixtureChannelNames = {};
+        ArtnetGnS.groups = {};
+        // cancel and remove scenes
+        for (let key in ArtnetGnS.scenes) {
+            let scene = ArtnetGnS.scenes[key];
+            scene.cancel();
+        }
+        ArtnetGnS.scenes = {};
+        ArtnetGnS.crossfaders = {};
     }
 
     /**
@@ -415,19 +453,32 @@ export class ArtnetGnS extends Script {
 
     private recursiveValue(channels: AnalogChannel[], pos: number, value: number, delay: number) {
         if (pos == channels.length) return;
-        wait(delay / 2 * 1000).then(() => {
+        wait(delay * MS_PER_S).then(() => {
             var channel: AnalogChannel = channels[pos];
             channel.fadeTo(value * channel.maxValue, delay);
             this.recursiveValue(channels, pos + 1, value, delay);
         });
     }
 
-    private recursiveChase(channels: AnalogChannel[], delay: number) {
-        this.recursiveValue(channels, 0, 1, delay);
-        wait(delay * 1000).then(() => {
-            this.recursiveValue(channels, 0, this.mLightOffValue, delay);
+    private recursiveChase(channels: AnalogChannel[], delay: number, backwards?: boolean) : Promise<void> {
+        var channelsCopy = channels.slice();
+        if (backwards) channelsCopy = channelsCopy.reverse();
+        this.recursiveValue(channelsCopy, 0, 1, delay);
+        const waitDelay = delay * 2 * MS_PER_S;
+        wait(waitDelay).then(() => {
+            this.recursiveValue(channelsCopy, 0, this.mLightOffValue, delay);
+        });
+        return new Promise<void>((resolve, reject) => {
+            const total = channelsCopy.length * delay * MS_PER_S + waitDelay;
+            wait(total + MS_PER_S).then(() => {
+                reject('scene timeout! (did not finish on time)');
+            });
+            wait(total).then(() => {
+                resolve();
+            });
         });
     }
+
 
     private fadeChannels(channels: AnalogChannel[], value: number, duration: number): Promise<void> {
         for (let i = 0; i < channels.length; i++) {
@@ -477,8 +528,8 @@ export class ArtnetGnS extends Script {
     }
     private getFixtureChannelNames(fixtureName: string): string[] {
         var channelNameList: string[] = [];
-        if (this.fixtureChannelNames[fixtureName]) {
-            channelNameList = this.fixtureChannelNames[fixtureName];
+        if (ArtnetGnS.fixtureChannelNames[fixtureName]) {
+            channelNameList = ArtnetGnS.fixtureChannelNames[fixtureName];
         }
         else {
             for (let i = this.mMinChannel; i < this.mMaxChannel; i++) {
@@ -490,17 +541,17 @@ export class ArtnetGnS extends Script {
     }
 
     private getGroup(groupName: string, createIfMissing: boolean): ArtnetGroup|undefined {
-        if (!this.groups[groupName] && createIfMissing) {
-            this.groups[groupName] = new ArtnetGroup();
+        if (!ArtnetGnS.groups[groupName] && createIfMissing) {
+            ArtnetGnS.groups[groupName] = new ArtnetGroup();
             if (PUBLISH_GROUP_PROPERTIES) this.publishGroupProps(groupName);
         }
-        return this.groups[groupName];
+        return ArtnetGnS.groups[groupName];
     }
     private getGroups(groupNames: string): ArtnetGroup[] {
         var groupNameList: string[] = this.getStringArray(groupNames);
         var groups: ArtnetGroup[] = [];
         for (let i = 0; i < groupNameList.length; i++) {
-            var group = this.groups[groupNameList[i]];
+            var group = ArtnetGnS.groups[groupNameList[i]];
             if (group) groups.push(group);
         }
         return groups;
@@ -509,7 +560,7 @@ export class ArtnetGnS extends Script {
         var crossfaderNameList: string[] = this.getStringArray(crossfaderNames);
         var crossfaders: ArtnetCrossfader[] = [];
         for (let i = 0; i < crossfaderNameList.length; i++) {
-            var crossfader = this.crossfaders[crossfaderNameList[i]];
+            var crossfader = ArtnetGnS.crossfaders[crossfaderNameList[i]];
             if (crossfader) crossfaders.push(crossfader);
         }
         return crossfaders;
@@ -520,11 +571,11 @@ export class ArtnetGnS extends Script {
         return group.channels;
     }
     private getScene(sceneName: string, createIfMissing: boolean): ArtnetScene|undefined {
-        if (!this.scenes[sceneName] && createIfMissing) {
-            this.scenes[sceneName] = new ArtnetScene();
+        if (!ArtnetGnS.scenes[sceneName] && createIfMissing) {
+            ArtnetGnS.scenes[sceneName] = new ArtnetScene();
             if (PUBLISH_SCENE_PROPERTIES) this.publishSceneProps(sceneName);
         }
-        return this.scenes[sceneName];
+        return ArtnetGnS.scenes[sceneName];
     }
 
     private getStringArray(list: string): string[] {
@@ -675,6 +726,10 @@ class ArtnetScene {
     private callingScene: Promise<void>;
     private callingSceneResolver: (value?: any) => void;
     private callingSceneRejector: (error?: any) => void;
+    private runObject: Object = null;
+    private runCounter: number = 0;
+
+    public debug: boolean;
 
     /** duration in seconds */
     get duration(): number {
@@ -685,6 +740,10 @@ class ArtnetScene {
             if (total > max) max = total;
         }
         return max;
+    }
+    /* is scene running? */
+    get isRunning() : boolean {
+        return this.runObject !== null;
     }
 
     public addChannel(channel: AnalogChannel, value: number, duration?: number, delay?: number) {
@@ -717,6 +776,11 @@ class ArtnetScene {
         }
         this.applyChanges();
     }
+    public addExecute(realm: string, group: string, task: string, delay?: number)
+    {
+        this.sceneItems.push(new ArtnetSceneExecute(realm, group, task, 0, delay));
+        this.applyChanges();
+    }
     private applyChanges() {
         this.sceneItems.sort((a, b) => {
             if (a.delay > b.delay) return 1;
@@ -735,14 +799,21 @@ class ArtnetScene {
         this.sceneItems.push(new ArtnetSceneCrossfade(crossfader, fadeValue, masterValue, duration, delay));
     }
 
-    public call(timefactor? : number): Promise<void> {
+    public call(timefactor? : number, seekTo?: number, force?: boolean): Promise<void> {
         this.sceneCallStartMs = Date.now();
+        if (seekTo) this.sceneCallStartMs -= seekTo * MS_PER_S;
+        if (this.callingScene && force)
+        {
+            if (this.debug) console.log('stopping previous scene call');
+            this.resolveSceneExecution();
+        }
         if (!this.callingScene) {
             this.callingScene = new Promise<void>((resolve, reject) => {
                 this.callingSceneResolver = resolve;
                 this.callingSceneRejector = reject;
                 if (!timefactor) timefactor = 1.0;
                 var duration = this.duration * timefactor;
+                if (seekTo) duration -= seekTo;
                 wait(duration * MS_PER_S + MS_PER_S).then(() => {
                     reject('scene timeout! (did not finish on time)');
                 });
@@ -750,24 +821,41 @@ class ArtnetScene {
                     this.resolveSceneExecution();
                 });
             });
-            this.executeScene(0, timefactor);
+            this.runObject = new Object();
+            this.runCounter++;
+            this.executeScene(0, timefactor, this.runObject, this.runCounter);
         }
         return this.callingScene;
     }
+    public cancel(): void {
+        if(this.callingScene) {
+            this.resolveSceneExecution();
+            this.runObject = null;
+        }
+    }
 
-    private executeScene(channelPos: number, timefactor: number) {
+    private executeScene(channelPos: number, timefactor: number, runObject: Object, runCounter: number) {
         var nowMs: number = Date.now();
         var deltaTimeMs: number = nowMs - this.sceneCallStartMs;
         var sceneItem: ArtnetSceneItem;
+        if (this.debug) console.log('continuing scene at ' + deltaTimeMs + 'ms (#' + runCounter + ')');
+        // cancel execution if another execution has been started
+        if (runObject !== this.runObject)
+        {
+            console.log('runID is wrong ' + runObject + ' vs ' + this.runObject);
+            return;
+        }
         for (let i = channelPos; i < this.sceneItems.length; i++) {
             sceneItem = this.sceneItems[i];
             var delay = sceneItem.delay * timefactor;
             var deltaDelay: number = delay * MS_PER_S - deltaTimeMs;
             if (deltaDelay <= 0) {
-                sceneItem.call(timefactor);
+                sceneItem.call(timefactor * (deltaDelay < -MS_PER_S ? 0.001 : 1));
+                if (this.debug) console.log('calling scene item ' + i + ' at ' + deltaTimeMs + 'ms (#' + runCounter + ')');
             } else {
                 wait(deltaDelay).then(() => {
-                    this.executeScene(i, timefactor);
+                    const offset = i;
+                    this.executeScene(offset, timefactor, runObject, runCounter);
                 });
                 return;
             }
@@ -775,7 +863,7 @@ class ArtnetScene {
     }
 
     private resolveSceneExecution() {
-        this.callingSceneResolver(true);
+        if (this.callingSceneResolver) this.callingSceneResolver(true);
         delete this.callingSceneResolver;
         delete this.callingSceneRejector;
         delete this.callingScene;
@@ -829,6 +917,7 @@ class ArtnetSceneGroup extends ArtnetSceneItem {
         this.value = value;
     }
     public call(timefactor? : number) {
+        // console.log('sc_grp fadeTo ' + this.value + ' over ' + this.duration + 's ' + (timefactor ? ' f' + timefactor : ''));
         this.group.fadeTo(
           this.value,
           timefactor ? timefactor * this.duration : this.duration
@@ -851,6 +940,22 @@ class ArtnetSceneCrossfade extends ArtnetSceneItem {
           this.masterValue,
           timefactor ? timefactor * this.duration : this.duration
         );
+    }
+}
+class ArtnetSceneExecute extends ArtnetSceneItem {
+    private readonly realm: string;
+    private readonly group: string;
+    private readonly task: string;
+    public constructor(realm: string, group: string, task: string, duration?: number, delay?: number) {
+        super(duration, delay);
+        this.realm = realm;
+        this.group = group;
+        this.task = task;
+    }
+    public call (factor? : number) {
+        if (factor > 0.9 && factor < 1.1) {
+            Realm[this.realm].group[this.group][this.task].running = true;
+        }
     }
 }
 
