@@ -431,7 +431,7 @@ export class Xicato extends Driver<NetworkTCP> {
                 var deviceGroups = result.groups;
                 var indexOfGroupId = deviceGroups.indexOf(groupId);
                 if (indexOfGroupId !== -1) {
-                    deviceGroups.splice(indexOfGroupId);
+                    deviceGroups.splice(indexOfGroupId, 1);
                     this.setDeviceGroupsREST(network, deviceId, deviceGroups).
                     then(_result => {
                         resolve();

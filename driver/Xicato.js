@@ -354,7 +354,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                     var deviceGroups = result.groups;
                     var indexOfGroupId = deviceGroups.indexOf(groupId);
                     if (indexOfGroupId !== -1) {
-                        deviceGroups.splice(indexOfGroupId);
+                        deviceGroups.splice(indexOfGroupId, 1);
                         _this.setDeviceGroupsREST(network, deviceId, deviceGroups).
                             then(function (_result) {
                             resolve();
