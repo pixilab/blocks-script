@@ -96,7 +96,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             return this.setDeviceGroup(network, deviceId, groupId);
         };
         Xicato.prototype.unsetGroup = function (network, deviceId, groupId) {
-            return this.unsetGroup(network, deviceId, groupId);
+            return this.unsetDeviceGroup(network, deviceId, groupId);
         };
         Xicato.prototype.setScene = function (network, deviceId, sceneNumber, intensity, fadeTime, delayTime) {
             return this.setDeviceScene(network, deviceId, sceneNumber, intensity, fadeTime, delayTime);

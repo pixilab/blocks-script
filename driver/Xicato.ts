@@ -138,7 +138,7 @@ export class Xicato extends Driver<NetworkTCP> {
         @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
         @parameter('group number (an integer)') groupId: number,
     ) : Promise<void> {
-        return this.unsetGroup(network, deviceId, groupId);
+        return this.unsetDeviceGroup(network, deviceId, groupId);
     }
 
     @callable('set scene for a device')
