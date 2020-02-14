@@ -14,12 +14,16 @@
 const ASCII = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
 import { NetworkTCP } from "system/Network";
-import {SimpleHTTP} from "system/SimpleHTTP";
+import { SimpleHTTP, Request, Response } from "system/SimpleHTTP";
 import { SimpleFile } from "system/SimpleFile";
 import { Driver } from "system_lib/Driver";
 import { callable, max, min, parameter, property, driver } from "system_lib/Metadata";
 
-const XICATO_CONFIG_BASE_PATH = 'xicato.config';
+const XIC_CONFIG_BASE_PATH : string = 'xicato.config';
+const XIC_GROUP_OFFSET : number = 49152;
+const XIC_MAX_DEVICE_GROUPS : number = 16;
+const XIC_MAX_DEVICE_SCENES : number = 32;
+
 
 @driver('NetworkTCP', { port: 8000 })
 export class Xicato extends Driver<NetworkTCP> {
@@ -39,42 +43,43 @@ export class Xicato extends Driver<NetworkTCP> {
     private mDeferredSender: CancelablePromise<void>;	// Send commands soon
 
     private devices: XicDevices;
-    private groups: XicGroups;
+    private groups: XicGroupsWithDevices;
+    private scenes: XicScene[];
 
     private readonly devicesFileName: string;
     private readonly groupsFileName: string;
+    private readonly scenesFileName: string;
 
-    public constructor(private socket: NetworkTCP) {
+    public constructor(socket: NetworkTCP) {
         super(socket);
 
         // no auto-connect needed since REST API
-
-
-        const settingsFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '.config';
-        this.devicesFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '/devices.json';
-        this.groupsFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '/groups.json';
+        const settingsFileName = XIC_CONFIG_BASE_PATH + '/' + socket.name + '.config';
+        const dataPath = XIC_CONFIG_BASE_PATH + '/' + socket.name + '';
+        this.devicesFileName = dataPath + '/devices.json';
+        this.groupsFileName = dataPath + '/groups.json';
+        this.scenesFileName = dataPath + '/scenes.json';
 
 
         // try read configuration. if not present, write example file
-    		SimpleFile.read(settingsFileName).then(readValue => {
-          var settings : XicatoSettings = JSON.parse(readValue);
-          this.mUsername = settings.username;
-          this.mPassword = settings.password;
+    	SimpleFile.read(settingsFileName).then(readValue => {
+            var settings : XicatoSettings = JSON.parse(readValue);
+            this.mUsername = settings.username;
+            this.mPassword = settings.password;
 
-          this.mAlive = true;
+            this.mAlive = true;
       		this.mBaseURL = 'http://' + socket.address + ':' + socket.port + '/';
 
-          if (socket.enabled) {
-      			socket.subscribe('finish', sender => {
+            if (socket.enabled) {
+      			socket.subscribe('finish', _sender => {
       				this.onFinish();
       			});
       			this.requestPoll(100);
       		}
-
-    		}).catch(error => {
-    			console.warn("Can't read file", settingsFileName, error);
-                SimpleFile.write(settingsFileName, JSON.stringify(new XicatoSettings()));
-    		});
+		}).catch(error => {
+			console.warn("Can't read file", settingsFileName, error);
+            SimpleFile.write(settingsFileName, JSON.stringify(new XicatoSettings()));
+		});
 
     }
 
@@ -83,31 +88,71 @@ export class Xicato extends Driver<NetworkTCP> {
   		return this.mConnected;
   	}
   	public set connected(value: boolean) {
-      if (this.mConnected == value) return;
-      this.mConnected = value;
-      this.changed('connected');
-  		// this.checkReadyToSend();
+        if (this.mConnected == value) return;
+        this.mConnected = value;
+        this.changed('connected');
+  		this.checkReadyToSend();
   	}
 
     @property('Current bearer token issued by gateway')
     public get token() : string {
-      return this.mAuthToken;
+        return this.mAuthToken;
     }
     public set token(value: string) {
-      if (this.mAuthToken == value) return;
-      this.mAuthToken = value;
-      this.changed('token');
+        if (this.mAuthToken == value) return;
+        this.mAuthToken = value;
+        this.changed('token');
     }
 
-    @callable('recall a scene')
+    @callable('set intensity')
+    public setIntensity (
+        @parameter('network name') network: string,
+        @parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)') deviceId: number,
+        @parameter('target intensity, in percent (0 or between 0.1 and 100.0)') intensity: number,
+        @parameter('fade time, in milliseconds', true) fading?: number
+    ) : void {
+        this.setIntensityREST(network, deviceId, intensity, fading);
+    }
+
+    @callable('recall scene for a device')
     public recallScene (
         @parameter('network name') network: string,
-        @parameter('group id') groupId: number,
+        @parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)') deviceId: number,
         @parameter('target scene number (an integer)') sceneId: number,
         @parameter('fade time, in milliseconds', true) fading?: number
     ) : Promise<void> {
-        return this.recallSceneREST(network, groupId, sceneId, fading);
+        return this.recallSceneREST(network, deviceId, sceneId, fading);
     }
+
+    @callable('add device to group')
+    public setGroup(
+        @parameter('network name') network: string,
+        @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
+        @parameter('group number (an integer)') groupId: number,
+    ) : Promise<void> {
+        return this.setDeviceGroup(network, deviceId, groupId);
+    }
+    @callable('remove device from group')
+    public unsetGroup(
+        @parameter('network name') network: string,
+        @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
+        @parameter('group number (an integer)') groupId: number,
+    ) : Promise<void> {
+        return this.unsetGroup(network, deviceId, groupId);
+    }
+
+    @callable('set scene for a device')
+    public setScene (
+        @parameter('network name') network: string,
+        @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
+        @parameter('target scene number (an integer)') sceneNumber: number,
+        @parameter('target intensity, in percent (0 or between 0.1 and 100.0)') intensity: number,
+        @parameter('fade time in milliseconds', true) fadeTime?: number,
+        @parameter('delay in milliseconds', true) delayTime?: number
+    ) : Promise<void> {
+        return this.setDeviceScene(network, deviceId, sceneNumber, intensity, fadeTime, delayTime);
+    }
+
 
     private requestPoll(delay: number) {
   		if (!this.mPoller && this.mAlive) {
@@ -143,6 +188,8 @@ export class Xicato extends Driver<NetworkTCP> {
   			this.getDevices();
   		else if (!this.groups)
   			this.getGroups();
+        else if (!this.scenes)
+            this.getScenes();
   		this.checkReadyToSend();
   	}
 
@@ -150,6 +197,7 @@ export class Xicato extends Driver<NetworkTCP> {
   		if (
         this.devices &&
         this.groups &&
+        this.scenes &&
         this.connected &&
         this.mAuthorized
       )
@@ -159,55 +207,142 @@ export class Xicato extends Driver<NetworkTCP> {
       // this.sendPendingCommands();
   	}
 
-    private recallSceneREST (network: string, group: number, scene: number, fading?: number) : Promise<void> {
-        var deviceId : number = 49152 + group;
-        network = encodeURI(network);
-        var url = this.mBaseURL + '/device/recallscene/' + network + '/' + deviceId + '/' + scene + '/' + (fading ? fading : '');
-        return new Promise<void>((resolve, reject) => {
-            this.authorizedGet(url)
-            .then(_result => {
-                resolve();
-            }).catch(error => {
-                console.warn(error);
-                reject(error);
-            });
-        });
-    }
+    // REST API CALLS   //
+
+    //   View Permission API Calls    //
 
     private showDevicesREST () : Promise<string> {
         var url = this.mBaseURL + '/devices';
         return this.authorizedGet(url);
     }
-
-    private showGroupsREST () : Promise<string> {
+    private showGroupsWithDevicesREST () : Promise<string> {
         var url = this.mBaseURL + '/groups';
         return this.authorizedGet(url);
     }
+    private showScenesREST () : Promise<string> {
+        var url = this.mBaseURL + '/scenes';
+        return this.authorizedGet(url);
+    }
+    private getDeviceGroupsREST (network: string, deviceId: number) : Promise<XicGetDeviceGroupsResponse> {
+        network = encodeURI(network);
+        var url = this.mBaseURL + '/device/groups/' + network + '/' + deviceId;
+        return new Promise<XicGetDeviceGroupsResponse>((resolve, reject) => {
+            this.authorizedGet(url).
+            then(result => {
+                resolve(JSON.parse(result));
+            }).catch(error => { reject(error) });
+        });
+    }
+    private getDeviceScenesREST (network: string, deviceId: number) : Promise<XicGetDeviceScenesResponse> {
+        network = encodeURI(network);
+        var url = this.mBaseURL + '/device/scenes/' + network + '/' + deviceId;
+        return new Promise<XicGetDeviceScenesResponse>((resolve, reject) => {
+            this.authorizedGet(url).
+            then(result => {
+                resolve(JSON.parse(result));
+            }).catch(error => { reject(error) });
+        });
+    }
+
+    // Control Permission API Calls //
+
+    private setIntensityREST (network: string, deviceId: number, intensity: number, fadeTime?: number) : void {
+        network = encodeURI(network);
+        var url = this.mBaseURL + '/device/setintensity/' + network + '/' + deviceId + '/' + intensity + '/' + (fadeTime ? fadeTime : '');
+        this.authorizedGet(url).
+        then(_result => {
+            // nothing yet
+        }).catch(_error => {
+            // nothing either
+        });
+    }
+    private recallSceneREST (network: string, deviceId: number, scene: number, fadeTime?: number) : Promise<void> {
+        network = encodeURI(network);
+        var url = this.mBaseURL + '/device/recallscene/' + network + '/' + deviceId + '/' + scene + '/' + (fadeTime ? fadeTime : '');
+        return new Promise<void>((resolve, reject) => {
+            this.authorizedGet(url).
+            then(_result => {
+                resolve();
+            }).catch(error => {
+                reject(error);
+            });
+        });
+    }
+
+    //    Configure Permission API Calls //
+
+
+    private setDeviceGroupsREST (network: string, deviceId: number, groups: number[]) : Promise<XicSetDeviceGroupsResponse> {
+        network = encodeURI(network);
+        var url = this.mBaseURL + '/device/setgroups/' + network + '/' + deviceId;
+        return new Promise<XicSetDeviceGroupsResponse>((resolve, reject) => {
+            this.authorizedPut(url, JSON.stringify(groups)).
+            then(result => {
+                resolve(JSON.parse(result));
+            }).catch(error => { reject(error) });
+        });
+    }
+    private setDeviceScenesREST (network: string, deviceId: number, scenes: XicDeviceScene[]) : Promise<XicSetDeviceScenesResponse> {
+        network = encodeURI(network);
+        var url = this.mBaseURL + '/device/setscenes/' + network + '/' + deviceId;
+        return new Promise<XicSetDeviceScenesResponse>((resolve, reject) => {
+            this.authorizedPut(url, JSON.stringify(scenes)).
+            then(result => {
+                resolve(JSON.parse(result));
+            }).catch(error => { reject(error) });
+        });
+    }
+
 
     private authorizedGet (url: string) : Promise<string> {
         const promise = new Promise<string>((resolve, reject) => {
-            SimpleHTTP.newRequest(url).
-            header('Authorization', 'Bearer ' + this.mAuthToken).
+            this.createAuthorizedRequest(url).
             get().
             then(response => {
-                this.connected = true;
-                if (response.status === 200) {
-                    resolve(response.data);
-                } else if (response.status === 401 || response.status === 403) {
-                    // token likely invalid
-                    this.unauthorize();
-                    reject(response.data);
-                } else {
-                    console.warn(response.status + ': ' + response.data);
-                    reject(response.data);
-                }
+                this.handleGetPutResponse(response, resolve, reject);
             }).catch(error => {
-                this.requestFailed(error);
-                reject();
+                this.requestFailed(error, reject);
             });
         });
         return promise;
     }
+    private authorizedPut (url: string, jsonData?: string) : Promise<string> {
+        const promise = new Promise<string>((resolve, reject) => {
+            this.createAuthorizedRequest(url).
+            put(
+                jsonData ? jsonData : ''
+            ).then(response => {
+                this.handleGetPutResponse(response, resolve, reject);
+            }).catch(error => {
+                this.requestFailed(error, reject);
+            });
+        });
+        return promise;
+    }
+    private handleGetPutResponse (
+        response: Response,
+        resolve: (value?: string | Thenable<string>) => void,
+        reject: (error?: any) => void
+    ) : void {
+        this.connected = true;
+        if (response.status === 200) {
+            resolve(response.data);
+        } else if (response.status === 401 || response.status === 403) {
+            // token likely invalid
+            this.unauthorize();
+            Xicato.handleRejection(reject, response.data);
+        } else {
+            Xicato.handleRejection(reject, response.data, true);
+        }
+    }
+    static handleRejection (reject: (error?: any) => void, message: string = '', logConsoleWarn: boolean = false) : void {
+        if (logConsoleWarn) console.warn(message);
+        reject(message);
+    }
+    private createAuthorizedRequest(url: string) : Request {
+        return SimpleHTTP.newRequest(url).header('Authorization', 'Bearer ' + this.mAuthToken);
+    }
+
 
     private authenticationPoll() {
   		SimpleHTTP.newRequest(this.mBaseURL + 'api/token').
@@ -240,29 +375,120 @@ export class Xicato extends Driver<NetworkTCP> {
   	}
 
   	private getDevices() {
-  		this.showDevicesREST()
-        .then(result => {
+  		this.showDevicesREST().
+        then(result => {
             this.devices = JSON.parse(result);
-            // thought: instead of stringify, one could also just store the response
             SimpleFile.write(this.devicesFileName, JSON.stringify(this.devices));
-        }).catch(error => {
-            console.warn(error);
         });
   	}
     private getGroups() {
-        this.showGroupsREST()
-        .then(result => {
+        this.showGroupsWithDevicesREST().
+        then(result => {
             this.groups = JSON.parse(result);
-            // thought: instead of stringify, one could also just store the response
             SimpleFile.write(this.groupsFileName, JSON.stringify(this.groups));
-        }).catch(error => {
-            console.warn(error);
-        });;
+        });
+    }
+    private getScenes() {
+        this.showScenesREST().
+        then(result => {
+            this.scenes = JSON.parse(result);
+            SimpleFile.write(this.scenesFileName, JSON.stringify(this.scenes));
+        });
     }
 
-    private requestFailed(error: string) {
+    /**
+    add device to group
+    */
+    private setDeviceGroup(network: string, deviceId: number, groupId: number) : Promise<void> {
+        return new Promise<void> ((resolve, reject) => {
+            this.getDeviceGroupsREST(network, deviceId).
+            then(result => {
+                var deviceGroups = result.groups;
+                if (deviceGroups.indexOf(groupId) === -1) {
+                    if (deviceGroups.length < XIC_MAX_DEVICE_GROUPS) {
+                        deviceGroups.push(groupId);
+                        this.setDeviceGroupsREST(network, deviceId, deviceGroups).
+                        then(_result => {
+                            resolve();
+                        }).catch(error => {reject(error)});
+                    } else {
+                        reject('can not add another group: device has already ' + deviceGroups.length + ' groups assigned');
+                    }
+                } else {
+                    // group was already assigned
+                    resolve();
+                }
+            }).catch(error => {reject(error)});
+        });
+    }
+    /**
+    remove device from group
+    */
+    private unsetDeviceGroup(network: string, deviceId: number, groupId: number) : Promise<void> {
+        return new Promise<void> ((resolve, reject) => {
+            this.getDeviceGroupsREST(network, deviceId).
+            then(result => {
+                var deviceGroups = result.groups;
+                var indexOfGroupId = deviceGroups.indexOf(groupId);
+                if (indexOfGroupId !== -1) {
+                    deviceGroups.splice(indexOfGroupId);
+                    this.setDeviceGroupsREST(network, deviceId, deviceGroups).
+                    then(_result => {
+                        resolve();
+                    }).catch(error => {reject(error)});
+                } else {
+                    // group was already NOT assigned
+                    resolve();
+                }
+            }).catch(error => {reject(error)});
+        });
+    }
+    /**
+    add / change scene for a device
+    */
+    private setDeviceScene(network: string, deviceId: number, sceneNumber: number, intensity: number, fadeTime: number = 0, delayTime: number = 0) : Promise<void> {
+        return new Promise<void> ((resolve, reject) => {
+            this.getDeviceScenesREST(network, deviceId).
+            then(result => {
+                var deviceScenes = result.scenes;
+                var scene = Xicato.findDeviceSceneById(sceneNumber, deviceScenes);
+                if (scene) {
+                    scene.intensity = intensity;
+                    scene.fadeTime = fadeTime;
+                    scene.delayTime = delayTime;
+                } else {
+                    if (deviceScenes.length < XIC_MAX_DEVICE_SCENES) {
+                        scene = new XicDeviceScene();
+                        scene.sceneNumber = sceneNumber;
+                        scene.intensity = intensity;
+                        scene.fadeTime = fadeTime;
+                        scene.delayTime = delayTime;
+                        deviceScenes.push(scene);
+                    } else {
+                        reject('can not add another scene: device has already ' + deviceScenes.length + ' scenes assigned');
+                        return;
+                    }
+                }
+                this.setDeviceScenesREST(network, deviceId, deviceScenes).
+                then(_result => {
+                    resolve();
+                }).catch(error => {reject(error)});
+            }).catch(error => {reject(error)});
+        });
+    }
+
+    private static findDeviceSceneById (sceneNumber: number, deviceScenes: XicDeviceScene[]) : XicDeviceScene | null {
+        for (let i = 0; i < deviceScenes.length; i++) {
+            var scene = deviceScenes[i];
+            if (scene.sceneNumber == sceneNumber) return scene;
+        }
+        return null;
+    }
+
+
+    private requestFailed(error: string, reject?: (error?: any) => void) {
   		this.connected = false;
-  		console.warn(error);
+        if (reject) Xicato.handleRejection(reject, error, true);
   	}
 
     private onFinish () {
@@ -304,7 +530,6 @@ export class Xicato extends Driver<NetworkTCP> {
 class XicatoSettings {
     public username : string = '';
     public password : string = '';
-
 }
 
 class XicDeviceBase {
@@ -364,16 +589,55 @@ class XicDevices {
     public switches : XicSwitch[];
     public temperature : number;
 }
-class XicGroup {
+class XicGroupWithDevices {
     public devices: XicDevice[];
     /** integer; null indicates devices without any group membership */
     public groupId : number | null;
     public groupName : string;
 }
-class XicGroups {
+class XicGroupsWithDevices {
     public network : string | null;
     public networks : string[];
     public connectable : boolean;
-    public groups : XicGroup[];
+    public groups : XicGroupWithDevices[];
     public temperature : number;
+}
+class XicScene {
+    public name : string | null;
+    /** integer */
+    public number : number;
+    public network : string | null;
+}
+class XicDeviceScene {
+    /** Integer, 0 < n < 65535 */
+    public sceneNumber : number;
+    /** Float, 0.0 <= m <= 100.0 */
+    public intensity : number;
+    /** Integer, n >= 0 */
+    public delayTime : number;
+    /** Integer, 0 <= n <= 1.44e7 */
+    public fadeTime : number;
+}
+class XicDeviceResponse {
+    public device_id: string;
+}
+class XicDeviceSetResponse extends XicDeviceResponse {
+    public result: boolean;
+}
+class XicGetDeviceGroupsResponse extends XicDeviceResponse {
+    public network : string;
+    public groups : number[];
+}
+class XicSetDeviceGroupsResponse extends XicDeviceSetResponse {
+    public groups : number[];
+}
+class XicGetDeviceScenesResponse extends XicDeviceResponse {
+    public scenes : XicDeviceScene[];
+}
+class XicSetDeviceScenesResponse extends XicDeviceSetResponse {
+    public scenes : XicDeviceScene[];
+}
+class XicGetDeviceFirmwareAvailableResponse extends XicDeviceResponse {
+    public current : string;
+    public available : number[];
 }

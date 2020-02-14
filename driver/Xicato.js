@@ -27,15 +27,19 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ASCII = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-    var XICATO_CONFIG_BASE_PATH = 'xicato.config';
+    var XIC_CONFIG_BASE_PATH = 'xicato.config';
+    var XIC_GROUP_OFFSET = 49152;
+    var XIC_MAX_DEVICE_GROUPS = 16;
+    var XIC_MAX_DEVICE_SCENES = 32;
     var Xicato = (function (_super) {
         __extends(Xicato, _super);
         function Xicato(socket) {
             var _this = _super.call(this, socket) || this;
-            _this.socket = socket;
-            var settingsFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '.config';
-            _this.devicesFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '/devices.json';
-            _this.groupsFileName = XICATO_CONFIG_BASE_PATH + '/' + socket.name + '/groups.json';
+            var settingsFileName = XIC_CONFIG_BASE_PATH + '/' + socket.name + '.config';
+            var dataPath = XIC_CONFIG_BASE_PATH + '/' + socket.name + '';
+            _this.devicesFileName = dataPath + '/devices.json';
+            _this.groupsFileName = dataPath + '/groups.json';
+            _this.scenesFileName = dataPath + '/scenes.json';
             SimpleFile_1.SimpleFile.read(settingsFileName).then(function (readValue) {
                 var settings = JSON.parse(readValue);
                 _this.mUsername = settings.username;
@@ -43,7 +47,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                 _this.mAlive = true;
                 _this.mBaseURL = 'http://' + socket.address + ':' + socket.port + '/';
                 if (socket.enabled) {
-                    socket.subscribe('finish', function (sender) {
+                    socket.subscribe('finish', function (_sender) {
                         _this.onFinish();
                     });
                     _this.requestPoll(100);
@@ -54,6 +58,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             });
             return _this;
         }
+        Xicato_1 = Xicato;
         Object.defineProperty(Xicato.prototype, "connected", {
             get: function () {
                 return this.mConnected;
@@ -63,6 +68,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                     return;
                 this.mConnected = value;
                 this.changed('connected');
+                this.checkReadyToSend();
             },
             enumerable: true,
             configurable: true
@@ -80,8 +86,20 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             enumerable: true,
             configurable: true
         });
-        Xicato.prototype.recallScene = function (network, groupId, sceneId, fading) {
-            return this.recallSceneREST(network, groupId, sceneId, fading);
+        Xicato.prototype.setIntensity = function (network, deviceId, intensity, fading) {
+            this.setIntensityREST(network, deviceId, intensity, fading);
+        };
+        Xicato.prototype.recallScene = function (network, deviceId, sceneId, fading) {
+            return this.recallSceneREST(network, deviceId, sceneId, fading);
+        };
+        Xicato.prototype.setGroup = function (network, deviceId, groupId) {
+            return this.setDeviceGroup(network, deviceId, groupId);
+        };
+        Xicato.prototype.unsetGroup = function (network, deviceId, groupId) {
+            return this.unsetGroup(network, deviceId, groupId);
+        };
+        Xicato.prototype.setScene = function (network, deviceId, sceneNumber, intensity, fadeTime, delayTime) {
+            return this.setDeviceScene(network, deviceId, sceneNumber, intensity, fadeTime, delayTime);
         };
         Xicato.prototype.requestPoll = function (delay) {
             var _this = this;
@@ -113,63 +131,142 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                 this.getDevices();
             else if (!this.groups)
                 this.getGroups();
+            else if (!this.scenes)
+                this.getScenes();
             this.checkReadyToSend();
         };
         Xicato.prototype.checkReadyToSend = function () {
             if (this.devices &&
                 this.groups &&
+                this.scenes &&
                 this.connected &&
                 this.mAuthorized) {
             }
-        };
-        Xicato.prototype.recallSceneREST = function (network, group, scene, fading) {
-            var _this = this;
-            var deviceId = 49152 + group;
-            network = encodeURI(network);
-            var url = this.mBaseURL + '/device/recallscene/' + network + '/' + deviceId + '/' + scene + '/' + (fading ? fading : '');
-            return new Promise(function (resolve, reject) {
-                _this.authorizedGet(url)
-                    .then(function (_result) {
-                    resolve();
-                }).catch(function (error) {
-                    console.warn(error);
-                    reject(error);
-                });
-            });
         };
         Xicato.prototype.showDevicesREST = function () {
             var url = this.mBaseURL + '/devices';
             return this.authorizedGet(url);
         };
-        Xicato.prototype.showGroupsREST = function () {
+        Xicato.prototype.showGroupsWithDevicesREST = function () {
             var url = this.mBaseURL + '/groups';
             return this.authorizedGet(url);
+        };
+        Xicato.prototype.showScenesREST = function () {
+            var url = this.mBaseURL + '/scenes';
+            return this.authorizedGet(url);
+        };
+        Xicato.prototype.getDeviceGroupsREST = function (network, deviceId) {
+            var _this = this;
+            network = encodeURI(network);
+            var url = this.mBaseURL + '/device/groups/' + network + '/' + deviceId;
+            return new Promise(function (resolve, reject) {
+                _this.authorizedGet(url).
+                    then(function (result) {
+                    resolve(JSON.parse(result));
+                }).catch(function (error) { reject(error); });
+            });
+        };
+        Xicato.prototype.getDeviceScenesREST = function (network, deviceId) {
+            var _this = this;
+            network = encodeURI(network);
+            var url = this.mBaseURL + '/device/scenes/' + network + '/' + deviceId;
+            return new Promise(function (resolve, reject) {
+                _this.authorizedGet(url).
+                    then(function (result) {
+                    resolve(JSON.parse(result));
+                }).catch(function (error) { reject(error); });
+            });
+        };
+        Xicato.prototype.setIntensityREST = function (network, deviceId, intensity, fadeTime) {
+            network = encodeURI(network);
+            var url = this.mBaseURL + '/device/setintensity/' + network + '/' + deviceId + '/' + intensity + '/' + (fadeTime ? fadeTime : '');
+            this.authorizedGet(url).
+                then(function (_result) {
+            }).catch(function (_error) {
+            });
+        };
+        Xicato.prototype.recallSceneREST = function (network, deviceId, scene, fadeTime) {
+            var _this = this;
+            network = encodeURI(network);
+            var url = this.mBaseURL + '/device/recallscene/' + network + '/' + deviceId + '/' + scene + '/' + (fadeTime ? fadeTime : '');
+            return new Promise(function (resolve, reject) {
+                _this.authorizedGet(url).
+                    then(function (_result) {
+                    resolve();
+                }).catch(function (error) {
+                    reject(error);
+                });
+            });
+        };
+        Xicato.prototype.setDeviceGroupsREST = function (network, deviceId, groups) {
+            var _this = this;
+            network = encodeURI(network);
+            var url = this.mBaseURL + '/device/setgroups/' + network + '/' + deviceId;
+            return new Promise(function (resolve, reject) {
+                _this.authorizedPut(url, JSON.stringify(groups)).
+                    then(function (result) {
+                    resolve(JSON.parse(result));
+                }).catch(function (error) { reject(error); });
+            });
+        };
+        Xicato.prototype.setDeviceScenesREST = function (network, deviceId, scenes) {
+            var _this = this;
+            network = encodeURI(network);
+            var url = this.mBaseURL + '/device/setscenes/' + network + '/' + deviceId;
+            return new Promise(function (resolve, reject) {
+                _this.authorizedPut(url, JSON.stringify(scenes)).
+                    then(function (result) {
+                    resolve(JSON.parse(result));
+                }).catch(function (error) { reject(error); });
+            });
         };
         Xicato.prototype.authorizedGet = function (url) {
             var _this = this;
             var promise = new Promise(function (resolve, reject) {
-                SimpleHTTP_1.SimpleHTTP.newRequest(url).
-                    header('Authorization', 'Bearer ' + _this.mAuthToken).
+                _this.createAuthorizedRequest(url).
                     get().
                     then(function (response) {
-                    _this.connected = true;
-                    if (response.status === 200) {
-                        resolve(response.data);
-                    }
-                    else if (response.status === 401 || response.status === 403) {
-                        _this.unauthorize();
-                        reject(response.data);
-                    }
-                    else {
-                        console.warn(response.status + ': ' + response.data);
-                        reject(response.data);
-                    }
+                    _this.handleGetPutResponse(response, resolve, reject);
                 }).catch(function (error) {
-                    _this.requestFailed(error);
-                    reject();
+                    _this.requestFailed(error, reject);
                 });
             });
             return promise;
+        };
+        Xicato.prototype.authorizedPut = function (url, jsonData) {
+            var _this = this;
+            var promise = new Promise(function (resolve, reject) {
+                _this.createAuthorizedRequest(url).
+                    put(jsonData ? jsonData : '').then(function (response) {
+                    _this.handleGetPutResponse(response, resolve, reject);
+                }).catch(function (error) {
+                    _this.requestFailed(error, reject);
+                });
+            });
+            return promise;
+        };
+        Xicato.prototype.handleGetPutResponse = function (response, resolve, reject) {
+            this.connected = true;
+            if (response.status === 200) {
+                resolve(response.data);
+            }
+            else if (response.status === 401 || response.status === 403) {
+                this.unauthorize();
+                Xicato_1.handleRejection(reject, response.data);
+            }
+            else {
+                Xicato_1.handleRejection(reject, response.data, true);
+            }
+        };
+        Xicato.handleRejection = function (reject, message, logConsoleWarn) {
+            if (message === void 0) { message = ''; }
+            if (logConsoleWarn === void 0) { logConsoleWarn = false; }
+            if (logConsoleWarn)
+                console.warn(message);
+            reject(message);
+        };
+        Xicato.prototype.createAuthorizedRequest = function (url) {
+            return SimpleHTTP_1.SimpleHTTP.newRequest(url).header('Authorization', 'Bearer ' + this.mAuthToken);
         };
         Xicato.prototype.authenticationPoll = function () {
             var _this = this;
@@ -203,28 +300,119 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         };
         Xicato.prototype.getDevices = function () {
             var _this = this;
-            this.showDevicesREST()
-                .then(function (result) {
+            this.showDevicesREST().
+                then(function (result) {
                 _this.devices = JSON.parse(result);
                 SimpleFile_1.SimpleFile.write(_this.devicesFileName, JSON.stringify(_this.devices));
-            }).catch(function (error) {
-                console.warn(error);
             });
         };
         Xicato.prototype.getGroups = function () {
             var _this = this;
-            this.showGroupsREST()
-                .then(function (result) {
+            this.showGroupsWithDevicesREST().
+                then(function (result) {
                 _this.groups = JSON.parse(result);
                 SimpleFile_1.SimpleFile.write(_this.groupsFileName, JSON.stringify(_this.groups));
-            }).catch(function (error) {
-                console.warn(error);
             });
-            ;
         };
-        Xicato.prototype.requestFailed = function (error) {
+        Xicato.prototype.getScenes = function () {
+            var _this = this;
+            this.showScenesREST().
+                then(function (result) {
+                _this.scenes = JSON.parse(result);
+                SimpleFile_1.SimpleFile.write(_this.scenesFileName, JSON.stringify(_this.scenes));
+            });
+        };
+        Xicato.prototype.setDeviceGroup = function (network, deviceId, groupId) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                _this.getDeviceGroupsREST(network, deviceId).
+                    then(function (result) {
+                    var deviceGroups = result.groups;
+                    if (deviceGroups.indexOf(groupId) === -1) {
+                        if (deviceGroups.length < XIC_MAX_DEVICE_GROUPS) {
+                            deviceGroups.push(groupId);
+                            _this.setDeviceGroupsREST(network, deviceId, deviceGroups).
+                                then(function (_result) {
+                                resolve();
+                            }).catch(function (error) { reject(error); });
+                        }
+                        else {
+                            reject('can not add another group: device has already ' + deviceGroups.length + ' groups assigned');
+                        }
+                    }
+                    else {
+                        resolve();
+                    }
+                }).catch(function (error) { reject(error); });
+            });
+        };
+        Xicato.prototype.unsetDeviceGroup = function (network, deviceId, groupId) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                _this.getDeviceGroupsREST(network, deviceId).
+                    then(function (result) {
+                    var deviceGroups = result.groups;
+                    var indexOfGroupId = deviceGroups.indexOf(groupId);
+                    if (indexOfGroupId !== -1) {
+                        deviceGroups.splice(indexOfGroupId);
+                        _this.setDeviceGroupsREST(network, deviceId, deviceGroups).
+                            then(function (_result) {
+                            resolve();
+                        }).catch(function (error) { reject(error); });
+                    }
+                    else {
+                        resolve();
+                    }
+                }).catch(function (error) { reject(error); });
+            });
+        };
+        Xicato.prototype.setDeviceScene = function (network, deviceId, sceneNumber, intensity, fadeTime, delayTime) {
+            var _this = this;
+            if (fadeTime === void 0) { fadeTime = 0; }
+            if (delayTime === void 0) { delayTime = 0; }
+            return new Promise(function (resolve, reject) {
+                _this.getDeviceScenesREST(network, deviceId).
+                    then(function (result) {
+                    var deviceScenes = result.scenes;
+                    var scene = Xicato_1.findDeviceSceneById(sceneNumber, deviceScenes);
+                    if (scene) {
+                        scene.intensity = intensity;
+                        scene.fadeTime = fadeTime;
+                        scene.delayTime = delayTime;
+                    }
+                    else {
+                        if (deviceScenes.length < XIC_MAX_DEVICE_SCENES) {
+                            scene = new XicDeviceScene();
+                            scene.sceneNumber = sceneNumber;
+                            scene.intensity = intensity;
+                            scene.fadeTime = fadeTime;
+                            scene.delayTime = delayTime;
+                            deviceScenes.push(scene);
+                        }
+                        else {
+                            reject('can not add another scene: device has already ' + deviceScenes.length + ' scenes assigned');
+                            return;
+                        }
+                    }
+                    _this.setDeviceScenesREST(network, deviceId, deviceScenes).
+                        then(function (_result) {
+                        resolve();
+                    }).catch(function (error) { reject(error); });
+                }).catch(function (error) { reject(error); });
+            });
+        };
+        Xicato.findDeviceSceneById = function (sceneNumber, deviceScenes) {
+            for (var i = 0; i < deviceScenes.length; i++) {
+                var scene = deviceScenes[i];
+                if (scene.sceneNumber == sceneNumber)
+                    return scene;
+            }
+            return null;
+        };
+        Xicato.prototype.requestFailed = function (error, reject) {
             this.connected = false;
-            console.warn(error);
+            if (reject)
+                Xicato_1.handleRejection(reject, error, true);
         };
         Xicato.prototype.onFinish = function () {
             this.mAlive = false;
@@ -253,6 +441,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             return b64;
         };
         ;
+        var Xicato_1;
         __decorate([
             Metadata_1.property('Connected successfully to device', true),
             __metadata("design:type", Boolean),
@@ -264,16 +453,56 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             __metadata("design:paramtypes", [String])
         ], Xicato.prototype, "token", null);
         __decorate([
-            Metadata_1.callable('recall a scene'),
+            Metadata_1.callable('set intensity'),
             __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('group id')),
+            __param(1, Metadata_1.parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)')),
+            __param(2, Metadata_1.parameter('target intensity, in percent (0 or between 0.1 and 100.0)')),
+            __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], Xicato.prototype, "setIntensity", null);
+        __decorate([
+            Metadata_1.callable('recall scene for a device'),
+            __param(0, Metadata_1.parameter('network name')),
+            __param(1, Metadata_1.parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)')),
             __param(2, Metadata_1.parameter('target scene number (an integer)')),
             __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", Promise)
         ], Xicato.prototype, "recallScene", null);
-        Xicato = __decorate([
+        __decorate([
+            Metadata_1.callable('add device to group'),
+            __param(0, Metadata_1.parameter('network name')),
+            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
+            __param(2, Metadata_1.parameter('group number (an integer)')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], Xicato.prototype, "setGroup", null);
+        __decorate([
+            Metadata_1.callable('remove device from group'),
+            __param(0, Metadata_1.parameter('network name')),
+            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
+            __param(2, Metadata_1.parameter('group number (an integer)')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], Xicato.prototype, "unsetGroup", null);
+        __decorate([
+            Metadata_1.callable('set scene for a device'),
+            __param(0, Metadata_1.parameter('network name')),
+            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
+            __param(2, Metadata_1.parameter('target scene number (an integer)')),
+            __param(3, Metadata_1.parameter('target intensity, in percent (0 or between 0.1 and 100.0)')),
+            __param(4, Metadata_1.parameter('fade time in milliseconds', true)),
+            __param(5, Metadata_1.parameter('delay in milliseconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], Xicato.prototype, "setScene", null);
+        Xicato = Xicato_1 = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 8000 }),
             __metadata("design:paramtypes", [Object])
         ], Xicato);
@@ -330,14 +559,71 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         }
         return XicDevices;
     }());
-    var XicGroup = (function () {
-        function XicGroup() {
+    var XicGroupWithDevices = (function () {
+        function XicGroupWithDevices() {
         }
-        return XicGroup;
+        return XicGroupWithDevices;
     }());
-    var XicGroups = (function () {
-        function XicGroups() {
+    var XicGroupsWithDevices = (function () {
+        function XicGroupsWithDevices() {
         }
-        return XicGroups;
+        return XicGroupsWithDevices;
     }());
+    var XicScene = (function () {
+        function XicScene() {
+        }
+        return XicScene;
+    }());
+    var XicDeviceScene = (function () {
+        function XicDeviceScene() {
+        }
+        return XicDeviceScene;
+    }());
+    var XicDeviceResponse = (function () {
+        function XicDeviceResponse() {
+        }
+        return XicDeviceResponse;
+    }());
+    var XicDeviceSetResponse = (function (_super) {
+        __extends(XicDeviceSetResponse, _super);
+        function XicDeviceSetResponse() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return XicDeviceSetResponse;
+    }(XicDeviceResponse));
+    var XicGetDeviceGroupsResponse = (function (_super) {
+        __extends(XicGetDeviceGroupsResponse, _super);
+        function XicGetDeviceGroupsResponse() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return XicGetDeviceGroupsResponse;
+    }(XicDeviceResponse));
+    var XicSetDeviceGroupsResponse = (function (_super) {
+        __extends(XicSetDeviceGroupsResponse, _super);
+        function XicSetDeviceGroupsResponse() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return XicSetDeviceGroupsResponse;
+    }(XicDeviceSetResponse));
+    var XicGetDeviceScenesResponse = (function (_super) {
+        __extends(XicGetDeviceScenesResponse, _super);
+        function XicGetDeviceScenesResponse() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return XicGetDeviceScenesResponse;
+    }(XicDeviceResponse));
+    var XicSetDeviceScenesResponse = (function (_super) {
+        __extends(XicSetDeviceScenesResponse, _super);
+        function XicSetDeviceScenesResponse() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return XicSetDeviceScenesResponse;
+    }(XicDeviceSetResponse));
+    var XicGetDeviceFirmwareAvailableResponse = (function (_super) {
+        __extends(XicGetDeviceFirmwareAvailableResponse, _super);
+        function XicGetDeviceFirmwareAvailableResponse() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return XicGetDeviceFirmwareAvailableResponse;
+    }(XicDeviceResponse));
 });
