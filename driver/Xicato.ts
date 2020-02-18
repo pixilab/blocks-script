@@ -4,9 +4,13 @@
 
  	Copyright (c) 2019 No Parking Production ApS, Denmark (https://noparking.dk). All Rights Reserved.
 	Created by: Samuel Walz <mail@samwalz.com>
-  Version: 0.1
+  Version: 0.3
   Features:
   - get auth token via username & password
+  - set intensity for devices & groups
+  - recall scenes for devices & groups
+  - set scenes for devices (and unset scenes)
+  - assign devices to groups (and remove them)
 
   (losely based on the DeConz.ts driver)
  */
@@ -105,27 +109,45 @@ export class Xicato extends Driver<NetworkTCP> {
     }
 
     @callable('set intensity')
-    public setIntensity (
+    public deviceSetIntensity (
         @parameter('network name') network: string,
-        @parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)') deviceId: number,
+        @parameter('device id') deviceId: number,
         @parameter('target intensity, in percent (0 or between 0.1 and 100.0)') intensity: number,
         @parameter('fade time, in milliseconds', true) fading?: number
     ) : void {
         this.setIntensityREST(network, deviceId, intensity, fading);
     }
-
-    @callable('recall scene for a device')
-    public recallScene (
+    @callable('set intensity')
+    public groupSetIntensity (
         @parameter('network name') network: string,
-        @parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)') deviceId: number,
+        @parameter('group id') groupId: number,
+        @parameter('target intensity, in percent (0 or between 0.1 and 100.0)') intensity: number,
+        @parameter('fade time, in milliseconds', true) fading?: number
+    ) : void {
+        this.setIntensityREST(network, groupId + XIC_GROUP_OFFSET, intensity, fading);
+    }
+
+    @callable('recall scene')
+    public deviceRecallScene (
+        @parameter('network name') network: string,
+        @parameter('device id') deviceId: number,
         @parameter('target scene number (an integer)') sceneId: number,
         @parameter('fade time, in milliseconds', true) fading?: number
     ) : Promise<void> {
         return this.recallSceneREST(network, deviceId, sceneId, fading);
     }
+    @callable('recall scene')
+    public groupRecallScene (
+        @parameter('network name') network: string,
+        @parameter('group id') groupId: number,
+        @parameter('target scene number (an integer)') sceneId: number,
+        @parameter('fade time, in milliseconds', true) fading?: number
+    ) : Promise<void> {
+        return this.recallSceneREST(network, groupId + XIC_GROUP_OFFSET, sceneId, fading);
+    }
 
     @callable('add device to group')
-    public setGroup(
+    public groupAddDevice(
         @parameter('network name') network: string,
         @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
         @parameter('group number (an integer)') groupId: number,
@@ -133,7 +155,7 @@ export class Xicato extends Driver<NetworkTCP> {
         return this.setDeviceGroup(network, deviceId, groupId);
     }
     @callable('remove device from group')
-    public unsetGroup(
+    public groupRemoveDevice(
         @parameter('network name') network: string,
         @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
         @parameter('group number (an integer)') groupId: number,
@@ -142,7 +164,7 @@ export class Xicato extends Driver<NetworkTCP> {
     }
 
     @callable('set scene for a device')
-    public setScene (
+    public deviceSetScene (
         @parameter('network name') network: string,
         @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
         @parameter('target scene number (an integer)') sceneNumber: number,
@@ -151,6 +173,14 @@ export class Xicato extends Driver<NetworkTCP> {
         @parameter('delay in milliseconds', true) delayTime?: number
     ) : Promise<void> {
         return this.setDeviceScene(network, deviceId, sceneNumber, intensity, fadeTime, delayTime);
+    }
+    @callable('remove scene from device')
+    public deviceRemoveScene (
+        @parameter('network name') network: string,
+        @parameter('target device ID (cannot be a group or a sensor)') deviceId: number,
+        @parameter('target scene number (an integer)') sceneNumber: number
+    ) : Promise<void> {
+        return this.unsetDeviceScene(network, deviceId, sceneNumber);
     }
 
 
@@ -476,6 +506,28 @@ export class Xicato extends Driver<NetworkTCP> {
             }).catch(error => {reject(error)});
         });
     }
+    /**
+    add / change scene for a device
+    */
+    private unsetDeviceScene(network: string, deviceId: number, sceneNumber: number) : Promise<void> {
+        return new Promise<void> ((resolve, reject) => {
+            this.getDeviceScenesREST(network, deviceId).
+            then(result => {
+                var deviceScenes = result.scenes;
+                var indexOfSceneNumber = Xicato.findDeviceSceneIndexById(sceneNumber, deviceScenes);
+                if (indexOfSceneNumber !== -1) {
+                    deviceScenes.splice(indexOfSceneNumber, 1);
+                    this.setDeviceScenesREST(network, deviceId, deviceScenes).
+                    then(_result => {
+                        resolve();
+                    }).catch(error => {reject(error)});
+                } else {
+                    // group was already NOT assigned
+                    resolve();
+                }
+            }).catch(error => {reject(error)});
+        });
+    }
 
     private static findDeviceSceneById (sceneNumber: number, deviceScenes: XicDeviceScene[]) : XicDeviceScene | null {
         for (let i = 0; i < deviceScenes.length; i++) {
@@ -484,7 +536,13 @@ export class Xicato extends Driver<NetworkTCP> {
         }
         return null;
     }
-
+    private static findDeviceSceneIndexById (sceneNumber: number, deviceScenes: XicDeviceScene[]) : number {
+        for (let i = 0; i < deviceScenes.length; i++) {
+            var scene = deviceScenes[i];
+            if (scene.sceneNumber == sceneNumber) return i;
+        }
+        return -1;
+    }
 
     private requestFailed(error: string, reject?: (error?: any) => void) {
   		this.connected = false;

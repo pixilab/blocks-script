@@ -86,20 +86,29 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             enumerable: true,
             configurable: true
         });
-        Xicato.prototype.setIntensity = function (network, deviceId, intensity, fading) {
+        Xicato.prototype.deviceSetIntensity = function (network, deviceId, intensity, fading) {
             this.setIntensityREST(network, deviceId, intensity, fading);
         };
-        Xicato.prototype.recallScene = function (network, deviceId, sceneId, fading) {
+        Xicato.prototype.groupSetIntensity = function (network, groupId, intensity, fading) {
+            this.setIntensityREST(network, groupId + XIC_GROUP_OFFSET, intensity, fading);
+        };
+        Xicato.prototype.deviceRecallScene = function (network, deviceId, sceneId, fading) {
             return this.recallSceneREST(network, deviceId, sceneId, fading);
         };
-        Xicato.prototype.setGroup = function (network, deviceId, groupId) {
+        Xicato.prototype.groupRecallScene = function (network, groupId, sceneId, fading) {
+            return this.recallSceneREST(network, groupId + XIC_GROUP_OFFSET, sceneId, fading);
+        };
+        Xicato.prototype.groupAddDevice = function (network, deviceId, groupId) {
             return this.setDeviceGroup(network, deviceId, groupId);
         };
-        Xicato.prototype.unsetGroup = function (network, deviceId, groupId) {
+        Xicato.prototype.groupRemoveDevice = function (network, deviceId, groupId) {
             return this.unsetDeviceGroup(network, deviceId, groupId);
         };
-        Xicato.prototype.setScene = function (network, deviceId, sceneNumber, intensity, fadeTime, delayTime) {
+        Xicato.prototype.deviceSetScene = function (network, deviceId, sceneNumber, intensity, fadeTime, delayTime) {
             return this.setDeviceScene(network, deviceId, sceneNumber, intensity, fadeTime, delayTime);
+        };
+        Xicato.prototype.deviceRemoveScene = function (network, deviceId, sceneNumber) {
+            return this.unsetDeviceScene(network, deviceId, sceneNumber);
         };
         Xicato.prototype.requestPoll = function (delay) {
             var _this = this;
@@ -401,6 +410,26 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                 }).catch(function (error) { reject(error); });
             });
         };
+        Xicato.prototype.unsetDeviceScene = function (network, deviceId, sceneNumber) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                _this.getDeviceScenesREST(network, deviceId).
+                    then(function (result) {
+                    var deviceScenes = result.scenes;
+                    var indexOfSceneNumber = Xicato_1.findDeviceSceneIndexById(sceneNumber, deviceScenes);
+                    if (indexOfSceneNumber !== -1) {
+                        deviceScenes.splice(indexOfSceneNumber, 1);
+                        _this.setDeviceScenesREST(network, deviceId, deviceScenes).
+                            then(function (_result) {
+                            resolve();
+                        }).catch(function (error) { reject(error); });
+                    }
+                    else {
+                        resolve();
+                    }
+                }).catch(function (error) { reject(error); });
+            });
+        };
         Xicato.findDeviceSceneById = function (sceneNumber, deviceScenes) {
             for (var i = 0; i < deviceScenes.length; i++) {
                 var scene = deviceScenes[i];
@@ -408,6 +437,14 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                     return scene;
             }
             return null;
+        };
+        Xicato.findDeviceSceneIndexById = function (sceneNumber, deviceScenes) {
+            for (var i = 0; i < deviceScenes.length; i++) {
+                var scene = deviceScenes[i];
+                if (scene.sceneNumber == sceneNumber)
+                    return i;
+            }
+            return -1;
         };
         Xicato.prototype.requestFailed = function (error, reject) {
             this.connected = false;
@@ -455,23 +492,43 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         __decorate([
             Metadata_1.callable('set intensity'),
             __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)')),
+            __param(1, Metadata_1.parameter('device id')),
             __param(2, Metadata_1.parameter('target intensity, in percent (0 or between 0.1 and 100.0)')),
             __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", void 0)
-        ], Xicato.prototype, "setIntensity", null);
+        ], Xicato.prototype, "deviceSetIntensity", null);
         __decorate([
-            Metadata_1.callable('recall scene for a device'),
+            Metadata_1.callable('set intensity'),
             __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('device id (+ ' + XIC_GROUP_OFFSET + ' for group id)')),
+            __param(1, Metadata_1.parameter('group id')),
+            __param(2, Metadata_1.parameter('target intensity, in percent (0 or between 0.1 and 100.0)')),
+            __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], Xicato.prototype, "groupSetIntensity", null);
+        __decorate([
+            Metadata_1.callable('recall scene'),
+            __param(0, Metadata_1.parameter('network name')),
+            __param(1, Metadata_1.parameter('device id')),
             __param(2, Metadata_1.parameter('target scene number (an integer)')),
             __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", Promise)
-        ], Xicato.prototype, "recallScene", null);
+        ], Xicato.prototype, "deviceRecallScene", null);
+        __decorate([
+            Metadata_1.callable('recall scene'),
+            __param(0, Metadata_1.parameter('network name')),
+            __param(1, Metadata_1.parameter('group id')),
+            __param(2, Metadata_1.parameter('target scene number (an integer)')),
+            __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], Xicato.prototype, "groupRecallScene", null);
         __decorate([
             Metadata_1.callable('add device to group'),
             __param(0, Metadata_1.parameter('network name')),
@@ -480,7 +537,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
             __metadata("design:returntype", Promise)
-        ], Xicato.prototype, "setGroup", null);
+        ], Xicato.prototype, "groupAddDevice", null);
         __decorate([
             Metadata_1.callable('remove device from group'),
             __param(0, Metadata_1.parameter('network name')),
@@ -489,7 +546,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
             __metadata("design:returntype", Promise)
-        ], Xicato.prototype, "unsetGroup", null);
+        ], Xicato.prototype, "groupRemoveDevice", null);
         __decorate([
             Metadata_1.callable('set scene for a device'),
             __param(0, Metadata_1.parameter('network name')),
@@ -501,7 +558,16 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number, Number, Number]),
             __metadata("design:returntype", Promise)
-        ], Xicato.prototype, "setScene", null);
+        ], Xicato.prototype, "deviceSetScene", null);
+        __decorate([
+            Metadata_1.callable('remove scene from device'),
+            __param(0, Metadata_1.parameter('network name')),
+            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
+            __param(2, Metadata_1.parameter('target scene number (an integer)')),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], Xicato.prototype, "deviceRemoveScene", null);
         Xicato = Xicato_1 = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 8000 }),
             __metadata("design:paramtypes", [Object])
