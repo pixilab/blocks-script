@@ -18,7 +18,7 @@ const LABEL_IDSSDOM = "IDSSDOM";
 const LABEL_IDEVT = "IDEVT";
 const LABEL_IDMSG = "IDMSG";
 const LABEL_IDSEND = "IDSEND";
-const LABEL_LANG = "LANG";
+// const LABEL_LANG = "LANG";
 const LABEL_LANGUE = "LANGUE";
 const LABEL_MSTSTATUS = "MSTSTATUS";
 const LABEL_NUMDIFF = "NUMDIFF";
@@ -41,38 +41,41 @@ const LABEL_UNICAST = "UNICAST";
 
 const PORT_UNICAST = 5023;
 
+const SERVER_IP = '10.0.2.10';
 
+/** max wait time for acknowledgement in ms */
+const MAX_WAIT_FOR_ACKNOWLEDGEMENT = 500;
+
+const LOG_DEBUG = false;
 /**
  A driver using a UDP socket for communicating with an EmZ-IP device.
  */
 @Meta.driver('NetworkUDP', { port: PORT_UNICAST })
 export class EmZ_IP extends Driver<NetworkUDP> {
 
-
     _lastEventID : number = 0;
-    _lastEventPlayerID : number;
+    _lastEventPlayerID : number = -1;
 
     _idDom : number = 0;
 
-    /**
-    * Create me, attached to the network socket I communicate through. When using a
-     * driver, the driver replaces the built-in functionality of the network socket
-     with the properties and callable functions exposed.
-     */
-     public constructor(private socket: NetworkUDP) {
+    messageQueue : EmZIPMessage[] = [];
+    currentSentMessage : EmZIPMessage = null;
+    sendResolver: (value?: void | Thenable<void>) => void = null;
+
+    public constructor(private socket: NetworkUDP) {
         super(socket);
 
-
-        socket.subscribe('textReceived', (sender, message)=> {
+        socket.subscribe('textReceived', (_sender, message)=> {
             this.onMessage(message.text);
         });
 
         // setup device for unicast to blocks server
-        var messageUnicastSetup = new EmZIPUnicastSetup();
-        messageUnicastSetup.ValueIDDOM = this._idDom;
-        messageUnicastSetup.ValueADR = '192.168.1.10';// '10.0.2.10';
-        messageUnicastSetup.ValuePORT = socket.listenerPort;
-        this.sendMessage(messageUnicastSetup);
+        var messageUnicastSetup = new EmZIPUnicastSetup(
+            this._idDom,
+            SERVER_IP,
+            socket.listenerPort
+        );
+        this.queueMessage(messageUnicastSetup);
 
     }
 
@@ -81,19 +84,18 @@ export class EmZ_IP extends Driver<NetworkUDP> {
         @Meta.parameter("Zone to play") zone : number
     ) : void
     {
-        var simpleControl = new EmZIPSimpleControl();
-        simpleControl.ValueIDDOM = this._idDom;
-        simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_STOP;
-        simpleControl.ValueNUMZONE = 0;
-        simpleControl.ValueOFFSET = 0;
-        this.sendMessage(simpleControl);
+        var simpleControl = new EmZIPSimpleControl(
+            this._idDom,
+            EmZIPSimpleControl.ORDRE_STOP
+        );
+        this.queueMessage(simpleControl);
 
-        simpleControl = new EmZIPSimpleControl();
-        simpleControl.ValueIDDOM = this._idDom;
-        simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_PLAY_ZONE;
-        simpleControl.ValueNUMZONE = zone;
-        simpleControl.ValueOFFSET = 0;
-        this.sendMessage(simpleControl);
+        simpleControl = new EmZIPSimpleControl(
+            this._idDom,
+            EmZIPSimpleControl.ORDRE_PLAY_ZONE,
+            zone
+        );
+        this.queueMessage(simpleControl);
     }
 
     /**
@@ -120,10 +122,36 @@ export class EmZ_IP extends Driver<NetworkUDP> {
         return this._lastEventPlayerID;
     }
 
-    sendMessage(message : EmZIPMessage )
+    sendMessage(message : EmZIPMessage ) : Promise<void>
     {
-        // console.info(message.ToString());
+        if (LOG_DEBUG) console.info(this.socket.name + ': sending ' + EmZIPMessage.CDEToEnglish(message.ValueCDE));
         this.socket.sendText(message.ToString() + '\0');
+        this.currentSentMessage = message;
+        return new Promise<void>((resolve, reject) => {
+            this.sendResolver = resolve;
+            wait(MAX_WAIT_FOR_ACKNOWLEDGEMENT).then(() => {
+                reject('send timed out');
+            });
+        });
+    }
+
+    queueMessage(message : EmZIPMessage)
+    {
+        this.messageQueue.push(message);
+        this.workMessageQueue();
+    }
+
+    workMessageQueue()
+    {
+        if (this.messageQueue.length > 0 &&
+            this.currentSentMessage == null)
+        {
+            this.sendMessage(this.messageQueue.shift()).then(() => {
+                this.workMessageQueue();
+            }).catch(error => {
+                console.warn(error);
+            });
+        }
     }
 
     onMessage(message: string)
@@ -131,8 +159,8 @@ export class EmZ_IP extends Driver<NetworkUDP> {
         var emZIPMessage = EmZIPMessage.Parse(message);
         switch (emZIPMessage.ValueCDE)
         {
-            case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
-                // nothing yet
+            case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
+                this.ProcessAcknowledgement(emZIPMessage as EmZIPAcknowledgment);
                 break;
             case EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER:
                 // do nothing
@@ -140,8 +168,8 @@ export class EmZ_IP extends Driver<NetworkUDP> {
             case EmZIPMessage.MESSAGE_TYPE_EVENT:
                 this.ProcessEvent(emZIPMessage as EmZIPEvent);
                 break;
-            case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
-                // nothing here yet
+            case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
+                // nothing yet
                 break;
             default:
                 console.info("received unsupported message type: " + emZIPMessage.ToString());
@@ -151,17 +179,60 @@ export class EmZ_IP extends Driver<NetworkUDP> {
 
     ProcessEvent (eventMessage : EmZIPEvent)
     {
+        if (LOG_DEBUG) console.log('received event: event id : ' + eventMessage.ValueIDEVT  + ' language: ' + eventMessage.ValueLANGUE + ' opt: ' + eventMessage.ValueOPT);
         this._lastEventID++;
         this._lastEventPlayerID = eventMessage.ValuePLAYERID;
         this.changed("lastEventID");
         this.changed("lastEventPlayerID");
     }
 
+    ProcessAcknowledgement (acknowledgeMessage : EmZIPAcknowledgment)
+    {
+        var cde = acknowledgeMessage.ValueIDCDE;
+        // var result = acknowledgeMessage.ValueRESULT;
+
+        if (this.currentSentMessage.ValueCDE == cde)
+        {
+            if (this.sendResolver != null)
+            {
+                this.sendResolver();
+                this.sendResolver = null;
+            }
+            this.currentSentMessage = null;
+        }
+
+        switch (acknowledgeMessage.ValueIDCDE)
+        {
+            case EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL:
+                this.LogAcknowledgement('simple control', acknowledgeMessage);
+                break;
+            case EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP:
+                this.LogAcknowledgement('unicast setup', acknowledgeMessage);
+                break;
+            default:
+                this.LogAcknowledgement(EmZIPMessage.CDEToEnglish(cde), acknowledgeMessage);
+                break;
+        }
+    }
+
+    LogAcknowledgement (logPrefix : string, acknowledgement : EmZIPAcknowledgment)
+    {
+        if (acknowledgement.ValueRESULT == EmZIPAcknowledgment.RESULT_OKAY)
+        {
+            if (LOG_DEBUG) console.log(this.socket.name + ': ' + logPrefix + ' accepted (sender: ' +  acknowledgement.ValueADR + ':' + acknowledgement.ValuePORT + ')');
+        }
+        else
+        {
+            console.warn(logPrefix + ' rejected');
+        }
+    }
 
 
 }
 
-
+interface Dictionary<Group> {
+    [label: string]: Group;
+}
 
 class EmZIPMessage
 {
@@ -173,36 +244,23 @@ class EmZIPMessage
     public static readonly MESSAGE_TYPE_UNICAST_SETUP = 32;
     public static readonly MESSAGE_TYPE_ACKNOWLEDGMENT = 64;
 
-    protected _fields: {[label: string]: string;} = {};
-    _splitByLinebreak = '\n';
-    _splitByEqual = '=';
+    protected _fields: Dictionary<string> = {};
+    static splitByLinebreak = '\n';
+    static splitByEqual = '=';
 
+    public get ValueIDDOM() : number { return this.GetNumberValue(LABEL_IDDOM); }
+    public get ValueCDE () : number { return this.GetNumberValue(LABEL_CDE); }
 
-    public get ValueIDDOM() : number
+    public constructor (iddom : number, cde : number)
     {
-        return this.GetNumberValue(LABEL_IDDOM);
-    }
-    public set ValueIDDOM(value: number)
-    {
-        this.SetNumberValue(LABEL_IDDOM, value);
-    }
-
-    public get ValueCDE () : number
-    {
-        return this.GetNumberValue(LABEL_CDE);
-    }
-
-    public constructor (message? : string)
-    {
-        if (message) this.ParseMessage(message);
+        this.SetNumberValue(LABEL_IDDOM, iddom);
+        this.SetNumberValue(LABEL_CDE, cde);
     }
 
     public GetNumberValue(label: string) : number
     {
-        var value = this._fields[label];
-        return value ? parseInt(value) : -1;
+        return EmZIPMessage.GetNumber(label, this._fields);
     }
-
     public SetNumberValue (label: string, value: number)
     {
         var valueString = value;
@@ -213,27 +271,65 @@ class EmZIPMessage
     {
         return this._fields[label];
     }
-
     public SetValue(label : string, value : string | number)
     {
         this._fields[label] = String(value);
     }
 
+    public static CDEToEnglish (cde : number) : string {
+        switch (cde)
+        {
+            case EmZIPMessage.MESSAGE_TYPE_EVENT:
+                return 'event';
+            case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
+                return 'request for delay';
+            case EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER:
+                return 'delay answer';
+            case EmZIPMessage.MESSAGE_TYPE_CONTROL:
+                return 'control';
+            case EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL:
+                return 'simple control';
+            case EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP:
+                return 'unicast setup';
+            case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
+                return 'acknowledgement';
+        }
+        return 'unknown';
+    }
+
+    private static GetNumber (label : string, dict : Dictionary<string>) : number
+    {
+        var value = dict[label];
+        return value ? parseInt(value) : -1;
+    }
+    private static GetString (label : string, dict : Dictionary<string>) : string
+    {
+        return dict[label];
+    }
+
+
 
     // parses valid message lines into dictionary
     ParseMessage (message : string)
     {
-        var fields = message.split(this._splitByLinebreak);
+        this._fields = EmZIPMessage.ParseMessageIntoDict(message);
+    }
+
+    static ParseMessageIntoDict (message : string) : Dictionary<string>
+    {
+        var dict: Dictionary<string> = {};
+        var fields = message.split(EmZIPMessage.splitByLinebreak);
         for (var i = 0; i < fields.length; i++)
         {
-            var labelAndValue = fields[i].trim().split(this._splitByEqual);
+            var labelAndValue = fields[i].trim().split(EmZIPMessage.splitByEqual);
             if (labelAndValue.length == 2)
             {
                 var label = labelAndValue[0].trim();
                 var value = labelAndValue[1].trim();
-                this._fields[label] = value;
+                dict[label] = value;
             }
         }
+        return dict;
     }
 
     // renders dictonary entry into valid message line
@@ -244,26 +340,71 @@ class EmZIPMessage
 
     public static Parse (message : string) : EmZIPMessage
     {
-        var emZIPMessage = new EmZIPMessage(message);
-
-        switch (emZIPMessage.ValueCDE)
+        var dict = this.ParseMessageIntoDict(message);
+        var iddom = this.GetNumber(LABEL_IDDOM, dict);
+        var cde = this.GetNumber(LABEL_CDE, dict);
+        switch (cde)
         {
             case EmZIPMessage.MESSAGE_TYPE_EVENT:
-                return new EmZIPEvent(message);
+                return new EmZIPEvent(
+                    iddom,
+                    this.GetNumber(LABEL_IDEVT, dict),
+                    this.GetNumber(LABEL_NUMZONE, dict),
+                    this.GetNumber(LABEL_PLAYERID, dict),
+                    this.GetNumber(LABEL_LANGUE, dict),
+                    this.GetNumber(LABEL_OPT, dict),
+                    this.GetNumber(LABEL_OFFSET, dict)
+                );
             case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
-                return new EmZIPRequestForDelay(message);
+                return new EmZIPRequestForDelay(
+                    iddom,
+                    this.GetString(LABEL_IDSEND, dict),
+                    this.GetNumber(LABEL_IDMSG, dict),
+                );
             case EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER:
-                return new EmZIPDelayAnswer(message);
+                return new EmZIPDelayAnswer(
+                    iddom,
+                    this.GetString(LABEL_IDDEST, dict),
+                    this.GetNumber(LABEL_IDMSG, dict),
+                    this.GetNumber(LABEL_TSRXSEC, dict),
+                    this.GetNumber(LABEL_TSRXNSEC, dict),
+                    this.GetNumber(LABEL_TSTXSEC, dict),
+                    this.GetNumber(LABEL_TSTXNSEC, dict)
+                );
             case EmZIPMessage.MESSAGE_TYPE_CONTROL:
-                return new EmZIPControl(message);
+                return new EmZIPControl(
+                    iddom,
+                    this.GetNumber(LABEL_TSSEC, dict),
+                    this.GetNumber(LABEL_TSNSEC, dict),
+                    this.GetString(LABEL_MSTSTATUS, dict),
+                    this.GetString(LABEL_IDSSDOM, dict),
+                    this.GetNumber(LABEL_NUMDIFF, dict),
+                    this.GetNumber(LABEL_RELTMPS, dict),
+                    this.GetNumber(LABEL_RELTMPNS, dict)
+                );
             case EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL:
-                return new EmZIPSimpleControl(message);
+                return new EmZIPSimpleControl(
+                    iddom,
+                    this.GetNumber(LABEL_ORDRE, dict),
+                    this.GetNumber(LABEL_NUMZONE, dict),
+                    this.GetNumber(LABEL_OFFSET, dict)
+                );
             case EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP:
-                return new EmZIPUnicastSetup(message);
+                return new EmZIPUnicastSetup(
+                    iddom,
+                    this.GetString(LABEL_ADR, dict),
+                    this.GetNumber(LABEL_PORT, dict)
+                );
             case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
-                return new EmZIPAcknowledgment(message);
+                return new EmZIPAcknowledgment(
+                    iddom,
+                    this.GetNumber(LABEL_IDCDE, dict),
+                    this.GetNumber(LABEL_RESULT, dict),
+                    this.GetString(LABEL_ADR, dict),
+                    this.GetNumber(LABEL_PORT, dict)
+                );
         }
-        return emZIPMessage;
+        return new EmZIPMessage(iddom, cde);
     }
 
 	public ToString() : string
@@ -277,24 +418,21 @@ class EmZIPMessage
 class EmZIPEvent extends EmZIPMessage
 {
     public get ValueIDEVT() : number { return this.GetNumberValue(LABEL_IDEVT); }
-    public set ValueIDEVT( value: number ) { this.SetNumberValue(LABEL_IDEVT, value); }
-
     public get ValueNUMZONE() : number { return this.GetNumberValue(LABEL_NUMZONE); }
-    public set ValueNUMZONE( value: number ) { this.SetNumberValue(LABEL_NUMZONE, value); }
-
     public get ValuePLAYERID() : number { return this.GetNumberValue(LABEL_PLAYERID); }
-    public set ValuePLAYERID( value: number ) { this.SetNumberValue(LABEL_PLAYERID, value); }
-
     public get ValueLANGUE() : number { return this.GetNumberValue(LABEL_LANGUE); }
-    public set ValueLANGUE( value: number ) { this.SetNumberValue(LABEL_LANGUE, value); }
-
     public get ValueOPT() : number { return this.GetNumberValue(LABEL_OPT); }
-    public set ValueOPT( value: number ) { this.SetNumberValue(LABEL_OPT, value); }
-
     public get ValueOFFSET() : number { return this.GetNumberValue(LABEL_OFFSET); }
-    public set ValueOFFSET( value: number ) { this.SetNumberValue(LABEL_OFFSET, value); }
 
-    public constructor (message : string) { super(message); }
+    public constructor (iddom: number, idevt: number, numzone: number, playerid: number, langue: number, opt: number, offset: number) {
+        super(iddom, EmZIPMessage.MESSAGE_TYPE_EVENT);
+        this.SetNumberValue(LABEL_IDEVT, idevt);
+        this.SetNumberValue(LABEL_NUMZONE, numzone);
+        this.SetNumberValue(LABEL_PLAYERID, playerid);
+        this.SetNumberValue(LABEL_LANGUE, langue);
+        this.SetNumberValue(LABEL_OPT, opt);
+        this.SetNumberValue(LABEL_OFFSET, offset);
+    }
 }
 
 class EmZIPRequestForDelay extends EmZIPMessage
@@ -302,33 +440,32 @@ class EmZIPRequestForDelay extends EmZIPMessage
     public get ValueIDSEND() : string { return this._fields[LABEL_IDSEND]; }
     public get ValueIDMSG() : number { return this.GetNumberValue(LABEL_IDMSG); }
 
-    public constructor(message : string) { super(message); }
+    public constructor(iddom: number, idsend: string, idmsg: number) {
+        super(iddom, EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY);
+        this.SetValue(LABEL_IDSEND, idsend);
+        this.SetNumberValue(LABEL_IDMSG, idmsg);
+    }
 }
 
 class EmZIPDelayAnswer extends EmZIPMessage
 {
     public get ValueIDDEST() : string { return this._fields[LABEL_IDDEST]; }
-    public set ValueIDDEST( value: string ) { this._fields[LABEL_IDDEST] = value; }
-
     public get ValueIDMSG() : number { return this.GetNumberValue(LABEL_IDMSG); }
-    public set ValueIDMSG( value: number ) { this.SetNumberValue(LABEL_IDMSG, value); }
-
     public get ValueTSRXSEC() : number { return this.GetNumberValue(LABEL_TSRXSEC); }
-    public set ValueTSRXSEC( value: number ) { this.SetNumberValue(LABEL_TSRXSEC, value); }
-
     public get ValueTSRXNSEC() : number { return this.GetNumberValue(LABEL_TSRXNSEC); }
-    public set ValueTSRXNSEC( value: number ) { this.SetNumberValue(LABEL_TSRXNSEC, value); }
-
     public get ValueTSTXSEC() : number { return this.GetNumberValue(LABEL_TSTXSEC); }
-    public set ValueTSTXSEC( value: number ) { this.SetNumberValue(LABEL_TSTXSEC, value); }
-
     public get ValueTSTXNSEC() : number { return this.GetNumberValue(LABEL_TSTXNSEC); }
-    public set ValueTSTXNSEC( value: number ) { this.SetNumberValue(LABEL_TSTXNSEC, value); }
 
-    public constructor(message? : string)
+    public constructor(iddom : number, iddest: string, idmsg: number,
+        tsrxsec: number, tsrxnsec: number, tstxsec: number, tstxnsec: number)
     {
-        super(message);
-        if (!message) this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER);
+        super(iddom, EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER);
+        this.SetValue(LABEL_IDDEST, iddest);
+        this.SetNumberValue(LABEL_IDMSG, idmsg);
+        this.SetNumberValue(LABEL_TSRXSEC, tsrxsec);
+        this.SetNumberValue(LABEL_TSRXNSEC, tsrxnsec);
+        this.SetNumberValue(LABEL_TSTXSEC, tstxsec);
+        this.SetNumberValue(LABEL_TSTXNSEC, tstxnsec);
     }
 
 	public ToString() : string
@@ -342,8 +479,6 @@ class EmZIPDelayAnswer extends EmZIPMessage
                 this.RenderMessageField(LABEL_TSTXNSEC) +
                 MESSAGE_LINE_BREAK;
 	}
-
-
 }
 
 class EmZIPSimpleControl extends EmZIPMessage
@@ -355,19 +490,15 @@ class EmZIPSimpleControl extends EmZIPMessage
     public static readonly ORDRE_SYNC_ZONE = 5;
 
     public get ValueORDRE() : number { return this.GetNumberValue(LABEL_ORDRE); }
-    public set ValueORDRE( value: number ) { this.SetNumberValue(LABEL_ORDRE, value); }
-
     public get ValueNUMZONE() : number { return this.GetNumberValue(LABEL_NUMZONE); }
-    public set ValueNUMZONE( value: number ) { this.SetNumberValue(LABEL_NUMZONE, value); }
-
     public get ValueOFFSET() : number { return this.GetNumberValue(LABEL_OFFSET); }
-    public set ValueOFFSET( value: number ) { this.SetNumberValue(LABEL_OFFSET, value); }
 
-
-    public constructor (message? : string)
+    public constructor (iddom : number, ordre: number, numzone: number = 0, offset : number = 0)
     {
-        super(message);
-        if (!message) this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL);
+        super(iddom, EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL);
+        this.SetNumberValue(LABEL_ORDRE, ordre);
+        this.SetNumberValue(LABEL_NUMZONE, numzone);
+        this.SetNumberValue(LABEL_OFFSET, offset);
     }
 
 	public ToString() : string
@@ -382,11 +513,42 @@ class EmZIPSimpleControl extends EmZIPMessage
 
 class EmZIPControl extends EmZIPMessage
 {
-    public constructor (message? : string)
+    public static readonly MSSTATUS_PLAY = 'PLAY';
+    public static readonly MSSTATUS_STOP = 'STOP';
+    public static readonly MSSTATUS_PAUSE = 'PAUSE';
+
+    public get ValueTSSEC() : number { return this.GetNumberValue(LABEL_TSSEC); }
+    public get ValueTSNSEC() : number { return this.GetNumberValue(LABEL_TSNSEC); }
+    public get ValueMSSTATUS() : string { return this.GetValue(LABEL_MSTSTATUS); }
+    public get ValueIDSSDOM() : string { return this.GetValue(LABEL_IDSSDOM); }
+    public get ValueRELTMPS() : number { return this.GetNumberValue(LABEL_RELTMPS); }
+    public get ValueRELTMPNS() : number { return this.GetNumberValue(LABEL_RELTMPNS); }
+
+    public constructor (iddom : number, tssec: number, tsnsec: number, msstatus: string, idssdom: string,
+        numdiff: number, reltmps: number, reltmpns: number)
     {
-        super(message);
-        if (!message) this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_CONTROL);
+        super(iddom, EmZIPMessage.MESSAGE_TYPE_CONTROL);
+        this.SetNumberValue(LABEL_TSSEC, tssec);
+        this.SetNumberValue(LABEL_TSNSEC, tsnsec);
+        this.SetValue(LABEL_MSTSTATUS, msstatus);
+        this.SetValue(LABEL_IDSSDOM, idssdom);
+        this.SetNumberValue(LABEL_NUMDIFF, numdiff);
+        this.SetNumberValue(LABEL_RELTMPS, reltmps);
+        this.SetNumberValue(LABEL_RELTMPNS, reltmpns);
     }
+
+    public ToString() : string
+	{
+        return super.ToString() +
+                this.RenderMessageField(LABEL_TSSEC) +
+                this.RenderMessageField(LABEL_TSNSEC) +
+                this.RenderMessageField(LABEL_MSTSTATUS) +
+                this.RenderMessageField(LABEL_IDSSDOM) +
+                this.RenderMessageField(LABEL_NUMDIFF) +
+                this.RenderMessageField(LABEL_RELTMPS) +
+                this.RenderMessageField(LABEL_RELTMPNS) +
+                MESSAGE_LINE_BREAK;
+	}
 }
 
 class EmZIPUnicastSetup extends EmZIPMessage
@@ -394,26 +556,17 @@ class EmZIPUnicastSetup extends EmZIPMessage
     public static readonly CDEUNICAST_INIT = 1;
 
     public get ValueUNICAST() : number { return this.GetNumberValue(LABEL_UNICAST); }
-    public set ValueUNICAST( value: number ) { this.SetNumberValue(LABEL_UNICAST, value); }
-
     public get ValueADR() : string { return this.GetValue(LABEL_ADR); }
-    public set ValueADR( value: string ) { this.SetValue(LABEL_ADR, value); }
-
     public get ValuePORT() : number { return this.GetNumberValue(LABEL_PORT); }
-    public set ValuePORT( value: number ) { this.SetNumberValue(LABEL_PORT, value); }
 
-    public constructor (message? : string)
-    {
-        super(message);
-        if (!message)
-        {
-            this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP);
-            this.ValueUNICAST = EmZIPUnicastSetup.CDEUNICAST_INIT;
-        }
+    public constructor (iddom : number, adr : string, port: number) {
+        super(iddom, EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP);
+        this.SetNumberValue(LABEL_UNICAST, EmZIPUnicastSetup.CDEUNICAST_INIT);
+        this.SetValue(LABEL_ADR, adr);
+        this.SetNumberValue(LABEL_PORT, port);
     }
 
-	public ToString() : string
-	{
+	public ToString() : string {
         return super.ToString() +
                 this.RenderMessageField(LABEL_UNICAST) +
                 this.RenderMessageField(LABEL_ADR) +
@@ -424,14 +577,23 @@ class EmZIPUnicastSetup extends EmZIPMessage
 
 class EmZIPAcknowledgment extends EmZIPMessage
 {
-    public constructor (message? : string)
-    {
-        super(message);
-        if (!message) this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT);
+    public static readonly RESULT_OKAY = 6;
+    public static readonly RESULT_ERROR = 21;
+
+    public get ValueIDCDE() : number { return this.GetNumberValue(LABEL_IDCDE); }
+    public get ValueRESULT() : number { return this.GetNumberValue(LABEL_RESULT); }
+    public get ValueADR() : string { return this._fields[LABEL_ADR]; }
+    public get ValuePORT() : number { return this.GetNumberValue(LABEL_PORT); }
+
+    public constructor (iddom : number, idcde: number, result: number, adr: string, port: number) {
+        super(iddom, EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT);
+        this.SetNumberValue(LABEL_IDCDE, idcde);
+        this.SetNumberValue(LABEL_RESULT, result);
+        this.SetValue(LABEL_ADR, adr);
+        this.SetNumberValue(LABEL_PORT, port);
     }
 
-	public ToString() : string
-	{
+	public ToString() : string {
         return super.ToString() +
                 this.RenderMessageField(LABEL_IDCDE) +
                 this.RenderMessageField(LABEL_RESULT) +
