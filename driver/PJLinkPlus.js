@@ -72,6 +72,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 CMD_POWR,
                 CMD_ERST,
                 CMD_CLSS,
+                CMD_INST,
                 CMD_AVMT,
                 CMD_LAMP,
                 CMD_NAME,
@@ -297,15 +298,18 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             var nonNumberID = parseInt(id) === NaN;
             if (this._class == 2) {
                 if (nonNumberID && !this.isValidLetter(id)) {
-                    console.log('not a valid letter or number');
+                    console.warn('not a valid letter or number');
                     return false;
                 }
             }
             else {
-                console.log('not a valid number');
+                console.warn('not a valid number');
                 if (nonNumberID)
                     return false;
             }
+            var inputValue = type + id;
+            if (this._class > 1 && this._validInputs.indexOf(inputValue) === -1)
+                return false;
             this._inputType = type;
             this._inputSource = id;
             if (this._input.set(type + id)) {
@@ -569,6 +573,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                     (this._lampCount > 2 ? 'Lamp three: ' + (this._lampThreeActive ? 'on' : 'off') + ', ' + this._lampThreeHours + ' lighting hours' + this._lineBreak : '') +
                     (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '') +
                     (this._lampReplacementModelNumber ? 'Lamp replacement model number: ' + this._lampReplacementModelNumber + this._lineBreak : '') +
+                    (this._validInputs ? 'Inputs: ' + this._validInputs.join(', ') + this._lineBreak : '') +
                     (this._serialNumber ? 'SNR: ' + this._serialNumber + this._lineBreak : '') +
                     (this._softwareVersion ? 'Software version: ' + this._softwareVersion + this._lineBreak : '') +
                     '(class ' + this._class + ', status report last updated ' + this._infoFetchDate + ')';
@@ -783,6 +788,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                     }
                     break;
                 case CMD_INST:
+                    this._validInputs = reply.split(' ');
                     break;
                 case CMD_NAME:
                     var newDeviceName = reply;
@@ -1051,7 +1057,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _a[CMD_POWR] = { dynamic: true, cmdClass: 1, read: true, write: true, needsPower: false },
             _a[CMD_INPT] = { dynamic: true, cmdClass: 1, read: true, write: true, needsPower: true },
             _a[CMD_AVMT] = { dynamic: true, cmdClass: 1, read: true, write: true, needsPower: true },
-            _a[CMD_ERST] = { dynamic: true, cmdClass: 1, read: true, write: false, needsPower: true },
+            _a[CMD_ERST] = { dynamic: true, cmdClass: 1, read: true, write: false, needsPower: false },
             _a[CMD_LAMP] = { dynamic: true, cmdClass: 1, read: true, write: false, needsPower: false },
             _a[CMD_INST] = { dynamic: true, cmdClass: 2, read: true, write: false, needsPower: false },
             _a[CMD_NAME] = { dynamic: false, cmdClass: 1, read: true, write: false, needsPower: false },
