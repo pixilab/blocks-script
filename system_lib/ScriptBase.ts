@@ -42,6 +42,21 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 	changed(prop: string|Function): void {
 		this.__scriptFacade.changed(prop);
 	}
+
+	/**
+	 * Turn an array-like object into a proper JavaScript array, which is returned.
+	 * Simply returns arr if already is fine.
+	 */
+	makeJSArray(arr: any[]) {
+		if (Array.isArray(arr))
+			return arr;	// Already seems kosher
+
+		const arrayLike: any[] = arr; // Needed since TS compiler thinks it knows better
+		const result = [];
+		for (var i = 0; i < arrayLike.length; ++i)
+			result.push(arrayLike[i]);
+		return result;
+	}
 }
 
 // Common script environment used by all script objects

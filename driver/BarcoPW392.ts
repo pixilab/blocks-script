@@ -1,73 +1,50 @@
 /*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2018 by Mike Fahl.
+ * Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
-import {NetworkTCP} from "system/Network";
-import {BoolState, NetworkProjector, NumState} from "driver/NetworkProjector";
-import * as Meta from "system_lib/Metadata";
 
-/*
- Manage a PJLink projector, accessed through a provided NetworkTCP connection.
+import * as Meta from "system_lib/Metadata";
+import {BoolState, NetworkProjector, NumState} from "driver/NetworkProjector";
+import {NetworkTCP} from "system/Network";
+
+/**
+ Manage a BarcoPW392 protocol (aka ProjectionDesign) projector,
+ accessed through a provided NetworkTCPDevice connection.
  */
 @Meta.driver('NetworkTCP', { port: 1025 })
 export class BarcoPW392 extends NetworkProjector {
-	private static replyParser = /\%\d* (\S*) (\!?)(\d*)/;
-	private static kMaxInput = 25;
 	protected _input: NumState;
+	private static replyParser = /%\d* (\S*) (!?)(\d*)/;
 
 	constructor(socket: NetworkTCP) {
 		super(socket);
 		this.addState(this._power = new BoolState('POWR', 'power'));
 		this.addState(this._input = new NumState(
 			'IABS', 'input',
-			0, BarcoPW392.kMaxInput
+			0, 25, () => this._power.getCurrent()
 		));
 
 		this.poll();	// Get polling going
 		this.attemptConnect();	// Attempt initial connection
+		// console.info("inited");
 	}
 
 	/**
-	 * Allow clients to check for my type, just as in some system object classes
-	 */
-	isOfTypeName(typeName: string) {
-		return typeName === "BarcoPW392" ? this : super.isOfTypeName(typeName);
-	}
-
-	/*
-	 Set desired input source.
-	 */
-	@Meta.property("Desired input source number")
-	@Meta.min(0) @Meta.max(BarcoPW392.kMaxInput)
-	public set input(value: number) {
-		if (this._input.set(value))
-			this.sendCorrection();
-	}
-
-	/*
-	 Get current input, if known, else undefined.
-	 */
-	public get input(): number {
-		return this._input.get();
-	}
-
-	/*
-	 Override to call getInitialState on connection, as this protocol has
-	 no initial handshake from projector.
+	 Override to initiate getInitialState on connection, as this protocol has
+	 no initial handshake from peer.
 	 */
 	protected justConnected(): void {
 		super.justConnected();
 		this.getInitialState();
 	}
 
-	/*
+	/**
 	 Send queries to obtain the initial state of the projector.
 	 */
 	private getInitialState() {
 		this.connected = false;	// Mark me as not yet fully awake, to hold off commands
 		this.request('POWR').then(
 			reply => {
-				this._power.updateCurrent((parseInt(reply) & 1) != 0);
+				this._power.updateCurrent(!!(parseInt(reply) & 1));
 				// console.info("getInitialState POWR", this.power.current);
 				return this.request('IABS')
 			}
@@ -75,7 +52,7 @@ export class BarcoPW392 extends NetworkProjector {
 			reply => {
 				this._input.updateCurrent(parseInt(reply));
 				this.connected = true;
-				// console.info("getInitialState INPT", this.input.current);
+				// console.info("getInitialState IABS", this.input.current);
 				this.sendCorrection();
 			}
 		).catch(error => {
@@ -84,7 +61,8 @@ export class BarcoPW392 extends NetworkProjector {
 		});
 	}
 
-	/*
+
+	/**
 	 Send a question or command to the projector, and wait for the response. The
 	 response is assumed to be
 
@@ -95,13 +73,16 @@ export class BarcoPW392 extends NetworkProjector {
 	 If error: rrr is an error code, beginning with a '!'char
 	 */
 	request(question: string, param?: string): Promise<string> {
+		this.currCmd = question;
 		var toSend = ':' + question;
 		toSend += (param === undefined) ? '?' : param;
 		// console.info("request", toSend);
-		this.socket.sendText(toSend).catch(err=>this.sendFailed(err));
-		const result = this.startRequest(question);
+		this.socket.sendText(toSend).catch(
+			err=>this.sendFailed(err)
+		);
+		const result = this.startRequest(toSend);
 		result.finally(()=> {
-			asap(()=> {	// Send further corrections soon
+			asap(()=> {	// Send further corrections soon, once this cycle settled
 				// console.info("request finally sendCorrection");
 				this.sendCorrection();
 			});
@@ -109,7 +90,7 @@ export class BarcoPW392 extends NetworkProjector {
 		return result;
 	}
 
-	/*
+	/**
 	 Got data from peer. Handle responses to requests.
 	 */
 	protected textReceived(text: string): void {
@@ -122,11 +103,10 @@ export class BarcoPW392 extends NetworkProjector {
 					console.warn("BarcoPW response", text);
 					this.requestFailure(text);
 				} else
-					this.requestSuccess(parts[3]); // Only "reply" data part
+					this.requestSuccess(parts[3]);	// Only "reply" data part
 			} else
 				console.warn("Unexpected data", text);
 			this.requestFinished();
 		}
 	}
-
 }

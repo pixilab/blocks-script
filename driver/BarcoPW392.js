@@ -17,7 +17,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
+define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"], function (require, exports, Meta, NetworkProjector_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var BarcoPW392 = BarcoPW392_1 = (function (_super) {
@@ -25,25 +25,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         function BarcoPW392(socket) {
             var _this = _super.call(this, socket) || this;
             _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
-            _this.addState(_this._input = new NetworkProjector_1.NumState('IABS', 'input', 0, BarcoPW392_1.kMaxInput));
+            _this.addState(_this._input = new NetworkProjector_1.NumState('IABS', 'input', 0, 25, function () { return _this._power.getCurrent(); }));
             _this.poll();
             _this.attemptConnect();
             return _this;
         }
-        BarcoPW392.prototype.isOfTypeName = function (typeName) {
-            return typeName === "BarcoPW392" ? this : _super.prototype.isOfTypeName.call(this, typeName);
-        };
-        Object.defineProperty(BarcoPW392.prototype, "input", {
-            get: function () {
-                return this._input.get();
-            },
-            set: function (value) {
-                if (this._input.set(value))
-                    this.sendCorrection();
-            },
-            enumerable: true,
-            configurable: true
-        });
         BarcoPW392.prototype.justConnected = function () {
             _super.prototype.justConnected.call(this);
             this.getInitialState();
@@ -52,7 +38,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             var _this = this;
             this.connected = false;
             this.request('POWR').then(function (reply) {
-                _this._power.updateCurrent((parseInt(reply) & 1) != 0);
+                _this._power.updateCurrent(!!(parseInt(reply) & 1));
                 return _this.request('IABS');
             }).then(function (reply) {
                 _this._input.updateCurrent(parseInt(reply));
@@ -64,10 +50,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         };
         BarcoPW392.prototype.request = function (question, param) {
             var _this = this;
+            this.currCmd = question;
             var toSend = ':' + question;
             toSend += (param === undefined) ? '?' : param;
             this.socket.sendText(toSend).catch(function (err) { return _this.sendFailed(err); });
-            var result = this.startRequest(question);
+            var result = this.startRequest(toSend);
             result.finally(function () {
                 asap(function () {
                     _this.sendCorrection();
@@ -93,14 +80,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         };
         return BarcoPW392;
     }(NetworkProjector_1.NetworkProjector));
-    BarcoPW392.replyParser = /\%\d* (\S*) (\!?)(\d*)/;
-    BarcoPW392.kMaxInput = 25;
-    __decorate([
-        Meta.property("Desired input source number"),
-        Meta.min(0), Meta.max(BarcoPW392_1.kMaxInput),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], BarcoPW392.prototype, "input", null);
+    BarcoPW392.replyParser = /%\d* (\S*) (!?)(\d*)/;
     BarcoPW392 = BarcoPW392_1 = __decorate([
         Meta.driver('NetworkTCP', { port: 1025 }),
         __metadata("design:paramtypes", [Object])

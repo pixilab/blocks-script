@@ -22,13 +22,6 @@ export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFa
 		}
 	}
 
-	/**	Inform others that prop has changed, causing any
-	 *	subscribers to be notified soon.
-	 */
-	changed(prop: string|Function): void {
-		this.__scriptFacade.changed(prop);
-	}
-
 	/*	Provide basic connected status. May be overridden in subclass
 		if it has better idea.
 	 */
