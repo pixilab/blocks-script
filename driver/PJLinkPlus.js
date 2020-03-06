@@ -20,7 +20,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
+define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", "system/SimpleFile"], function (require, exports, NetworkProjector_1, Meta, SimpleFile_1) {
     "use strict";
     var _a;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -52,7 +52,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
     var ERR_4 = 'ERR4';
     var ERR_A = 'ERRA';
     var STATUS_POLL_INTERVAL = 20000;
-    var FETCH_INFO_ON_STARTUP = true;
+    var LOG_DEBUG = true;
     var MUTE_MIN = 10;
     var MUTE_MAX = 31;
     var RESOLUTION_SPLIT = 'x';
@@ -64,36 +64,21 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
     var INPT_STORAGE = 4;
     var INPT_NETWORK = 5;
     var INPT_INTERNAL = 6;
+    var PJLINK_PLUS_CONFIG_BASE_PATH = 'pjlinkplus.config';
     var PJLinkPlus = (function (_super) {
         __extends(PJLinkPlus, _super);
         function PJLinkPlus(socket) {
             var _this = _super.call(this, socket) || this;
-            _this.wantedDeviceParameters = [
-                CMD_POWR,
-                CMD_ERST,
-                CMD_CLSS,
-                CMD_INST,
-                CMD_AVMT,
-                CMD_LAMP,
-                CMD_NAME,
-                CMD_INF1,
-                CMD_INF2,
-                CMD_INFO,
-                CMD_SNUM,
-                CMD_SVER,
-                CMD_RLMP,
-                CMD_RFIL,
-                CMD_IRES,
-                CMD_RRES,
-                CMD_FILT,
-            ];
             _this.skipDeviceParameters = [];
             _this._lineBreak = '\n';
             _this.devicePollParameters = [
-                CMD_CLSS,
                 CMD_ERST,
                 CMD_POWR,
                 CMD_INPT,
+                CMD_AVMT,
+                CMD_LAMP,
+                CMD_IRES,
+                CMD_FILT,
             ];
             _this._lastKnownConnectionDateSet = false;
             _this._powerStatus = 0;
@@ -102,7 +87,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this._isCooling = false;
             _this._isWarmingUp = false;
             _this._inputType = 0;
-            _this._inputSource = '1';
+            _this._inputSource = '-';
             _this._lampCount = 0;
             _this._lampOneHours = -1;
             _this._lampTwoHours = -1;
@@ -123,65 +108,106 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this._hasError = false;
             _this._hasWarning = false;
             _this._currentParameterFetchList = [];
+            _this.commandReplyCache = {};
+            _this.cacheBasePath = PJLINK_PLUS_CONFIG_BASE_PATH + '/cache';
+            _this.inputInformation = {
+                1: { label: 'RGB', sourceIDs: [] },
+                2: { label: 'Video', sourceIDs: [] },
+                3: { label: 'Digital', sourceIDs: [] },
+                4: { label: 'Storage', sourceIDs: [] },
+                5: { label: 'Network', sourceIDs: [] },
+                6: { label: 'Internal', sourceIDs: [] },
+            };
+            _this.cacheFilePath = _this.cacheBasePath + '/' + _this.socket.name + '.json';
             _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
             _this.addState(_this._input = new StringState(CMD_INPT, 'input', function () { return _this._power.getCurrent(); }));
-            _this._mute = new NetworkProjector_1.NumState(CMD_AVMT, 'mute', MUTE_MIN, MUTE_MAX, function () { return _this._power.getCurrent(); });
+            _this.addState(_this._mute = new NetworkProjector_1.NumState(CMD_AVMT, 'mute', MUTE_MIN, MUTE_MAX, function () { return _this._power.getCurrent(); }));
             _this.addState(_this._freeze = new NetworkProjector_1.BoolState(CMD_FREZ, 'freeze', function () { return _this._power.getCurrent(); }));
-            _this.addState(_this._mute);
             _this._mute.set(MUTE_MIN);
             socket.subscribe('connect', function (_sender, _message) {
                 _this.onConnectStateChange();
             });
-            _this.pollDeviceStatus();
-            if (FETCH_INFO_ON_STARTUP) {
-                wait(3000).then(function () {
-                    _this.fetchDeviceInfo();
-                });
-            }
             _this.poll();
             _this.attemptConnect();
             return _this;
         }
         PJLinkPlus_1 = PJLinkPlus;
-        PJLinkPlus.prototype.fetchDeviceInfo = function () {
+        PJLinkPlus.prototype.justConnected = function () {
             var _this = this;
-            var delay = this.connected ? 0 : (this.isOnline ? 5000 : 0);
-            delay += this.socket.connected ? 0 : (this.isOnline ? 25000 : 0);
-            if (!this.fetchingDeviceInfo) {
-                this.fetchingDeviceInfo = new Promise(function (resolve, reject) {
-                    _this.fetchDeviceInfoResolver = resolve;
-                    if (_this.isOnline) {
-                        wait(5000 + delay).then(function () {
-                            reject("Timeout");
-                            delete _this.fetchingDeviceInfo;
-                            delete _this.fetchDeviceInfoResolver;
-                        });
-                    }
-                    else {
-                        wait(100).then(function () {
-                            reject('Projector/Display seems offline');
-                            delete _this.fetchingDeviceInfo;
-                            delete _this.fetchDeviceInfoResolver;
-                        });
-                    }
-                });
-            }
-            this.delayedInfoFetch(delay);
-            return this.fetchingDeviceInfo;
+            this.getToKnowDevice().then(function (_resolve) { return _this.pollDeviceStatus(); }, function (_reject) { return console.warn('could not get to know device'); });
         };
-        PJLinkPlus.prototype.delayedInfoFetch = function (countdown) {
+        PJLinkPlus.prototype.getToKnowDevice = function () {
             var _this = this;
-            if (this.socket.connected && this.connected) {
-                this.fetchDeviceInformation(this.wantedDeviceParameters);
-            }
-            else if (countdown < 0) {
-            }
-            else {
-                this.delayedDeviceInfoFetch = wait(PJLinkPlus_1.delayedFetchInterval);
-                this.delayedDeviceInfoFetch.then(function () {
-                    _this.delayedInfoFetch(countdown - PJLinkPlus_1.delayedFetchInterval);
+            return new Promise(function (resolveGetToKnow, rejectGetToKnow) {
+                if (LOG_DEBUG)
+                    console.log('trying to load from disk');
+                _this.tryLoadCacheFromDisk().then(function (_resolve) {
+                    if (LOG_DEBUG)
+                        console.log('trying to get class 1 static info');
+                    _this.tryGetStaticInformation(1).then(function (_resolve) {
+                        if (_this._class > 1) {
+                            if (LOG_DEBUG)
+                                console.log('trying to get class 2 static info');
+                            _this.tryGetStaticInformation(2).then(function (_resolve) {
+                                _this.createDynamicInputProperties();
+                                resolveGetToKnow();
+                            }, function (_reject) {
+                                rejectGetToKnow();
+                            });
+                        }
+                        else {
+                            resolveGetToKnow();
+                        }
+                    }, function (_reject) {
+                        rejectGetToKnow();
+                    });
                 });
+            });
+        };
+        PJLinkPlus.prototype.tryLoadCacheFromDisk = function () {
+            var _this = this;
+            return new Promise(function (resolve, _reject) {
+                SimpleFile_1.SimpleFile.read(_this.cacheFilePath).then(function (readValue) {
+                    _this.commandReplyCache = JSON.parse(readValue);
+                    if (LOG_DEBUG)
+                        console.log('successfully loaded command reply cache');
+                    resolve();
+                }).catch(function (_error) {
+                    SimpleFile_1.SimpleFile.write(_this.cacheFilePath, JSON.stringify(_this.commandReplyCache));
+                    resolve();
+                });
+            });
+        };
+        PJLinkPlus.prototype.cacheCommandReply = function (command, reply) {
+            var _this = this;
+            var existingItem = this.commandReplyCache[command];
+            if (existingItem && existingItem.reply == reply)
+                return;
+            this.commandReplyCache[command] = { reply: reply };
+            SimpleFile_1.SimpleFile.write(this.cacheFilePath, JSON.stringify(this.commandReplyCache)).then(function (_resolve) {
+                if (LOG_DEBUG)
+                    console.log('updated cache file \'' + _this.cacheFilePath + '\' with ' + command + '=\'' + reply + '\'');
+            });
+        };
+        PJLinkPlus.prototype.tryGetStaticInformation = function (cmdClass) {
+            var _this = this;
+            return new Promise(function (resolveGetStatic, rejectGetStatic) {
+                var commands = PJLinkPlus_1.getStaticCommands(cmdClass);
+                _this.fetchDeviceInformation(commands).then(function (_resolve) {
+                    resolveGetStatic();
+                }, function (reject) {
+                    rejectGetStatic(reject);
+                });
+            });
+        };
+        PJLinkPlus.getStaticCommands = function (cmdClass) {
+            var commands = [];
+            for (var command in this.commandInformation) {
+                var info = this.commandInformation[command];
+                if (!info.dynamic && info.cmdClass == cmdClass)
+                    commands.push(command);
             }
+            return commands;
         };
         Object.defineProperty(PJLinkPlus.prototype, "powerStatus", {
             get: function () {
@@ -230,86 +256,63 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(PJLinkPlus.prototype, "inputRGB", {
-            get: function () {
-                return this._inputType == INPT_RGB ? this._inputSource : '-';
-            },
-            set: function (value) {
-                this.setInput(INPT_RGB, value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(PJLinkPlus.prototype, "inputVideo", {
-            get: function () {
-                return this._inputType == INPT_VIDEO ? this._inputSource : '-';
-            },
-            set: function (value) {
-                this.setInput(INPT_VIDEO, value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(PJLinkPlus.prototype, "inputDigital", {
-            get: function () {
-                return this._inputType == INPT_DIGITAL ? this._inputSource : '-';
-            },
-            set: function (value) {
-                this.setInput(INPT_DIGITAL, value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(PJLinkPlus.prototype, "inputStorage", {
-            get: function () {
-                return this._inputType == INPT_STORAGE ? this._inputSource : '-';
-            },
-            set: function (value) {
-                this.setInput(INPT_STORAGE, value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(PJLinkPlus.prototype, "inputNetwork", {
-            get: function () {
-                return this._inputType == INPT_NETWORK ? this._inputSource : '-';
-            },
-            set: function (value) {
-                this.setInput(INPT_NETWORK, value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(PJLinkPlus.prototype, "inputInternal", {
-            get: function () {
-                return this._inputType == INPT_INTERNAL ? this._inputSource : '-';
-            },
-            set: function (value) {
-                this.setInput(INPT_INTERNAL, value);
-            },
-            enumerable: true,
-            configurable: true
-        });
+        PJLinkPlus.prototype.createDynamicInputProperties = function () {
+            var _this = this;
+            if (LOG_DEBUG)
+                console.log('trying to create dynamic input properties');
+            var _loop_1 = function (type) {
+                var typeNum = parseInt(type);
+                var info = this_1.inputInformation[typeNum];
+                if (info.sourceIDs.length > 0) {
+                    if (LOG_DEBUG)
+                        console.log('attempting create input for ' + info.label);
+                    this_1.property('input' + info.label, { type: Number, description: 'select ' + info.label + ' input (valid values: ' + info.sourceIDs.join(', ') + ')' }, function (setValue) {
+                        if (setValue !== undefined) {
+                            _this.setInput(typeNum, setValue + '');
+                        }
+                        return _this._inputType == typeNum ? _this._inputSource : '-';
+                    });
+                }
+            };
+            var this_1 = this;
+            for (var type in this.inputInformation) {
+                _loop_1(type);
+            }
+        };
         PJLinkPlus.prototype.setInput = function (type, id) {
-            if (id.length != 1)
+            switch (this._class) {
+                default:
+                case 1:
+                    return this.setInputClass1(type, parseInt(id));
+                case 2:
+                    return this.setInputClass2(type, id);
+            }
+        };
+        PJLinkPlus.prototype.setInputClass1 = function (type, id) {
+            if (type < INPT_RGB || type > INPT_NETWORK)
                 return false;
+            if (id === NaN) {
+                console.warn('not a valid number');
+                return false;
+            }
+            this._inputType = type;
+            this._inputSource = id + '';
+            if (this._input.set(type + '' + id)) {
+                this.sendCorrection();
+            }
+        };
+        PJLinkPlus.prototype.setInputClass2 = function (type, id) {
             if (type < INPT_RGB || type > INPT_INTERNAL)
                 return false;
-            var nonNumberID = parseInt(id) === NaN;
-            if (this._class == 2) {
-                if (nonNumberID && !this.isValidLetter(id)) {
-                    console.warn('not a valid letter or number');
-                    return false;
-                }
-            }
-            else {
-                console.warn('not a valid number');
-                if (nonNumberID)
-                    return false;
+            if (!this.isValidSourceID(id, 2)) {
+                console.warn('\'' + id + '\'not a valid input id (1-9 A-Z)');
+                return false;
             }
             var inputValue = type + id;
-            if (this._class > 1 && this._validInputs.indexOf(inputValue) === -1)
+            if (this._validInputs.indexOf(inputValue) === -1) {
+                console.warn('not a valid input id - valid input ids: ' + this._validInputs.join(', '));
                 return false;
+            }
             this._inputType = type;
             this._inputSource = id;
             if (this._input.set(type + id)) {
@@ -317,8 +320,14 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             }
             return true;
         };
-        PJLinkPlus.prototype.isValidLetter = function (str) {
-            return str.length === 1 && str.match(/[A-Z]/);
+        PJLinkPlus.prototype.isValidSourceID = function (sourceID, sourceClass) {
+            switch (sourceClass) {
+                default:
+                case 1:
+                    return sourceID.length === 1 && sourceID.match(/[A-Z]/);
+                case 2:
+                    return sourceID.length === 1 && sourceID.match(/[A-Z1-9]/);
+            }
         };
         Object.defineProperty(PJLinkPlus.prototype, "mute", {
             get: function () {
@@ -615,36 +624,74 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             return parameter;
         };
         PJLinkPlus.prototype.fetchDeviceInformation = function (wantedInfo) {
-            this._currentParameterFetchList = wantedInfo.slice();
-            this.fetchInfoLoop();
+            var _this = this;
+            if (LOG_DEBUG)
+                console.log('trying to get info: \'' + wantedInfo.join(', ') + '\'');
+            this._currentParameterFetchList = wantedInfo.slice().reverse();
+            this.fetchingDeviceInfo = new Promise(function (resolve, reject) {
+                if (_this.fetchDeviceInfoResolver) {
+                    reject('fetch already in progress');
+                }
+                else {
+                    _this.fetchDeviceInfoResolver = resolve;
+                    _this.fetchInfoLoop();
+                }
+                wait(2000 * wantedInfo.length).then(function () {
+                    reject('fetch timeout');
+                });
+            });
+            return this.fetchingDeviceInfo;
         };
         PJLinkPlus.prototype.fetchInfoLoop = function () {
             var _this = this;
             this._currentParameter = this.nextParameterToFetch();
             if (this._currentParameter !== undefined) {
-                if (!this._power.getCurrent() && PJLinkPlus_1.commandNeedsPower(this._currentParameter)) {
-                    this.fetchInfoLoop();
-                    return;
-                }
-                this.request(this._currentParameter).then(function (reply) {
-                    if (reply != ERR_1) {
-                        _this.processInfoQueryReply(_this._currentParameter, reply);
-                        if (!PJLinkPlus_1.isCommandDynamic(_this._currentParameter)) {
-                            _this.addCommandToSkip(_this._currentParameter);
-                        }
-                    }
-                    else {
-                        _this.processInfoQueryError(_this._currentParameter, reply);
-                    }
-                    _this.fetchInfoLoop();
-                }, function (error) {
-                    _this.processInfoQueryError(_this._currentParameter, error);
+                this.fetchInfo(this._currentParameter).then(function (reply) {
+                    _this.processInfoQueryReply(_this._currentParameter, reply);
+                    wait(100).then(function () {
+                        _this.fetchInfoLoop();
+                    });
+                }, function (_error) {
                     _this.fetchInfoLoop();
                 });
             }
             else {
                 this.fetchInfoResolve();
             }
+        };
+        PJLinkPlus.prototype.fetchInfo = function (command) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                if (!_this._power.getCurrent() && PJLinkPlus_1.commandNeedsPower(command)) {
+                    reject('device needs to be powered on for command ' + command);
+                    return;
+                }
+                var cachedReply = _this.commandReplyCache[command];
+                if (cachedReply) {
+                    if (LOG_DEBUG)
+                        console.log('used cached reply for command ' + command);
+                    resolve(cachedReply.reply);
+                    return;
+                }
+                _this.request(command).then(function (reply) {
+                    if (reply != ERR_1) {
+                        if (LOG_DEBUG)
+                            console.log('got reply for \'' + _this._currentParameter + '\':' + reply);
+                        if (!PJLinkPlus_1.isCommandDynamic(command)) {
+                            _this.cacheCommandReply(command, reply);
+                            _this.addCommandToSkip(command);
+                        }
+                        resolve(reply);
+                    }
+                    else {
+                        _this.processInfoQueryError(command, reply);
+                        reject('command not available: ' + command);
+                    }
+                }, function (error) {
+                    _this.processInfoQueryError(command, error);
+                    reject(error);
+                });
+            });
         };
         PJLinkPlus.prototype.fetchInfoResolve = function () {
             if (this.fetchDeviceInfoResolver) {
@@ -660,7 +707,13 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             this.statusPoller.then(function () {
                 if (_this.socket.connected &&
                     _this.connected) {
-                    _this.fetchDeviceInformation(_this.devicePollParameters);
+                    _this.fetchDeviceInformation(_this.devicePollParameters).then(function (_resolve) {
+                        if (LOG_DEBUG)
+                            console.log('poll device status DONE');
+                    }, function (reject) {
+                        if (LOG_DEBUG)
+                            console.log('poll device status error: ' + reject);
+                    });
                 }
                 if (!_this.discarded) {
                     _this.pollDeviceStatus();
@@ -751,11 +804,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                         var list = [0, 0, 0, 0, 0, 0];
                         var warning = false;
                         var error = false;
-                        for (var i = 0; i < reply.length; i++) {
-                            list[i] = parseInt(reply[i]);
-                            error = error || list[i] == 2;
-                            warning = warning || list[i] == 1;
-                            this['_errorStatus' + errorNames[0]] = list[i];
+                        for (var i_1 = 0; i_1 < reply.length; i_1++) {
+                            list[i_1] = parseInt(reply[i_1]);
+                            error = error || list[i_1] == 2;
+                            warning = warning || list[i_1] == 1;
+                            this['_errorStatus' + errorNames[0]] = list[i_1];
                         }
                         if (this._hasError != error) {
                             this._hasError = error;
@@ -774,21 +827,24 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                     var lampNames = ['One', 'Two', 'Three', 'Four'];
                     var lampData = reply.split(' ');
                     this._lampCount = lampData.length / 2;
-                    for (var i = 0; i < this._lampCount; i++) {
-                        var newHours = parseInt(lampData[i * 2]);
-                        var newActive = parseInt(lampData[i * 2 + 1]) == 1;
-                        if (this['_lamp' + lampNames[i] + 'Hours'] != newHours) {
-                            this['_lamp' + lampNames[i] + 'Hours'] = newHours;
-                            this.changed('lamp' + lampNames[i] + 'Hours');
+                    for (var i_2 = 0; i_2 < this._lampCount; i_2++) {
+                        var newHours = parseInt(lampData[i_2 * 2]);
+                        var newActive = parseInt(lampData[i_2 * 2 + 1]) == 1;
+                        if (this['_lamp' + lampNames[i_2] + 'Hours'] != newHours) {
+                            this['_lamp' + lampNames[i_2] + 'Hours'] = newHours;
+                            this.changed('lamp' + lampNames[i_2] + 'Hours');
                         }
-                        if (this['_lamp' + lampNames[i] + 'Active'] != newActive) {
-                            this['_lamp' + lampNames[i] + 'Active'] = newActive;
-                            this.changed('lamp' + lampNames[i] + 'Active');
+                        if (this['_lamp' + lampNames[i_2] + 'Active'] != newActive) {
+                            this['_lamp' + lampNames[i_2] + 'Active'] = newActive;
+                            this.changed('lamp' + lampNames[i_2] + 'Active');
                         }
                     }
                     break;
                 case CMD_INST:
                     this._validInputs = reply.split(' ');
+                    for (var i = 0; i < this._validInputs.length; i++) {
+                        this.addValidInput(this._validInputs[i]);
+                    }
                     break;
                 case CMD_NAME:
                     var newDeviceName = reply;
@@ -924,6 +980,21 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                     break;
             }
         };
+        PJLinkPlus.prototype.addValidInput = function (inputChars) {
+            if (inputChars.length != 2) {
+                console.warn('wrong length of input chars: \'' + inputChars + '\'');
+                return;
+            }
+            var type = parseInt(inputChars[0]);
+            if (type === undefined ||
+                type < INPT_RGB ||
+                type > INPT_INTERNAL) {
+                console.warn('invalid input type: \'' + inputChars + '\'');
+                return;
+            }
+            var sourceID = inputChars[1];
+            this.inputInformation[type].sourceIDs.push(sourceID);
+        };
         PJLinkPlus.prototype.addCommandToSkip = function (command) {
             if (this.skipDeviceParameters.indexOf(command) == -1) {
                 this.skipDeviceParameters.push(command);
@@ -938,7 +1009,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             var toSend = '%' + pjClass + question;
             toSend += ' ';
             toSend += (param === undefined) ? '?' : param;
-            this.socket.sendText(toSend).catch(function (err) { return _this.sendFailed(err); });
+            console.log('sending request \'' + toSend + '\'');
+            this.socket.sendText(toSend).catch(function (err) {
+                console.log('send failed: ' + err);
+                _this.sendFailed(err);
+            });
             var result = this.startRequest(toSend);
             result.finally(function () {
                 asap(function () {
@@ -958,8 +1033,9 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 return;
             }
             var msgStart = text.indexOf('%');
-            if (msgStart > 0)
+            if (msgStart > 0) {
                 text = text.substring(msgStart);
+            }
             var currCmd = this.currCmd;
             if (!currCmd) {
                 this.warnMsg("Unsolicited data", text);
@@ -987,17 +1063,21 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                                 this.warnMsg("PJLink response", currCmd, text);
                                 break;
                         }
-                        if (!treatAsOk)
+                        if (!treatAsOk) {
                             this.requestFailure(text);
+                        }
                     }
-                    if (treatAsOk)
+                    if (treatAsOk) {
                         this.requestSuccess(text);
+                    }
                 }
-                else
+                else {
                     this.requestFailure("Expected reply " + expectedResponse + ", got " + text);
+                }
             }
-            else
+            else {
                 this.warnMsg("Unexpected data", text);
+            }
             this.requestFinished();
         };
         PJLinkPlus.prototype.projectorBusy = function () {
@@ -1052,14 +1132,13 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             return null;
         };
         var PJLinkPlus_1;
-        PJLinkPlus.delayedFetchInterval = 10000;
         PJLinkPlus.commandInformation = (_a = {},
             _a[CMD_POWR] = { dynamic: true, cmdClass: 1, read: true, write: true, needsPower: false },
             _a[CMD_INPT] = { dynamic: true, cmdClass: 1, read: true, write: true, needsPower: true },
             _a[CMD_AVMT] = { dynamic: true, cmdClass: 1, read: true, write: true, needsPower: true },
             _a[CMD_ERST] = { dynamic: true, cmdClass: 1, read: true, write: false, needsPower: false },
             _a[CMD_LAMP] = { dynamic: true, cmdClass: 1, read: true, write: false, needsPower: false },
-            _a[CMD_INST] = { dynamic: true, cmdClass: 2, read: true, write: false, needsPower: false },
+            _a[CMD_INST] = { dynamic: false, cmdClass: 2, read: true, write: false, needsPower: false },
             _a[CMD_NAME] = { dynamic: false, cmdClass: 1, read: true, write: false, needsPower: false },
             _a[CMD_INF1] = { dynamic: false, cmdClass: 1, read: true, write: false, needsPower: false },
             _a[CMD_INF2] = { dynamic: false, cmdClass: 1, read: true, write: false, needsPower: false },
@@ -1069,7 +1148,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _a[CMD_SVER] = { dynamic: false, cmdClass: 2, read: true, write: false, needsPower: false },
             _a[CMD_INNM] = { dynamic: true, cmdClass: 2, read: true, write: false, needsPower: false },
             _a[CMD_IRES] = { dynamic: true, cmdClass: 2, read: true, write: false, needsPower: true },
-            _a[CMD_RRES] = { dynamic: true, cmdClass: 2, read: true, write: false, needsPower: false },
+            _a[CMD_RRES] = { dynamic: false, cmdClass: 2, read: true, write: false, needsPower: false },
             _a[CMD_FILT] = { dynamic: true, cmdClass: 2, read: true, write: false, needsPower: false },
             _a[CMD_RLMP] = { dynamic: false, cmdClass: 2, read: true, write: false, needsPower: false },
             _a[CMD_RFIL] = { dynamic: false, cmdClass: 2, read: true, write: false, needsPower: false },
@@ -1077,12 +1156,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _a[CMD_MVOL] = { dynamic: true, cmdClass: 2, read: false, write: true, needsPower: true },
             _a[CMD_FREZ] = { dynamic: true, cmdClass: 2, read: true, write: true, needsPower: true },
             _a);
-        __decorate([
-            Meta.callable("Refresh device information"),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", []),
-            __metadata("design:returntype", Promise)
-        ], PJLinkPlus.prototype, "fetchDeviceInfo", null);
         __decorate([
             Meta.property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)"),
             __metadata("design:type", Number),
@@ -1113,36 +1186,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "input", null);
-        __decorate([
-            Meta.property('select RGB input'),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], PJLinkPlus.prototype, "inputRGB", null);
-        __decorate([
-            Meta.property('select VIDEO input'),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], PJLinkPlus.prototype, "inputVideo", null);
-        __decorate([
-            Meta.property('select DIGITAL input'),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], PJLinkPlus.prototype, "inputDigital", null);
-        __decorate([
-            Meta.property('select STORAGE input'),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], PJLinkPlus.prototype, "inputStorage", null);
-        __decorate([
-            Meta.property('select NETWORK input'),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], PJLinkPlus.prototype, "inputNetwork", null);
-        __decorate([
-            Meta.property('select INTERNAL input'),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], PJLinkPlus.prototype, "inputInternal", null);
         __decorate([
             Meta.property("Mute setting. (Video mute on/off: 11/10, Audio mute on/off: 21/20, A/V mute on/off: 31/30)"),
             Meta.min(MUTE_MIN),
