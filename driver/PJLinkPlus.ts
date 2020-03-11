@@ -1,13 +1,14 @@
 /*
  * Created 2018 by Samuel Walz
- * Version 2.0b
- * - now supports class 2 commands
+ * Version 2.3b
+ * - supports class 2 commands
+ * - supports authentication
  */
-import {NetworkTCP} from "system/Network";
-// import {PJLink} from "driver/PJLink";
-import {NetworkProjector, State, BoolState, NumState} from "driver/NetworkProjector";
-import * as Meta from "system_lib/Metadata";
-import { SimpleFile } from "system/SimpleFile";
+import {NetworkTCP} from 'system/Network';
+import {NetworkProjector, State, BoolState, NumState} from 'driver/NetworkProjector';
+import * as Meta from 'system_lib/Metadata';
+import { SimpleFile } from 'system/SimpleFile';
+import { Md5 } from 'lib/md5';
 
 /*
  * projector commands
@@ -37,6 +38,8 @@ import { SimpleFile } from "system/SimpleFile";
 /* write only */
 /** Speaker volume adjustment (write only) [2] */     const CMD_SVOL = 'SVOL';  // since PJLink 2.0 (class 2)
 /** Microphone volume adjustment (write only) [2] */  const CMD_MVOL = 'MVOL';  // since PJLink 2.0 (class 2)
+/* not a command */
+/** server came online (receive only) [2] */          const MSG_LKUP = 'LKUP';  // since PJLink 2.0 (class 2)
 /*
  * projector error codes
  */
@@ -50,8 +53,8 @@ import { SimpleFile } from "system/SimpleFile";
  * fixed parameters
  */
 /** status poll interval in milliseconds */       const STATUS_POLL_INTERVAL = 20000;
-const LOG_DEBUG = true;
-// /** automatically fetch device info on startup */ const FETCH_INFO_ON_STARTUP = true;
+const LOG_DEBUG = false;
+const PJLINK_PASSWORD = 'JBMIAProjectorLink';
 
 /*
  * other constants
@@ -70,6 +73,10 @@ const INPT_NETWORK = 5;
 const INPT_INTERNAL = 6;
 
 const PJLINK_PLUS_CONFIG_BASE_PATH : string = 'pjlinkplus.config';
+
+const SEPARATOR_QUERY = ' ?';
+const SEPARATOR_RESPONSE = '=';
+const SEPARATOR_INSTRUCTION = ' ';
 
 /**
  Manage a PJLink projector, accessed through a provided NetworkTCPDevice connection.
@@ -97,6 +104,10 @@ export class PJLinkPlus extends NetworkProjector {
     private unauthenticated: boolean;	// True if projector requires authentication
     private busyHoldoff?: CancelablePromise<void>;	// See projectorBusy()
     // private recentCmdHoldoff?: CancelablePromise<void>;	// See sentCommand()
+
+    private pjlinkPassword : string;
+    private randomAuthSequence : string;
+    private authenticationSequence : string = '';
 
     private statusPoller: CancelablePromise<void>;
 
@@ -193,6 +204,7 @@ export class PJLinkPlus extends NetworkProjector {
     private commandReplyCache: Dictionary<CommandReply> = {};
     private cacheBasePath = PJLINK_PLUS_CONFIG_BASE_PATH + '/cache';
     private cacheFilePath : string;
+    private currentQuery: PJLinkQuery;
 
     private inputInformation : NumDict<InputTypeInfo> = {
         1 : {label: 'RGB', sourceIDs: []},
@@ -206,6 +218,8 @@ export class PJLinkPlus extends NetworkProjector {
 	constructor(socket: NetworkTCP) {
 
         super(socket);
+
+        this.pjlinkPassword = PJLINK_PASSWORD;
 
         this.cacheFilePath = this.cacheBasePath + '/' + this.socket.name + '.json';
 
@@ -231,10 +245,20 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     justConnected (): void {
-        this.getToKnowDevice().then(
-            _resolve => this.pollDeviceStatus(),
-            _reject => console.warn('could not get to know device')
-        );
+        wait(200).then(() => {
+            if (this.unauthenticated) {
+                console.warn('not authenticated');
+            }
+            else {
+                this.getToKnowDevice().then(
+                    _resolve =>  {
+                        if (LOG_DEBUG) console.log('got to know device - starting to poll');
+                        this.pollDeviceStatus(true);
+                    },
+                    _reject => console.warn('could not get to know device')
+                );
+            }
+        });
     }
 
     /**
@@ -314,7 +338,9 @@ export class PJLinkPlus extends NetworkProjector {
         return commands;
     }
 
+
     /* power status */
+
     @Meta.property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)")
     public get powerStatus() : number {
         return this._powerStatus;
@@ -337,7 +363,7 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     /* input */
-    @Meta.property('current input')
+    @Meta.property('current input (class 1: 11-59 / class 2: 11-6Z)')
     public set input(value: string) {
         if (value.length != 2) return;
         this.setInput(parseInt(value[0]), value[1]);
@@ -373,7 +399,7 @@ export class PJLinkPlus extends NetworkProjector {
     private setInputClass1 (type: number, id: number) : boolean {
         if (type < INPT_RGB || type > INPT_NETWORK) return false;
         if (id === NaN) {
-            console.warn('not a valid number');
+            console.warn('not a valid input id (1-9)');
             return false;
         }
         this._inputType = type;
@@ -404,7 +430,7 @@ export class PJLinkPlus extends NetworkProjector {
         switch (sourceClass) {
             default:
             case 1:
-                return sourceID.length === 1 && sourceID.match(/[A-Z]/);
+                return sourceID.length === 1 && sourceID.match(/[1-9]/);
             case 2:
                 return sourceID.length === 1 && sourceID.match(/[A-Z1-9]/);
         }
@@ -581,19 +607,20 @@ export class PJLinkPlus extends NetworkProjector {
         return 'Device: ' + this._manufactureName + ' ' + this._productName + ' ' +  this._deviceName + this._lineBreak +
             'Power status: ' + this.translatePowerCode(this._powerStatus) + this._lineBreak +
             'Error status: (' + this._errorStatus + ')' + this._lineBreak +
-            'Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
-            'Lamp' + (this._lampCount > 1 ? 's' : '') + ': ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
-            'Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
-            'Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
-            'Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? this.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
-            (this._filterReplacementModelNumber ? 'Filter replacement model number: ' + this._filterReplacementModelNumber + this._lineBreak : '') +
-            'Other: ' + this.translateErrorCode(this._errorStatusOther) + this._lineBreak +
+            '  Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
+            '  Lamp' + (this._lampCount > 1 ? 's' : '') + ': ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
+            '  Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
+            '  Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
+            '  Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? this.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
+            '  Other: ' + this.translateErrorCode(this._errorStatusOther) + this._lineBreak +
             (this._lampCount > 0 ? 'Lamp status: ' + this._lineBreak : '') +
             (this._lampCount > 0 ? 'Lamp one: ' + (this._lampOneActive ? 'on' : 'off') + ', ' + this._lampOneHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 2 ? 'Lamp three: ' + (this._lampThreeActive ? 'on' : 'off') + ', ' + this._lampThreeHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 3 ? 'Lamp four: ' + (this._lampFourActive ? 'on' : 'off') + ', ' + this._lampFourHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampReplacementModelNumber ? 'Lamp replacement model number: ' + this._lampReplacementModelNumber + this._lineBreak : '') +
+            (this._filterUsageTime ? 'Filter usage time: ' + this._filterUsageTime + ' hours' + this._lineBreak : '') +
+            (this._filterReplacementModelNumber ? 'Filter replacement model number: ' + this._filterReplacementModelNumber + this._lineBreak : '') +
             (this._validInputs ? 'Inputs: ' + this._validInputs.join(', ') + this._lineBreak : '' ) +
             (this._serialNumber ? 'SNR: ' + this._serialNumber + this._lineBreak : '') +
             (this._softwareVersion ? 'Software version: ' + this._softwareVersion + this._lineBreak : '' ) +
@@ -656,9 +683,17 @@ export class PJLinkPlus extends NetworkProjector {
     private fetchInfoLoop () : void {
         this._currentParameter = this.nextParameterToFetch();
         if (this._currentParameter !== undefined) {
-            this.fetchInfo(this._currentParameter).then(
+            let pjClass : number;
+            if (this._currentParameter == CMD_INPT) {
+                pjClass = this._class;
+            }
+            else {
+                pjClass = PJLinkPlus.determineCommandClass(this._currentParameter);
+            }
+            this.currentQuery = new PJLinkQuery(pjClass, this._currentParameter);
+            this.fetchInfo(this.currentQuery).then(
                 reply => {
-                    this.processInfoQueryReply(this._currentParameter, reply);
+                    this.processInfoQueryReply(this.currentQuery, reply);
                     wait(100).then(() => {
                         this.fetchInfoLoop();
                     });
@@ -671,36 +706,36 @@ export class PJLinkPlus extends NetworkProjector {
             this.fetchInfoResolve();
         }
     }
-    private fetchInfo (command: string) : Promise<string> {
+    private fetchInfo (query: PJLinkQuery) : Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            if (!this._power.getCurrent() && PJLinkPlus.commandNeedsPower(command)) {
-                reject('device needs to be powered on for command ' + command);
+            if (!this._power.getCurrent() && PJLinkPlus.commandNeedsPower(query.command)) {
+                reject('device needs to be powered on for command ' + query.command);
                 return;
             }
-            var cachedReply = this.commandReplyCache[command];
+            var cachedReply = this.commandReplyCache[query.command];
             if (cachedReply) {
-                if (LOG_DEBUG) console.log('used cached reply for command ' + command);
+                if (LOG_DEBUG) console.log('used cached reply for command ' + query.command);
                 resolve(cachedReply.reply);
                 return;
             }
-            this.request(command).then(
+            this.queryRequest(query).then(
                 reply => {
                     if (reply != ERR_1) {
                         if (LOG_DEBUG) console.log('got reply for \'' + this._currentParameter + '\':' + reply);
                         // successful fetch and parameter is not dynamic? cache & skip next time
-                        if (!PJLinkPlus.isCommandDynamic(command)) {
-                            this.cacheCommandReply(command, reply);
-                            this.addCommandToSkip(command);
+                        if (!PJLinkPlus.isCommandDynamic(query.command)) {
+                            this.cacheCommandReply(query.command, reply);
+                            this.addCommandToSkip(query.command);
                         }
                         resolve(reply);
                     } else {
                         // PJLink perceives ERR_1 and ERR_2 as successful queries
-                        this.processInfoQueryError(command, reply);
-                        reject('command not available: ' + command);
+                        this.processInfoQueryError(query.command, reply);
+                        reject('command not available: ' + query.command);
                     }
                 },
                 error => {
-                    this.processInfoQueryError(command, error);
+                    this.processInfoQueryError(query.command, error);
                     reject(error);
                 }
             );
@@ -715,9 +750,10 @@ export class PJLinkPlus extends NetworkProjector {
             delete this.fetchDeviceInfoResolver;
         }
     }
-    private pollDeviceStatus() {
+    private pollDeviceStatus(skipInterval: boolean = false) {
         // status interval minus up to 10% (to create some variation)
-		this.statusPoller = wait(STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1));
+        let waitDuration = STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1);
+		this.statusPoller = wait(skipInterval ? 10 : waitDuration);
 		this.statusPoller.then(()=> {
 			if (this.socket.connected &&
                 this.connected) {
@@ -736,27 +772,14 @@ export class PJLinkPlus extends NetworkProjector {
 	}
 
     private processInfoQueryError (command : string, error : string) {
-        switch (command) {
-            case CMD_LAMP:
-                if (error == ERR_1) {
-                    this._hasLamps = false;
-                    this.skipDeviceParameters.push(CMD_LAMP);
-                }
-                break;
-            case CMD_RLMP:
-                if (error == ERR_1) {
-                    this.skipDeviceParameters.push(CMD_RLMP);
-                }
-            case CMD_FILT:
-                if (error == ERR_1) {
-                    this._hasFilter = false;
-                    this.skipDeviceParameters.push(CMD_FILT);
-                }
-                break;
+        if (error == ERR_1) {
+            if (command == CMD_LAMP) this._hasLamps = false;
+            if (command == CMD_FILT) this._hasFilter = false;
+            this.skipDeviceParameters.push(command);
         }
     }
-    private processInfoQueryReply (command : string, reply : string) {
-        switch (command) {
+    private processInfoQueryReply (query : PJLinkQuery, reply : string) {
+        switch (query.command) {
             case CMD_POWR:
                 var newPowerStatus = parseInt(reply);
                 if (this._powerStatus != newPowerStatus) {
@@ -825,7 +848,7 @@ export class PJLinkPlus extends NetworkProjector {
                         list[i] = parseInt(reply[i]);
                         error = error || list[i] == 2;
                         warning = warning || list[i] == 1;
-						(<any>this)['_errorStatus' + errorNames[0]] = list[i];
+						(<any>this)['_errorStatus' + errorNames[i]] = list[i];
                     }
                     if (this._hasError != error) {
                         this._hasError = error;
@@ -1040,7 +1063,7 @@ export class PJLinkPlus extends NetworkProjector {
 		toSend += ' ';
 		toSend += (param === undefined) ? '?' : param;
         console.log('sending request \'' + toSend +'\'');
-		this.socket.sendText(toSend).catch(
+		this.socket.sendText(this.authenticationSequence + toSend).catch(
 			err=>{
                 console.log('send failed: ' + err);
                 this.sendFailed(err);
@@ -1054,11 +1077,41 @@ export class PJLinkPlus extends NetworkProjector {
 		});
 		return result;
 	}
+    queryRequest(query: PJLinkQuery): Promise<string> {
+        const toSend = query.encode();
+        this.socket.sendText(this.authenticationSequence + toSend).catch(
+			err=>{
+                console.log('send failed: ' + err);
+                this.sendFailed(err);
+            }
+		);
+		const result = this.startRequest(toSend);
+		result.finally(()=> {
+			asap(()=> {	// Send further corrections soon, once this cycle settled
+				this.sendCorrection();
+			});
+		});
+		return result;
+    }
 
     protected textReceived(text: string): void {
 		if (text.indexOf('PJLINK ') === 0) {	// Initial handshake sent spontaneously by projector
 			if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0)) {
-                this.errorMsg("PJLink authentication not supported");
+                this.randomAuthSequence = text.substr('PJLINK 1'.length + 1);
+                const sequence = this.randomAuthSequence + '' + this.pjlinkPassword;
+                const md5Sequence = Md5.hashAsciiStr(sequence);
+                console.log('\'' + sequence + '\' -> \'' + md5Sequence + '\' (' + md5Sequence.length + ')');
+                this.authenticationSequence = md5Sequence as string;
+                this.unauthenticated = false;
+                this.connected = true;
+                // this.errorMsg('PJLink authentication not supported \'' + this.randomAuthSequence + '\'');
+
+            }
+            else if (text.indexOf('PJLINK ' + ERR_A) === 0) {
+                this.connected = false;
+                this.unauthenticated = true;
+                console.warn('authentication failed');
+                this.requestFailure(text);
             }
 			else {
                 // this.getInitialState();	// Pick up initial state before doing anything else
@@ -1066,14 +1119,9 @@ export class PJLinkPlus extends NetworkProjector {
             }
 			return;	// Initial handshake all done
 		}
-
 		// console.info("textReceived", text);
 
-		// Strip off any leading garbage characters seen occasionally, up to expected %
-		const msgStart = text.indexOf('%');
-		if (msgStart > 0) {
-            text = text.substring(msgStart);
-        }
+        text = PJLinkPlus.removeLeadingGarbageCharacters(text);
 
 		// If no query in flight - log a warning and ignore data
 		let currCmd = this.currCmd;
@@ -1081,6 +1129,8 @@ export class PJLinkPlus extends NetworkProjector {
 			this.warnMsg("Unsolicited data", text);
 			return;
 		}
+
+        // const response = PJLinkPlus.parseResponseMessage(text);
 
 		currCmd = currCmd.substring(0, 6);	// Initial part %1XXXX of command
 		if (currCmd) {
@@ -1110,6 +1160,11 @@ export class PJLinkPlus extends NetworkProjector {
 						// console.info("PJLink ERR3");
 						this.projectorBusy();
 						// Deliberate fallthrough
+                    case ERR_A: // bad authentication
+                        this.connected = false;
+                        this.unauthenticated = true;
+                        console.warn('authentication failed');
+                        break;
 					default:
 						this.warnMsg("PJLink response", currCmd, text);
 						break;
@@ -1137,46 +1192,6 @@ export class PJLinkPlus extends NetworkProjector {
 
 		this.requestFinished();
 	}
-    // private getInitialState() {
-	// 	this.connected = false;	// Mark me as not yet fully awake, to hold off commands
-	// 	this.request('POWR').then(
-	// 		reply => {
-	// 			if (!this.inCmdHoldoff())
-	// 				this._power.updateCurrent((parseInt(reply) & 1) != 0);
-	// 			if (this._power.get()) // Power on - proceed quering input
-	// 				this.getInputState();
-	// 			else {
-	// 				this.connected = true;	// Can't query input if off - skip this step
-	// 				this.sendCorrection();
-	// 			}
-	// 		},
-	// 		error => {
-	// 			this.warnMsg("getInitialState POWR error - retry soon", error);
-	// 			this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
-	// 		}
-	// 	);
-	// }
-    // private inCmdHoldoff() {
-	// 	return this.recentCmdHoldoff
-	// }
-    // private getInputState(ignoreError?: boolean) {
-	// 	this.request('INPT').then(
-	// 		reply => {
-	// 			if (!this.inCmdHoldoff())
-	// 				this._input.updateCurrent(reply);
-	// 			this.connected = true;
-	// 			this.sendCorrection();
-	// 		},
-	// 		error => {
-	// 			// May fail for "normal" reasons, eg, during power up/down
-	// 			this.warnMsg("getInitialState INPT error", error);
-	// 			if (!ignoreError) {
-	// 				this.connected = true; // Allow things to proceed anyway
-	// 				this.sendCorrection();
-	// 			}
-	// 		}
-	// 	);
-	// }
 
     private projectorBusy() {
 		if (!this.busyHoldoff) {
@@ -1236,8 +1251,29 @@ export class PJLinkPlus extends NetworkProjector {
         }
         return null;
     }
-
-
+    /** Strip off any leading garbage characters seen occasionally, up to expected % */
+    static removeLeadingGarbageCharacters (text: string) : string {
+        const msgStart = text.indexOf('%');
+		if (msgStart > 0) {
+            return text.substring(msgStart);
+        }
+        return text;
+    }
+    static parseResponseMessage (text: string) : PJLinkResponse | null {
+        text = this.removeLeadingGarbageCharacters(text);
+        if (text.length < 8) return null;
+        // verify leading %
+        if (text[0] != '%') return null;
+        // extract class, command, and separator
+        const separator = text.substr(6, 1);
+        if (separator != SEPARATOR_RESPONSE) return null;
+        const message : PJLinkResponse = new PJLinkResponse (
+            parseInt(text[1]),
+            text.substr(2, 4),
+            text.substr(7)
+        );
+        return message;
+    }
 }
 class StringState extends State<string> {
 	correct(drvr: NetworkProjector): Promise<string> {
@@ -1259,6 +1295,36 @@ interface CommandInfo {
 }
 interface CommandReply {
     reply: string,
+}
+class PJLinkMessage {
+    cmdClass: number;
+    command: string;
+    separator: string;
+    value: string;
+    constructor (cmdClass: number, command: string, separator: string, value: string) {
+        this.cmdClass = cmdClass;
+        this.command = command;
+        this.separator = separator;
+        this.value = value;
+    }
+    public encode () : string {
+        return '%' + this.cmdClass + this.command + this.separator + this.value;
+    }
+}
+class PJLinkQuery extends PJLinkMessage {
+    constructor (cmdClass: number, command: string, value: string = '') {
+        super(cmdClass, command, SEPARATOR_QUERY, value);
+    }
+}
+class PJLinkInstruction extends  PJLinkMessage {
+    constructor (cmdClass: number, command: string, value: string) {
+        super(cmdClass, command, SEPARATOR_INSTRUCTION, value);
+    }
+}
+class PJLinkResponse extends PJLinkMessage {
+    constructor (cmdClass: number, command: string, value: string) {
+        super(cmdClass, command, SEPARATOR_RESPONSE, value);
+    }
 }
 interface InputTypeInfo {
     label: string,
