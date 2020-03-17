@@ -72,7 +72,8 @@ const INPT_STORAGE = 4;
 const INPT_NETWORK = 5;
 const INPT_INTERNAL = 6;
 
-const PJLINK_PLUS_CONFIG_BASE_PATH : string = 'pjlinkplus.config';
+const CONFIG_BASE_PATH = 'pjlinkplus.config';
+const CACHE_BASE_PATH = '/temp/pjlinkplus.cache';
 
 const SEPARATOR_QUERY = ' ?';
 const SEPARATOR_RESPONSE = '=';
@@ -110,9 +111,11 @@ export class PJLinkPlus extends NetworkProjector {
     private authenticationSequence : string = '';
 
     private statusPoller: CancelablePromise<void>;
+    private keepPollingStatus: boolean;
 
-    private fetchingDeviceInfo: Promise<void>;
-    private fetchDeviceInfoResolver: (value?: any) => void;
+    private fetchingDeviceInfo: Promise<void> = null;
+    private fetchDeviceInfoResolve: (value?: any) => void = null;
+    private fetchDeviceInfoReject: (value?: any) => void = null;
     // private delayedDeviceInfoFetch: CancelablePromise<void>;
     // private static delayedFetchInterval: number = 10000;
     private _infoFetchDate : Date;
@@ -202,7 +205,6 @@ export class PJLinkPlus extends NetworkProjector {
         [CMD_FREZ] : {dynamic: true,  cmdClass: 2, read: true,  write: true,  needsPower: true },
     }
     private commandReplyCache: Dictionary<CommandReply> = {};
-    private cacheBasePath = PJLINK_PLUS_CONFIG_BASE_PATH + '/cache';
     private cacheFilePath : string;
     private currentQuery: PJLinkQuery;
 
@@ -218,10 +220,6 @@ export class PJLinkPlus extends NetworkProjector {
 	constructor(socket: NetworkTCP) {
 
         super(socket);
-
-        this.pjlinkPassword = PJLINK_PASSWORD;
-
-        this.cacheFilePath = this.cacheBasePath + '/' + this.socket.name + '.json';
 
         this.addState(this._power = new BoolState('POWR', 'power'));
         this.addState(this._input = new StringState(CMD_INPT, 'input', () => this._power.getCurrent()));
@@ -240,9 +238,28 @@ export class PJLinkPlus extends NetworkProjector {
 			this.onConnectStateChange();
 		});
 
-        this.poll();
-        this.attemptConnect();
+        this.cacheFilePath = CACHE_BASE_PATH + '/' + this.socket.name + '.json';
+        const configurationFilePath = CONFIG_BASE_PATH + '/' + this.socket.name + '.cfg.json';
+
+        SimpleFile.read(configurationFilePath).then(readValue => {
+            const config : PJLinkConfiguration = JSON.parse(readValue);
+            this.pjlinkPassword = config.password;
+		}).catch(_error => {
+			console.log('creating configuration file for "' + this.socket.name + '" under "' + configurationFilePath + '" - please fill out password if needed');
+            SimpleFile.write(configurationFilePath, new PJLinkConfiguration().toJSON());
+            this.pjlinkPassword = PJLINK_PASSWORD;
+		}).finally(() => {
+            // start polling and connect
+            this.poll();
+            this.attemptConnect();
+        });
+
+
     }
+
+    protected pollStatus(): boolean {
+		return true;
+	}
 
     justConnected (): void {
         wait(200).then(() => {
@@ -253,7 +270,7 @@ export class PJLinkPlus extends NetworkProjector {
                 this.getToKnowDevice().then(
                     _resolve =>  {
                         if (LOG_DEBUG) console.log('got to know device - starting to poll');
-                        this.pollDeviceStatus(true);
+                        this.startPollDeviceStatus();
                     },
                     _reject => console.warn('could not get to know device')
                 );
@@ -666,21 +683,22 @@ export class PJLinkPlus extends NetworkProjector {
         if (LOG_DEBUG) console.log('trying to get info: \'' + wantedInfo.join(', ') + '\'');
         this._currentParameterFetchList = wantedInfo.slice().reverse();
         this.fetchingDeviceInfo = new Promise<void>((resolve, reject)=>{
-            if (this.fetchDeviceInfoResolver) {
+            if (this.fetchDeviceInfoResolve) {
                 reject('fetch already in progress');
             }
             else {
-                this.fetchDeviceInfoResolver = resolve;
+                this.fetchDeviceInfoResolve = resolve;
                 this.fetchInfoLoop();
+                this.fetchDeviceInfoReject = reject;
+                wait(2000 * wantedInfo.length).then(() => {
+                    reject('fetch timeout');
+                });
             }
-            wait(2000 * wantedInfo.length).then(() => {
-                reject('fetch timeout');
-            });
         });
-
         return this.fetchingDeviceInfo;
     }
     private fetchInfoLoop () : void {
+        if (!this.keepFetchingInfo()) return;
         this._currentParameter = this.nextParameterToFetch();
         if (this._currentParameter !== undefined) {
             let pjClass : number;
@@ -703,8 +721,29 @@ export class PJLinkPlus extends NetworkProjector {
                 }
             );
         } else {
-            this.fetchInfoResolve();
+            this.finishFetchDeviceInformation();
         }
+    }
+    private abortFetchDeviceInformation () : void {
+        if (this.fetchDeviceInfoResolve) {
+            this.fetchDeviceInfoReject('fetching device info aborted');
+            this.cleanUpFetchingDeviceInformation();
+        }
+    }
+    private keepFetchingInfo () : boolean {
+        return this.fetchDeviceInfoResolve !== undefined;
+    }
+    private finishFetchDeviceInformation () : void {
+        if (this.fetchDeviceInfoResolve) {
+            this.fetchDeviceInfoResolve(true);
+            this._infoFetchDate = new Date();
+            this.cleanUpFetchingDeviceInformation();
+        }
+    }
+    private cleanUpFetchingDeviceInformation () : void {
+        delete this.fetchingDeviceInfo;
+        delete this.fetchDeviceInfoResolve;
+        delete this.fetchDeviceInfoReject;
     }
     private fetchInfo (query: PJLinkQuery) : Promise<string> {
         return new Promise<string>((resolve, reject) => {
@@ -741,20 +780,25 @@ export class PJLinkPlus extends NetworkProjector {
             );
         });
     }
-    private fetchInfoResolve () : void {
-        if (this.fetchDeviceInfoResolver) {
-            this.fetchDeviceInfoResolver(true);
-            this._infoFetchDate = new Date();
-            // console.info("got device info");
-            delete this.fetchingDeviceInfo;
-            delete this.fetchDeviceInfoResolver;
+    private startPollDeviceStatus () {
+        if (this.statusPoller) {
+            console.warn('status polling already running');
+            return;
         }
+        this.pollDeviceStatus(true);
     }
     private pollDeviceStatus(skipInterval: boolean = false) {
+        if (!this.connected) {
+            this.abortPollDeviceStatus();
+            return;
+        }
+        this.keepPollingStatus = true;
         // status interval minus up to 10% (to create some variation)
-        let waitDuration = STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1);
-		this.statusPoller = wait(skipInterval ? 10 : waitDuration);
+        let waitDuration = skipInterval ? 7 : STATUS_POLL_INTERVAL - Math.random() * (STATUS_POLL_INTERVAL * 0.1);
+        if (LOG_DEBUG) console.log('going to wait for ' + waitDuration + ' ms');
+		this.statusPoller = wait(waitDuration);
 		this.statusPoller.then(()=> {
+            if (!this.keepPollingStatus) return;
 			if (this.socket.connected &&
                 this.connected) {
                 this.fetchDeviceInformation(this.devicePollParameters).then(_resolve => {
@@ -768,8 +812,17 @@ export class PJLinkPlus extends NetworkProjector {
                 // Keep polling
                 this.pollDeviceStatus();
             }
+            else {
+                this.abortPollDeviceStatus();
+            }
 		})
 	}
+    private abortPollDeviceStatus () : void {
+        this.keepPollingStatus = false;
+        this.abortFetchDeviceInformation();
+        console.log('aborting polling device status');
+        if (this.statusPoller) delete this.statusPoller;
+    }
 
     private processInfoQueryError (command : string, error : string) {
         if (error == ERR_1) {
@@ -939,7 +992,7 @@ export class PJLinkPlus extends NetworkProjector {
                 }
                 break;
             case CMD_INNM:
-                var receivedInputTerminalName = reply;
+                // nothing yet
                 break;
             case CMD_IRES:
                 var newInputResolution : Resolution;
@@ -1062,7 +1115,6 @@ export class PJLinkPlus extends NetworkProjector {
 		var toSend = '%' + pjClass + question;
 		toSend += ' ';
 		toSend += (param === undefined) ? '?' : param;
-        console.log('sending request \'' + toSend +'\'');
 		this.socket.sendText(this.authenticationSequence + toSend).catch(
 			err=>{
                 console.log('send failed: ' + err);
@@ -1100,7 +1152,7 @@ export class PJLinkPlus extends NetworkProjector {
                 this.randomAuthSequence = text.substr('PJLINK 1'.length + 1);
                 const sequence = this.randomAuthSequence + '' + this.pjlinkPassword;
                 const md5Sequence = Md5.hashAsciiStr(sequence);
-                console.log('\'' + sequence + '\' -> \'' + md5Sequence + '\' (' + md5Sequence.length + ')');
+                if (LOG_DEBUG) console.log('\'' + sequence + '\' -> \'' + md5Sequence + '\' (' + md5Sequence.length + ')');
                 this.authenticationSequence = md5Sequence as string;
                 this.unauthenticated = false;
                 this.connected = true;
@@ -1156,18 +1208,23 @@ export class PJLinkPlus extends NetworkProjector {
 						this.errorMsg("Bad command parameter", this.currCmd);
 						treatAsOk = true;
 						break;
-					case ERR_3:	// Bad time for this command (usually in standby or not yet awake)
-						// console.info("PJLink ERR3");
-						this.projectorBusy();
-						// Deliberate fallthrough
                     case ERR_A: // bad authentication
                         this.connected = false;
                         this.unauthenticated = true;
                         console.warn('authentication failed');
                         break;
+                    case ERR_3:	// Bad time for this command (usually in standby or not yet awake)
+						// console.info("PJLink ERR3");
+						this.projectorBusy();
+						// Deliberate fallthrough
 					default:
-						this.warnMsg("PJLink response", currCmd, text);
+						this.warnMsg('PJLink response', currCmd, text);
 						break;
+                    case ERR_4:
+                        // this would mean that the projector is not able to operate properly
+                        // this.errorMsg('projector not able to operate properly : ERR4 received');
+                        this.abortPollDeviceStatus();
+                        break;
 					}
 					if (!treatAsOk) {
                         this.requestFailure(text);
@@ -1333,13 +1390,21 @@ interface InputTypeInfo {
 class Resolution {
     public readonly horizontal : number;
     public readonly vertical : number;
-
     constructor (h: number, v: number) {
         this.horizontal = h;
         this.vertical = v;
     }
-
     toString () : string {
         return this.horizontal + 'x' + this.vertical;
+    }
+}
+class PJLinkConfiguration {
+    public password: string = PJLINK_PASSWORD;
+    toJSON () : string {
+        const json =
+        '{\n' +
+        '    "password" : "' + this.password + '"\n' +
+        '}';
+        return json;
     }
 }
