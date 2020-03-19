@@ -136,21 +136,32 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 _this.onConnectStateChange();
             });
             _this.cacheFilePath = CACHE_BASE_PATH + '/' + _this.socket.name + '.json';
-            var configurationFilePath = CONFIG_BASE_PATH + '/' + _this.socket.name + '.cfg.json';
-            SimpleFile_1.SimpleFile.read(configurationFilePath).then(function (readValue) {
-                var config = JSON.parse(readValue);
-                _this.pjlinkPassword = config.password;
+            _this.configurationFilePath = CONFIG_BASE_PATH + '/' + _this.socket.name + '.cfg.json';
+            SimpleFile_1.SimpleFile.read(_this.configurationFilePath).then(function (readValue) {
+                _this.configuration = JSON.parse(readValue);
             }).catch(function (_error) {
-                console.log('creating configuration file for "' + _this.socket.name + '" under "' + configurationFilePath + '" - please fill out password if needed');
-                SimpleFile_1.SimpleFile.write(configurationFilePath, new PJLinkConfiguration().toJSON());
-                _this.pjlinkPassword = PJLINK_PASSWORD;
+                console.log('creating configuration file for "' + _this.socket.name + '" under "' + _this.configurationFilePath + '" - please fill out password if needed');
+                _this.storePassword(PJLINK_PASSWORD);
             }).finally(function () {
+                _this.pjlinkPassword = _this.configuration.password;
                 _this.poll();
                 _this.attemptConnect();
             });
             return _this;
         }
         PJLinkPlus_1 = PJLinkPlus;
+        PJLinkPlus.prototype.storePassword = function (password) {
+            if (!this.configuration) {
+                this.configuration = new PJLinkConfiguration();
+            }
+            this.configuration.password = password;
+            return this.storeConfiguration(this.configuration);
+        };
+        PJLinkPlus.prototype.storeConfiguration = function (cfg) {
+            if (!cfg)
+                cfg = this.configuration;
+            return SimpleFile_1.SimpleFile.write(this.configurationFilePath, cfg.toJSON());
+        };
         PJLinkPlus.prototype.pollStatus = function () {
             return true;
         };
@@ -573,6 +584,16 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         Object.defineProperty(PJLinkPlus.prototype, "hasProblem", {
             get: function () {
                 return this._hasError || this._hasWarning;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PJLinkPlus.prototype, "password", {
+            get: function () {
+                return this.configuration ? this.configuration.password : PJLINK_PASSWORD;
+            },
+            set: function (value) {
+                this.storePassword(value);
             },
             enumerable: true,
             configurable: true
@@ -1111,6 +1132,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             return result;
         };
         PJLinkPlus.prototype.textReceived = function (text) {
+            this._lastKnownConnectionDate = new Date();
             if (text.indexOf('PJLINK ') === 0) {
                 if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0)) {
                     this.randomAuthSequence = text.substr('PJLINK 1'.length + 1);
@@ -1453,6 +1475,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "hasProblem", null);
+        __decorate([
+            Meta.property('PJLink password'),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], PJLinkPlus.prototype, "password", null);
         __decorate([
             Meta.property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)"),
             __metadata("design:type", Boolean),

@@ -217,6 +217,9 @@ export class PJLinkPlus extends NetworkProjector {
         6 : {label: 'Internal', sourceIDs: []},
     }
 
+    private configurationFilePath: string;
+    private configuration: PJLinkConfiguration;
+
 	constructor(socket: NetworkTCP) {
 
         super(socket);
@@ -239,22 +242,32 @@ export class PJLinkPlus extends NetworkProjector {
 		});
 
         this.cacheFilePath = CACHE_BASE_PATH + '/' + this.socket.name + '.json';
-        const configurationFilePath = CONFIG_BASE_PATH + '/' + this.socket.name + '.cfg.json';
+        this.configurationFilePath = CONFIG_BASE_PATH + '/' + this.socket.name + '.cfg.json';
 
-        SimpleFile.read(configurationFilePath).then(readValue => {
-            const config : PJLinkConfiguration = JSON.parse(readValue);
-            this.pjlinkPassword = config.password;
+        SimpleFile.read(this.configurationFilePath).then(readValue => {
+            this.configuration = JSON.parse(readValue);
 		}).catch(_error => {
-			console.log('creating configuration file for "' + this.socket.name + '" under "' + configurationFilePath + '" - please fill out password if needed');
-            SimpleFile.write(configurationFilePath, new PJLinkConfiguration().toJSON());
-            this.pjlinkPassword = PJLINK_PASSWORD;
+			console.log('creating configuration file for "' + this.socket.name + '" under "' + this.configurationFilePath + '" - please fill out password if needed');
+            this.storePassword(PJLINK_PASSWORD);
 		}).finally(() => {
+            this.pjlinkPassword = this.configuration.password;
             // start polling and connect
             this.poll();
             this.attemptConnect();
         });
 
 
+    }
+    private storePassword (password: string) : Promise<void> {
+        if (!this.configuration) {
+            this.configuration = new PJLinkConfiguration();
+        }
+        this.configuration.password = password;
+        return this.storeConfiguration(this.configuration);
+    }
+    private storeConfiguration (cfg?: PJLinkConfiguration) : Promise<void> {
+        if (!cfg) cfg = this.configuration;
+        return SimpleFile.write(this.configurationFilePath, cfg.toJSON());
     }
 
     protected pollStatus(): boolean {
@@ -597,6 +610,14 @@ export class PJLinkPlus extends NetworkProjector {
     @Meta.property("Problem reported?")
     public get hasProblem () : boolean {
         return this._hasError || this._hasWarning;
+    }
+
+    @Meta.property('PJLink password')
+    public set password (value: string) {
+        this.storePassword(value);
+    }
+    public get password () : string {
+        return this.configuration ? this.configuration.password : PJLINK_PASSWORD;
     }
 
     /* special properties */
@@ -1147,6 +1168,9 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     protected textReceived(text: string): void {
+        // response == proof of healthy connection
+        this._lastKnownConnectionDate = new Date();
+
 		if (text.indexOf('PJLINK ') === 0) {	// Initial handshake sent spontaneously by projector
 			if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0)) {
                 this.randomAuthSequence = text.substr('PJLINK 1'.length + 1);
