@@ -47,8 +47,9 @@ export interface NetworkTCP extends NetworkBase {
 
 	/*	Explicit connection. Returns a "connect finished" promise.
 		Optionally set "raw" data mode if not already opened in text mode.
+		Uses the port specified in the UI unless explicitly overridden.
 	 */
-	connect(rawBytesMode?: boolean): Promise<any>;
+	connect(rawBytesMode?: boolean, port?:number): Promise<any>;
 
 	disconnect(): void;			// Disconnect immediately
 

@@ -15,7 +15,7 @@ export var SimpleWebsocket: {
 	 */
 	connect(
 		url:string, 				// URL to connect to (typically starts with ws:// or wss://)
-		maxMsgSize?: number,		// Max expected incoming frame size (default is 4096)
+		maxMsgSize?: number,		// Max expected incoming frame size (default is 8K)
 		headers?: Dictionary<string> // Request headers (e.g., authorization, API key, etc)
 	): Promise<WebsocketConnection>;
 };
