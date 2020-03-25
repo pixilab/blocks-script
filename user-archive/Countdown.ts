@@ -11,6 +11,7 @@ import {property, callable} from "system_lib/Metadata";
 export class Countdown extends Script {
 	private mMinutes = 0;
 	private mSeconds = 0;
+	private mRunning = true;
 	private tickTimer: CancelablePromise<void>;	// Set if we have a timer in flight
 
 	public constructor(env : ScriptEnv) {
@@ -24,22 +25,38 @@ export class Countdown extends Script {
 		});
 	}
 
-	@property("Number of minutes remaining (always 2 digits)")
+	@property("Number of minutes remaining (2 digits)")
 	public get minutes(): string {
 		return padTwoDigits(this.mMinutes);
 	}
 
-	@property("Number of seconds remaining (always 2 digits)")
+	@property("Number of seconds remaining (2 digits)")
 	public get seconds(): string {
 		return padTwoDigits(this.mSeconds);
 	}
 
-	@property("True when the timer is at time zero")
+	@property("Timer is at time zero")
 	public get zero(): boolean {
 		return this.mMinutes === 0 && this.mSeconds === 0;
 	}
 
-	@callable("Start countdown from specified time")
+	@property("Counter is running")
+	public get running() {
+		return this.mRunning;
+	}
+	public set running(state: boolean) {
+		if (this.mRunning !== state) {
+			this.mRunning = state;
+			this.manageTicking();
+		}
+	}
+
+	// Return true if clock should run ath this point
+	private shouldRunClock(): boolean {
+		return this.mRunning && !this.zero;
+	}
+
+	@callable("Start countdown at specified time")
 	public start(minutes: number, seconds: number) {
 		const wasZero = this.zero;
 		this.setSeconds(Math.max(0, Math.min(59, Math.round(seconds))));
@@ -48,6 +65,7 @@ export class Countdown extends Script {
 		this.manageTicking();
 		// console.log("Started at", minutes, seconds);
 	}
+
 
 	// Set my "minutes" value, notifying if this is news
 	private setMinutes(val: number) {
@@ -84,25 +102,28 @@ export class Countdown extends Script {
 			this.tickTimer.cancel();
 			this.tickTimer = undefined;
 		}
-		if (!this.zero) {
+		if (this.shouldRunClock()) {
 			this.tickTimer = wait(1000);
-			this.tickTimer.then(() => {
-				// console.log("Ticked");
-				this.tickTimer = undefined;
-				var seconds = this.mSeconds;
-				var minutes = this.mMinutes;
-				if (--seconds === -1) {
-					if (--minutes === -1)
-						seconds = minutes = 0;	// All done
-					else
-						seconds = 59;
-				}
-				this.setSeconds(seconds);
-				this.setMinutes(minutes);
-				this.notifyZero(false);
-				this.manageTicking();
-			});
+			this.tickTimer.then(() => this.nextTick());
 		}
+	}
+
+  // Called once per second while clock is running
+	private nextTick() {
+			// console.log("Ticked");
+			this.tickTimer = undefined;
+			var seconds = this.mSeconds;
+			var minutes = this.mMinutes;
+			if (--seconds === -1) {
+				if (--minutes === -1)
+					seconds = minutes = 0;	// All done
+				else
+					seconds = 59;
+			}
+			this.setSeconds(seconds);
+			this.setMinutes(minutes);
+			this.notifyZero(false);
+			this.manageTicking();	// Set up for next second
 	}
 }
 

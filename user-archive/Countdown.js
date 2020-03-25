@@ -26,6 +26,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             var _this = _super.call(this, env) || this;
             _this.mMinutes = 0;
             _this.mSeconds = 0;
+            _this.mRunning = true;
             env.subscribe('finish', function () {
                 if (_this.tickTimer)
                     _this.tickTimer.cancel();
@@ -53,6 +54,22 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Countdown.prototype, "running", {
+            get: function () {
+                return this.mRunning;
+            },
+            set: function (state) {
+                if (this.mRunning !== state) {
+                    this.mRunning = state;
+                    this.manageTicking();
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Countdown.prototype.shouldRunClock = function () {
+            return this.mRunning && !this.zero;
+        };
         Countdown.prototype.start = function (minutes, seconds) {
             var wasZero = this.zero;
             this.setSeconds(Math.max(0, Math.min(59, Math.round(seconds))));
@@ -86,44 +103,50 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
                 this.tickTimer.cancel();
                 this.tickTimer = undefined;
             }
-            if (!this.zero) {
+            if (this.shouldRunClock()) {
                 this.tickTimer = wait(1000);
-                this.tickTimer.then(function () {
-                    _this.tickTimer = undefined;
-                    var seconds = _this.mSeconds;
-                    var minutes = _this.mMinutes;
-                    if (--seconds === -1) {
-                        if (--minutes === -1)
-                            seconds = minutes = 0;
-                        else
-                            seconds = 59;
-                    }
-                    _this.setSeconds(seconds);
-                    _this.setMinutes(minutes);
-                    _this.notifyZero(false);
-                    _this.manageTicking();
-                });
+                this.tickTimer.then(function () { return _this.nextTick(); });
             }
+        };
+        Countdown.prototype.nextTick = function () {
+            this.tickTimer = undefined;
+            var seconds = this.mSeconds;
+            var minutes = this.mMinutes;
+            if (--seconds === -1) {
+                if (--minutes === -1)
+                    seconds = minutes = 0;
+                else
+                    seconds = 59;
+            }
+            this.setSeconds(seconds);
+            this.setMinutes(minutes);
+            this.notifyZero(false);
+            this.manageTicking();
         };
         return Countdown;
     }(Script_1.Script));
     __decorate([
-        Metadata_1.property("Number of minutes remaining (always 2 digits)"),
+        Metadata_1.property("Number of minutes remaining (2 digits)"),
         __metadata("design:type", String),
         __metadata("design:paramtypes", [])
     ], Countdown.prototype, "minutes", null);
     __decorate([
-        Metadata_1.property("Number of seconds remaining (always 2 digits)"),
+        Metadata_1.property("Number of seconds remaining (2 digits)"),
         __metadata("design:type", String),
         __metadata("design:paramtypes", [])
     ], Countdown.prototype, "seconds", null);
     __decorate([
-        Metadata_1.property("True when the timer is at time zero"),
+        Metadata_1.property("Timer is at time zero"),
         __metadata("design:type", Boolean),
         __metadata("design:paramtypes", [])
     ], Countdown.prototype, "zero", null);
     __decorate([
-        Metadata_1.callable("Start countdown from specified time"),
+        Metadata_1.property("Counter is running"),
+        __metadata("design:type", Object),
+        __metadata("design:paramtypes", [Boolean])
+    ], Countdown.prototype, "running", null);
+    __decorate([
+        Metadata_1.callable("Start countdown at specified time"),
         __metadata("design:type", Function),
         __metadata("design:paramtypes", [Number, Number]),
         __metadata("design:returntype", void 0)
