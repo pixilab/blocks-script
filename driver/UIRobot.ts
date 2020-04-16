@@ -23,6 +23,8 @@ export class UIRobot extends Driver<NetworkTCP> {
 		super(socket);
 		if (bufferSize)
 			socket.setMaxLineLength(bufferSize);
+
+		socket.enableWakeOnLAN();
 		socket.autoConnect();
 
 		socket.subscribe('connect', (sender, message) => {
@@ -43,6 +45,11 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.mProgramParams = '';
 	}
 
+	@callable("Try to start the computer through wake on lan.")
+	public wakeUp() {
+		this.socket.wakeOnLAN();
+	}
+
 	@property("Left mouse button down")
 	public set leftDown(value: boolean) {
 		if (this.mLeftDown !== value) {
@@ -50,6 +57,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.sendMouseButtonState(1024, value);
 		}
 	}
+
 	public get leftDown(): boolean {
 		return this.mLeftDown;
 	}
@@ -61,6 +69,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.sendMouseButtonState(4096, value);
 		}
 	}
+
 	public get rightDown(): boolean {
 		return this.mRightDown;
 	}
@@ -72,7 +81,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 
 	@property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS")
 	public set program(programParams: string) {
-		// console.log("program", programParams);
 		// First stop the previously runnig program, if any
 		const runningProgram = this.parseProgramParams(this.mProgramParams);
 		if (runningProgram) {
@@ -97,6 +105,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.mProgramParams = '';
 		}
 	}
+
 	public get program(): string {
 		return this.mProgramParams;
 	}
@@ -142,6 +151,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 			});
 		}
 	}
+
 	public get keyDown(): string {
 		return this.mCurrentKeys;
 	}
@@ -159,7 +169,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 */
 	protected sendCommand(command: string, ...args: any[]) {
 		command += ' ' + args.join(' ');
-		console.log("-------------command", command);
 		return this.socket.sendText(command);
 	}
 
@@ -168,7 +177,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 * into a ProgramParams object.
 	 */
 	private parseProgramParams(programParams?: string): ProgramParams|undefined {
-		// console.log("parseProgramParams", programParams);
 		if (programParams) {
 			const params = programParams.split('|');
 			const result = {
@@ -176,7 +184,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 				workingDir: UIRobot.quote(params[1]) || '/',
 				arguments: params.slice(2)
 			};
-			// console.log("parseProgramParams PROGRAM", result.program, "WORKING", result.workingDir, "ARGS", result.arguments.toString());
 			return result;
 		} // Else returns undefined if no/empty programParams
 	}
