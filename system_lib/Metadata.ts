@@ -139,7 +139,7 @@ export function max(max:number) {
  	/rest/script/invoke/<user-script-name>/<method-name>
 
  with a JSON body payload deserialized and passed to the method as an Object.
- An object or string returned from the method will be seriallized as JSON data and
+ An object or string returned from the method will be serialized as JSON data and
  returned to the web client. May return a promise eventually resolving with the
  result value.
 
