@@ -25,6 +25,15 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.changed = function (prop) {
             this.__scriptFacade.changed(prop);
         };
+        ScriptBase.prototype.makeJSArray = function (arr) {
+            if (Array.isArray(arr))
+                return arr;
+            var arrayLike = arr;
+            var result = [];
+            for (var i = 0; i < arrayLike.length; ++i)
+                result.push(arrayLike[i]);
+            return result;
+        };
         return ScriptBase;
     }());
     exports.ScriptBase = ScriptBase;

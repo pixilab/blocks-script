@@ -32,9 +32,6 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
             }
             return _this;
         }
-        Driver.prototype.changed = function (prop) {
-            this.__scriptFacade.changed(prop);
-        };
         Object.defineProperty(Driver.prototype, "connected", {
             get: function () {
                 return this.__scriptFacade.connected ? true : false;

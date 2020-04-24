@@ -23,7 +23,7 @@ export var SimpleServer: {
 		port:number,			// Port listening on for server connections
 		maxConnections?:number	// Max number of concurrent connections (default is 25)
 	): ServerListener;
-}
+};
 
 /*
  * The listener that listens for connections on the specified port

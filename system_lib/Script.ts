@@ -20,7 +20,7 @@ export class Script extends ScriptBase<ScriptEnv> {
 	 *
 	 * The value associated with the property varies with the type of property.
 	 */
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType> {
+	getProperty<PropType>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
 		return changeNotification ?
 			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
 			this.__scriptFacade.getProperty<PropType>(fullPath);
@@ -60,11 +60,14 @@ export interface PropertyAccessor<PropType> {
 	close(): void;	// Close down this accessor - can no longer be used
 }
 
-// Internal implementation - not for direct client access
 export interface ScriptEnv extends ScriptBaseEnv {
+	// Script is being shut down
+	subscribe(event: 'finish', listener: ()=>void): void;
 
+	// Following are internal implementation details - not for direct client access
 	establishChannel(name: string):void;
 	establishChannel(name: string, listener: Function): void;
 	sendOnChannel(name: string, data: string):void;
 	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
+
 }

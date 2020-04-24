@@ -1,0 +1,5 @@
+All example user scripts have been moved to the "user-archive" directory, so they won't be
+activated if you copy the entire script directory from github onto your Blocks server (e.g.,
+to install the latest version of all drivers). To activate a user script, simply move it
+(both the JS and TS files) from the "user-archive" to the "user" directory. Any scripts
+in the "user-archive" directory will be ignored.
