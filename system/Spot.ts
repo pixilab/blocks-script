@@ -254,7 +254,7 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 
 // Spot type named "Location" in Blocks UI
 export interface VirtualSpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name ("VirtualSpot")
+	isOfTypeName(typeName: string): VirtualSpot | null;	// Check subtype by name ("VirtualSpot")
 
 	subscribe(event: "spot", listener: (sender: VirtualSpot, message:{
 		type:
