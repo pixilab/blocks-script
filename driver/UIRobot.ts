@@ -19,35 +19,58 @@ export class UIRobot extends Driver<NetworkTCP> {
 	private mCurrentKeys: string = '';
 	private mKeyRlsTimer?: CancelablePromise<void>;	// Set while key down timer running
 
+	// Program and arguments that need to run on peer to shut down. Assumes Windows.
+	static readonly kPowerDownProgram = "C:/Windows/System32/shutdown.exe||/s /f /t 0";
+
 	public constructor(protected socket: NetworkTCP, bufferSize?: number) {
 		super(socket);
 		if (bufferSize)
 			socket.setMaxLineLength(bufferSize);
-
-		socket.enableWakeOnLAN();
+		socket.enableWakeOnLAN();	// Allows us to use wakeOnLAN in power property
 		socket.autoConnect();
 
 		socket.subscribe('connect', (sender, message) => {
-			if (message.type === 'Connection' && sender.connected)
+			if (message.type === 'Connection')
 				this.onConnectStateChanged(sender.connected);
 		});
 
+		// Handle initially connected state
 		if (socket.connected)
-			this.onConnectStateChanged(socket.connected);
-		//console.log("UIRobot started");
+			this.onConnectStateChanged(true);
 	}
 
-	/**	When peer disconnects - forget about any "currently running program", since this
-	 *  likely means the peer was shut down.
+	/**	Connected state changed to the one specified by the parameter.
 	 */
 	protected onConnectStateChanged(connected: boolean) {
 		if (!connected)
 			this.mProgramParams = '';
+
+		// We consider connection state as our "power" property's, so fire change for that
+		this.changed("power");
 	}
 
-	@callable("Try to start the computer through wake on lan.")
-	public wakeUp() {
-		this.socket.wakeOnLAN();
+	/**
+	 * Turn power of computer in other end on and off. Setting the power to ON will attempt
+	 * to wake up the computer using Wake-on-LAN. Setting it to OFF will send a command to
+	 * the peer to shut it down, using kPowerDownProgram.
+	 */
+	@property("Power computer on/off")
+	public set power(power: boolean) {
+		if (power) {
+			if (!this.socket.connected)	// No need if already online
+				this.socket.wakeOnLAN();
+		} else
+			this.program = UIRobot.kPowerDownProgram;
+	}
+
+	/**
+	 * Consider power OFF if peer not connected OR if the last command sent was kPowerDownProgram.
+	 * Note that the power ON state will be delayed visavi setting the property, since I won't
+	 * consider power to be on until the computer actually connects, which will take quite a while
+	 * from setting power to true.
+	 */
+	public get power(): boolean {
+		return this.socket.connected && this.program !== UIRobot.kPowerDownProgram;
 	}
 
 	@property("Left mouse button down")
@@ -57,7 +80,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.sendMouseButtonState(1024, value);
 		}
 	}
-
 	public get leftDown(): boolean {
 		return this.mLeftDown;
 	}
@@ -69,7 +91,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.sendMouseButtonState(4096, value);
 		}
 	}
-
 	public get rightDown(): boolean {
 		return this.mRightDown;
 	}
@@ -81,6 +102,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 
 	@property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS")
 	public set program(programParams: string) {
+		// console.log("program", programParams);
 		// First stop the previously runnig program, if any
 		const runningProgram = this.parseProgramParams(this.mProgramParams);
 		if (runningProgram) {
@@ -105,7 +127,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.mProgramParams = '';
 		}
 	}
-
 	public get program(): string {
 		return this.mProgramParams;
 	}
@@ -151,7 +172,6 @@ export class UIRobot extends Driver<NetworkTCP> {
 			});
 		}
 	}
-
 	public get keyDown(): string {
 		return this.mCurrentKeys;
 	}
@@ -169,6 +189,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 */
 	protected sendCommand(command: string, ...args: any[]) {
 		command += ' ' + args.join(' ');
+		console.log("-------------command", command);
 		return this.socket.sendText(command);
 	}
 
@@ -177,6 +198,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 * into a ProgramParams object.
 	 */
 	private parseProgramParams(programParams?: string): ProgramParams|undefined {
+		// console.log("parseProgramParams", programParams);
 		if (programParams) {
 			const params = programParams.split('|');
 			const result = {
@@ -184,6 +206,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 				workingDir: UIRobot.quote(params[1]) || '/',
 				arguments: params.slice(2)
 			};
+			// console.log("parseProgramParams PROGRAM", result.program, "WORKING", result.workingDir, "ARGS", result.arguments.toString());
 			return result;
 		} // Else returns undefined if no/empty programParams
 	}

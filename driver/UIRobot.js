@@ -34,20 +34,33 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.enableWakeOnLAN();
             socket.autoConnect();
             socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection' && sender.connected)
+                if (message.type === 'Connection')
                     _this.onConnectStateChanged(sender.connected);
             });
             if (socket.connected)
-                _this.onConnectStateChanged(socket.connected);
+                _this.onConnectStateChanged(true);
             return _this;
         }
         UIRobot.prototype.onConnectStateChanged = function (connected) {
             if (!connected)
                 this.mProgramParams = '';
+            this.changed("power");
         };
-        UIRobot.prototype.wakeUp = function () {
-            this.socket.wakeOnLAN();
-        };
+        Object.defineProperty(UIRobot.prototype, "power", {
+            get: function () {
+                return this.socket.connected && this.program !== UIRobot_1.kPowerDownProgram;
+            },
+            set: function (power) {
+                if (power) {
+                    if (!this.socket.connected)
+                        this.socket.wakeOnLAN();
+                }
+                else
+                    this.program = UIRobot_1.kPowerDownProgram;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(UIRobot.prototype, "leftDown", {
             get: function () {
                 return this.mLeftDown;
@@ -144,6 +157,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 args[_i - 1] = arguments[_i];
             }
             command += ' ' + args.join(' ');
+            console.log("-------------command", command);
             return this.socket.sendText(command);
         };
         UIRobot.prototype.parseProgramParams = function (programParams) {
@@ -162,12 +176,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         return UIRobot;
     }(Driver_1.Driver));
+    UIRobot.kPowerDownProgram = "C:/Windows/System32/shutdown.exe||/s /f /t 0";
     __decorate([
-        Metadata_1.callable("Try to start the computer through wake on lan."),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", []),
-        __metadata("design:returntype", void 0)
-    ], UIRobot.prototype, "wakeUp", null);
+        Metadata_1.property("Power computer on/off"),
+        __metadata("design:type", Boolean),
+        __metadata("design:paramtypes", [Boolean])
+    ], UIRobot.prototype, "power", null);
     __decorate([
         Metadata_1.property("Left mouse button down"),
         __metadata("design:type", Boolean),

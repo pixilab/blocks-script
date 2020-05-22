@@ -1,5 +1,7 @@
 /*
-	Samsung MDC display control driver. Works with most Samsung Signage displays.
+	Enhanced Samsung MDC display control driver. Works with devices that support the
+	"Status Control" (00) command of the MDC protocol. For other devices, use the
+	simpler SamsungMDCBasic driver instead.
 
 	Available "input" numbers, according to the protocol doc (may vary with model of display)
 
