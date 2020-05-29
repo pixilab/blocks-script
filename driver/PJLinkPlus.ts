@@ -692,10 +692,10 @@ export class PJLinkPlus extends NetworkProjector {
 
     private nextParameterToFetch () : string {
         var parameter : string;
-        while ((parameter === undefined ||
-            this.skipDeviceParameters.indexOf(parameter) > -1) &&
-            this._currentParameterFetchList.length > 0) {
+        while (parameter === undefined &&
+                this._currentParameterFetchList.length > 0) {
             parameter = this._currentParameterFetchList.pop();
+            if (this.skipDeviceParameters.indexOf(parameter) > -1) parameter = undefined;
         }
         return parameter;
     }
@@ -768,7 +768,8 @@ export class PJLinkPlus extends NetworkProjector {
     }
     private fetchInfo (query: PJLinkQuery) : Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            if (!this._power.getCurrent() && PJLinkPlus.commandNeedsPower(query.command)) {
+            if ((!this._power || !this._power.getCurrent()) &&
+                    PJLinkPlus.commandNeedsPower(query.command)) {
                 reject('device needs to be powered on for command ' + query.command);
                 return;
             }
@@ -1225,17 +1226,17 @@ export class PJLinkPlus extends NetworkProjector {
 					 */
 					switch (text) {
 					case ERR_1:	// Undefined command - no need to re-try
-						this.errorMsg("Undefined command", this.currCmd);
+						if (LOG_DEBUG) this.warnMsg("Undefined command", this.currCmd);
 						treatAsOk = true;
 						break;
 					case ERR_2:	// Parameter not accepted (e.g., non-existing input)
-						this.errorMsg("Bad command parameter", this.currCmd);
+						if (LOG_DEBUG) this.warnMsg("Bad command parameter", this.currCmd);
 						treatAsOk = true;
 						break;
                     case ERR_A: // bad authentication
                         this.connected = false;
                         this.unauthenticated = true;
-                        console.warn('authentication failed');
+                        this.warnMsg('authentication failed');
                         break;
                     case ERR_3:	// Bad time for this command (usually in standby or not yet awake)
 						// console.info("PJLink ERR3");

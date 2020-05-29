@@ -24,6 +24,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
     "use strict";
     var _a;
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.PJLinkPlus = void 0;
     var CMD_POWR = 'POWR';
     var CMD_INPT = 'INPT';
     var CMD_AVMT = 'AVMT';
@@ -257,35 +258,35 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._powerStatus;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "isOff", {
             get: function () {
                 return this._isOff;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "isOn", {
             get: function () {
                 return this._isOn;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "isCooling", {
             get: function () {
                 return this._isCooling;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "isWarmingUp", {
             get: function () {
                 return this._isWarmingUp;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "input", {
@@ -297,7 +298,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     return;
                 this.setInput(parseInt(value[0]), value[1]);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         PJLinkPlus.prototype.createDynamicInputProperties = function () {
@@ -382,7 +383,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     this.sendCorrection();
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "muteAudio", {
@@ -393,7 +394,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             set: function (value) {
                 this.mute = value ? 21 : 20;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "muteVideo", {
@@ -404,7 +405,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             set: function (value) {
                 this.mute = value ? 11 : 10;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "inputResolution", {
@@ -414,7 +415,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 }
                 return 'undefined';
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "recommendedResolution", {
@@ -424,168 +425,168 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 }
                 return 'undefined';
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "deviceName", {
             get: function () {
                 return this._deviceName;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "manufactureName", {
             get: function () {
                 return this._manufactureName;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "productName", {
             get: function () {
                 return this._productName;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "otherInformation", {
             get: function () {
                 return this._otherInformation;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "serialNumber", {
             get: function () {
                 return this._serialNumber;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "softwareVersion", {
             get: function () {
                 return this._softwareVersion;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampCount", {
             get: function () {
                 return this._lampCount;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampOneHours", {
             get: function () {
                 return this._lampOneHours;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampTwoHours", {
             get: function () {
                 return this._lampTwoHours;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampThreeHours", {
             get: function () {
                 return this._lampThreeHours;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampFourHours", {
             get: function () {
                 return this._lampFourHours;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampOneActive", {
             get: function () {
                 return this._lampOneActive;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampTwoActive", {
             get: function () {
                 return this._lampTwoActive;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampThreeActive", {
             get: function () {
                 return this._lampThreeActive;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampFourActive", {
             get: function () {
                 return this._lampFourActive;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "lampReplacementModelNumber", {
             get: function () {
                 return this._lampReplacementModelNumber;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "hasFilter", {
             get: function () {
                 return this._hasFilter;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "filterUsageTime", {
             get: function () {
                 return this._filterUsageTime;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "filterReplacementModelNumber", {
             get: function () {
                 return this._filterReplacementModelNumber;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "errorStatus", {
             get: function () {
                 return this._errorStatus;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "hasError", {
             get: function () {
                 return this._hasError;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "hasWarning", {
             get: function () {
                 return this._hasWarning;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "hasProblem", {
             get: function () {
                 return this._hasError || this._hasWarning;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "password", {
@@ -595,7 +596,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             set: function (value) {
                 this.storePassword(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "isOnline", {
@@ -612,7 +613,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 var msSinceLastConnection = now.getTime() - this._lastKnownConnectionDate.getTime();
                 return msSinceLastConnection < 42000;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "detailedStatusReport", {
@@ -642,7 +643,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     (this._softwareVersion ? 'Software version: ' + this._softwareVersion + this._lineBreak : '') +
                     '(class ' + this._class + ', status report last updated ' + this._infoFetchDate + ')';
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         PJLinkPlus.prototype.translateErrorCode = function (code) {
@@ -671,10 +672,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         };
         PJLinkPlus.prototype.nextParameterToFetch = function () {
             var parameter;
-            while ((parameter === undefined ||
-                this.skipDeviceParameters.indexOf(parameter) > -1) &&
+            while (parameter === undefined &&
                 this._currentParameterFetchList.length > 0) {
                 parameter = this._currentParameterFetchList.pop();
+                if (this.skipDeviceParameters.indexOf(parameter) > -1)
+                    parameter = undefined;
             }
             return parameter;
         };
@@ -749,7 +751,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         PJLinkPlus.prototype.fetchInfo = function (query) {
             var _this = this;
             return new Promise(function (resolve, reject) {
-                if (!_this._power.getCurrent() && PJLinkPlus_1.commandNeedsPower(query.command)) {
+                if ((!_this._power || !_this._power.getCurrent()) &&
+                    PJLinkPlus_1.commandNeedsPower(query.command)) {
                     reject('device needs to be powered on for command ' + query.command);
                     return;
                 }
@@ -1170,17 +1173,19 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     if (!treatAsOk) {
                         switch (text) {
                             case ERR_1:
-                                this.errorMsg("Undefined command", this.currCmd);
+                                if (LOG_DEBUG)
+                                    this.warnMsg("Undefined command", this.currCmd);
                                 treatAsOk = true;
                                 break;
                             case ERR_2:
-                                this.errorMsg("Bad command parameter", this.currCmd);
+                                if (LOG_DEBUG)
+                                    this.warnMsg("Bad command parameter", this.currCmd);
                                 treatAsOk = true;
                                 break;
                             case ERR_A:
                                 this.connected = false;
                                 this.unauthenticated = true;
-                                console.warn('authentication failed');
+                                this.warnMsg('authentication failed');
                                 break;
                             case ERR_3:
                                 this.projectorBusy();
@@ -1238,7 +1243,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._customRequestResult;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         PJLinkPlus.prototype.customRequest = function (question, param) {
