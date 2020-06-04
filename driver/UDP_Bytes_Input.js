@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.UDP_Bytes_Input = void 0;
     var UDP_Bytes_Input = (function (_super) {
         __extends(UDP_Bytes_Input, _super);
         function UDP_Bytes_Input(socket) {
@@ -50,20 +54,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     });
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
+        __decorate([
+            Metadata_1.property("The most recent command", true),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], UDP_Bytes_Input.prototype, "command", null);
+        UDP_Bytes_Input = __decorate([
+            Metadata_1.driver('NetworkUDP', { port: 4445 }),
+            __metadata("design:paramtypes", [Object])
+        ], UDP_Bytes_Input);
         return UDP_Bytes_Input;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.property("The most recent command", true),
-        __metadata("design:type", String),
-        __metadata("design:paramtypes", [String])
-    ], UDP_Bytes_Input.prototype, "command", null);
-    UDP_Bytes_Input = __decorate([
-        Metadata_1.driver('NetworkUDP', { port: 4445 }),
-        __metadata("design:paramtypes", [Object])
-    ], UDP_Bytes_Input);
     exports.UDP_Bytes_Input = UDP_Bytes_Input;
     function toHexString(data) {
         var result = "";

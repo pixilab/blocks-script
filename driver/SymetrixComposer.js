@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.SymetrixComposer = void 0;
     var SymetrixComposer = (function (_super) {
         __extends(SymetrixComposer, _super);
         function SymetrixComposer(socket) {
@@ -131,11 +135,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         SymetrixComposer.prototype.getPropNameForKey = function (key) {
             return "Controller " + key;
         };
+        SymetrixComposer = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 48631 }),
+            __metadata("design:paramtypes", [Object])
+        ], SymetrixComposer);
         return SymetrixComposer;
     }(Driver_1.Driver));
-    SymetrixComposer = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 48631 }),
-        __metadata("design:paramtypes", [Object])
-    ], SymetrixComposer);
     exports.SymetrixComposer = SymetrixComposer;
 });

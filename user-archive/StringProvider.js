@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_lib/Metadata"], function (require, exports, Script_1, SimpleFile_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.StringProvider = void 0;
     var StringProvider = (function (_super) {
         __extends(StringProvider, _super);
         function StringProvider(env) {
@@ -81,14 +85,14 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
                 });
             }
         };
+        StringProvider.kFileName = "StringProvider.json";
+        __decorate([
+            Metadata_1.resource(),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Object]),
+            __metadata("design:returntype", String)
+        ], StringProvider.prototype, "fetch", null);
         return StringProvider;
     }(Script_1.Script));
-    StringProvider.kFileName = "StringProvider.json";
-    __decorate([
-        Metadata_1.resource(),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", String)
-    ], StringProvider.prototype, "fetch", null);
     exports.StringProvider = StringProvider;
 });

@@ -1,6 +1,7 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.resource = exports.max = exports.min = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.driver = void 0;
     function driver(baseDriverType, typeSpecificMeta) {
         var info = {
             paramTypes: [baseDriverType],
@@ -23,6 +24,10 @@ define(["require", "exports"], function (require, exports) {
             var constrMin;
             var constrMax;
             var constr;
+            if (!prop.enumerable && prop.configurable) {
+                prop.enumerable = true;
+                Object.defineProperty(target, propName, prop);
+            }
             if (origSetter) {
                 prop.set = function (newValue) {
                     var oldValue = prop.get.call(this);

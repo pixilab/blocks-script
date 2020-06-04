@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,7 +23,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"], function (require, exports, Meta, NetworkProjector_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var BarcoPW392 = BarcoPW392_1 = (function (_super) {
+    exports.BarcoPW392 = void 0;
+    var BarcoPW392 = (function (_super) {
         __extends(BarcoPW392, _super);
         function BarcoPW392(socket) {
             var _this = _super.call(this, socket) || this;
@@ -30,6 +34,7 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             _this.attemptConnect();
             return _this;
         }
+        BarcoPW392_1 = BarcoPW392;
         BarcoPW392.prototype.justConnected = function () {
             _super.prototype.justConnected.call(this);
             this.getInitialState();
@@ -78,13 +83,13 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
                 this.requestFinished();
             }
         };
+        var BarcoPW392_1;
+        BarcoPW392.replyParser = /%\d* (\S*) (!?)(\d*)/;
+        BarcoPW392 = BarcoPW392_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 1025 }),
+            __metadata("design:paramtypes", [Object])
+        ], BarcoPW392);
         return BarcoPW392;
     }(NetworkProjector_1.NetworkProjector));
-    BarcoPW392.replyParser = /%\d* (\S*) (!?)(\d*)/;
-    BarcoPW392 = BarcoPW392_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 1025 }),
-        __metadata("design:paramtypes", [Object])
-    ], BarcoPW392);
     exports.BarcoPW392 = BarcoPW392;
-    var BarcoPW392_1;
 });

@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.PanasonicPanTilt = void 0;
     var PanasonicPanTilt = (function (_super) {
         __extends(PanasonicPanTilt, _super);
         function PanasonicPanTilt(socket) {
@@ -39,7 +43,7 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
                 this.mPower = state;
                 this.sendRawCommand('O' + (state ? '1' : '0'));
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PanasonicPanTilt.prototype, "pan", {
@@ -52,7 +56,7 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
                     this.sendPanTiltSoon();
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(PanasonicPanTilt.prototype, "tilt", {
@@ -65,7 +69,7 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
                     this.sendPanTiltSoon();
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         PanasonicPanTilt.prototype.sendPanTiltSoon = function () {
@@ -86,37 +90,37 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
             result.then(function (response) { return log("Response", response); });
             return result;
         };
+        __decorate([
+            Meta.property("Camera power control"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], PanasonicPanTilt.prototype, "power", null);
+        __decorate([
+            Meta.property("Camera pan, normalized 0…1"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], PanasonicPanTilt.prototype, "pan", null);
+        __decorate([
+            Meta.property("Camera tilt, normalized 0…1"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], PanasonicPanTilt.prototype, "tilt", null);
+        __decorate([
+            Meta.callable("Send raw command to device"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", Promise)
+        ], PanasonicPanTilt.prototype, "sendRawCommand", null);
+        PanasonicPanTilt = __decorate([
+            Meta.driver('NetworkTCP', { port: 80 }),
+            __metadata("design:paramtypes", [Object])
+        ], PanasonicPanTilt);
         return PanasonicPanTilt;
     }(Driver_1.Driver));
-    __decorate([
-        Meta.property("Camera power control"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], PanasonicPanTilt.prototype, "power", null);
-    __decorate([
-        Meta.property("Camera pan, normalized 0…1"),
-        Meta.min(0),
-        Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], PanasonicPanTilt.prototype, "pan", null);
-    __decorate([
-        Meta.property("Camera tilt, normalized 0…1"),
-        Meta.min(0),
-        Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], PanasonicPanTilt.prototype, "tilt", null);
-    __decorate([
-        Meta.callable("Send raw command to device"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", Promise)
-    ], PanasonicPanTilt.prototype, "sendRawCommand", null);
-    PanasonicPanTilt = __decorate([
-        Meta.driver('NetworkTCP', { port: 80 }),
-        __metadata("design:paramtypes", [Object])
-    ], PanasonicPanTilt);
     exports.PanasonicPanTilt = PanasonicPanTilt;
     var CmdProcessor = (function () {
         function CmdProcessor(server) {
@@ -150,9 +154,9 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
                 });
             }
         };
+        CmdProcessor.kMillisPerCmd = 130;
         return CmdProcessor;
     }());
-    CmdProcessor.kMillisPerCmd = 130;
     function log() {
         var toLog = [];
         for (var _i = 0; _i < arguments.length; _i++) {

@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,7 +23,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var ChristiePerformance = ChristiePerformance_1 = (function (_super) {
+    exports.ChristiePerformance = void 0;
+    var ChristiePerformance = (function (_super) {
         __extends(ChristiePerformance, _super);
         function ChristiePerformance(socket) {
             var _this = _super.call(this, socket) || this;
@@ -35,6 +39,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             });
             return _this;
         }
+        ChristiePerformance_1 = ChristiePerformance;
         ChristiePerformance.prototype.isOfTypeName = function (typeName) {
             return typeName === "ChristiePerformance" ? this : null;
         };
@@ -88,7 +93,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                         this.powerDown();
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         ChristiePerformance.prototype.powerUp = function () {
@@ -131,7 +136,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.appendChecksum(cmd);
                 this.socket.sendBytes(cmd);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         ChristiePerformance.prototype.makeCmd = function (cmd) {
@@ -149,32 +154,33 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             cmdBuf.push(checksum);
         };
+        var ChristiePerformance_1;
+        ChristiePerformance.kMinInput = 1;
+        ChristiePerformance.kMaxInput = 16;
+        ChristiePerformance.kLengthIx = 5;
+        __decorate([
+            Meta.property("Power on/off"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], ChristiePerformance.prototype, "power", null);
+        __decorate([
+            Meta.callable("Power up using wake-on-LAN"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", Promise)
+        ], ChristiePerformance.prototype, "powerUp", null);
+        __decorate([
+            Meta.property("Desired input source number"),
+            Meta.min(ChristiePerformance_1.kMinInput),
+            Meta.max(ChristiePerformance_1.kMaxInput),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], ChristiePerformance.prototype, "input", null);
+        ChristiePerformance = ChristiePerformance_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 5000 }),
+            __metadata("design:paramtypes", [Object])
+        ], ChristiePerformance);
         return ChristiePerformance;
     }(Driver_1.Driver));
-    ChristiePerformance.kMinInput = 1;
-    ChristiePerformance.kMaxInput = 16;
-    ChristiePerformance.kLengthIx = 5;
-    __decorate([
-        Meta.property("Power on/off"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], ChristiePerformance.prototype, "power", null);
-    __decorate([
-        Meta.callable("Power up using wake-on-LAN"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", []),
-        __metadata("design:returntype", Promise)
-    ], ChristiePerformance.prototype, "powerUp", null);
-    __decorate([
-        Meta.property("Desired input source number"),
-        Meta.min(ChristiePerformance_1.kMinInput), Meta.max(ChristiePerformance_1.kMaxInput),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], ChristiePerformance.prototype, "input", null);
-    ChristiePerformance = ChristiePerformance_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 5000 }),
-        __metadata("design:paramtypes", [Object])
-    ], ChristiePerformance);
     exports.ChristiePerformance = ChristiePerformance;
-    var ChristiePerformance_1;
 });

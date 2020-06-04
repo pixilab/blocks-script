@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,7 +23,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var ChristieAccess = ChristieAccess_1 = (function (_super) {
+    exports.PowerState = exports.ChristieAccess = void 0;
+    var ChristieAccess = (function (_super) {
         __extends(ChristieAccess, _super);
         function ChristieAccess(socket) {
             var _this = _super.call(this, socket) || this;
@@ -32,6 +36,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this.attemptConnect();
             return _this;
         }
+        ChristieAccess_1 = ChristieAccess;
         Object.defineProperty(ChristieAccess.prototype, "input", {
             get: function () {
                 return this._input.get();
@@ -40,7 +45,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 if (this._input.set(value))
                     this.sendCorrection();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         ChristieAccess.prototype.justConnected = function () {
@@ -100,31 +105,33 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 this.requestFinished();
             }
         };
+        var ChristieAccess_1;
+        ChristieAccess.replyParser = /.* (.*)$/;
+        ChristieAccess.kMinInput = 5;
+        ChristieAccess.kMaxInput = 20;
+        ChristieAccess.kInputNameToNum = {
+            "FAV": 5,
+            "HDMI1": 7,
+            "HDMI2": 8,
+            "YPbPr": 11,
+            "VGA": 12,
+            "DVI": 18,
+            "DP": 19,
+            "OPS": 20
+        };
+        __decorate([
+            Meta.property("Desired input source number"),
+            Meta.min(ChristieAccess_1.kMinInput),
+            Meta.max(ChristieAccess_1.kMaxInput),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], ChristieAccess.prototype, "input", null);
+        ChristieAccess = ChristieAccess_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 1986 }),
+            __metadata("design:paramtypes", [Object])
+        ], ChristieAccess);
         return ChristieAccess;
     }(NetworkProjector_1.NetworkProjector));
-    ChristieAccess.replyParser = /.* (.*)$/;
-    ChristieAccess.kMinInput = 5;
-    ChristieAccess.kMaxInput = 20;
-    ChristieAccess.kInputNameToNum = {
-        "FAV": 5,
-        "HDMI1": 7,
-        "HDMI2": 8,
-        "YPbPr": 11,
-        "VGA": 12,
-        "DVI": 18,
-        "DP": 19,
-        "OPS": 20
-    };
-    __decorate([
-        Meta.property("Desired input source number"),
-        Meta.min(ChristieAccess_1.kMinInput), Meta.max(ChristieAccess_1.kMaxInput),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], ChristieAccess.prototype, "input", null);
-    ChristieAccess = ChristieAccess_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 1986 }),
-        __metadata("design:paramtypes", [Object])
-    ], ChristieAccess);
     exports.ChristieAccess = ChristieAccess;
     var PowerState = (function (_super) {
         __extends(PowerState, _super);
@@ -137,5 +144,4 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         return PowerState;
     }(NetworkProjector_1.State));
     exports.PowerState = PowerState;
-    var ChristieAccess_1;
 });

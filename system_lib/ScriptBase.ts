@@ -14,26 +14,31 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 		this.__scriptFacade = scriptFacade;
 	}
 
-	/** Expose a dynamic property of type T with specified options and name.
+	/** Expose a dynamic property of type T with specified name and options.
 	 */
-	property<T>(name: string, options: SGOptions, setGetFunc: SetterGetter<T>): void {
-		this.__scriptFacade.property(name, options, setGetFunc);
+	property<T>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): void {
+		this.__scriptFacade.property(name, options, gsFunc);
 
-		// A little dance to make this work also for direct JS-style assignment
-		Object.defineProperty(this.constructor.prototype, name, {
-			get: function () {
-				return setGetFunc();
-			},
-			set: function (value) {
-				if (!options.readOnly) {
-					const oldValue = setGetFunc();
-					if (oldValue !== setGetFunc(value))
+		// Make assignment work also for direct JS use (instance-specific, so apply to 'this')
+		if (options && options.readOnly) {	// Define as read-only
+			Object.defineProperty(this, name, {
+				get: function () {
+					return gsFunc();
+				}
+			});
+		} else {	// Define as R/W
+			// defineProperty on 'this', not on prototype, as gsFunc is instance-specific
+			Object.defineProperty(this, name, {
+				get: function () {
+					return gsFunc();
+				},
+				set: function (value) {
+					const oldValue = gsFunc();
+					if (oldValue !== gsFunc(value))
 						this.__scriptFacade.firePropChanged(name);
 				}
-			},
-			enumerable: true,
-			configurable: true
-		});
+			});
+		}
 	}
 
 	/**	Inform others that prop has changed, causing any

@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Script", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Script_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Slack = void 0;
     var Slack = (function (_super) {
         __extends(Slack, _super);
         function Slack(env) {
@@ -45,16 +49,16 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             var request = SimpleHTTP_1.SimpleHTTP.newRequest(Slack.SLACK_MSG_URL + this.accessToken);
             return request.post(jsonContent, 'application/json');
         };
+        Slack.CONFIG_FILE_NAME = "Slack.config.json";
+        Slack.SLACK_MSG_URL = "https://hooks.slack.com/services/";
+        __decorate([
+            Metadata_1.callable("Send message to Slack"),
+            __param(0, Metadata_1.parameter("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", Promise)
+        ], Slack.prototype, "sendMessage", null);
         return Slack;
     }(Script_1.Script));
-    Slack.CONFIG_FILE_NAME = "Slack.config.json";
-    Slack.SLACK_MSG_URL = "https://hooks.slack.com/services/";
-    __decorate([
-        Metadata_1.callable("Send message to Slack"),
-        __param(0, Metadata_1.parameter("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", Promise)
-    ], Slack.prototype, "sendMessage", null);
     exports.Slack = Slack;
 });

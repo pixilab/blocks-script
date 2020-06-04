@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_lib/Metadata"], function (require, exports, Script_1, SimpleFile_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.SettableClock = void 0;
     var SettableClock = (function (_super) {
         __extends(SettableClock, _super);
         function SettableClock(env) {
@@ -52,7 +56,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
             set: function (value) {
                 this.mOn = value;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(SettableClock.prototype, "startHour", {
@@ -64,7 +68,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
                     this.persistVars();
                 this.settings.start.hour = value;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(SettableClock.prototype, "startMinute", {
@@ -76,7 +80,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
                     this.persistVars();
                 this.settings.start.minute = value;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(SettableClock.prototype, "endHour", {
@@ -88,7 +92,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
                     this.persistVars();
                 this.settings.end.hour = value;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(SettableClock.prototype, "endMinute", {
@@ -100,7 +104,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
                     this.persistVars();
                 this.settings.end.minute = value;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         SettableClock.hmToSeconds = function (hm) {
@@ -144,36 +148,40 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
                 _this.checkState();
             });
         };
+        __decorate([
+            Metadata_1.property("ON state", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], SettableClock.prototype, "on", null);
+        __decorate([
+            Metadata_1.property("Start hour"),
+            Metadata_1.min(0),
+            Metadata_1.max(23),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SettableClock.prototype, "startHour", null);
+        __decorate([
+            Metadata_1.property("Start minute"),
+            Metadata_1.min(0),
+            Metadata_1.max(59),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SettableClock.prototype, "startMinute", null);
+        __decorate([
+            Metadata_1.property("End hour"),
+            Metadata_1.min(0),
+            Metadata_1.max(23),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SettableClock.prototype, "endHour", null);
+        __decorate([
+            Metadata_1.property("End minute"),
+            Metadata_1.min(0),
+            Metadata_1.max(59),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SettableClock.prototype, "endMinute", null);
         return SettableClock;
     }(Script_1.Script));
-    __decorate([
-        Metadata_1.property("ON state", true),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], SettableClock.prototype, "on", null);
-    __decorate([
-        Metadata_1.property("Start hour"),
-        Metadata_1.min(0), Metadata_1.max(23),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], SettableClock.prototype, "startHour", null);
-    __decorate([
-        Metadata_1.property("Start minute"),
-        Metadata_1.min(0), Metadata_1.max(59),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], SettableClock.prototype, "startMinute", null);
-    __decorate([
-        Metadata_1.property("End hour"),
-        Metadata_1.min(0), Metadata_1.max(23),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], SettableClock.prototype, "endHour", null);
-    __decorate([
-        Metadata_1.property("End minute"),
-        Metadata_1.min(0), Metadata_1.max(59),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], SettableClock.prototype, "endMinute", null);
     exports.SettableClock = SettableClock;
 });

@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Metadata"], function (require, exports, Spot_1, Script_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.NavigationSynchronizer = void 0;
     var NavigationSynchronizer = (function (_super) {
         __extends(NavigationSynchronizer, _super);
         function NavigationSynchronizer(env) {
@@ -58,20 +62,20 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
             }
             return navigationMaster;
         };
+        __decorate([
+            Meta.callable("Start Spot Synchronisation"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String]),
+            __metadata("design:returntype", void 0)
+        ], NavigationSynchronizer.prototype, "start", null);
+        __decorate([
+            Meta.callable("Stop Spot Synchronisation"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String]),
+            __metadata("design:returntype", void 0)
+        ], NavigationSynchronizer.prototype, "stop", null);
         return NavigationSynchronizer;
     }(Script_1.Script));
-    __decorate([
-        Meta.callable("Start Spot Synchronisation"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String, String]),
-        __metadata("design:returntype", void 0)
-    ], NavigationSynchronizer.prototype, "start", null);
-    __decorate([
-        Meta.callable("Stop Spot Synchronisation"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, String, String]),
-        __metadata("design:returntype", void 0)
-    ], NavigationSynchronizer.prototype, "stop", null);
     exports.NavigationSynchronizer = NavigationSynchronizer;
     var NavigationMaster = (function () {
         function NavigationMaster(spotGroup, sourceSpotName) {
@@ -146,7 +150,7 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
             }
             return undefined;
         };
+        NavigationMaster.masters = [];
         return NavigationMaster;
     }());
-    NavigationMaster.masters = [];
 });

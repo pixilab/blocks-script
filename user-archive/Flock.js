@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Script", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Script_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Flock = void 0;
     var Flock = (function (_super) {
         __extends(Flock, _super);
         function Flock(env) {
@@ -52,23 +56,23 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             var request = SimpleHTTP_1.SimpleHTTP.newRequest(Flock.FLOCK_MSG_URL + this.accessToken);
             return request.post(jsonContent, 'application/json');
         };
+        Flock.CONFIG_FILE_NAME = "Flock.config.json";
+        Flock.FLOCK_MSG_URL = "https://api.flock.com/hooks/sendMessage/";
+        __decorate([
+            Metadata_1.callable("Send message to Flock"),
+            __param(0, Metadata_1.parameter("Message content")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", Promise)
+        ], Flock.prototype, "sendMessage", null);
+        __decorate([
+            Metadata_1.callable("Send rich text message to Flock"),
+            __param(0, Metadata_1.parameter("Rich text version (using FlockML. Supports e.g. <a>, <em>, <i>, <strong>, <b>, <u>, <br>)")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", Promise)
+        ], Flock.prototype, "sendRichMessage", null);
         return Flock;
     }(Script_1.Script));
-    Flock.CONFIG_FILE_NAME = "Flock.config.json";
-    Flock.FLOCK_MSG_URL = "https://api.flock.com/hooks/sendMessage/";
-    __decorate([
-        Metadata_1.callable("Send message to Flock"),
-        __param(0, Metadata_1.parameter("Message content")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", Promise)
-    ], Flock.prototype, "sendMessage", null);
-    __decorate([
-        Metadata_1.callable("Send rich text message to Flock"),
-        __param(0, Metadata_1.parameter("Rich text version (using FlockML. Supports e.g. <a>, <em>, <i>, <strong>, <b>, <u>, <br>)")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", Promise)
-    ], Flock.prototype, "sendRichMessage", null);
     exports.Flock = Flock;
 });

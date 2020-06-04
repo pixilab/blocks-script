@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,7 +26,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_lib/Driver", "system_lib/Metadata", "system_lib/Metadata"], function (require, exports, SimpleFile_1, SimpleHTTP_1, Driver_1, Meta, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var DeConz = DeConz_1 = (function (_super) {
+    exports.DeConz = void 0;
+    var DeConz = (function (_super) {
         __extends(DeConz, _super);
         function DeConz(socket) {
             var _this = _super.call(this, socket) || this;
@@ -53,6 +57,7 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
             }
             return _this;
         }
+        DeConz_1 = DeConz;
         Object.defineProperty(DeConz.prototype, "authorized", {
             get: function () {
                 return this.mAuthorized;
@@ -63,7 +68,7 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 this.mAuthorized = value;
                 this.checkReadyToSend();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(DeConz.prototype, "connected", {
@@ -74,7 +79,7 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 this.mConnected = value;
                 this.checkReadyToSend();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         DeConz.prototype.refresh = function () {
@@ -363,66 +368,67 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
             this.connected = false;
             console.warn(error);
         };
+        var DeConz_1;
+        __decorate([
+            Meta.property("Authorized to control", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], DeConz.prototype, "authorized", null);
+        __decorate([
+            Meta.property("Connected successfully to device", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], DeConz.prototype, "connected", null);
+        __decorate([
+            Metadata_1.callable("Refresh device and group info"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", void 0)
+        ], DeConz.prototype, "refresh", null);
+        __decorate([
+            Metadata_1.callable("Turn target on or off"),
+            __param(0, Metadata_1.parameter("device or group name")),
+            __param(1, Metadata_1.parameter("state (false to turn off)")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Boolean]),
+            __metadata("design:returntype", void 0)
+        ], DeConz.prototype, "setOn", null);
+        __decorate([
+            Metadata_1.callable("Set/Fade brightness and (optionally) CIE color"),
+            __param(0, Metadata_1.parameter("device or group name")),
+            __param(1, Metadata_1.parameter("level 0...1")),
+            __param(2, Metadata_1.parameter("transition, in seconds", true)),
+            __param(3, Metadata_1.parameter("0...1", true)),
+            __param(4, Metadata_1.parameter("0...1", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], DeConz.prototype, "setBrightness", null);
+        __decorate([
+            Metadata_1.callable("Set the color temperature"),
+            __param(0, Metadata_1.parameter("device or group name")),
+            __param(1, Metadata_1.parameter("2000...6500")),
+            __param(2, Metadata_1.parameter("transition, in seconds", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], DeConz.prototype, "setColorTemperature", null);
+        __decorate([
+            Metadata_1.callable("Set/Fade the Hue and Saturation"),
+            __param(0, Metadata_1.parameter("device or group name")),
+            __param(1, Metadata_1.parameter("0...1")),
+            __param(2, Metadata_1.parameter("0...1")),
+            __param(3, Metadata_1.parameter("transition, in seconds", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], DeConz.prototype, "setHueSaturation", null);
+        DeConz = DeConz_1 = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 8080 }),
+            __metadata("design:paramtypes", [Object])
+        ], DeConz);
         return DeConz;
     }(Driver_1.Driver));
-    __decorate([
-        Meta.property("Authorized to control", true),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], DeConz.prototype, "authorized", null);
-    __decorate([
-        Meta.property("Connected successfully to device", true),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], DeConz.prototype, "connected", null);
-    __decorate([
-        Metadata_1.callable("Refresh device and group info"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", []),
-        __metadata("design:returntype", void 0)
-    ], DeConz.prototype, "refresh", null);
-    __decorate([
-        Metadata_1.callable("Turn target on or off"),
-        __param(0, Metadata_1.parameter("device or group name")),
-        __param(1, Metadata_1.parameter("state (false to turn off)")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Boolean]),
-        __metadata("design:returntype", void 0)
-    ], DeConz.prototype, "setOn", null);
-    __decorate([
-        Metadata_1.callable("Set/Fade brightness and (optionally) CIE color"),
-        __param(0, Metadata_1.parameter("device or group name")),
-        __param(1, Metadata_1.parameter("level 0...1")),
-        __param(2, Metadata_1.parameter("transition, in seconds", true)),
-        __param(3, Metadata_1.parameter("0...1", true)),
-        __param(4, Metadata_1.parameter("0...1", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], DeConz.prototype, "setBrightness", null);
-    __decorate([
-        Metadata_1.callable("Set the color temperature"),
-        __param(0, Metadata_1.parameter("device or group name")),
-        __param(1, Metadata_1.parameter("2000...6500")),
-        __param(2, Metadata_1.parameter("transition, in seconds", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], DeConz.prototype, "setColorTemperature", null);
-    __decorate([
-        Metadata_1.callable("Set/Fade the Hue and Saturation"),
-        __param(0, Metadata_1.parameter("device or group name")),
-        __param(1, Metadata_1.parameter("0...1")),
-        __param(2, Metadata_1.parameter("0...1")),
-        __param(3, Metadata_1.parameter("transition, in seconds", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Number, Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], DeConz.prototype, "setHueSaturation", null);
-    DeConz = DeConz_1 = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 8080 }),
-        __metadata("design:paramtypes", [Object])
-    ], DeConz);
     exports.DeConz = DeConz;
     function clip(value) {
         value = value || 0;
@@ -440,5 +446,4 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
         }
         return NamedItems;
     }());
-    var DeConz_1;
 });

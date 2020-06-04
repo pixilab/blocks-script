@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], function (require, exports, ScriptBase_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Driver = void 0;
     var Driver = (function (_super) {
         __extends(Driver, _super);
         function Driver(scriptFacade) {
@@ -36,15 +40,15 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
             get: function () {
                 return this.__scriptFacade.connected ? true : false;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
+        __decorate([
+            Meta.property("Connected to peer"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], Driver.prototype, "connected", null);
         return Driver;
     }(ScriptBase_1.ScriptBase));
-    __decorate([
-        Meta.property("Connected to peer"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [])
-    ], Driver.prototype, "connected", null);
     exports.Driver = Driver;
 });
