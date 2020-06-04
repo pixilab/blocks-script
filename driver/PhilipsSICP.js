@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -17,10 +20,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var PhilipsSICP = PhilipsSICP_1 = (function (_super) {
+    exports.PhilipsSICP = void 0;
+    var PhilipsSICP = (function (_super) {
         __extends(PhilipsSICP, _super);
         function PhilipsSICP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -29,6 +40,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.autoConnect(true);
             return _this;
         }
+        PhilipsSICP_1 = PhilipsSICP;
         Object.defineProperty(PhilipsSICP.prototype, "currentInput", {
             get: function () {
                 return this.mCurrentInput;
@@ -40,7 +52,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.sendCommand(inputNumber, 9, 1, 0);
                 this.mCurrentInput = name;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         PhilipsSICP.prototype.sendCommand = function () {
@@ -53,7 +65,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             fullCommand.push(0x01);
             fullCommand.push(0x00);
             fullCommand.push(0xAC);
-            fullCommand.splice.apply(fullCommand, [4, 0].concat(commandBytes));
+            fullCommand.splice.apply(fullCommand, __spreadArrays([4, 0], commandBytes));
             fullCommand[0] = fullCommand.length + 1;
             this.addChecksum(fullCommand);
             this.socket.sendBytes(fullCommand);
@@ -75,32 +87,32 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             console.log(fullMessage);
         };
+        var PhilipsSICP_1;
+        PhilipsSICP.nameToInput = {
+            "VIDEO": 0x01,
+            "S-VIDEO": 0x02,
+            "COMPONENT": 0x03,
+            "VGA": 0x05,
+            "HDMI": 0x0D,
+            "HDMI 1": 0x0D,
+            "HDMI 2": 0x06,
+            "HDMI 3": 0x0F,
+            "DVI-D": 0x0E,
+            "BROWSER": 0x10,
+            "DISPLAY PORT": 0x0A,
+            "DISPLAY PORT 1": 0x0A,
+            "DISPLAY PORT 2": 0x07
+        };
+        __decorate([
+            Meta.property("Input to be displayed, by name"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], PhilipsSICP.prototype, "currentInput", null);
+        PhilipsSICP = PhilipsSICP_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 5000 }),
+            __metadata("design:paramtypes", [Object])
+        ], PhilipsSICP);
         return PhilipsSICP;
     }(Driver_1.Driver));
-    PhilipsSICP.nameToInput = {
-        "VIDEO": 0x01,
-        "S-VIDEO": 0x02,
-        "COMPONENT": 0x03,
-        "VGA": 0x05,
-        "HDMI": 0x0D,
-        "HDMI 1": 0x0D,
-        "HDMI 2": 0x06,
-        "HDMI 3": 0x0F,
-        "DVI-D": 0x0E,
-        "BROWSER": 0x10,
-        "DISPLAY PORT": 0x0A,
-        "DISPLAY PORT 1": 0x0A,
-        "DISPLAY PORT 2": 0x07
-    };
-    __decorate([
-        Meta.property("Input to be displayed, by name"),
-        __metadata("design:type", String),
-        __metadata("design:paramtypes", [String])
-    ], PhilipsSICP.prototype, "currentInput", null);
-    PhilipsSICP = PhilipsSICP_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 5000 }),
-        __metadata("design:paramtypes", [Object])
-    ], PhilipsSICP);
     exports.PhilipsSICP = PhilipsSICP;
-    var PhilipsSICP_1;
 });

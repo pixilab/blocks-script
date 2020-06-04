@@ -59,6 +59,11 @@ export function property(description?: string, readOnly?: boolean) {
 		let constrMax: number;
 		let constr: boolean;	// Set once any constraints have been obtained
 
+		if (!prop.enumerable && prop.configurable) {
+			prop.enumerable = true;	// Must be to pick scan prop after typescript 3.8
+			Object.defineProperty(target, propName, prop); // Replaces previous definition
+		}
+
 		if (origSetter) {
 			prop.set = function (newValue) {
 				const oldValue = prop.get.call(this);

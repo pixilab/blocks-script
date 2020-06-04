@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Script", "system/Realm", "system/Spot", "system_lib/Metadata"], function (require, exports, Script_1, Realm_1, Spot_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.PropGetter = void 0;
     var PropGetter = (function (_super) {
         __extends(PropGetter, _super);
         function PropGetter(env) {
@@ -38,19 +42,19 @@ define(["require", "exports", "system_lib/Script", "system/Realm", "system/Spot"
             var spotListItem = Spot_1.Spot[fetchSpec.spotPath];
             return spotListItem[fetchSpec.propName];
         };
+        __decorate([
+            Metadata_1.resource(),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Object]),
+            __metadata("design:returntype", Object)
+        ], PropGetter.prototype, "readTaskItem", null);
+        __decorate([
+            Metadata_1.resource(),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Object]),
+            __metadata("design:returntype", Object)
+        ], PropGetter.prototype, "readSpotState", null);
         return PropGetter;
     }(Script_1.Script));
-    __decorate([
-        Metadata_1.resource(),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", Object)
-    ], PropGetter.prototype, "readTaskItem", null);
-    __decorate([
-        Metadata_1.resource(),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", Object)
-    ], PropGetter.prototype, "readSpotState", null);
     exports.PropGetter = PropGetter;
 });

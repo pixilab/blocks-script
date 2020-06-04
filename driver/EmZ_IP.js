@@ -26,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.EmZ_IP = void 0;
     var PROTOCOL_VERSION = 'ProfilNetV2.0';
     var MESSAGE_LINE_BREAK = '\r\n';
     var LABEL_ADR = "ADR";
@@ -91,14 +92,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             get: function () {
                 return this._lastEventID;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZ_IP.prototype, "lastEventPlayerID", {
             get: function () {
                 return this._lastEventPlayerID;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         EmZ_IP.prototype.sendMessage = function (message) {
@@ -155,36 +156,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.changed("lastEventID");
             this.changed("lastEventPlayerID");
         };
-        EmZ_IP.prototype.ProcessAcknowledgement = function (acknowledgeMessage) {
-            var cde = acknowledgeMessage.ValueIDCDE;
-            if (this.currentSentMessage.ValueCDE == cde) {
-                if (this.sendResolver != null) {
-                    this.sendResolver();
-                    this.sendResolver = null;
-                }
-                this.currentSentMessage = null;
-            }
-            switch (acknowledgeMessage.ValueIDCDE) {
-                case EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL:
-                    this.LogAcknowledgement('simple control', acknowledgeMessage);
-                    break;
-                case EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP:
-                    this.LogAcknowledgement('unicast setup', acknowledgeMessage);
-                    break;
-                default:
-                    this.LogAcknowledgement(EmZIPMessage.CDEToEnglish(cde), acknowledgeMessage);
-                    break;
-            }
-        };
-        EmZ_IP.prototype.LogAcknowledgement = function (logPrefix, acknowledgement) {
-            if (acknowledgement.ValueRESULT == EmZIPAcknowledgment.RESULT_OKAY) {
-                if (LOG_DEBUG)
-                    console.log(this.socket.name + ': ' + logPrefix + ' accepted (sender: ' + acknowledgement.ValueADR + ':' + acknowledgement.ValuePORT + ')');
-            }
-            else {
-                console.warn(logPrefix + ' rejected');
-            }
-        };
         __decorate([
             Meta.callable("Play Zone"),
             __param(0, Meta.parameter("Zone to play")),
@@ -223,13 +194,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.SetNumberValue(LABEL_CDE, cde);
         }
         Object.defineProperty(EmZIPMessage.prototype, "ValueIDDOM", {
-            get: function () { return this.GetNumberValue(LABEL_IDDOM); },
-            enumerable: true,
+            get: function () {
+                return this.GetNumberValue(LABEL_IDDOM);
+            },
+            set: function (value) {
+                this.SetNumberValue(LABEL_IDDOM, value);
+            },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPMessage.prototype, "ValueCDE", {
-            get: function () { return this.GetNumberValue(LABEL_CDE); },
-            enumerable: true,
+            get: function () {
+                return this.GetNumberValue(LABEL_CDE);
+            },
+            enumerable: false,
             configurable: true
         });
         EmZIPMessage.prototype.GetNumberValue = function (label) {
@@ -324,8 +302,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER = 9;
         EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP = 32;
         EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT = 64;
-        EmZIPMessage.splitByLinebreak = '\n';
-        EmZIPMessage.splitByEqual = '=';
         return EmZIPMessage;
     }());
     var EmZIPEvent = (function (_super) {
@@ -342,32 +318,38 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         Object.defineProperty(EmZIPEvent.prototype, "ValueIDEVT", {
             get: function () { return this.GetNumberValue(LABEL_IDEVT); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_IDEVT, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPEvent.prototype, "ValueNUMZONE", {
             get: function () { return this.GetNumberValue(LABEL_NUMZONE); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_NUMZONE, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPEvent.prototype, "ValuePLAYERID", {
             get: function () { return this.GetNumberValue(LABEL_PLAYERID); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_PLAYERID, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPEvent.prototype, "ValueLANGUE", {
             get: function () { return this.GetNumberValue(LABEL_LANGUE); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_LANGUE, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPEvent.prototype, "ValueOPT", {
             get: function () { return this.GetNumberValue(LABEL_OPT); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_OPT, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPEvent.prototype, "ValueOFFSET", {
             get: function () { return this.GetNumberValue(LABEL_OFFSET); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_OFFSET, value); },
+            enumerable: false,
             configurable: true
         });
         return EmZIPEvent;
@@ -382,12 +364,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         Object.defineProperty(EmZIPRequestForDelay.prototype, "ValueIDSEND", {
             get: function () { return this._fields[LABEL_IDSEND]; },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPRequestForDelay.prototype, "ValueIDMSG", {
             get: function () { return this.GetNumberValue(LABEL_IDMSG); },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         return EmZIPRequestForDelay;
@@ -406,32 +388,38 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         Object.defineProperty(EmZIPDelayAnswer.prototype, "ValueIDDEST", {
             get: function () { return this._fields[LABEL_IDDEST]; },
-            enumerable: true,
+            set: function (value) { this._fields[LABEL_IDDEST] = value; },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPDelayAnswer.prototype, "ValueIDMSG", {
             get: function () { return this.GetNumberValue(LABEL_IDMSG); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_IDMSG, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPDelayAnswer.prototype, "ValueTSRXSEC", {
             get: function () { return this.GetNumberValue(LABEL_TSRXSEC); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_TSRXSEC, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPDelayAnswer.prototype, "ValueTSRXNSEC", {
             get: function () { return this.GetNumberValue(LABEL_TSRXNSEC); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_TSRXNSEC, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPDelayAnswer.prototype, "ValueTSTXSEC", {
             get: function () { return this.GetNumberValue(LABEL_TSTXSEC); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_TSTXSEC, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPDelayAnswer.prototype, "ValueTSTXNSEC", {
             get: function () { return this.GetNumberValue(LABEL_TSTXNSEC); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_TSTXNSEC, value); },
+            enumerable: false,
             configurable: true
         });
         EmZIPDelayAnswer.prototype.ToString = function () {
@@ -459,17 +447,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         Object.defineProperty(EmZIPSimpleControl.prototype, "ValueORDRE", {
             get: function () { return this.GetNumberValue(LABEL_ORDRE); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_ORDRE, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPSimpleControl.prototype, "ValueNUMZONE", {
             get: function () { return this.GetNumberValue(LABEL_NUMZONE); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_NUMZONE, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPSimpleControl.prototype, "ValueOFFSET", {
             get: function () { return this.GetNumberValue(LABEL_OFFSET); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_OFFSET, value); },
+            enumerable: false,
             configurable: true
         });
         EmZIPSimpleControl.prototype.ToString = function () {
@@ -556,17 +547,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         Object.defineProperty(EmZIPUnicastSetup.prototype, "ValueUNICAST", {
             get: function () { return this.GetNumberValue(LABEL_UNICAST); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_UNICAST, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPUnicastSetup.prototype, "ValueADR", {
             get: function () { return this.GetValue(LABEL_ADR); },
-            enumerable: true,
+            set: function (value) { this.SetValue(LABEL_ADR, value); },
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EmZIPUnicastSetup.prototype, "ValuePORT", {
             get: function () { return this.GetNumberValue(LABEL_PORT); },
-            enumerable: true,
+            set: function (value) { this.SetNumberValue(LABEL_PORT, value); },
+            enumerable: false,
             configurable: true
         });
         EmZIPUnicastSetup.prototype.ToString = function () {

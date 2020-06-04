@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.BarcoE2_JSON = void 0;
     var BarcoE2_JSON = (function (_super) {
         __extends(BarcoE2_JSON, _super);
         function BarcoE2_JSON(socket) {
@@ -45,7 +49,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (preset) {
                 this.activatePreset(preset, true);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(BarcoE2_JSON.prototype, "live", {
@@ -55,37 +59,37 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (preset) {
                 this.activatePreset(preset, false);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         BarcoE2_JSON.prototype.send = function (cmd) {
             var cmdJson = JSON.stringify(cmd);
             return this.socket.sendText(cmdJson);
         };
+        __decorate([
+            Metadata_1.callable("Load a preset into Live or Preview"),
+            __param(0, Metadata_1.parameter("Preset number")),
+            __param(1, Metadata_1.parameter("Load into Preview", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Boolean]),
+            __metadata("design:returntype", void 0)
+        ], BarcoE2_JSON.prototype, "activatePreset", null);
+        __decorate([
+            Metadata_1.property("Current preview preset"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], BarcoE2_JSON.prototype, "preview", null);
+        __decorate([
+            Metadata_1.property("Current live preset"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], BarcoE2_JSON.prototype, "live", null);
+        BarcoE2_JSON = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 9999 }),
+            __metadata("design:paramtypes", [Object])
+        ], BarcoE2_JSON);
         return BarcoE2_JSON;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.callable("Load a preset into Live or Preview"),
-        __param(0, Metadata_1.parameter("Preset number")),
-        __param(1, Metadata_1.parameter("Load into Preview", true)),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, Boolean]),
-        __metadata("design:returntype", void 0)
-    ], BarcoE2_JSON.prototype, "activatePreset", null);
-    __decorate([
-        Metadata_1.property("Current preview preset"),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], BarcoE2_JSON.prototype, "preview", null);
-    __decorate([
-        Metadata_1.property("Current live preset"),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], BarcoE2_JSON.prototype, "live", null);
-    BarcoE2_JSON = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 9999 }),
-        __metadata("design:paramtypes", [Object])
-    ], BarcoE2_JSON);
     exports.BarcoE2_JSON = BarcoE2_JSON;
     var Command = (function () {
         function Command(method, params) {
@@ -94,7 +98,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.id = Command.nextId++;
             this.params = params;
         }
+        Command.nextId = 1;
         return Command;
     }());
-    Command.nextId = 1;
 });

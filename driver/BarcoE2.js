@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.BarcoE2 = void 0;
     var BarcoE2 = (function (_super) {
         __extends(BarcoE2, _super);
         function BarcoE2(socket) {
@@ -42,29 +46,29 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (preset) {
                 this.activatePreset(preset);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         BarcoE2.prototype.send = function (preset) {
             return this.socket.sendText("PRESET -a " + preset);
         };
+        __decorate([
+            Metadata_1.callable("Load a preset into Program or Preview"),
+            __param(0, Metadata_1.parameter("Preset number")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number]),
+            __metadata("design:returntype", void 0)
+        ], BarcoE2.prototype, "activatePreset", null);
+        __decorate([
+            Metadata_1.property("Current live preset"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], BarcoE2.prototype, "live", null);
+        BarcoE2 = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 9878 }),
+            __metadata("design:paramtypes", [Object])
+        ], BarcoE2);
         return BarcoE2;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.callable("Load a preset into Program or Preview"),
-        __param(0, Metadata_1.parameter("Preset number")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number]),
-        __metadata("design:returntype", void 0)
-    ], BarcoE2.prototype, "activatePreset", null);
-    __decorate([
-        Metadata_1.property("Current live preset"),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], BarcoE2.prototype, "live", null);
-    BarcoE2 = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 9878 }),
-        __metadata("design:paramtypes", [Object])
-    ], BarcoE2);
     exports.BarcoE2 = BarcoE2;
 });

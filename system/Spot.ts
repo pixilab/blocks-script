@@ -48,6 +48,15 @@ export interface BaseSpot {
 	 if none.
 	 */
 	playingBlock: string;	// Read-only
+
+	/*	Explicitly end subscription from listener function to event,
+		where both the listener and the event name must be identical to
+		those passed into subscribe. Beware if you're using a lambda
+		(aka "fat arrow") function, in which case you should store that
+		very instance of the function in a variable that can then be
+		used to unsubscribe.
+	 */
+	unsubscribe(event: string, listener: Function): void;
 }
 
 export interface DisplaySpot extends SpotGroupItem, BaseSpot {
@@ -229,11 +238,9 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 
 	// Object is being shut down
 	subscribe(event: 'finish', listener: (sender: DisplaySpot)=>void): void;
-
-	unsubscribe(event: string, listener: Function): void;
 }
 
-
+// Spot type named "Visitor Spot" in Blocks UI
 export interface MobileSpot extends SpotGroupItem, BaseSpot {
 	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name ("MobileSpot")
 
@@ -243,7 +250,17 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 			'PriorityBlock'|	// Priority block changed (may be schedule)
 			'PlayingBlock'		// Actually playing block changed (always media)
 	})=>void): void;
+}
 
-	// Explicitly end subscription to event with function
-	unsubscribe(event: string, listener: Function): void;
+// Spot type named "Location" in Blocks UI
+export interface VirtualSpot extends SpotGroupItem, BaseSpot {
+	isOfTypeName(typeName: string): VirtualSpot | null;	// Check subtype by name ("VirtualSpot")
+
+	subscribe(event: "spot", listener: (sender: VirtualSpot, message:{
+		type:
+			'DefaultBlock'|		// Default block changed (may be schedule)
+			'PriorityBlock'|	// Priority block changed (may be schedule)
+			'PlayingBlock' |	// Actually playing block changed (always media)
+			'Active'			// Spot activated by accessing its Location ID
+	})=>void): void;
 }

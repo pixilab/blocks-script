@@ -19,35 +19,58 @@ export class UIRobot extends Driver<NetworkTCP> {
 	private mCurrentKeys: string = '';
 	private mKeyRlsTimer?: CancelablePromise<void>;	// Set while key down timer running
 
+	// Program and arguments that need to run on peer to shut down. Assumes Windows.
+	static readonly kPowerDownProgram = "C:/Windows/System32/shutdown.exe||/s /f /t 0";
+
 	public constructor(protected socket: NetworkTCP, bufferSize?: number) {
 		super(socket);
 		if (bufferSize)
 			socket.setMaxLineLength(bufferSize);
-
-		socket.enableWakeOnLAN();
+		socket.enableWakeOnLAN();	// Allows us to use wakeOnLAN in power property
 		socket.autoConnect();
 
 		socket.subscribe('connect', (sender, message) => {
-			if (message.type === 'Connection' && sender.connected)
+			if (message.type === 'Connection')
 				this.onConnectStateChanged(sender.connected);
 		});
 
+		// Handle initially connected state
 		if (socket.connected)
-			this.onConnectStateChanged(socket.connected);
-		//console.log("UIRobot started");
+			this.onConnectStateChanged(true);
 	}
 
-	/**	When peer disconnects - forget about any "currently running program", since this
-	 *  likely means the peer was shut down.
+	/**	Connected state changed to the one specified by the parameter.
 	 */
 	protected onConnectStateChanged(connected: boolean) {
 		if (!connected)
 			this.mProgramParams = '';
+
+		// We consider connection state as our "power" property's, so fire change for that
+		this.changed("power");
 	}
 
-	@callable("Try to start the computer through wake on lan.")
-	public wakeUp() {
-		this.socket.wakeOnLAN();
+	/**
+	 * Turn power of computer in other end on and off. Setting the power to ON will attempt
+	 * to wake up the computer using Wake-on-LAN. Setting it to OFF will send a command to
+	 * the peer to shut it down, using kPowerDownProgram.
+	 */
+	@property("Power computer on/off")
+	public set power(power: boolean) {
+		if (power) {
+			if (!this.socket.connected)	// No need if already online
+				this.socket.wakeOnLAN();
+		} else
+			this.program = UIRobot.kPowerDownProgram;
+	}
+
+	/**
+	 * Consider power OFF if peer not connected OR if the last command sent was kPowerDownProgram.
+	 * Note that the power ON state will be delayed visavi setting the property, since I won't
+	 * consider power to be on until the computer actually connects, which will take quite a while
+	 * from setting power to true.
+	 */
+	public get power(): boolean {
+		return this.socket.connected && this.program !== UIRobot.kPowerDownProgram;
 	}
 
 	@property("Left mouse button down")
