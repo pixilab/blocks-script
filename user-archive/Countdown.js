@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], function (require, exports, Script_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Countdown = void 0;
     var Countdown = (function (_super) {
         __extends(Countdown, _super);
         function Countdown(env) {
@@ -37,21 +41,21 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             get: function () {
                 return padTwoDigits(this.mMinutes);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Countdown.prototype, "seconds", {
             get: function () {
                 return padTwoDigits(this.mSeconds);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Countdown.prototype, "zero", {
             get: function () {
                 return this.mMinutes === 0 && this.mSeconds === 0;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Countdown.prototype, "running", {
@@ -64,7 +68,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
                     this.manageTicking();
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Countdown.prototype.shouldRunClock = function () {
@@ -123,34 +127,34 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             this.notifyZero(false);
             this.manageTicking();
         };
+        __decorate([
+            Metadata_1.property("Number of minutes remaining (2 digits)"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], Countdown.prototype, "minutes", null);
+        __decorate([
+            Metadata_1.property("Number of seconds remaining (2 digits)"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], Countdown.prototype, "seconds", null);
+        __decorate([
+            Metadata_1.property("Timer is at time zero"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [])
+        ], Countdown.prototype, "zero", null);
+        __decorate([
+            Metadata_1.property("Counter is running"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], Countdown.prototype, "running", null);
+        __decorate([
+            Metadata_1.callable("Start countdown at specified time"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], Countdown.prototype, "start", null);
         return Countdown;
     }(Script_1.Script));
-    __decorate([
-        Metadata_1.property("Number of minutes remaining (2 digits)"),
-        __metadata("design:type", String),
-        __metadata("design:paramtypes", [])
-    ], Countdown.prototype, "minutes", null);
-    __decorate([
-        Metadata_1.property("Number of seconds remaining (2 digits)"),
-        __metadata("design:type", String),
-        __metadata("design:paramtypes", [])
-    ], Countdown.prototype, "seconds", null);
-    __decorate([
-        Metadata_1.property("Timer is at time zero"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [])
-    ], Countdown.prototype, "zero", null);
-    __decorate([
-        Metadata_1.property("Counter is running"),
-        __metadata("design:type", Object),
-        __metadata("design:paramtypes", [Boolean])
-    ], Countdown.prototype, "running", null);
-    __decorate([
-        Metadata_1.callable("Start countdown at specified time"),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Number, Number]),
-        __metadata("design:returntype", void 0)
-    ], Countdown.prototype, "start", null);
     exports.Countdown = Countdown;
     function padTwoDigits(val) {
         var result = val.toString();

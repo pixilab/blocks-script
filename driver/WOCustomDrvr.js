@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,7 +26,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var WOCustomDrvr = WOCustomDrvr_1 = (function (_super) {
+    exports.WOCustomDrvr = void 0;
+    var WOCustomDrvr = (function (_super) {
         __extends(WOCustomDrvr, _super);
         function WOCustomDrvr(socket) {
             var _this = _super.call(this, socket) || this;
@@ -47,6 +51,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 _this.getInitialStatus();
             return _this;
         }
+        WOCustomDrvr_1 = WOCustomDrvr;
         Object.defineProperty(WOCustomDrvr.prototype, "connected", {
             get: function () {
                 return this.mConnected;
@@ -54,7 +59,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (online) {
                 this.mConnected = online;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(WOCustomDrvr.prototype, "layerCond", {
@@ -67,7 +72,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.tell("enableLayerCond " + cond);
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(WOCustomDrvr.prototype, "playing", {
@@ -79,7 +84,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.tell(play ? "run" : "halt");
                 this.mPlaying = play;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(WOCustomDrvr.prototype, "standBy", {
@@ -91,7 +96,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.tell(stby ? "standBy true 1000" : "standBy false 1000");
                 this.mStandBy = stby;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(WOCustomDrvr.prototype, "input", {
@@ -102,7 +107,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.tell("setInput In1 " + level);
                 this.mLevel = level;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         WOCustomDrvr.prototype.playAuxTimeline = function (name, start) {
@@ -162,48 +167,49 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
             this.pendingQueries = {};
         };
+        var WOCustomDrvr_1;
+        WOCustomDrvr.kReplyParser = /\[([^\]]+)\](\w*)[\s]?(.*)/;
+        __decorate([
+            Meta.property("Connected to WATCHOUT", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], WOCustomDrvr.prototype, "connected", null);
+        __decorate([
+            Meta.property("Layer condition flags"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], WOCustomDrvr.prototype, "layerCond", null);
+        __decorate([
+            Meta.property("Main timeline playing"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], WOCustomDrvr.prototype, "playing", null);
+        __decorate([
+            Meta.property("Standby mode"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], WOCustomDrvr.prototype, "standBy", null);
+        __decorate([
+            Meta.property("Generic input level"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], WOCustomDrvr.prototype, "input", null);
+        __decorate([
+            Meta.callable("Play or stop any auxiliary timeline"),
+            __param(0, Meta.parameter("Name of aux timeline to control")),
+            __param(1, Meta.parameter("Whether to start the timeline")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Boolean]),
+            __metadata("design:returntype", void 0)
+        ], WOCustomDrvr.prototype, "playAuxTimeline", null);
+        WOCustomDrvr = WOCustomDrvr_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 3040 }),
+            __metadata("design:paramtypes", [Object])
+        ], WOCustomDrvr);
         return WOCustomDrvr;
     }(Driver_1.Driver));
-    WOCustomDrvr.kReplyParser = /\[([^\]]+)\](\w*)[\s]?(.*)/;
-    __decorate([
-        Meta.property("Connected to WATCHOUT", true),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], WOCustomDrvr.prototype, "connected", null);
-    __decorate([
-        Meta.property("Layer condition flags"),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], WOCustomDrvr.prototype, "layerCond", null);
-    __decorate([
-        Meta.property("Main timeline playing"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], WOCustomDrvr.prototype, "playing", null);
-    __decorate([
-        Meta.property("Standby mode"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], WOCustomDrvr.prototype, "standBy", null);
-    __decorate([
-        Meta.property("Generic input level"),
-        Meta.min(0),
-        Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], WOCustomDrvr.prototype, "input", null);
-    __decorate([
-        Meta.callable("Play or stop any auxiliary timeline"),
-        __param(0, Meta.parameter("Name of aux timeline to control")),
-        __param(1, Meta.parameter("Whether to start the timeline")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Boolean]),
-        __metadata("design:returntype", void 0)
-    ], WOCustomDrvr.prototype, "playAuxTimeline", null);
-    WOCustomDrvr = WOCustomDrvr_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 3040 }),
-        __metadata("design:paramtypes", [Object])
-    ], WOCustomDrvr);
     exports.WOCustomDrvr = WOCustomDrvr;
     var Query = (function () {
         function Query(cmd) {
@@ -218,17 +224,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         Object.defineProperty(Query.prototype, "id", {
             get: function () { return this.mId; },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Query.prototype, "fullCmd", {
             get: function () { return this.mFullCmd; },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Query.prototype, "promise", {
             get: function () { return this.mPromise; },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Query.prototype.handleResult = function (what, remainder) {
@@ -240,8 +246,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         Query.prototype.fail = function (error) {
             this.rejector(error);
         };
+        Query.prevId = 0;
         return Query;
     }());
-    Query.prevId = 0;
-    var WOCustomDrvr_1;
 });

@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Xilica = void 0;
     var Xilica = (function (_super) {
         __extends(Xilica, _super);
         function Xilica(socket) {
@@ -76,7 +80,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (gain) {
                 this.outputs[0].setGain(gain);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xilica.prototype, "input1", {
@@ -86,7 +90,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.outputs[0].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xilica.prototype, "gain2", {
@@ -96,7 +100,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (gain) {
                 this.outputs[1].setGain(gain);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xilica.prototype, "input2", {
@@ -106,7 +110,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.outputs[1].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xilica.prototype, "gain3", {
@@ -116,7 +120,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (gain) {
                 this.outputs[2].setGain(gain);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xilica.prototype, "input3", {
@@ -126,7 +130,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.outputs[2].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xilica.prototype, "gain4", {
@@ -136,7 +140,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (gain) {
                 this.outputs[3].setGain(gain);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xilica.prototype, "input4", {
@@ -146,70 +150,86 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.outputs[3].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
+        __decorate([
+            Metadata_1.callable("Send a single SET command"),
+            __param(0, Metadata_1.parameter("Target function")),
+            __param(1, Metadata_1.parameter("Value")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Object]),
+            __metadata("design:returntype", void 0)
+        ], Xilica.prototype, "sendSetCommand", null);
+        __decorate([
+            Metadata_1.callable("Send a command"),
+            __param(0, Metadata_1.parameter("Command to send")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", void 0)
+        ], Xilica.prototype, "sendText", null);
+        __decorate([
+            Metadata_1.property("Channel 1 gain"),
+            Metadata_1.min(-100),
+            Metadata_1.max(15),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "gain1", null);
+        __decorate([
+            Metadata_1.property("Channel 1 input"),
+            Metadata_1.min(0),
+            Metadata_1.max(4),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "input1", null);
+        __decorate([
+            Metadata_1.property("Channel 2 gain"),
+            Metadata_1.min(-100),
+            Metadata_1.max(15),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "gain2", null);
+        __decorate([
+            Metadata_1.property("Channel 2 input"),
+            Metadata_1.min(0),
+            Metadata_1.max(4),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "input2", null);
+        __decorate([
+            Metadata_1.property("Channel 3 gain"),
+            Metadata_1.min(-100),
+            Metadata_1.max(15),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "gain3", null);
+        __decorate([
+            Metadata_1.property("Channel 3 input"),
+            Metadata_1.min(0),
+            Metadata_1.max(4),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "input3", null);
+        __decorate([
+            Metadata_1.property("Channel 4 gain"),
+            Metadata_1.min(-100),
+            Metadata_1.max(15),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "gain4", null);
+        __decorate([
+            Metadata_1.property("Channel 4 input"),
+            Metadata_1.min(0),
+            Metadata_1.max(4),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Xilica.prototype, "input4", null);
+        Xilica = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 10007 }),
+            __metadata("design:paramtypes", [Object])
+        ], Xilica);
         return Xilica;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.callable("Send a single SET command"),
-        __param(0, Metadata_1.parameter("Target function")),
-        __param(1, Metadata_1.parameter("Value")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String, Object]),
-        __metadata("design:returntype", void 0)
-    ], Xilica.prototype, "sendSetCommand", null);
-    __decorate([
-        Metadata_1.callable("Send a command"),
-        __param(0, Metadata_1.parameter("Command to send")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", void 0)
-    ], Xilica.prototype, "sendText", null);
-    __decorate([
-        Metadata_1.property("Channel 1 gain"), Metadata_1.min(-100), Metadata_1.max(15),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "gain1", null);
-    __decorate([
-        Metadata_1.property("Channel 1 input"), Metadata_1.min(0), Metadata_1.max(4),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "input1", null);
-    __decorate([
-        Metadata_1.property("Channel 2 gain"), Metadata_1.min(-100), Metadata_1.max(15),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "gain2", null);
-    __decorate([
-        Metadata_1.property("Channel 2 input"), Metadata_1.min(0), Metadata_1.max(4),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "input2", null);
-    __decorate([
-        Metadata_1.property("Channel 3 gain"), Metadata_1.min(-100), Metadata_1.max(15),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "gain3", null);
-    __decorate([
-        Metadata_1.property("Channel 3 input"), Metadata_1.min(0), Metadata_1.max(4),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "input3", null);
-    __decorate([
-        Metadata_1.property("Channel 4 gain"), Metadata_1.min(-100), Metadata_1.max(15),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "gain4", null);
-    __decorate([
-        Metadata_1.property("Channel 4 input"), Metadata_1.min(0), Metadata_1.max(4),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], Xilica.prototype, "input4", null);
-    Xilica = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 10007 }),
-        __metadata("design:paramtypes", [Object])
-    ], Xilica);
     exports.Xilica = Xilica;
     var Output = (function () {
         function Output(xilica, channel) {

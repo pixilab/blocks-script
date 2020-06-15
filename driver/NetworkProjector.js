@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], function (require, exports, Metadata_1, Driver_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.NumState = exports.BoolState = exports.State = exports.NetworkProjector = void 0;
     var NetworkProjector = (function (_super) {
         __extends(NetworkProjector, _super);
         function NetworkProjector(socket) {
@@ -56,7 +60,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 if (this._power.set(on))
                     this.sendCorrection();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         NetworkProjector.prototype.sendText = function (text) {
@@ -72,7 +76,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             set: function (conn) {
                 this.awake = conn;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         NetworkProjector.prototype.discard = function () {
@@ -243,25 +247,25 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             delete this.currRejector;
             delete this.currResolver;
         };
+        __decorate([
+            Metadata_1.property("Power on/off"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], NetworkProjector.prototype, "power", null);
+        __decorate([
+            Metadata_1.callable("Send raw command string to device"),
+            __param(0, Metadata_1.parameter("What to send")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", Promise)
+        ], NetworkProjector.prototype, "sendText", null);
+        __decorate([
+            Metadata_1.property("True if projector is online", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], NetworkProjector.prototype, "connected", null);
         return NetworkProjector;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.property("Power on/off"),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], NetworkProjector.prototype, "power", null);
-    __decorate([
-        Metadata_1.callable("Send raw command string to device"),
-        __param(0, Metadata_1.parameter("What to send")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", Promise)
-    ], NetworkProjector.prototype, "sendText", null);
-    __decorate([
-        Metadata_1.property("True if projector is online", true),
-        __metadata("design:type", Boolean),
-        __metadata("design:paramtypes", [Boolean])
-    ], NetworkProjector.prototype, "connected", null);
     exports.NetworkProjector = NetworkProjector;
     var State = (function () {
         function State(baseCmd, propName, correctionApprover) {

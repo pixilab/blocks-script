@@ -1,5 +1,7 @@
 /*
-	Samsung MDC display control driver. Works with most Samsung Signage displays.
+	Enhanced Samsung MDC display control driver. Works with devices that support the
+	"Status Control" (00) command of the MDC protocol. For other devices, use the
+	simpler SamsungMDCBasic driver instead.
 
 	Available "input" numbers, according to the protocol doc (may vary with model of display)
 
@@ -87,7 +89,6 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 		debugMsg("driver initialized");
 	}
 
-
 	/**
 	 * Allow clients to check for my type by name, just as in some system classes.
 	 */
@@ -112,7 +113,6 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 	public get id(): number {
 		return this.mId;
 	}
-
 
 	/**
 	 * Discard this driver. Called when the host object is torn down, to cancel all pending
@@ -338,8 +338,10 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 				Is there a better way to detect that power was turned off outside our control? Likely
 				not, since the device don't respond to network commands when off.
 			 */
-			this.socket.disconnect();
-			this.powerProp.updateCurrent(false);
+			if (cmd.name !== 'power') { // Do NOT disconnect as result of power command
+				this.socket.disconnect();
+				this.powerProp.updateCurrent(false);
+			}
 		});
 		return result;
 	}
@@ -585,11 +587,11 @@ class Power extends BoolProp {
 	}
 
 	correct(): Promise<number[]>  {
-		if (this.wanted) {
-			debugMsg("WoL attempted");
+		if (this.wanted) { // Must use WoL to wake up the display
 			this.driver.wakeUp();
+			debugMsg("WoL attempted");
 		}
-		return super.correct();
+		return super.correct(); // Send the Power command regardless
 	}
 }
 

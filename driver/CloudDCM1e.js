@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,7 +23,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var CloudDCM1e = CloudDCM1e_1 = (function (_super) {
+    exports.CloudDCM1e = void 0;
+    var CloudDCM1e = (function (_super) {
         __extends(CloudDCM1e, _super);
         function CloudDCM1e(socket) {
             var _this = _super.call(this, socket) || this;
@@ -40,6 +44,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             console.info("Driver initialized");
             return _this;
         }
+        CloudDCM1e_1 = CloudDCM1e;
         CloudDCM1e.prototype.connectStateChanged = function (message) {
             if (message.type === 'Connection') {
                 if (this.socket.connected) {
@@ -68,7 +73,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[0].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneIn2", {
@@ -78,7 +83,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[1].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneIn3", {
@@ -88,7 +93,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[2].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneIn4", {
@@ -98,7 +103,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[3].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneIn5", {
@@ -108,7 +113,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[4].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneIn6", {
@@ -118,7 +123,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[5].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneIn7", {
@@ -128,7 +133,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[6].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneIn8", {
@@ -138,7 +143,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (input) {
                 this.zones[7].setInput(input);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume1", {
@@ -148,7 +153,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[0].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume2", {
@@ -158,7 +163,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[1].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume3", {
@@ -168,7 +173,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[2].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume4", {
@@ -178,7 +183,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[3].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume5", {
@@ -188,7 +193,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[4].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume6", {
@@ -198,7 +203,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[5].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume7", {
@@ -208,7 +213,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[6].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CloudDCM1e.prototype, "zoneVolume8", {
@@ -218,7 +223,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (volume) {
                 this.zones[7].setVolume(volume);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         CloudDCM1e.prototype.sendRequest = function (request, responsePattern) {
@@ -248,93 +253,126 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 }
             });
         };
+        var CloudDCM1e_1;
+        CloudDCM1e.kZones = 8;
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn1", null);
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn2", null);
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn3", null);
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn4", null);
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn5", null);
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.min(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn6", null);
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn7", null);
+        __decorate([
+            Meta.property("Zone source"),
+            Meta.min(1),
+            Meta.max(8),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneIn8", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume1", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume2", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume3", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume4", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume5", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume6", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume7", null);
+        __decorate([
+            Meta.property("Zone volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], CloudDCM1e.prototype, "zoneVolume8", null);
+        CloudDCM1e = CloudDCM1e_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 4999 }),
+            __metadata("design:paramtypes", [Object])
+        ], CloudDCM1e);
         return CloudDCM1e;
     }(Driver_1.Driver));
-    CloudDCM1e.kZones = 8;
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn1", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn2", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn3", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn4", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn5", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.min(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn6", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn7", null);
-    __decorate([
-        Meta.property("Zone source"), Meta.min(1), Meta.max(8),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneIn8", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume1", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume2", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume3", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume4", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume5", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume6", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume7", null);
-    __decorate([
-        Meta.property("Zone volume"), Meta.min(0), Meta.max(1),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], CloudDCM1e.prototype, "zoneVolume8", null);
-    CloudDCM1e = CloudDCM1e_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 4999 }),
-        __metadata("design:paramtypes", [Object])
-    ], CloudDCM1e);
     exports.CloudDCM1e = CloudDCM1e;
     var Request = (function () {
         function Request(request, responsePattern) {
@@ -413,10 +451,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 });
             }
         };
+        Zone.kInputPattern = /<z\d\.mu,s=(.*)\/>/;
+        Zone.kVolumePattern = /<z\d\.mu,l=(.*)\/>/;
+        Zone.kMinVol = 62;
         return Zone;
     }());
-    Zone.kInputPattern = /<z\d\.mu,s=(.*)\/>/;
-    Zone.kVolumePattern = /<z\d\.mu,l=(.*)\/>/;
-    Zone.kMinVol = 62;
-    var CloudDCM1e_1;
 });

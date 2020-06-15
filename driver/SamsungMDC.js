@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.SamsungMDC = void 0;
     var kHeaderData = 0xAA;
     var kAckData = 0x41;
     var SamsungMDC = (function (_super) {
@@ -62,7 +66,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             set: function (id) {
                 this.mId = id;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         SamsungMDC.prototype.discard = function () {
@@ -231,8 +235,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.cmdTimeout = wait(10000);
             this.cmdTimeout.then(function () {
                 _this.requestFailure("Timeout for " + cmd);
-                _this.socket.disconnect();
-                _this.powerProp.updateCurrent(false);
+                if (cmd.name !== 'power') {
+                    _this.socket.disconnect();
+                    _this.powerProp.updateCurrent(false);
+                }
             });
             return result;
         };
@@ -260,18 +266,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.currResolver = undefined;
             this.receivedData = undefined;
         };
+        __decorate([
+            Metadata_1.property("The target ID (rarely used over network)"),
+            Metadata_1.min(0),
+            Metadata_1.max(254),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], SamsungMDC.prototype, "id", null);
+        SamsungMDC = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 1515 }),
+            __metadata("design:paramtypes", [Object])
+        ], SamsungMDC);
         return SamsungMDC;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.property("The target ID (rarely used over network)"),
-        Metadata_1.min(0), Metadata_1.max(254),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], SamsungMDC.prototype, "id", null);
-    SamsungMDC = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 1515 }),
-        __metadata("design:paramtypes", [Object])
-    ], SamsungMDC);
     exports.SamsungMDC = SamsungMDC;
     var Command = (function () {
         function Command(name, id, cmdType, paramByte) {
@@ -285,6 +292,57 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 cmd.push(1);
                 paramByte = Math.max(0, Math.round(paramByte)) & 0xff;
                 cmd.push(paramByte);
+            }
+            if (this.correctionRetry) {
+                this.correctionRetry.cancel();
+                this.correctionRetry = undefined;
+            }
+            if (this.cmdTimeout) {
+                this.cmdTimeout.cancel();
+                this.cmdTimeout = undefined;
+            }
+        };
+        SamsungMDC.prototype.errorMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            messages.unshift(this.socket.fullName);
+            console.error(messages);
+        };
+        SamsungMDC.prototype.warnMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            messages.unshift(this.socket.fullName);
+            console.warn(messages);
+        };
+        SamsungMDC.prototype.getPropToSend = function () {
+            for (var _i = 0, _a = this.propList; _i < _a.length; _i++) {
+                var p = _a[_i];
+                if (p.needsCorrection())
+                    return p;
+            }
+        };
+        SamsungMDC.prototype.sendCorrection = function () {
+            var _this = this;
+            if (this.okToSendNewCommand()) {
+                var prop = this.getPropToSend();
+                if (prop) {
+                    if (prop.canSendOffline() || (this.powerProp.getCurrent() && this.socket.connected)) {
+                        debugMsg("sendCorrection prop", prop.name, "from", prop.getCurrent(), "to", prop.get());
+                        var promise = prop.correct();
+                        if (promise) {
+                            promise.catch(function () {
+                                if (_this.getPropToSend())
+                                    _this.retryCorrectionSoon();
+                            });
+                        }
+                        else
+                            this.retryCorrectionSoon();
+                    }
+                }
             }
             else
                 cmd.push(0);
@@ -391,8 +449,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         Power.prototype.correct = function () {
             if (this.wanted) {
-                debugMsg("WoL attempted");
                 this.driver.wakeUp();
+                debugMsg("WoL attempted");
             }
             return _super.prototype.correct.call(this);
         };

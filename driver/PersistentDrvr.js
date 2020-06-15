@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system/SimpleFile", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleFile_1, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.PersistentDrvr = void 0;
     var PersistentDrvr = (function (_super) {
         __extends(PersistentDrvr, _super);
         function PersistentDrvr(socket) {
@@ -51,19 +55,19 @@ define(["require", "exports", "system/SimpleFile", "system_lib/Driver", "system_
                     });
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
+        __decorate([
+            Metadata_1.property("Persisted property"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], PersistentDrvr.prototype, "stringo", null);
+        PersistentDrvr = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 1025 }),
+            __metadata("design:paramtypes", [Object])
+        ], PersistentDrvr);
         return PersistentDrvr;
     }(Driver_1.Driver));
-    __decorate([
-        Metadata_1.property("Persisted property"),
-        __metadata("design:type", String),
-        __metadata("design:paramtypes", [String])
-    ], PersistentDrvr.prototype, "stringo", null);
-    PersistentDrvr = __decorate([
-        Metadata_1.driver('NetworkTCP', { port: 1025 }),
-        __metadata("design:paramtypes", [Object])
-    ], PersistentDrvr);
     exports.PersistentDrvr = PersistentDrvr;
 });

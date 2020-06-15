@@ -23,6 +23,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Xicato = void 0;
     var ASCII = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
     var XIC_CONFIG_BASE_PATH = 'xicato.config';
     var XIC_GROUP_OFFSET = 49152;
@@ -66,7 +67,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                 this.changed('connected');
                 this.checkReadyToSend();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Xicato.prototype, "token", {
@@ -79,7 +80,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                 this.mAuthToken = value;
                 this.changed('token');
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Xicato.prototype.deviceSetIntensity = function (network, deviceId, intensity, fading) {

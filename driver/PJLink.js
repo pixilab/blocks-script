@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -20,7 +23,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var PJLink = PJLink_1 = (function (_super) {
+    exports.PJLink = void 0;
+    var PJLink = (function (_super) {
         __extends(PJLink, _super);
         function PJLink(socket) {
             var _this = _super.call(this, socket) || this;
@@ -30,6 +34,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this.attemptConnect();
             return _this;
         }
+        PJLink_1 = PJLink;
         PJLink.prototype.pollStatus = function () {
             var _this = this;
             if (this.okToSendCommand()) {
@@ -57,7 +62,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 if (this._input.set(value))
                     this.sendCorrection();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         PJLink.prototype.getInitialState = function () {
@@ -181,21 +186,21 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         PJLink.prototype.okToSendCommand = function () {
             return !this.busyHoldoff && _super.prototype.okToSendCommand.call(this);
         };
+        var PJLink_1;
+        PJLink.kMinInput = 11;
+        PJLink.kMaxInput = 59;
+        __decorate([
+            Meta.property("Desired input source number"),
+            Meta.min(PJLink_1.kMinInput),
+            Meta.max(PJLink_1.kMaxInput),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], PJLink.prototype, "input", null);
+        PJLink = PJLink_1 = __decorate([
+            Meta.driver('NetworkTCP', { port: 4352 }),
+            __metadata("design:paramtypes", [Object])
+        ], PJLink);
         return PJLink;
     }(NetworkProjector_1.NetworkProjector));
-    PJLink.kMinInput = 11;
-    PJLink.kMaxInput = 59;
-    __decorate([
-        Meta.property("Desired input source number"),
-        Meta.min(PJLink_1.kMinInput),
-        Meta.max(PJLink_1.kMaxInput),
-        __metadata("design:type", Number),
-        __metadata("design:paramtypes", [Number])
-    ], PJLink.prototype, "input", null);
-    PJLink = PJLink_1 = __decorate([
-        Meta.driver('NetworkTCP', { port: 4352 }),
-        __metadata("design:paramtypes", [Object])
-    ], PJLink);
     exports.PJLink = PJLink;
-    var PJLink_1;
 });

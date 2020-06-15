@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -23,6 +26,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Script", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Script_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Pushover = void 0;
     var Pushover = (function (_super) {
         __extends(Pushover, _super);
         function Pushover(env) {
@@ -57,16 +61,16 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
             }
             return result;
         };
+        Pushover.CONFIG_FILE_NAME = "Pushover.config.json";
+        Pushover.MSG_URL = "https://api.pushover.net/1/messages.json";
+        __decorate([
+            Metadata_1.callable("Send a message"),
+            __param(0, Metadata_1.parameter("Message content")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", Promise)
+        ], Pushover.prototype, "sendMessage", null);
         return Pushover;
     }(Script_1.Script));
-    Pushover.CONFIG_FILE_NAME = "Pushover.config.json";
-    Pushover.MSG_URL = "https://api.pushover.net/1/messages.json";
-    __decorate([
-        Metadata_1.callable("Send a message"),
-        __param(0, Metadata_1.parameter("Message content")),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [String]),
-        __metadata("design:returntype", Promise)
-    ], Pushover.prototype, "sendMessage", null);
     exports.Pushover = Pushover;
 });

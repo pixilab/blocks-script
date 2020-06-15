@@ -26,49 +26,53 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.BarcoE2 = void 0;
-    var BarcoE2 = (function (_super) {
-        __extends(BarcoE2, _super);
-        function BarcoE2(socket) {
+    exports.GrandMA = void 0;
+    var GrandMA = (function (_super) {
+        __extends(GrandMA, _super);
+        function GrandMA(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.username = 'blocks';
+            _this.password = '';
+            socket.subscribe('connect', function (sender, message) {
+                if (message.type === 'Connection')
+                    _this.justConnected();
+            });
+            socket.subscribe('textReceived', function (sender, msg) {
+                return _this.textReceived(msg.text);
+            });
+            socket.subscribe('finish', function (sender) {
+                return _this.discard();
+            });
             socket.autoConnect();
             return _this;
         }
-        BarcoE2.prototype.activatePreset = function (preset) {
-            this.mLive = preset;
-            return this.send(preset);
+        GrandMA.prototype.justConnected = function () {
+            console.log('just connected');
+            this.cmdLogin(this.username, this.password);
         };
-        Object.defineProperty(BarcoE2.prototype, "live", {
-            get: function () {
-                return this.mLive;
-            },
-            set: function (preset) {
-                this.activatePreset(preset);
-            },
-            enumerable: false,
-            configurable: true
-        });
-        BarcoE2.prototype.send = function (preset) {
-            return this.socket.sendText("PRESET -a " + preset);
+        GrandMA.prototype.textReceived = function (message) {
+        };
+        GrandMA.prototype.cmdLogin = function (user, pw) {
+            this.socket.sendText('Login "' + user + '" "' + pw + '"');
+        };
+        GrandMA.prototype.startMacro = function (macroID) {
+            this.socket.sendText('Go Macro ' + macroID);
+        };
+        GrandMA.prototype.discard = function () {
         };
         __decorate([
-            Metadata_1.callable("Load a preset into Program or Preview"),
-            __param(0, Metadata_1.parameter("Preset number")),
+            Metadata_1.callable('(Go Macro <id>)'),
+            __param(0, Metadata_1.parameter('ID of macro to start')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
-        ], BarcoE2.prototype, "activatePreset", null);
-        __decorate([
-            Metadata_1.property("Current live preset"),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BarcoE2.prototype, "live", null);
-        BarcoE2 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 9878 }),
+        ], GrandMA.prototype, "startMacro", null);
+        GrandMA = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 30000 }),
             __metadata("design:paramtypes", [Object])
-        ], BarcoE2);
-        return BarcoE2;
+        ], GrandMA);
+        return GrandMA;
     }(Driver_1.Driver));
-    exports.BarcoE2 = BarcoE2;
+    exports.GrandMA = GrandMA;
 });
