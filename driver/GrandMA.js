@@ -52,7 +52,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.cmdLogin(this.username, this.password);
         };
         GrandMA.prototype.textReceived = function (message) {
-            console.log('reply: "' + message + '"');
         };
         GrandMA.prototype.cmdLogin = function (user, pw) {
             this.socket.sendText('Login "' + user + '" "' + pw + '"');

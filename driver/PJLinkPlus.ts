@@ -6,7 +6,7 @@
  */
 import {NetworkTCP} from 'system/Network';
 import {NetworkProjector, State, BoolState, NumState} from 'driver/NetworkProjector';
-import * as Meta from 'system_lib/Metadata';
+import {callable, driver, min, max, parameter, property} from 'system_lib/Metadata';
 import { SimpleFile } from 'system/SimpleFile';
 import { Md5 } from 'lib/md5';
 
@@ -55,6 +55,7 @@ import { Md5 } from 'lib/md5';
 /** status poll interval in milliseconds */       const STATUS_POLL_INTERVAL = 20000;
 const LOG_DEBUG = false;
 const PJLINK_PASSWORD = 'JBMIAProjectorLink';
+const CREATE_DYNAMIC_PROPERTIES = false;
 
 /*
  * other constants
@@ -73,7 +74,7 @@ const INPT_NETWORK = 5;
 const INPT_INTERNAL = 6;
 
 const CONFIG_BASE_PATH = 'pjlinkplus.config';
-const CACHE_BASE_PATH = '/temp/pjlinkplus.cache';
+const CACHE_BASE_PATH = 'pjlinkplus.cache';
 
 const SEPARATOR_QUERY = ' ?';
 const SEPARATOR_RESPONSE = '=';
@@ -83,7 +84,7 @@ const SEPARATOR_INSTRUCTION = ' ';
  Manage a PJLink projector, accessed through a provided NetworkTCPDevice connection.
  Extended version.
  */
-@Meta.driver('NetworkTCP', { port: 4352 })
+@driver('NetworkTCP', { port: 4352 })
 export class PJLinkPlus extends NetworkProjector {
 
     private skipDeviceParameters : string[] = [];
@@ -305,7 +306,7 @@ export class PJLinkPlus extends NetworkProjector {
                         if (LOG_DEBUG) console.log('trying to get class 2 static info');
                         // get static info class 2
                         this.tryGetStaticInformation(2).then(_resolve => {
-                            this.createDynamicInputProperties();
+                            if (CREATE_DYNAMIC_PROPERTIES) this.createDynamicInputProperties();
                             resolveGetToKnow();
                         },
                         _reject => {
@@ -370,30 +371,34 @@ export class PJLinkPlus extends NetworkProjector {
 
 
     /* power status */
-
-    @Meta.property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)")
+    @property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)", true)
     public get powerStatus() : number {
         return this._powerStatus;
     }
-    @Meta.property("Is device off?")
+    public set powerStatus(_value : number) {}
+    @property("Is device off?", true)
     public get isOff() : boolean {
         return this._isOff;
     }
-    @Meta.property("Is device on?")
+    public set isOff(value : boolean) {}
+    @property("Is device on?", true)
     public get isOn() : boolean {
         return this._isOn;
     }
-    @Meta.property("Is device cooling?")
+    public set isOn(value : boolean) {}
+    @property("Is device cooling?", true)
     public get isCooling() : boolean {
         return this._isCooling;
     }
-    @Meta.property("Is device warming up?")
+    public set isCooling(value : boolean) {}
+    @property("Is device warming up?", true)
     public get isWarmingUp() : boolean {
         return this._isWarmingUp;
     }
+    public set isWarmingUp(value : boolean) {}
 
     /* input */
-    @Meta.property('current input (class 1: 11-59 / class 2: 11-6Z)')
+    @property('current input (class 1: 11-59 / class 2: 11-6Z)')
     public set input(value: string) {
         if (value.length != 2) return;
         this.setInput(parseInt(value[0]), value[1]);
@@ -468,9 +473,9 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     /* audio / video mute */
-    @Meta.property("Mute setting. (Video mute on/off: 11/10, Audio mute on/off: 21/20, A/V mute on/off: 31/30)")
-	@Meta.min(MUTE_MIN)
-	@Meta.max(MUTE_MAX)
+    @property("Mute setting. (Video mute on/off: 11/10, Audio mute on/off: 21/20, A/V mute on/off: 31/30)")
+	@min(MUTE_MIN)
+	@max(MUTE_MAX)
 	public set mute(value: number) {
 		if (this._mute.set(value)) {
             this.sendCorrection();
@@ -479,7 +484,7 @@ export class PJLinkPlus extends NetworkProjector {
 	public get mute(): number {
 		return this._mute.get();
 	}
-    @Meta.property("Mute audio")
+    @property("Mute audio")
     public set muteAudio (value: boolean) {
         this.mute = value ? 21 : 20;
     }
@@ -487,7 +492,7 @@ export class PJLinkPlus extends NetworkProjector {
         var currentValue = this._mute.get();
         return currentValue == 31 || currentValue == 21;
     }
-    @Meta.property("Mute video")
+    @property("Mute video")
     public set muteVideo (value: boolean) {
         this.mute = value ? 11 : 10;
     }
@@ -497,14 +502,14 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     /* resolution */
-    @Meta.property('Input resolution (' + CMD_IRES + ')')
+    @property('Input resolution (' + CMD_IRES + ')', true)
     public get inputResolution () : string {
         if (this._inputResolution) {
             return this._inputResolution.toString();
         }
         return 'undefined';
     }
-    @Meta.property('Recommended resolution (' + CMD_RRES + ')')
+    @property('Recommended resolution (' + CMD_RRES + ')', true)
     public get recommendedResolution () : string {
         if (this._recommendedResolution) {
             return this._recommendedResolution.toString();
@@ -513,106 +518,106 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     /* various information */
-    @Meta.property('Projector/Display name (' + CMD_NAME + ')')
+    @property('Projector/Display name (' + CMD_NAME + ')', true)
     public get deviceName () : string {
         return this._deviceName;
     }
-    @Meta.property('Manufacture name (' + CMD_INF1 + ')')
+    @property('Manufacture name (' + CMD_INF1 + ')', true)
     public get manufactureName () : string {
         return this._manufactureName;
     }
-    @Meta.property('Product name (' + CMD_INF2 + ')')
+    @property('Product name (' + CMD_INF2 + ')', true)
     public get productName () : string {
         return this._productName;
     }
-    @Meta.property('Other information (' + CMD_INFO + ')')
+    @property('Other information (' + CMD_INFO + ')', true)
     public get otherInformation () : string {
         return this._otherInformation;
     }
-    @Meta.property('Serial number (' + CMD_SNUM + ')')
+    @property('Serial number (' + CMD_SNUM + ')', true)
     public get serialNumber () : string {
         return this._serialNumber;
     }
-    @Meta.property('Software version (' + CMD_SVER + ')')
+    @property('Software version (' + CMD_SVER + ')', true)
     public get softwareVersion () : string {
         return this._softwareVersion;
     }
 
     /* lamp properties */
-    @Meta.property("Lamp count")
+    @property("Lamp count", true)
     public get lampCount (): number {
         return this._lampCount;
     }
-    @Meta.property("Lamp one: lighting hours")
+    @property("Lamp one: lighting hours", true)
     public get lampOneHours (): number {
         return this._lampOneHours;
     }
-    @Meta.property("Lamp two: lighting hours")
+    @property("Lamp two: lighting hours", true)
     public get lampTwoHours (): number {
         return this._lampTwoHours;
     }
-    @Meta.property("Lamp three: lighting hours")
+    @property("Lamp three: lighting hours", true)
     public get lampThreeHours (): number {
         return this._lampThreeHours;
     }
-    @Meta.property("Lamp four: lighting hours")
+    @property("Lamp four: lighting hours", true)
     public get lampFourHours (): number {
         return this._lampFourHours;
     }
-    @Meta.property("Lamp one: active")
+    @property("Lamp one: active", true)
     public get lampOneActive (): boolean {
         return this._lampOneActive;
     }
-    @Meta.property("Lamp one: active")
+    @property("Lamp one: active", true)
     public get lampTwoActive (): boolean {
         return this._lampTwoActive;
     }
-    @Meta.property("Lamp one: active")
+    @property("Lamp one: active", true)
     public get lampThreeActive (): boolean {
         return this._lampThreeActive;
     }
-    @Meta.property("Lamp one: active")
+    @property("Lamp one: active", true)
     public get lampFourActive (): boolean {
         return this._lampFourActive;
     }
-    @Meta.property('Lamp replacement model number (' + CMD_RLMP + ')')
+    @property('Lamp replacement model number (' + CMD_RLMP + ')', true)
     public get lampReplacementModelNumber () : string {
         return this._lampReplacementModelNumber;
     }
 
     /* filter properties */
-    @Meta.property("Has filter?")
+    @property("Has filter?", true)
     public get hasFilter() : boolean {
         return this._hasFilter;
     }
-    @Meta.property("Filter usage time (hours)")
+    @property("Filter usage time (hours)", true)
     public get filterUsageTime () : number {
         return this._filterUsageTime;
     }
-    @Meta.property('Filter replacement model number (' + CMD_RFIL + ')')
+    @property('Filter replacement model number (' + CMD_RFIL + ')', true)
     public get filterReplacementModelNumber () : string {
         return this._filterReplacementModelNumber;
     }
 
     /* error properties*/
-    @Meta.property("Error status (ERST)")
+    @property("Error status (ERST)", true)
     public get errorStatus (): string {
         return this._errorStatus;
     }
-    @Meta.property("Error reported?")
+    @property("Error reported?", true)
     public get hasError () : boolean {
         return this._hasError;
     }
-    @Meta.property("Warning reported?")
+    @property("Warning reported?", true)
     public get hasWarning () : boolean {
         return this._hasWarning;
     }
-    @Meta.property("Problem reported?")
+    @property("Problem reported?", true)
     public get hasProblem () : boolean {
         return this._hasError || this._hasWarning;
     }
 
-    @Meta.property('PJLink password')
+    @property('PJLink password')
     public set password (value: string) {
         this.storePassword(value);
     }
@@ -621,7 +626,7 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     /* special properties */
-    @Meta.property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)")
+    @property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)", true)
     public get isOnline () : boolean {
     	const now = new Date();
         if (this.socket.connected) {
@@ -637,7 +642,7 @@ export class PJLinkPlus extends NetworkProjector {
         return msSinceLastConnection < 42000;
     }
 
-    @Meta.property("Detailed device status report (human readable)")
+    @property("Detailed device status report (human readable)", true)
     public get detailedStatusReport () : string {
         if (this._infoFetchDate === undefined) {
             return 'call "fetchDeviceInfo" at least once before requesting "detailedStatusReport"';
@@ -1303,12 +1308,12 @@ export class PJLinkPlus extends NetworkProjector {
 
     }
 
-    @Meta.property("custom request response")
+    @property("custom request response", true)
     public get customRequestResponse () : string {
         return this._customRequestResult;
     }
 
-    @Meta.callable("Send custom request")
+    @callable("Send custom request")
     public customRequest (question: string, param?: string) : Promise<void> {
         var request = this.request(question, param == "" ? undefined : param).then(
 			reply => {

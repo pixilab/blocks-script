@@ -20,7 +20,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", "system/SimpleFile", "lib/md5"], function (require, exports, NetworkProjector_1, Meta, SimpleFile_1, md5_1) {
+define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", "system/SimpleFile", "lib/md5"], function (require, exports, NetworkProjector_1, Metadata_1, SimpleFile_1, md5_1) {
     "use strict";
     var _a;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -56,6 +56,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
     var STATUS_POLL_INTERVAL = 20000;
     var LOG_DEBUG = false;
     var PJLINK_PASSWORD = 'JBMIAProjectorLink';
+    var CREATE_DYNAMIC_PROPERTIES = false;
     var MUTE_MIN = 10;
     var MUTE_MAX = 31;
     var RESOLUTION_SPLIT = 'x';
@@ -68,7 +69,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
     var INPT_NETWORK = 5;
     var INPT_INTERNAL = 6;
     var CONFIG_BASE_PATH = 'pjlinkplus.config';
-    var CACHE_BASE_PATH = '/temp/pjlinkplus.cache';
+    var CACHE_BASE_PATH = 'pjlinkplus.cache';
     var SEPARATOR_QUERY = ' ?';
     var SEPARATOR_RESPONSE = '=';
     var SEPARATOR_INSTRUCTION = ' ';
@@ -194,7 +195,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                             if (LOG_DEBUG)
                                 console.log('trying to get class 2 static info');
                             _this.tryGetStaticInformation(2).then(function (_resolve) {
-                                _this.createDynamicInputProperties();
+                                if (CREATE_DYNAMIC_PROPERTIES)
+                                    _this.createDynamicInputProperties();
                                 resolveGetToKnow();
                             }, function (_reject) {
                                 rejectGetToKnow();
@@ -258,6 +260,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._powerStatus;
             },
+            set: function (_value) { },
             enumerable: false,
             configurable: true
         });
@@ -265,6 +268,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isOff;
             },
+            set: function (value) { },
             enumerable: false,
             configurable: true
         });
@@ -272,6 +276,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isOn;
             },
+            set: function (value) { },
             enumerable: false,
             configurable: true
         });
@@ -279,6 +284,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isCooling;
             },
+            set: function (value) { },
             enumerable: false,
             configurable: true
         });
@@ -286,6 +292,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isWarmingUp;
             },
+            set: function (value) { },
             enumerable: false,
             configurable: true
         });
@@ -1309,205 +1316,205 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             _a[CMD_FREZ] = { dynamic: true, cmdClass: 2, read: true, write: true, needsPower: true },
             _a);
         __decorate([
-            Meta.property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)"),
+            Metadata_1.property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)", true),
             __metadata("design:type", Number),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [Number])
         ], PJLinkPlus.prototype, "powerStatus", null);
         __decorate([
-            Meta.property("Is device off?"),
+            Metadata_1.property("Is device off?", true),
             __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [Boolean])
         ], PJLinkPlus.prototype, "isOff", null);
         __decorate([
-            Meta.property("Is device on?"),
+            Metadata_1.property("Is device on?", true),
             __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [Boolean])
         ], PJLinkPlus.prototype, "isOn", null);
         __decorate([
-            Meta.property("Is device cooling?"),
+            Metadata_1.property("Is device cooling?", true),
             __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [Boolean])
         ], PJLinkPlus.prototype, "isCooling", null);
         __decorate([
-            Meta.property("Is device warming up?"),
+            Metadata_1.property("Is device warming up?", true),
             __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [Boolean])
         ], PJLinkPlus.prototype, "isWarmingUp", null);
         __decorate([
-            Meta.property('current input (class 1: 11-59 / class 2: 11-6Z)'),
+            Metadata_1.property('current input (class 1: 11-59 / class 2: 11-6Z)'),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "input", null);
         __decorate([
-            Meta.property("Mute setting. (Video mute on/off: 11/10, Audio mute on/off: 21/20, A/V mute on/off: 31/30)"),
-            Meta.min(MUTE_MIN),
-            Meta.max(MUTE_MAX),
+            Metadata_1.property("Mute setting. (Video mute on/off: 11/10, Audio mute on/off: 21/20, A/V mute on/off: 31/30)"),
+            Metadata_1.min(MUTE_MIN),
+            Metadata_1.max(MUTE_MAX),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], PJLinkPlus.prototype, "mute", null);
         __decorate([
-            Meta.property("Mute audio"),
+            Metadata_1.property("Mute audio"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], PJLinkPlus.prototype, "muteAudio", null);
         __decorate([
-            Meta.property("Mute video"),
+            Metadata_1.property("Mute video"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], PJLinkPlus.prototype, "muteVideo", null);
         __decorate([
-            Meta.property('Input resolution (' + CMD_IRES + ')'),
+            Metadata_1.property('Input resolution (' + CMD_IRES + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "inputResolution", null);
         __decorate([
-            Meta.property('Recommended resolution (' + CMD_RRES + ')'),
+            Metadata_1.property('Recommended resolution (' + CMD_RRES + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "recommendedResolution", null);
         __decorate([
-            Meta.property('Projector/Display name (' + CMD_NAME + ')'),
+            Metadata_1.property('Projector/Display name (' + CMD_NAME + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "deviceName", null);
         __decorate([
-            Meta.property('Manufacture name (' + CMD_INF1 + ')'),
+            Metadata_1.property('Manufacture name (' + CMD_INF1 + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "manufactureName", null);
         __decorate([
-            Meta.property('Product name (' + CMD_INF2 + ')'),
+            Metadata_1.property('Product name (' + CMD_INF2 + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "productName", null);
         __decorate([
-            Meta.property('Other information (' + CMD_INFO + ')'),
+            Metadata_1.property('Other information (' + CMD_INFO + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "otherInformation", null);
         __decorate([
-            Meta.property('Serial number (' + CMD_SNUM + ')'),
+            Metadata_1.property('Serial number (' + CMD_SNUM + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "serialNumber", null);
         __decorate([
-            Meta.property('Software version (' + CMD_SVER + ')'),
+            Metadata_1.property('Software version (' + CMD_SVER + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "softwareVersion", null);
         __decorate([
-            Meta.property("Lamp count"),
+            Metadata_1.property("Lamp count", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampCount", null);
         __decorate([
-            Meta.property("Lamp one: lighting hours"),
+            Metadata_1.property("Lamp one: lighting hours", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampOneHours", null);
         __decorate([
-            Meta.property("Lamp two: lighting hours"),
+            Metadata_1.property("Lamp two: lighting hours", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampTwoHours", null);
         __decorate([
-            Meta.property("Lamp three: lighting hours"),
+            Metadata_1.property("Lamp three: lighting hours", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampThreeHours", null);
         __decorate([
-            Meta.property("Lamp four: lighting hours"),
+            Metadata_1.property("Lamp four: lighting hours", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampFourHours", null);
         __decorate([
-            Meta.property("Lamp one: active"),
+            Metadata_1.property("Lamp one: active", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampOneActive", null);
         __decorate([
-            Meta.property("Lamp one: active"),
+            Metadata_1.property("Lamp one: active", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampTwoActive", null);
         __decorate([
-            Meta.property("Lamp one: active"),
+            Metadata_1.property("Lamp one: active", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampThreeActive", null);
         __decorate([
-            Meta.property("Lamp one: active"),
+            Metadata_1.property("Lamp one: active", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampFourActive", null);
         __decorate([
-            Meta.property('Lamp replacement model number (' + CMD_RLMP + ')'),
+            Metadata_1.property('Lamp replacement model number (' + CMD_RLMP + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "lampReplacementModelNumber", null);
         __decorate([
-            Meta.property("Has filter?"),
+            Metadata_1.property("Has filter?", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "hasFilter", null);
         __decorate([
-            Meta.property("Filter usage time (hours)"),
+            Metadata_1.property("Filter usage time (hours)", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "filterUsageTime", null);
         __decorate([
-            Meta.property('Filter replacement model number (' + CMD_RFIL + ')'),
+            Metadata_1.property('Filter replacement model number (' + CMD_RFIL + ')', true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "filterReplacementModelNumber", null);
         __decorate([
-            Meta.property("Error status (ERST)"),
+            Metadata_1.property("Error status (ERST)", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "errorStatus", null);
         __decorate([
-            Meta.property("Error reported?"),
+            Metadata_1.property("Error reported?", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "hasError", null);
         __decorate([
-            Meta.property("Warning reported?"),
+            Metadata_1.property("Warning reported?", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "hasWarning", null);
         __decorate([
-            Meta.property("Problem reported?"),
+            Metadata_1.property("Problem reported?", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "hasProblem", null);
         __decorate([
-            Meta.property('PJLink password'),
+            Metadata_1.property('PJLink password'),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "password", null);
         __decorate([
-            Meta.property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)"),
+            Metadata_1.property("Is Projector/Display online? (Guesstimate: PJLink connection drops every now and then)", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "isOnline", null);
         __decorate([
-            Meta.property("Detailed device status report (human readable)"),
+            Metadata_1.property("Detailed device status report (human readable)", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "detailedStatusReport", null);
         __decorate([
-            Meta.property("custom request response"),
+            Metadata_1.property("custom request response", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], PJLinkPlus.prototype, "customRequestResponse", null);
         __decorate([
-            Meta.callable("Send custom request"),
+            Metadata_1.callable("Send custom request"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", Promise)
         ], PJLinkPlus.prototype, "customRequest", null);
         PJLinkPlus = PJLinkPlus_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 4352 }),
+            Metadata_1.driver('NetworkTCP', { port: 4352 }),
             __metadata("design:paramtypes", [Object])
         ], PJLinkPlus);
         return PJLinkPlus;

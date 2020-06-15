@@ -38,7 +38,7 @@ export class GrandMA extends Driver<NetworkTCP> {
 	}
 
 	private textReceived(message : string) {
-		console.log('reply: "' + message + '"');
+		// console.log('reply: "' + message + '"');
 	}
 
 	private cmdLogin (user: string, pw: string) {
