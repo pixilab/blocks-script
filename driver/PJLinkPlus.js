@@ -260,7 +260,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._powerStatus;
             },
-            set: function (_value) { },
+            set: function (value) { this._powerStatus = value; },
             enumerable: false,
             configurable: true
         });
@@ -268,7 +268,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isOff;
             },
-            set: function (value) { },
+            set: function (value) { this._isOff = value; },
             enumerable: false,
             configurable: true
         });
@@ -276,7 +276,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isOn;
             },
-            set: function (value) { },
+            set: function (value) { this._isOn = value; },
             enumerable: false,
             configurable: true
         });
@@ -284,7 +284,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isCooling;
             },
-            set: function (value) { },
+            set: function (value) { this._isCooling = value; },
             enumerable: false,
             configurable: true
         });
@@ -292,7 +292,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             get: function () {
                 return this._isWarmingUp;
             },
-            set: function (value) { },
+            set: function (value) { this._isWarmingUp = value; },
             enumerable: false,
             configurable: true
         });
@@ -436,44 +436,38 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "deviceName", {
-            get: function () {
-                return this._deviceName;
-            },
+            get: function () { return this._deviceName; },
+            set: function (value) { this._deviceName = value; },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "manufactureName", {
-            get: function () {
-                return this._manufactureName;
-            },
+            get: function () { return this._manufactureName; },
+            set: function (value) { this._manufactureName = value; },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "productName", {
-            get: function () {
-                return this._productName;
-            },
+            get: function () { return this._productName; },
+            set: function (value) { this._productName = value; },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "otherInformation", {
-            get: function () {
-                return this._otherInformation;
-            },
+            get: function () { return this._otherInformation; },
+            set: function (value) { this._otherInformation = value; },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "serialNumber", {
-            get: function () {
-                return this._serialNumber;
-            },
+            get: function () { return this._serialNumber; },
+            set: function (value) { this._serialNumber = value; },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(PJLinkPlus.prototype, "softwareVersion", {
-            get: function () {
-                return this._softwareVersion;
-            },
+            get: function () { return this._softwareVersion; },
+            set: function (value) { this._softwareVersion = value; },
             enumerable: false,
             configurable: true
         });
@@ -851,29 +845,12 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 case CMD_POWR:
                     var newPowerStatus = parseInt(reply);
                     if (this._powerStatus != newPowerStatus) {
-                        this._powerStatus = newPowerStatus;
-                        this.changed('powerStatus');
+                        this.powerStatus = newPowerStatus;
                         this._power.updateCurrent((parseInt(reply) & 1) != 0);
-                        var newIsOff = this._powerStatus == 0;
-                        var newIsOn = this._powerStatus == 1;
-                        var newIsCooling = this._powerStatus == 2;
-                        var newIsWarmingUp = this._powerStatus == 3;
-                        if (this._isOff != newIsOff) {
-                            this._isOff = newIsOff;
-                            this.changed('isOff');
-                        }
-                        if (this._isOn != newIsOn) {
-                            this._isOn = newIsOn;
-                            this.changed('isOn');
-                        }
-                        if (this._isCooling != newIsCooling) {
-                            this._isCooling = newIsCooling;
-                            this.changed('isCooling');
-                        }
-                        if (this._isWarmingUp != newIsWarmingUp) {
-                            this._isWarmingUp = newIsWarmingUp;
-                            this.changed('isWarmingUp');
-                        }
+                        this.isOff = this._powerStatus == 0;
+                        this.isOn = this._powerStatus == 1;
+                        this.isCooling = this._powerStatus == 2;
+                        this.isWarmingUp = this._powerStatus == 3;
                     }
                     break;
                 case CMD_INPT:
@@ -953,32 +930,16 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     }
                     break;
                 case CMD_NAME:
-                    var newDeviceName = reply;
-                    if (this._deviceName != newDeviceName) {
-                        this._deviceName = newDeviceName;
-                        this.changed('deviceName');
-                    }
+                    this.deviceName = reply;
                     break;
                 case CMD_INF1:
-                    var newManufactureName = reply;
-                    if (this._manufactureName != newManufactureName) {
-                        this._manufactureName = newManufactureName;
-                        this.changed('manufactureName');
-                    }
+                    this.manufactureName = reply;
                     break;
                 case CMD_INF2:
-                    var newProductName = reply;
-                    if (this._productName != newProductName) {
-                        this._productName = newProductName;
-                        this.changed('productName');
-                    }
+                    this.productName = reply;
                     break;
                 case CMD_INFO:
-                    var newOtherInformation = reply;
-                    if (this._otherInformation != newOtherInformation) {
-                        this._otherInformation = newOtherInformation;
-                        this.changed('otherInformation');
-                    }
+                    this.otherInformation = reply;
                     break;
                 case CMD_CLSS:
                     this._class = parseInt(reply);
@@ -990,18 +951,10 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     }
                     break;
                 case CMD_SNUM:
-                    var newSerialNumber = reply;
-                    if (this._serialNumber != newSerialNumber) {
-                        this._serialNumber = newSerialNumber;
-                        this.changed('serialNumber');
-                    }
+                    this.serialNumber = reply;
                     break;
                 case CMD_SVER:
-                    var newSoftwareVersion = reply;
-                    if (this._softwareVersion != newSoftwareVersion) {
-                        this._softwareVersion = newSoftwareVersion;
-                        this.changed('softwareVersion');
-                    }
+                    this.softwareVersion = reply;
                     break;
                 case CMD_INNM:
                     break;
@@ -1375,32 +1328,32 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         __decorate([
             Metadata_1.property('Projector/Display name (' + CMD_NAME + ')', true),
             __metadata("design:type", String),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "deviceName", null);
         __decorate([
             Metadata_1.property('Manufacture name (' + CMD_INF1 + ')', true),
             __metadata("design:type", String),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "manufactureName", null);
         __decorate([
             Metadata_1.property('Product name (' + CMD_INF2 + ')', true),
             __metadata("design:type", String),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "productName", null);
         __decorate([
             Metadata_1.property('Other information (' + CMD_INFO + ')', true),
             __metadata("design:type", String),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "otherInformation", null);
         __decorate([
             Metadata_1.property('Serial number (' + CMD_SNUM + ')', true),
             __metadata("design:type", String),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "serialNumber", null);
         __decorate([
             Metadata_1.property('Software version (' + CMD_SVER + ')', true),
             __metadata("design:type", String),
-            __metadata("design:paramtypes", [])
+            __metadata("design:paramtypes", [String])
         ], PJLinkPlus.prototype, "softwareVersion", null);
         __decorate([
             Metadata_1.property("Lamp count", true),
