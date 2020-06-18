@@ -785,7 +785,10 @@ export class PJLinkPlus extends NetworkProjector {
             }
             this.queryRequest(query).then(
                 reply => {
-                    if (reply != ERR_1) {
+                    if (reply == ERR_1 || reply == ERR_2 || reply == ERR_3) {
+                        this.processInfoQueryError(query.command, reply);
+                        if (reply == ERR_1) reject('command not available: ' + query.command);
+                    } else {
                         if (LOG_DEBUG) console.log('got reply for \'' + this._currentParameter + '\':' + reply);
                         // successful fetch and parameter is not dynamic? cache & skip next time
                         if (!PJLinkPlus.isCommandDynamic(query.command)) {
@@ -793,10 +796,6 @@ export class PJLinkPlus extends NetworkProjector {
                             this.addCommandToSkip(query.command);
                         }
                         resolve(reply);
-                    } else {
-                        // PJLink perceives ERR_1 and ERR_2 as successful queries
-                        this.processInfoQueryError(query.command, reply);
-                        reject('command not available: ' + query.command);
                     }
                 },
                 error => {
@@ -851,10 +850,16 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     private processInfoQueryError (command : string, error : string) {
-        if (error == ERR_1) {
-            if (command == CMD_LAMP) this._hasLamps = false;
-            if (command == CMD_FILT) this._hasFilter = false;
-            this.skipDeviceParameters.push(command);
+        switch (error) {
+            case ERR_1:
+                if (command == CMD_LAMP) this._hasLamps = false;
+                if (command == CMD_FILT) this._hasFilter = false;
+                this.skipDeviceParameters.push(command);
+                break;
+            case ERR_2:
+                break;
+            case ERR_3:
+                break;
         }
     }
     private processInfoQueryReply (query : PJLinkQuery, reply : string) {
@@ -863,13 +868,13 @@ export class PJLinkPlus extends NetworkProjector {
                 var newPowerStatus = parseInt(reply);
                 if (this._powerStatus != newPowerStatus) {
                     this.powerStatus = newPowerStatus;
-                    // also update PJLink based driver power status
-                    this._power.updateCurrent((parseInt(reply) & 1) != 0);
                     // updating detailed status
                     this.isOff = this._powerStatus == 0;
                     this.isOn = this._powerStatus == 1;
                     this.isCooling = this._powerStatus == 2;
                     this.isWarmingUp = this._powerStatus == 3;
+                    // also update PJLink based driver power status
+                    this._power.updateCurrent(this.isOn);
                 }
                 break;
             case CMD_INPT:
@@ -1204,7 +1209,8 @@ export class PJLinkPlus extends NetworkProjector {
                     case ERR_3:	// Bad time for this command (usually in standby or not yet awake)
 						// console.info("PJLink ERR3");
 						this.projectorBusy();
-						// Deliberate fallthrough
+                        treatAsOk = true;
+						break;
 					default:
 						this.warnMsg('PJLink response', currCmd, text);
 						break;
