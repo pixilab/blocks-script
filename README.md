@@ -1,7 +1,7 @@
 # blocks-script
 Scripting support for use with PIXILAB Blocks®, including custom device drivers.
 
-Lear now to install and use drivers on your Blocks system here:
+Learn now to install and use drivers on your Blocks system here:
 https://int.pixilab.se/docs/blocks/drivers/concepts#using_a_device_driver
 
 For more details on drivers and scripting development, see

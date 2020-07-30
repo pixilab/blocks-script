@@ -22,7 +22,7 @@ export interface Request {
 	header(headerName:string, headerValue:string): Request; // Additional header sent with request
 
 	get(): Promise<Response>;	// Make a basic GET request
-	// Default mediaType if not specified below is "application/json"
+	// Default mediaType (aka "Content-Type"), unless explicitly specified below, is "application/json"
 	put(dataToSend: string,  mediaType?: string): Promise<Response>;	// PUT request with supplied data
 	post(dataToSend: string,  mediaType?: string): Promise<Response>;	// POST request with supplied data
 }
