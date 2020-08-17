@@ -68,6 +68,11 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	connected: boolean;
 
 	/**
+	 * Dot-separated IP address of display spot, if connected, else null. Read only.
+	 */
+	address: string;
+
+	/**
 	 * Load a Block with priority. Returns a promise that's fulfilled once
 	 * the block is loaded, or rejected if the loading fails. Block name
 	 * is in "group/leaf" form. Setting to null or empty string reverts to

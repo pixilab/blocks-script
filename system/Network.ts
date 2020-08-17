@@ -102,6 +102,14 @@ export interface NetworkTCP extends NetworkBase {
 }
 
 /**
+ * Metadata provided in the typeSpecificMeta parameter for the @driver decorator
+ * for baseDriverType 'NetworkTCP'.
+ */
+interface NetworkTCPDriverMetaData {
+	port: number;	// Default port, selected automatically when driver is chosen
+}
+
+/**
  *	A UDP network port.
  */
 export interface NetworkUDP extends NetworkBase {
@@ -129,6 +137,15 @@ export interface NetworkUDP extends NetworkBase {
 
 	// Object is being shut down
 	subscribe(event: 'finish', listener: (sender: NetworkUDP)=>void): void;
+}
+
+/**
+ * Metadata provided in the typeSpecificMeta parameter for the @driver decorator
+ * for baseDriverType 'NetworkUDP'.
+ */
+interface NetworkUDPDriverMetaData {
+	port: number;	// Default port, selected automatically when driver is chosen
+	rcvPort?: number; 	// Set as receive port, and data reception is enabled
 }
 
 /**
