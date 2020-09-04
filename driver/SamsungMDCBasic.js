@@ -100,7 +100,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 checksum += cmd[ix];
             cmd.push(checksum & 0xff);
             this.socket.sendBytes(cmd);
-            console.log(cmd);
         };
         __decorate([
             Metadata_1.property("The target ID"),

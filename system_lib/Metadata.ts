@@ -6,9 +6,9 @@
 /**
  Annotation defining a class acting as a device driver. This class must have a constructor
  that takes the baseDriverType of low-level driver to attach to. The driverMeta passed in
- is an object with keys and values as dictated by the type of driver attached to. E.g., for
- a NetworkTCP driver, this may specify the port number to use. See documentation for each
- low level-driver type for more information.
+ is an object with keys/values that vary with the type of driver attached (see
+ NetworkTCPDriverMetaData and NetworkUDPDriverMetaData in Network.ts for those driver
+ types).
 
  Note to self: I must pass in baseDriverType as a string, since those are typically
  defined as interfaces (they're implemented in Java), so I can't get the param type

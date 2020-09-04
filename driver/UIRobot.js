@@ -169,6 +169,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 args[_i - 1] = arguments[_i];
             }
             command += ' ' + args.join(' ');
+            console.log("-------------command", command);
             return this.socket.sendText(command);
         };
         UIRobot.prototype.parseProgramParams = function (programParams) {

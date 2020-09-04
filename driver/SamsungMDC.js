@@ -448,10 +448,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return this.wanted;
         };
         Power.prototype.correct = function () {
-            if (this.wanted) {
+            if (this.wanted)
                 this.driver.wakeUp();
-                debugMsg("WoL attempted");
-            }
             return _super.prototype.correct.call(this);
         };
         return Power;

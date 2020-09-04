@@ -68,6 +68,11 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	connected: boolean;
 
 	/**
+	 * Dot-separated IP address of display spot, if connected, else null. Read only.
+	 */
+	address: string;
+
+	/**
 	 * Load a Block with priority. Returns a promise that's fulfilled once
 	 * the block is loaded, or rejected if the loading fails. Block name
 	 * is in "group/leaf" form. Setting to null or empty string reverts to
@@ -133,11 +138,12 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	customClasses: string;
 
 	/**
-	 Ask Spot to reveal the specified path, which is assumed to exist
-	 in the currently loaded block. The path must be absolute (start
-	 with a slash), and in the form
+	 Ask Spot to reveal the specified child block, in the current root block.
+	 Fails silently if the target child block can't be found.
+	 The 'play' and 'seekToSeconds' parameters apply to video/audio.
+	 The path must be absolute (start with a slash), and in the form
 
-	  	/TopLevel/subLevel/targetBlock
+	  	/firstChild/secondChild/targetChildBlock
 
 	 Where each segment must be one of the following:
 
@@ -149,15 +155,24 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 	+2	To step forward by two steps, with no wrap-around
 	 	-3	To step backwards 3 steps, with no wrap-around
 
-	 Fails silently if the target page can't be found.
+	 	This function used to be called gotoPage (still available in its
+	 	original form for backward compatibility).
 	 */
-	gotoPage(path: string): void;
+	gotoBlock(
+		path: string,			// Child block path to
+		play?:boolean, 			// Once found, tell the child to play or pause
+		seekToSeconds?: number // Once found, tell the child to seek to time pos
+	): void;
+
 
 	/**
-	 * Same as gotoPage, but returns a promise that will be rejected with
-	 * an error message if the specified page can't be found.
+	 * Same as gotoBlock, but returns a promise that will be rejected with
+	 * an error message if the specified block can't be found.
+	 *
+	 * This function used to be called tryGotoPage, which is still available
+	 * for backward compatibility.
 	 */
-	tryGotoPage(path: string): Promise<any>;
+	tryGotoBlock(path: string): Promise<any>;
 
 	/**
 	 * Force set of local tags to only those specified (comma separated). Does not

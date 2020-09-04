@@ -93,7 +93,6 @@ export class SamsungMDCBasic extends Driver<NetworkTCP> {
 			checksum += cmd[ix];
 		cmd.push(checksum & 0xff);
 		this.socket.sendBytes(cmd);
-
-		console.log(cmd);
+		// console.log("Sent to", this.socket.name, cmd);
 	}
 }
