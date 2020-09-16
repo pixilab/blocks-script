@@ -139,14 +139,15 @@ export function max(max:number) {
 }
 
 /**
- Annotation declaring a method as accessible from a web client under
+ Annotation declaring a method as accessible from a web client as a POST request under
 
  	/rest/script/invoke/<user-script-name>/<method-name>
 
- with a JSON body payload deserialized and passed to the method as an Object.
- An object or string returned from the method will be serialized as JSON data and
- returned to the web client. May return a promise eventually resolving with the
- result value.
+ with a JSON body payload deserialized and passed to the method as an object.
+ The method must be declared as accepting an object even if you don't need
+ any data (i.e., pass null). An object or string returned from the method
+ will be serialized as JSON data and returned to the web client. Alternatively,
+ you may return a promise eventually resolving with the result value.
 
  The roleRequired parameter, if specified, limits who can call the resource from the
  outside, and accepts the same values as the roleRequired annotation.
