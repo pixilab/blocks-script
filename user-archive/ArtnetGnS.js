@@ -32,9 +32,9 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
     var MIN_CHANNEL = 1;
     var MAX_CHANNEL = 42;
     var MS_PER_S = 1000;
-    var PUBLISH_GROUP_PROPERTIES = true;
-    var PUBLISH_SCENE_PROPERTIES = true;
-    var PUBLISH_CROSSFADER_PROPERTIES = true;
+    var PUBLISH_GROUP_PROPERTIES = false;
+    var PUBLISH_SCENE_PROPERTIES = false;
+    var PUBLISH_CROSSFADER_PROPERTIES = false;
     var split = require("lib/split-string");
     var ArtnetGnS = (function (_super) {
         __extends(ArtnetGnS, _super);
@@ -73,9 +73,17 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureName, ''));
             return this.fadeChannels(channels, value, duration ? duration : this.mFadeDuration);
         };
+        ArtnetGnS.prototype.fixtureFadeToLabel = function (fixtureName, label, duration) {
+            var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, ''));
+            this.fadeChannelsToLabel(fixtureName, channels, label, duration ? duration : this.mFadeDuration);
+        };
         ArtnetGnS.prototype.fixtureChannelsFadeTo = function (fixtureName, channelNames, value, duration) {
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureName, channelNames));
             return this.fadeChannels(channels, value, duration ? duration : this.mFadeDuration);
+        };
+        ArtnetGnS.prototype.fixtureChannelsFadeToLabel = function (fixtureName, channelNames, label, duration) {
+            var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureName, channelNames));
+            this.fadeChannelsToLabel(fixtureName, channels, label, duration ? duration : this.mFadeDuration);
         };
         ArtnetGnS.prototype.fixtureSetDefaults = function (channelNamePrefix, minChannel, maxChannel, channelNameDigits) {
             this.mChannelNamePrefix = channelNamePrefix;
@@ -143,6 +151,14 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             var crossfader = ArtnetGnS.crossfaders[crossfaderName];
             return crossfader ? crossfader.fadeTo(fadeValue, masterValue ? masterValue : -1, duration ? duration : this.mFadeDuration) : undefined;
         };
+        ArtnetGnS.prototype.labelDefine = function (labelName, value, fixtureName, channelNames) {
+            var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, channelNames));
+            for (var i = 0; i < channels.length; i++) {
+                var channel = channels[i];
+                var valuePath = ArtnetGnS.renderValuePath(fixtureName, channel.name, labelName);
+                ArtnetGnS.channelLabelValues[valuePath] = value;
+            }
+        };
         ArtnetGnS.prototype.sceneAddFixtures = function (sceneName, fixtureNames, value, duration, delay) {
             var channels = this.getAnalogChannels(this.getFixturesChannels(fixtureNames));
             this.getScene(sceneName, true).addChannels(channels, value, duration, delay);
@@ -161,6 +177,10 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
         };
         ArtnetGnS.prototype.sceneAddExecute = function (sceneName, realmName, groupName, taskName, delay) {
             this.getScene(sceneName, true).addExecute(realmName, groupName, taskName, delay);
+        };
+        ArtnetGnS.prototype.sceneAddChannelsFadeToLabel = function (sceneName, label, fixtureName, channelNames, duration, delay) {
+            var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, channelNames));
+            this.getScene(sceneName, true).addChannelsFadeToLabel(fixtureName, channels, label, duration, delay);
         };
         ArtnetGnS.prototype.sceneCall = function (sceneName, timefactor, seekTo, force) {
             var scene = this.getScene(sceneName, false);
@@ -215,6 +235,9 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             }
             ArtnetGnS.scenes = {};
             ArtnetGnS.crossfaders = {};
+        };
+        ArtnetGnS.renderValuePath = function (fixtureName, channelName, label) {
+            return fixtureName + '.' + channelName + ':' + label;
         };
         ArtnetGnS.sanitizePropName = function (propName) {
             return propName.replace(/[^\w\-]/g, '-');
@@ -331,6 +354,16 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             }
             return wait(duration * MS_PER_S);
         };
+        ArtnetGnS.prototype.fadeChannelsToLabel = function (fixtureName, channels, label, duration) {
+            for (var i = 0; i < channels.length; i++) {
+                var channel = channels[i];
+                var valuePath = ArtnetGnS.renderValuePath(fixtureName, channel.name, label);
+                var value = ArtnetGnS.channelLabelValues[valuePath];
+                if (value)
+                    channel.fadeTo(value * channel.maxValue, duration);
+            }
+            return wait(duration * MS_PER_S);
+        };
         ArtnetGnS.prototype.padStart = function (value, minLength, padWith) {
             var result = value;
             while (result.length < minLength) {
@@ -377,7 +410,7 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
                 channelNameList = ArtnetGnS.fixtureChannelNames[fixtureName];
             }
             else {
-                for (var i = this.mMinChannel; i < this.mMaxChannel; i++) {
+                for (var i = this.mMinChannel; i <= this.mMaxChannel; i++) {
                     var channelName = this.mChannelNamePrefix + this.padStart(i.toString(10), this.mChannelNameDigits, '0');
                     channelNameList.push(channelName);
                 }
@@ -452,6 +485,7 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
         ArtnetGnS.scenes = {};
         ArtnetGnS.fixtureChannelNames = {};
         ArtnetGnS.crossfaders = {};
+        ArtnetGnS.channelLabelValues = {};
         __decorate([
             Metadata_1.property('all groups to value'),
             Metadata_1.min(0),
@@ -477,6 +511,15 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "fixtureFadeTo", null);
         __decorate([
+            Metadata_1.callable('fade fixture to label'),
+            __param(0, Metadata_1.parameter('fixtureName')),
+            __param(1, Metadata_1.parameter('label')),
+            __param(2, Metadata_1.parameter('duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "fixtureFadeToLabel", null);
+        __decorate([
             Metadata_1.callable('fade fixture channels'),
             __param(0, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
             __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
@@ -486,6 +529,16 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             __metadata("design:paramtypes", [String, String, Number, Number]),
             __metadata("design:returntype", Promise)
         ], ArtnetGnS.prototype, "fixtureChannelsFadeTo", null);
+        __decorate([
+            Metadata_1.callable('fade fixture channels to label'),
+            __param(0, Metadata_1.parameter('fixtureName')),
+            __param(1, Metadata_1.parameter('channelName, channelName, channelName')),
+            __param(2, Metadata_1.parameter('label')),
+            __param(3, Metadata_1.parameter('duration in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "fixtureChannelsFadeToLabel", null);
         __decorate([
             Metadata_1.callable('settings for groupAddFixtures and sceneAddFixtures'),
             __param(0, Metadata_1.parameter('defaults to "' + CHANNEL_NAME_PREFIX + '"')),
@@ -594,6 +647,16 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "crossfaderFadeTo", null);
         __decorate([
+            Metadata_1.callable('define label'),
+            __param(0, Metadata_1.parameter('label name')),
+            __param(1, Metadata_1.parameter('value (0..1)')),
+            __param(2, Metadata_1.parameter('fixtureName')),
+            __param(3, Metadata_1.parameter('channelName, channelName, channelName', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, Number, String, String]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "labelDefine", null);
+        __decorate([
             Metadata_1.callable('add fixtures to scene'),
             __param(0, Metadata_1.parameter('scene name')),
             __param(1, Metadata_1.parameter('fixtureName, fixtureName, fixtureName')),
@@ -650,6 +713,18 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             __metadata("design:paramtypes", [String, String, String, String, Number]),
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "sceneAddExecute", null);
+        __decorate([
+            Metadata_1.callable('add fade to label to scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('label')),
+            __param(2, Metadata_1.parameter('fixtureName')),
+            __param(3, Metadata_1.parameter('channelName, channelName, channelName', true)),
+            __param(4, Metadata_1.parameter('duration in seconds', true)),
+            __param(5, Metadata_1.parameter('delay in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String, String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneAddChannelsFadeToLabel", null);
         __decorate([
             Metadata_1.callable('call scene'),
             __param(0, Metadata_1.parameter('scene name')),
@@ -845,6 +920,12 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             }
             this.applyChanges();
         };
+        ArtnetScene.prototype.addChannelsFadeToLabel = function (fixtureName, channels, label, duration, delay) {
+            for (var i = 0; i < channels.length; i++) {
+                this.addChannelFadeToLabelInternal(fixtureName, channels[i], label, duration, delay);
+            }
+            this.applyChanges();
+        };
         ArtnetScene.prototype.addGroup = function (group, value, duration, delay) {
             this.addGroupInternal(group, value, duration, delay);
             this.applyChanges();
@@ -880,6 +961,9 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
         };
         ArtnetScene.prototype.addChannelInternal = function (channel, value, duration, delay) {
             this.sceneItems.push(new ArtnetSceneChannel(channel, value, duration, delay));
+        };
+        ArtnetScene.prototype.addChannelFadeToLabelInternal = function (fixtureName, channel, label, duration, delay) {
+            this.sceneItems.push(new ArtnetSceneChannelFadeToLabel(fixtureName, channel, label, duration, delay));
         };
         ArtnetScene.prototype.addGroupInternal = function (group, value, duration, delay) {
             this.sceneItems.push(new ArtnetSceneGroup(group, value, duration, delay));
@@ -988,6 +1072,22 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             this.channel.fadeTo(this.value * this.channel.maxValue, timefactor ? timefactor * this.duration : this.duration);
         };
         return ArtnetSceneChannel;
+    }(ArtnetSceneItem));
+    var ArtnetSceneChannelFadeToLabel = (function (_super) {
+        __extends(ArtnetSceneChannelFadeToLabel, _super);
+        function ArtnetSceneChannelFadeToLabel(fixtureName, channel, label, duration, delay) {
+            var _this = _super.call(this, duration, delay) || this;
+            _this.channel = channel;
+            _this.valuePath = ArtnetGnS.renderValuePath(fixtureName, channel.name, label);
+            return _this;
+        }
+        ArtnetSceneChannelFadeToLabel.prototype.call = function (timefactor) {
+            var value = ArtnetGnS.channelLabelValues[this.valuePath];
+            if (value) {
+                this.channel.fadeTo(value * this.channel.maxValue, timefactor ? timefactor * this.duration : this.duration);
+            }
+        };
+        return ArtnetSceneChannelFadeToLabel;
     }(ArtnetSceneItem));
     var ArtnetSceneGroup = (function (_super) {
         __extends(ArtnetSceneGroup, _super);
