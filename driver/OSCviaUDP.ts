@@ -54,15 +54,15 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
     public sendMessage(
         @Meta.parameter('OSC address')
         address: string,
-        @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".')
-        valueList: string,
+        @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)
+        valueList?: string,
     ) {
         var tagsAndBytes: {} =
         {
             tags: ',',
             bytes: []
         }
-        this.parseValueList(valueList, tagsAndBytes);
+        this.parseValueList(valueList ? valueList : '', tagsAndBytes);
 
         var bytes: number[] = [];
 
