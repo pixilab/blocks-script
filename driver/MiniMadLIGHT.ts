@@ -4,14 +4,23 @@
 
  	Copyright (c) 2020 No Parking Production ApS, Denmark (https://noparking.dk). All Rights Reserved.
 	Created by: Samuel Walz <mail@samwalz.com>
-  Version: 0.1
+  Version: 0.1.1
+  - OSC documentation was wrong about index and name commands
  */
 
 import * as Meta from 'system_lib/Metadata';
 import { OSCviaUDP } from './OSCviaUDP';
+import { NetworkUDP } from '../system/Network';
 
 @Meta.driver('NetworkUDP', { port: 8010 })
 export class MiniMadLIGHT extends OSCviaUDP {
+
+    public constructor(socket: NetworkUDP) {
+        super(socket);
+        socket.subscribe('textReceived', (sender, message) => {
+			console.log(message.text);
+		});
+    }
 
     @Meta.callable('pauses the playback')
     public pause(): void {
@@ -26,12 +35,12 @@ export class MiniMadLIGHT extends OSCviaUDP {
         this.sendMessage('/replay');
     }
     @Meta.callable('previous sequence')
-    public previousMedia(): void {
-        this.sendMessage('/previous_sequence');
+    public previousSequence(): void {
+        this.sendMessage('/previous_media');
     }
     @Meta.callable('next sequence')
-    public nextMedia(): void {
-        this.sendMessage('/next_sequence');
+    public nextSequence(): void {
+        this.sendMessage('/next_media');
     }
     @Meta.callable('set playback mode')
     public setPlaybackMode(
@@ -41,18 +50,18 @@ export class MiniMadLIGHT extends OSCviaUDP {
         this.sendMessage('/set_playback_mode/' + modeIndex);
     }
     @Meta.callable('set the current sequence by name, example: "light_sequence_3" to play the sequence called light_sequence_3')
-    public setMediaByName(
+    public setSequenceByName(
         @Meta.parameter('sequence name')
         name: string
     ): void {
-        this.sendMessage('/set_sequence_by_name/' + name);
+        this.sendMessage('/media_name/' + name);
     }
     @Meta.callable('set the current sequence by index')
-    public setMediaByIndex(
+    public setSequenceByIndex(
         @Meta.parameter('sequence index')
         index: number
     ): void {
-        this.sendMessage('/set_sequence_by_idex/' + index);
+        this.sendMessage('/media_index/' + index);
     }
     @Meta.callable('set the master audio-level')
     public setMasterAudioLevel(
@@ -64,7 +73,7 @@ export class MiniMadLIGHT extends OSCviaUDP {
         this.sendMessage('/set_master_audio_level', audioLevelString);
     }
     @Meta.callable('set the master luminosity')
-    public setMasterAudioLuminosity(
+    public setMasterLuminosity(
         @Meta.parameter('luminosity level')
         luminosityLevel: number
     ): void {

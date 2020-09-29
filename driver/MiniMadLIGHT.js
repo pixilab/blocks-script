@@ -29,8 +29,12 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
     exports.MiniMadLIGHT = void 0;
     var MiniMadLIGHT = (function (_super) {
         __extends(MiniMadLIGHT, _super);
-        function MiniMadLIGHT() {
-            return _super !== null && _super.apply(this, arguments) || this;
+        function MiniMadLIGHT(socket) {
+            var _this = _super.call(this, socket) || this;
+            socket.subscribe('textReceived', function (sender, message) {
+                console.log(message.text);
+            });
+            return _this;
         }
         MiniMadLIGHT.prototype.pause = function () {
             this.sendMessage('/pause');
@@ -41,20 +45,20 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
         MiniMadLIGHT.prototype.replay = function () {
             this.sendMessage('/replay');
         };
-        MiniMadLIGHT.prototype.previousMedia = function () {
-            this.sendMessage('/previous_sequence');
+        MiniMadLIGHT.prototype.previousSequence = function () {
+            this.sendMessage('/previous_media');
         };
-        MiniMadLIGHT.prototype.nextMedia = function () {
-            this.sendMessage('/next_sequence');
+        MiniMadLIGHT.prototype.nextSequence = function () {
+            this.sendMessage('/next_media');
         };
         MiniMadLIGHT.prototype.setPlaybackMode = function (modeIndex) {
             this.sendMessage('/set_playback_mode/' + modeIndex);
         };
-        MiniMadLIGHT.prototype.setMediaByName = function (name) {
-            this.sendMessage('/set_sequence_by_name/' + name);
+        MiniMadLIGHT.prototype.setSequenceByName = function (name) {
+            this.sendMessage('/media_name/' + name);
         };
-        MiniMadLIGHT.prototype.setMediaByIndex = function (index) {
-            this.sendMessage('/set_sequence_by_idex/' + index);
+        MiniMadLIGHT.prototype.setSequenceByIndex = function (index) {
+            this.sendMessage('/media_index/' + index);
         };
         MiniMadLIGHT.prototype.setMasterAudioLevel = function (audioLevel) {
             var audioLevelString = audioLevel.toString();
@@ -62,7 +66,7 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
                 audioLevelString += '.0';
             this.sendMessage('/set_master_audio_level', audioLevelString);
         };
-        MiniMadLIGHT.prototype.setMasterAudioLuminosity = function (luminosityLevel) {
+        MiniMadLIGHT.prototype.setMasterLuminosity = function (luminosityLevel) {
             var luminosityLevelString = luminosityLevel.toString();
             if (luminosityLevelString.indexOf('.') === -1)
                 luminosityLevelString += '.0';
@@ -91,13 +95,13 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", void 0)
-        ], MiniMadLIGHT.prototype, "previousMedia", null);
+        ], MiniMadLIGHT.prototype, "previousSequence", null);
         __decorate([
             Meta.callable('next sequence'),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", void 0)
-        ], MiniMadLIGHT.prototype, "nextMedia", null);
+        ], MiniMadLIGHT.prototype, "nextSequence", null);
         __decorate([
             Meta.callable('set playback mode'),
             __param(0, Meta.parameter('playback mode index')),
@@ -111,14 +115,14 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
-        ], MiniMadLIGHT.prototype, "setMediaByName", null);
+        ], MiniMadLIGHT.prototype, "setSequenceByName", null);
         __decorate([
             Meta.callable('set the current sequence by index'),
             __param(0, Meta.parameter('sequence index')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
-        ], MiniMadLIGHT.prototype, "setMediaByIndex", null);
+        ], MiniMadLIGHT.prototype, "setSequenceByIndex", null);
         __decorate([
             Meta.callable('set the master audio-level'),
             __param(0, Meta.parameter('audio level')),
@@ -132,9 +136,10 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
-        ], MiniMadLIGHT.prototype, "setMasterAudioLuminosity", null);
+        ], MiniMadLIGHT.prototype, "setMasterLuminosity", null);
         MiniMadLIGHT = __decorate([
-            Meta.driver('NetworkUDP', { port: 8010 })
+            Meta.driver('NetworkUDP', { port: 8010 }),
+            __metadata("design:paramtypes", [Object])
         ], MiniMadLIGHT);
         return MiniMadLIGHT;
     }(OSCviaUDP_1.OSCviaUDP));

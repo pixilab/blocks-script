@@ -152,7 +152,7 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         tagsAndBytes: {}
     ) {
         var abs: number = Math.abs(value);
-        if (abs > MIN_ABS_FLOAT32 &&
+        if (//abs > MIN_ABS_FLOAT32 &&
             valueString.length <= 7) {
             tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT32;
             this.addRange(tagsAndBytes['bytes'], this.getFloat32Bytes(value));
