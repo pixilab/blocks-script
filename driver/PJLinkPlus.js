@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -152,6 +152,9 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             return _this;
         }
         PJLinkPlus_1 = PJLinkPlus;
+        PJLinkPlus.prototype.isOfTypeName = function (typeName) {
+            return typeName === "PJLinkPlus" ? this : _super.prototype.isOfTypeName.call(this, typeName);
+        };
         PJLinkPlus.prototype.storePassword = function (password) {
             if (!this.configuration) {
                 this.configuration = new PJLinkConfiguration();

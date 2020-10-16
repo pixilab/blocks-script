@@ -33,6 +33,13 @@ export class TCP_Input extends Driver<NetworkTCP> {
 	}
 
 	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "TCP_Input" ? this : null;
+	}
+
+	/**
 	 * Provide sendText passthrough, allowing the driver to be used to test itself by
 	 * setting the same port number for output and input, and running on localhost.
 	 */

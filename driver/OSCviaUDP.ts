@@ -50,6 +50,13 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         // });
     }
 
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "OSCviaUDP" ? this : null;
+	}
+
     @Meta.callable('send OSC message')
     public sendMessage(
         @Meta.parameter('OSC address')

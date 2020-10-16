@@ -15,6 +15,13 @@ import { OSCviaUDP } from './OSCviaUDP';
 @Meta.driver('NetworkUDP', { port: 8010 })
 export class MiniMadVIDEO extends OSCviaUDP {
 
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "MiniMadVIDEO" ? this : super.isOfTypeName(typeName);
+	}
+
     @Meta.callable('pauses the playback')
     public pause(): void {
         this.sendMessage('/pause');

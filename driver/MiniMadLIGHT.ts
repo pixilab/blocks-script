@@ -22,6 +22,13 @@ export class MiniMadLIGHT extends OSCviaUDP {
 		});
     }
 
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "MiniMadLIGHT" ? this : super.isOfTypeName(typeName);
+	}
+
     @Meta.callable('pauses the playback')
     public pause(): void {
         this.sendMessage('/pause');
