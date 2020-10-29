@@ -200,7 +200,7 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 * step. This is useful if you already know the name of the
 	 * spot.
 	 *
-	 * To cancel any current location, pass empty string
+	 * To end any current location, pass empty string
 	 * as location.
 	 */
 	locateSpot(location: string, isSpotPath?: boolean): void;
@@ -279,3 +279,4 @@ export interface VirtualSpot extends SpotGroupItem, BaseSpot {
 			'Active'			// Spot activated by accessing its Location ID
 	})=>void): void;
 }
+

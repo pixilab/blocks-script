@@ -128,27 +128,27 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             this.manageTicking();
         };
         __decorate([
-            Metadata_1.property("Number of minutes remaining (2 digits)"),
+            Metadata_1.property("Number of minutes remaining (always 2 digits)"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], Countdown.prototype, "minutes", null);
         __decorate([
-            Metadata_1.property("Number of seconds remaining (2 digits)"),
+            Metadata_1.property("Number of seconds remaining (always 2 digits)"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], Countdown.prototype, "seconds", null);
         __decorate([
-            Metadata_1.property("Timer is at time zero"),
+            Metadata_1.property("True when the timer is at time zero"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], Countdown.prototype, "zero", null);
         __decorate([
-            Metadata_1.property("Counter is running"),
+            Metadata_1.property("Countdown is running (true) or paused (false)"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], Countdown.prototype, "running", null);
         __decorate([
-            Metadata_1.callable("Start countdown at specified time"),
+            Metadata_1.callable("Start countdown from specified time"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Number]),
             __metadata("design:returntype", void 0)
