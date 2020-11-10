@@ -35,6 +35,8 @@ export interface Timeline {
 }
 
 export interface WATCHOUTCluster extends Timeline {
+	showName: string;	// Name of the currently loaded show
+
 	connect(): Promise<any>;
 	disconnect(): void;
 	isConnected(): boolean;

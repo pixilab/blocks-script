@@ -37,10 +37,23 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             _this.mCurrentInput = "BROWSER";
+            _this.mPower = true;
+            _this.mVolume = 50;
             socket.autoConnect(true);
             return _this;
         }
         PhilipsSICP_1 = PhilipsSICP;
+        Object.defineProperty(PhilipsSICP.prototype, "power", {
+            get: function () {
+                return this.mPower;
+            },
+            set: function (on) {
+                this.mPower = on;
+                this.sendCommand(0x18, on ? 2 : 1);
+            },
+            enumerable: false,
+            configurable: true
+        });
         Object.defineProperty(PhilipsSICP.prototype, "currentInput", {
             get: function () {
                 return this.mCurrentInput;
@@ -49,12 +62,41 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 var inputNumber = PhilipsSICP_1.nameToInput[name];
                 if (inputNumber === undefined)
                     throw "Bad input name";
-                this.sendCommand(inputNumber, 9, 1, 0);
+                this.sendCommand(0xAC, inputNumber, 9, 1, 0);
                 this.mCurrentInput = name;
             },
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(PhilipsSICP.prototype, "volume", {
+            get: function () {
+                return this.mVolume / 100;
+            },
+            set: function (value) {
+                var devVol = Math.round(value * 100);
+                if (devVol !== this.mVolume) {
+                    this.mVolume = devVol;
+                    if (this.mDefVolHoldoff)
+                        this.mDefVolume = true;
+                    else
+                        this.sendVolume();
+                }
+            },
+            enumerable: false,
+            configurable: true
+        });
+        PhilipsSICP.prototype.sendVolume = function () {
+            var _this = this;
+            this.sendCommand(0x44, this.mVolume, this.mVolume);
+            this.mDefVolHoldoff = wait(200);
+            this.mDefVolHoldoff.then(function () {
+                _this.mDefVolHoldoff = undefined;
+                if (_this.mDefVolume) {
+                    _this.mDefVolume = false;
+                    _this.sendVolume();
+                }
+            });
+        };
         PhilipsSICP.prototype.sendCommand = function () {
             var commandBytes = [];
             for (var _i = 0; _i < arguments.length; _i++) {
@@ -64,8 +106,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             fullCommand.push(0x00);
             fullCommand.push(0x01);
             fullCommand.push(0x00);
-            fullCommand.push(0xAC);
-            fullCommand.splice.apply(fullCommand, __spreadArrays([4, 0], commandBytes));
+            fullCommand.splice.apply(fullCommand, __spreadArrays([3, 0], commandBytes));
             fullCommand[0] = fullCommand.length + 1;
             this.addChecksum(fullCommand);
             this.socket.sendBytes(fullCommand);
@@ -104,10 +145,22 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             "DISPLAY PORT 2": 0x07
         };
         __decorate([
+            Meta.property("Display power"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], PhilipsSICP.prototype, "power", null);
+        __decorate([
             Meta.property("Input to be displayed, by name"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], PhilipsSICP.prototype, "currentInput", null);
+        __decorate([
+            Meta.property("Audio volume"),
+            Meta.min(0),
+            Meta.max(1),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], PhilipsSICP.prototype, "volume", null);
         PhilipsSICP = PhilipsSICP_1 = __decorate([
             Meta.driver('NetworkTCP', { port: 5000 }),
             __metadata("design:paramtypes", [Object])
