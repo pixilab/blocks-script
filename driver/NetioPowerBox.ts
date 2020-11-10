@@ -24,6 +24,7 @@ interface netioOuput {
 	Delay: number;
 }
 
+
 /**
  * Main class
  * @export
@@ -82,7 +83,7 @@ export class NetioPowerBox extends Driver<NetworkTCP> {
 				// direct change value
 				theOutlet1.State = val ? 1 : 0;
 
-				SimpleHTTP.newRequest(`http://${this.socket.address}/netio.json`).post(`{ "Outputs":[ { "ID":"${outletNumber}", "Action":"${val ? 1 : 0}" } ] }`).then((result) => {
+				SimpleHTTP.newRequest(`http://${this.socket.address}/netio.json`).post(`{ "Outputs":[ { "ID":"${outletNumber}", "Action":"${val ? 1 : 0}" } ] }`,'application/json').then((result) => {
 					this.connected = true;
 					let jsonObj = JSON.parse(result.data);
 					this.outputs = jsonObj.Outputs;
