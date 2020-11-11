@@ -61,7 +61,7 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
                 if (val !== undefined) {
                     var theOutlet1 = _this.outputs.filter(function (x) { return x.ID == 1; })[0];
                     theOutlet1.State = val ? 1 : 0;
-                    SimpleHTTP_1.SimpleHTTP.newRequest("http://" + _this.socket.address + "/netio.json").post("{ \"Outputs\":[ { \"ID\":\"" + outletNumber + "\", \"Action\":\"" + (val ? 1 : 0) + "\" } ] }").then(function (result) {
+                    SimpleHTTP_1.SimpleHTTP.newRequest("http://" + _this.socket.address + "/netio.json").post("{ \"Outputs\":[ { \"ID\":\"" + outletNumber + "\", \"Action\":\"" + (val ? 1 : 0) + "\" } ] }", 'application/json').then(function (result) {
                         _this.connected = true;
                         var jsonObj = JSON.parse(result.data);
                         _this.outputs = jsonObj.Outputs;
