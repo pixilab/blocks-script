@@ -73,6 +73,12 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	address: string;
 
 	/**
+	 * Identification, based on MAC address, serial number, given ID, or similar
+	 * system-unique value.
+	 */
+	identity: string;
+
+	/**
 	 * Load a Block with priority. Returns a promise that's fulfilled once
 	 * the block is loaded, or rejected if the loading fails. Block name
 	 * is in "group/leaf" form. Setting to null or empty string reverts to
@@ -83,8 +89,9 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	/**
 	 * Reload the current block. Occasionally useful after making server-side changes to
 	 * a block programmatically, or to reload a WebBlock that changed for other reasons.
+	 * Optionally, reload the entire web page (essentially performing a browser "reset").
 	 */
-	reload(): void;
+	reload(reloadBrowser?:boolean): void;
 
 	/**
 	 * Turn power on/off, if possible.

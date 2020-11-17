@@ -10,7 +10,6 @@ import {ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
  */
 export class Script extends ScriptBase<ScriptEnv> {
 
-
 	/**
 	 * Connect to the property at the specified full (dot-separated) path. Pass
 	 * a callback function to be notified when the value of the property changes.
@@ -69,5 +68,4 @@ export interface ScriptEnv extends ScriptBaseEnv {
 	establishChannel(name: string, listener: Function): void;
 	sendOnChannel(name: string, data: string):void;
 	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
-
 }

@@ -1,7 +1,7 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.resource = exports.max = exports.min = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.driver = void 0;
+    exports.resource = exports.max = exports.min = exports.list = exports.id = exports.field = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.driver = void 0;
     function driver(baseDriverType, typeSpecificMeta) {
         var info = {
             paramTypes: [baseDriverType],
@@ -19,51 +19,11 @@ define(["require", "exports"], function (require, exports) {
     }
     exports.roleRequired = roleRequired;
     function property(description, readOnly) {
-        return function (target, propName, prop) {
-            var origSetter = prop.set;
-            var constrMin;
-            var constrMax;
-            var constr;
-            if (!prop.enumerable && prop.configurable) {
-                prop.enumerable = true;
-                Object.defineProperty(target, propName, prop);
-            }
-            if (origSetter) {
-                prop.set = function (newValue) {
-                    var oldValue = prop.get.call(this);
-                    if (typeof newValue === 'number') {
-                        if (!constr) {
-                            constrMin = Reflect.getMetadata("pixi:min", target, propName);
-                            constrMax = Reflect.getMetadata("pixi:max", target, propName);
-                            constr = true;
-                        }
-                        if (constrMin !== undefined)
-                            newValue = Math.max(newValue, constrMin);
-                        if (constrMax !== undefined)
-                            newValue = Math.min(newValue, constrMax);
-                    }
-                    origSetter.call(this, newValue);
-                    newValue = prop.get.call(this);
-                    if (oldValue !== newValue)
-                        this.__scriptFacade.firePropChanged(propName);
-                };
-            }
-            Reflect.defineMetadata('pixi:property', description || "", target, propName);
-            if (readOnly)
-                Reflect.defineMetadata('pixi:readOnly', true, target, propName);
-            return prop;
-        };
+        return $metaSupport$.property(description, readOnly);
     }
     exports.property = property;
     function callable(description) {
-        return function (target, propertyKey, descriptor) {
-            var func = target[propertyKey];
-            var info = {
-                descr: description || "",
-                args: getArgs(func)
-            };
-            return Reflect.defineMetadata("pixi:callable", info, target, propertyKey);
-        };
+        return $metaSupport$.callable(description);
     }
     exports.callable = callable;
     function parameter(description, optional) {
@@ -77,14 +37,26 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.parameter = parameter;
+    function field(description) {
+        return $metaSupport$.fieldMetadata({ description: description });
+    }
+    exports.field = field;
+    function id(description) {
+        return $metaSupport$.fieldMetadata({ description: description, id: true });
+    }
+    exports.id = id;
+    function list(ofType, description) {
+        return $metaSupport$.fieldMetadata({ description: description, list: ofType });
+    }
+    exports.list = list;
     function min(min) {
-        return function (target, propertyKey, descriptor) {
+        return function (target, propertyKey) {
             Reflect.defineMetadata("pixi:min", min, target, propertyKey);
         };
     }
     exports.min = min;
     function max(max) {
-        return function (target, propertyKey, descriptor) {
+        return function (target, propertyKey) {
             Reflect.defineMetadata("pixi:max", max, target, propertyKey);
         };
     }
@@ -98,15 +70,4 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.resource = resource;
-    function getArgs(func) {
-        var args = func.toString().match(funcArgsRegEx)[1];
-        return args.split(',')
-            .map(function (arg) {
-            return arg.replace(parNameRegEx, '').trim();
-        }).filter(function (arg) {
-            return arg;
-        });
-    }
-    var funcArgsRegEx = /function\s.*?\(([^)]*)\)/;
-    var parNameRegEx = /\/\*.*\*\//;
 });

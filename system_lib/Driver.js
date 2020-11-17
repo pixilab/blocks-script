@@ -31,7 +31,7 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
             if (scriptFacade.isOfTypeName("NetworkTCP")) {
                 scriptFacade.subscribe('connect', function (sender, message) {
                     if (message.type === 'Connection')
-                        _this.__scriptFacade.firePropChanged('connected');
+                        _this.__scriptFacade.changed('connected');
                 });
             }
             return _this;

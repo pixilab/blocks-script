@@ -1,7 +1,12 @@
 /*
  * Basic functions for reading/writing/moving and deleting files.
- * By default (if a relative path or plain name is specified), files are assumed to live under script/files.
- * Alternatively, you can specify one of the follwing absolute paths:
+ *
+ * Text files must be UTF-8 encoded (or pure ASCII, which is a subset of UTF-8).
+ *
+ * By default (if a relative path or dile name is specified), files are assumed
+ * to live under script/files. Alternatively, you can specify one of the follwing
+ * absolute paths:
+ *
  * /public/*	Specifies a path under public
  * /temp/*		Specifies a path under temp
  *
@@ -29,6 +34,34 @@ export var SimpleFile: {
 	 * of the file once done, or rejecting it if the operation fails.
 	 */
 	read(fileName:string): Promise<string>;
+
+	/**
+	 * Read data from a CSV file, returning it as an array-like object, with
+	 * each element holding the data of one row, as an object with key:value
+	 * pairs, where the key is the name of the column and the value is the data
+	 * in the column for that row. The first line of the CSV file is assumed
+	 * to contain the column names.
+	 */
+	readCsv(fileName:string, options?: CsvOptions): Promise<any[]>;
+
+
+	/**
+	 * Read data from an XML file, returning it as an object, corresponding to
+	 * the root element in the XML file. Attributes are provided as named
+	 * properties. Nested content is provided as an attribute with the
+	 * empty string as its key.
+	 */
+	readXml(fileName:string): Promise<any[]>;
+
+	/**
+	 * Read data from a JSON file, returning it as an object, or an array-
+	 * like object (if the outermist JSON data is array). Fields in objects
+	 * hold primitive data and other, nested objects. This method of reading
+	 * JSON data is more efficient than reading it as text using the plain read call
+	 * and then converting it to JSON using the JSON.parse() method.
+	 */
+	readJson(fileName:string): Promise<any[]>;
+
 
 	/**
 	 * Move a file from src to dest. If dest exists and replace is true, then
@@ -85,4 +118,13 @@ export var SimpleFile: {
 export interface DirInfo {
 	files: string[];			// Plain files found in the specified directory
 	directories: string[];		// Subdirectories found in the specified directory
+}
+
+/**
+ * Configuation options for the readCsv method,
+ */
+interface CsvOptions {
+	columnSeparator?: string, // Separator character (default is ',' other common option is '\t')
+	escapeChar?: string,		// Escape character (default is none)
+	quote?: string | false 	// Quote charagter to use. None if false. (default is '"')
 }

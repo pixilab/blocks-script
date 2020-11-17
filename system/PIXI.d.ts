@@ -78,7 +78,7 @@ declare class Promise<T> implements Thenable<T> {
 	static race<R>(promises: (R | Thenable<R>)[]): Promise<R>;
 
 	/**
-	 * Make a new promise from the thenable.
+	 * Make a new promise from ultimate value or thenable.
 	 */
 	static resolve(): Promise<void>;
 	static resolve<R>(value: R | Thenable<R>): Promise<R>;

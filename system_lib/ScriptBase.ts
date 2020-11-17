@@ -4,6 +4,8 @@
 
 import {SetterGetter, SGOptions} from "system/PubSub";
 
+
+interface Ctor<T> { new(... args: any[]): T ;}
 /**
  * Common stuff shared between user scripts and drivers.
  */
@@ -14,7 +16,7 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 		this.__scriptFacade = scriptFacade;
 	}
 
-	/** Expose a dynamic property of type T with specified name and options.
+	/** Expose a named property of primitive type T with specified options and getter/setter function.
 	 */
 	property<T>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): void {
 		this.__scriptFacade.property(name, options, gsFunc);
@@ -35,17 +37,33 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 				set: function (value) {
 					const oldValue = gsFunc();
 					if (oldValue !== gsFunc(value))
-						this.__scriptFacade.firePropChanged(name);
+						this.__scriptFacade.changed(name);
 				}
 			});
 		}
 	}
 
+	/**
+	 * Expose a named and indexed property of object type T.
+	 */
+	indexedProperty<T>(
+		name: string, 		// Name of the indexed property
+		itemType: Ctor<T>	// Type of elements held
+	): IndexedProperty<T> {
+		return this.__scriptFacade.indexedProperty(name, itemType);
+	}
+
 	/**	Inform others that prop has changed, causing any
 	 *	subscribers to be notified soon.
+	 *
+	 *  NOTE: I used to alternatively accept a function (then using its
+	 *  name) in Blocks <= 4.3. Newer code should use property name
+	 *  only (while the underlying implementation will still accept
+	 *  a function for the forseeable future for the sake of
+	 *  backward compatibility)
 	 */
-	changed(prop: string|Function): void {
-		this.__scriptFacade.changed(prop);
+	changed(propName: string): void {
+		this.__scriptFacade.changed(propName);
 	}
 
 	/**
@@ -55,21 +73,45 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 	makeJSArray(arr: any[]) {
 		if (Array.isArray(arr))
 			return arr;	// Already seems kosher
-
-		const arrayLike: any[] = arr; // Needed since TS compiler thinks it knows better
+		/*	Casts below required to convince TS compiler that arr is indeed
+			sufficiently array-like to provide length and indexed access,
+			even past the isArray check above.
+		 */
 		const result = [];
-		for (var i = 0; i < arrayLike.length; ++i)
-			result.push(arrayLike[i]);
+		const length = (<any[]>arr).length;
+		for (var i = 0; i < length; ++i)
+			result.push((<any[]>arr)[i]);
 		return result;
 	}
 }
 
-// Common script environment used by all script objects
-export interface ScriptBaseEnv {
+
+/**
+ * An array-like type holding "indexed items".
+ */
+export interface IndexedProperty<T> {
+
+	[index:number] : T;	// Read-only array-like object
+
+	/**
+	 * Add an item to my list. Items can not be removed, and will be published
+	 * with an index range corresponding to the number of elements.
+	 */
+	push(item: T): void
+
+
+	/**
+	 * Number of items in me.
+	 */
+	length: number;
+}
+
+// Common environment used by user scripts as well as device drivers
+export interface ScriptBaseEnv  {
 	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 
-	// Following are internal implementation details - not for direct client access
-	property(p1: any, p2?: any, p3?: any): void;
-	changed(prop: string|Function): void;
-	firePropChanged(prop: string): void;
+	// Following are INTERNAL implementation details only. DO NOT CALL directly from scripts/drivers!
+	changed(prop: string): void; // Named child property has changed
+	property(name: string, options: SGOptions, gsFunc: SetterGetter<any>): void;
+	indexedProperty<T>(name: string, elemType: Ctor<T>): T[];
 }
