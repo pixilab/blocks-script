@@ -174,6 +174,7 @@ export class PJLink extends NetworkProjector {
 	 Got data from peer. Handle initial handshake, as well as command/query response.
 	 */
 	protected textReceived(text: string): void {
+		text = text.toUpperCase();	// Some brands send lower case responses
 		if (text.indexOf('PJLINK ') === 0) {	// Initial handshake sent spontaneously by projector
 			if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0))
 				this.errorMsg("PJLink authentication not supported");

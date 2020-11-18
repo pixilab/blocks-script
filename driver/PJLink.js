@@ -126,6 +126,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             return result;
         };
         PJLink.prototype.textReceived = function (text) {
+            text = text.toUpperCase();
             if (text.indexOf('PJLINK ') === 0) {
                 if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0))
                     this.errorMsg("PJLink authentication not supported");
