@@ -27,6 +27,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NumState = exports.BoolState = exports.State = exports.NetworkProjector = void 0;
+    var REQUEST_TIMEOUT = 8000;
     var NetworkProjector = (function (_super) {
         __extends(NetworkProjector, _super);
         function NetworkProjector(socket) {
@@ -216,7 +217,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 _this.currResolver = resolve;
                 _this.currRejector = reject;
             });
-            this.cmdTimeout = wait(4000);
+            this.cmdTimeout = wait(REQUEST_TIMEOUT);
             this.cmdTimeout.then(function () {
                 return _this.requestFailure("Timeout for " + cmd);
             });

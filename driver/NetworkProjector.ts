@@ -7,6 +7,8 @@ import {NetworkTCP} from "system/Network";
 import {callable, parameter, property} from "system_lib/Metadata";
 import {Driver} from "system_lib/Driver";
 
+const REQUEST_TIMEOUT = 8000;
+
 /**
  Common functionality needed by projectors controlled over the network.
  */
@@ -331,7 +333,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 			this.currResolver = resolve;
 			this.currRejector = reject;
 		});
-		this.cmdTimeout = wait(4000);	// Should be ample time to respond
+		this.cmdTimeout = wait(REQUEST_TIMEOUT);	// Should be ample time to respond
 		this.cmdTimeout.then(() =>
 			this.requestFailure("Timeout for " + cmd)
 		);

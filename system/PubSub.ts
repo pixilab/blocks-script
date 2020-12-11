@@ -6,7 +6,8 @@
 
 
 /**
- * A function that will set the value if its parameter is defined. Always returns the current value.
+ * A function that will set the value if its parameter is defined.
+ * Always returns the current value.
  */
 export interface SetterGetter<T> {
 	(setValue?: T): T;
@@ -37,12 +38,12 @@ export type PrimTypeSpecifier =
 
 
 /*
- * REMAINDER IS DEPRECATED! These features should *not* be used for class-based
+ * REMAINDER IS DEPRECATED FOR REMOVAL!
+ * These features should *not* be used for class-based
  * custom script development. Use property() and changed() provided through the
  * base-class instead, and use the @property and @callable annotations
  * to expose static properties and functions.
- */
-
+ *
 interface PubSubber {
 	property<T>(name: string, options: SGOptions, setGetFunc: SetterGetter<T>): void;
 	property<T>(options: SGOptions, setGetFunc: SetterGetter<T>): void;
@@ -53,4 +54,4 @@ interface PubSubber {
 }
 export var PubSub: PubSubber;
 interface Listener<T> {(message?: T): void;}
-
+*/

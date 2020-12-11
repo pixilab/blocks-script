@@ -256,9 +256,15 @@ export class PJLinkPlus extends NetworkProjector {
             this.poll();
             this.attemptConnect();
         });
-
-
     }
+
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "PJLinkPlus" ? this : super.isOfTypeName(typeName);
+	}
+
     private storePassword (password: string) : Promise<void> {
         if (!this.configuration) {
             this.configuration = new PJLinkConfiguration();
@@ -375,27 +381,27 @@ export class PJLinkPlus extends NetworkProjector {
     public get powerStatus() : number {
         return this._powerStatus;
     }
-    public set powerStatus(_value : number) {}
+    public set powerStatus(value: number) { this._powerStatus = value; }
     @property("Is device off?", true)
     public get isOff() : boolean {
         return this._isOff;
     }
-    public set isOff(value : boolean) {}
+    public set isOff(value: boolean) { this._isOff = value; }
     @property("Is device on?", true)
     public get isOn() : boolean {
         return this._isOn;
     }
-    public set isOn(value : boolean) {}
+    public set isOn(value: boolean) { this._isOn = value; }
     @property("Is device cooling?", true)
     public get isCooling() : boolean {
         return this._isCooling;
     }
-    public set isCooling(value : boolean) {}
+    public set isCooling(value: boolean) { this._isCooling = value; }
     @property("Is device warming up?", true)
     public get isWarmingUp() : boolean {
         return this._isWarmingUp;
     }
-    public set isWarmingUp(value : boolean) {}
+    public set isWarmingUp(value: boolean) { this._isWarmingUp = value; }
 
     /* input */
     @property('current input (class 1: 11-59 / class 2: 11-6Z)')
@@ -519,29 +525,28 @@ export class PJLinkPlus extends NetworkProjector {
 
     /* various information */
     @property('Projector/Display name (' + CMD_NAME + ')', true)
-    public get deviceName () : string {
-        return this._deviceName;
-    }
+    public get deviceName () : string { return this._deviceName; }
+    public set deviceName (value: string) { this._deviceName = value; }
+
     @property('Manufacture name (' + CMD_INF1 + ')', true)
-    public get manufactureName () : string {
-        return this._manufactureName;
-    }
+    public get manufactureName () : string { return this._manufactureName; }
+    public set manufactureName (value: string) { this._manufactureName = value; }
+
     @property('Product name (' + CMD_INF2 + ')', true)
-    public get productName () : string {
-        return this._productName;
-    }
+    public get productName () : string { return this._productName; }
+    public set productName (value: string) { this._productName = value; }
+
     @property('Other information (' + CMD_INFO + ')', true)
-    public get otherInformation () : string {
-        return this._otherInformation;
-    }
+    public get otherInformation () : string { return this._otherInformation; }
+    public set otherInformation (value: string) { this._otherInformation = value; }
+
     @property('Serial number (' + CMD_SNUM + ')', true)
-    public get serialNumber () : string {
-        return this._serialNumber;
-    }
+    public get serialNumber () : string { return this._serialNumber; }
+    public set serialNumber (value: string) { this._serialNumber = value; }
+
     @property('Software version (' + CMD_SVER + ')', true)
-    public get softwareVersion () : string {
-        return this._softwareVersion;
-    }
+    public get softwareVersion () : string { return this._softwareVersion; }
+    public set softwareVersion (value: string) { this._softwareVersion = value; }
 
     /* lamp properties */
     @property("Lamp count", true)
@@ -786,7 +791,10 @@ export class PJLinkPlus extends NetworkProjector {
             }
             this.queryRequest(query).then(
                 reply => {
-                    if (reply != ERR_1) {
+                    if (reply == ERR_1 || reply == ERR_2 || reply == ERR_3) {
+                        this.processInfoQueryError(query.command, reply);
+                        if (reply == ERR_1) reject('command not available: ' + query.command);
+                    } else {
                         if (LOG_DEBUG) console.log('got reply for \'' + this._currentParameter + '\':' + reply);
                         // successful fetch and parameter is not dynamic? cache & skip next time
                         if (!PJLinkPlus.isCommandDynamic(query.command)) {
@@ -794,10 +802,6 @@ export class PJLinkPlus extends NetworkProjector {
                             this.addCommandToSkip(query.command);
                         }
                         resolve(reply);
-                    } else {
-                        // PJLink perceives ERR_1 and ERR_2 as successful queries
-                        this.processInfoQueryError(query.command, reply);
-                        reject('command not available: ' + query.command);
                     }
                 },
                 error => {
@@ -852,10 +856,16 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     private processInfoQueryError (command : string, error : string) {
-        if (error == ERR_1) {
-            if (command == CMD_LAMP) this._hasLamps = false;
-            if (command == CMD_FILT) this._hasFilter = false;
-            this.skipDeviceParameters.push(command);
+        switch (error) {
+            case ERR_1:
+                if (command == CMD_LAMP) this._hasLamps = false;
+                if (command == CMD_FILT) this._hasFilter = false;
+                this.skipDeviceParameters.push(command);
+                break;
+            case ERR_2:
+                break;
+            case ERR_3:
+                break;
         }
     }
     private processInfoQueryReply (query : PJLinkQuery, reply : string) {
@@ -863,31 +873,14 @@ export class PJLinkPlus extends NetworkProjector {
             case CMD_POWR:
                 var newPowerStatus = parseInt(reply);
                 if (this._powerStatus != newPowerStatus) {
-                    this._powerStatus = newPowerStatus;
-                    this.changed('powerStatus');
-                    // also update PJLink base driver power status
-                    this._power.updateCurrent((parseInt(reply) & 1) != 0);
+                    this.powerStatus = newPowerStatus;
                     // updating detailed status
-                    var newIsOff = this._powerStatus == 0;
-                    var newIsOn = this._powerStatus == 1;
-                    var newIsCooling = this._powerStatus == 2;
-                    var newIsWarmingUp = this._powerStatus == 3;
-                    if (this._isOff != newIsOff) {
-                        this._isOff = newIsOff;
-                        this.changed('isOff');
-                    }
-                    if (this._isOn != newIsOn) {
-                        this._isOn = newIsOn;
-                        this.changed('isOn');
-                    }
-                    if (this._isCooling != newIsCooling) {
-                        this._isCooling = newIsCooling;
-                        this.changed('isCooling');
-                    }
-                    if (this._isWarmingUp != newIsWarmingUp) {
-                        this._isWarmingUp = newIsWarmingUp;
-                        this.changed('isWarmingUp');
-                    }
+                    this.isOff = this._powerStatus == 0;
+                    this.isOn = this._powerStatus == 1;
+                    this.isCooling = this._powerStatus == 2;
+                    this.isWarmingUp = this._powerStatus == 3;
+                    // also update PJLink based driver power status
+                    this._power.updateCurrent(this.isOn);
                 }
                 break;
             case CMD_INPT:
@@ -967,32 +960,16 @@ export class PJLinkPlus extends NetworkProjector {
                 }
                 break;
             case CMD_NAME:
-                var newDeviceName = reply;
-                if (this._deviceName != newDeviceName) {
-                    this._deviceName = newDeviceName;
-                    this.changed('deviceName');
-                }
+                this.deviceName = reply;
                 break;
             case CMD_INF1:
-                var newManufactureName = reply;
-                if (this._manufactureName != newManufactureName) {
-                    this._manufactureName = newManufactureName;
-                    this.changed('manufactureName');
-                }
+                this.manufactureName = reply;
                 break;
             case CMD_INF2:
-                var newProductName = reply;
-                if (this._productName != newProductName) {
-                    this._productName = newProductName;
-                    this.changed('productName');
-                }
+                this.productName = reply;
                 break;
             case CMD_INFO:
-                var newOtherInformation = reply;
-                if (this._otherInformation != newOtherInformation) {
-                    this._otherInformation = newOtherInformation;
-                    this.changed('otherInformation');
-                }
+                this.otherInformation = reply;
                 break;
             case CMD_CLSS:
                 this._class = parseInt(reply);
@@ -1005,18 +982,10 @@ export class PJLinkPlus extends NetworkProjector {
                 }
                 break;
             case CMD_SNUM:
-                var newSerialNumber = reply;
-                if (this._serialNumber != newSerialNumber) {
-                    this._serialNumber = newSerialNumber;
-                    this.changed('serialNumber');
-                }
+                this.serialNumber = reply;
                 break;
             case CMD_SVER:
-                var newSoftwareVersion = reply;
-                if (this._softwareVersion != newSoftwareVersion) {
-                    this._softwareVersion = newSoftwareVersion;
-                    this.changed('softwareVersion');
-                }
+                this.softwareVersion = reply;
                 break;
             case CMD_INNM:
                 // nothing yet
@@ -1246,7 +1215,8 @@ export class PJLinkPlus extends NetworkProjector {
                     case ERR_3:	// Bad time for this command (usually in standby or not yet awake)
 						// console.info("PJLink ERR3");
 						this.projectorBusy();
-						// Deliberate fallthrough
+                        treatAsOk = true;
+						break;
 					default:
 						this.warnMsg('PJLink response', currCmd, text);
 						break;

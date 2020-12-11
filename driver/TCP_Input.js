@@ -20,62 +20,66 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.GrandMA = void 0;
-    var GrandMA = (function (_super) {
-        __extends(GrandMA, _super);
-        function GrandMA(socket) {
+    exports.TCP_Input = void 0;
+    var TCP_Input = (function (_super) {
+        __extends(TCP_Input, _super);
+        function TCP_Input(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
-            _this.username = 'blocks';
-            _this.password = '';
-            socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection')
-                    _this.justConnected();
+            _this.mCommand = '';
+            socket.subscribe('textReceived', function (sender, message) {
+                _this.command = message.text;
             });
-            socket.subscribe('textReceived', function (sender, msg) {
-                return _this.textReceived(msg.text);
-            });
-            socket.subscribe('finish', function (sender) {
-                return _this.discard();
-            });
-            socket.autoConnect();
+            socket.connect();
             return _this;
         }
-        GrandMA.prototype.isOfTypeName = function (typeName) {
-            return typeName === "GrandMA" ? this : null;
+        TCP_Input.prototype.isOfTypeName = function (typeName) {
+            return typeName === "TCP_Input" ? this : null;
         };
-        GrandMA.prototype.justConnected = function () {
-            console.log('just connected');
-            this.cmdLogin(this.username, this.password);
+        TCP_Input.prototype.sendText = function (toSend) {
+            this.socket.sendText(toSend);
         };
-        GrandMA.prototype.textReceived = function (message) {
-        };
-        GrandMA.prototype.cmdLogin = function (user, pw) {
-            this.socket.sendText('Login "' + user + '" "' + pw + '"');
-        };
-        GrandMA.prototype.startMacro = function (macroID) {
-            this.socket.sendText('Go Macro ' + macroID);
-        };
-        GrandMA.prototype.discard = function () {
-        };
+        Object.defineProperty(TCP_Input.prototype, "command", {
+            get: function () {
+                return this.mCommand;
+            },
+            set: function (cmd) {
+                var _this = this;
+                this.mCommand = cmd;
+                if (this.mClearTimer) {
+                    this.mClearTimer.cancel();
+                    this.mClearTimer = undefined;
+                }
+                if (cmd) {
+                    this.mClearTimer = wait(300);
+                    this.mClearTimer.then(function () {
+                        _this.mClearTimer = undefined;
+                        _this.command = '';
+                    });
+                }
+            },
+            enumerable: false,
+            configurable: true
+        });
         __decorate([
-            Metadata_1.callable('(Go Macro <id>)'),
-            __param(0, Metadata_1.parameter('ID of macro to start')),
+            Metadata_1.callable("Send the text to the destination IP address and TCP port"),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number]),
+            __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
-        ], GrandMA.prototype, "startMacro", null);
-        GrandMA = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 30000 }),
+        ], TCP_Input.prototype, "sendText", null);
+        __decorate([
+            Metadata_1.property("The most recent command", true),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], TCP_Input.prototype, "command", null);
+        TCP_Input = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 5555 }),
             __metadata("design:paramtypes", [Object])
-        ], GrandMA);
-        return GrandMA;
+        ], TCP_Input);
+        return TCP_Input;
     }(Driver_1.Driver));
-    exports.GrandMA = GrandMA;
+    exports.TCP_Input = TCP_Input;
 });

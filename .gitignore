@@ -2,3 +2,5 @@
 blocks-script.iml
 system/*.js
 node_modules
+
+user/*.js

@@ -587,10 +587,8 @@ class Power extends BoolProp {
 	}
 
 	correct(): Promise<number[]>  {
-		if (this.wanted) { // Must use WoL to wake up the display
+		if (this.wanted) // Must use WoL to wake up the display
 			this.driver.wakeUp();
-			debugMsg("WoL attempted");
-		}
 		return super.correct(); // Send the Power command regardless
 	}
 }

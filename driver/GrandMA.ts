@@ -32,6 +32,13 @@ export class GrandMA extends Driver<NetworkTCP> {
 		socket.autoConnect();
 	}
 
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "GrandMA" ? this : null;
+	}
+
 	private justConnected (): void {
 		console.log('just connected');
 		this.cmdLogin(this.username, this.password);

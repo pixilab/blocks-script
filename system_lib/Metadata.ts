@@ -6,9 +6,9 @@
 /**
  Annotation defining a class acting as a device driver. This class must have a constructor
  that takes the baseDriverType of low-level driver to attach to. The driverMeta passed in
- is an object with keys and values as dictated by the type of driver attached to. E.g., for
- a NetworkTCP driver, this may specify the port number to use. See documentation for each
- low level-driver type for more information.
+ is an object with keys/values that vary with the type of driver attached (see
+ NetworkTCPDriverMetaData and NetworkUDPDriverMetaData in Network.ts for those driver
+ types).
 
  Note to self: I must pass in baseDriverType as a string, since those are typically
  defined as interfaces (they're implemented in Java), so I can't get the param type
@@ -139,14 +139,15 @@ export function max(max:number) {
 }
 
 /**
- Annotation declaring a method as accessible from a web client under
+ Annotation declaring a method as accessible from a web client as a POST request under
 
  	/rest/script/invoke/<user-script-name>/<method-name>
 
- with a JSON body payload deserialized and passed to the method as an Object.
- An object or string returned from the method will be serialized as JSON data and
- returned to the web client. May return a promise eventually resolving with the
- result value.
+ with a JSON body payload deserialized and passed to the method as an object.
+ The method must be declared as accepting an object even if you don't need
+ any data (i.e., pass null). An object or string returned from the method
+ will be serialized as JSON data and returned to the web client. Alternatively,
+ you may return a promise eventually resolving with the result value.
 
  The roleRequired parameter, if specified, limits who can call the resource from the
  outside, and accepts the same values as the roleRequired annotation.

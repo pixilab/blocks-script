@@ -25,29 +25,29 @@ export class Countdown extends Script {
 		});
 	}
 
-	@property("Number of minutes remaining (2 digits)")
+	@property("Number of minutes remaining (always 2 digits)")
 	public get minutes(): string {
 		return padTwoDigits(this.mMinutes);
 	}
 
-	@property("Number of seconds remaining (2 digits)")
+	@property("Number of seconds remaining (always 2 digits)")
 	public get seconds(): string {
 		return padTwoDigits(this.mSeconds);
 	}
 
-	@property("Timer is at time zero")
+	@property("True when the timer is at time zero")
 	public get zero(): boolean {
 		return this.mMinutes === 0 && this.mSeconds === 0;
 	}
 
-	@property("Counter is running")
+	@property("Countdown is running (true) or paused (false)")
 	public get running() {
 		return this.mRunning;
 	}
 	public set running(state: boolean) {
-		if (this.mRunning !== state) {
+		if (this.mRunning !== state) {	// This is news
 			this.mRunning = state;
-			this.manageTicking();
+			this.manageTicking();		// Starts/stops timer
 		}
 	}
 
@@ -56,7 +56,7 @@ export class Countdown extends Script {
 		return this.mRunning && !this.zero;
 	}
 
-	@callable("Start countdown at specified time")
+	@callable("Start countdown from specified time")
 	public start(minutes: number, seconds: number) {
 		const wasZero = this.zero;
 		this.setSeconds(Math.max(0, Math.min(59, Math.round(seconds))));
@@ -108,22 +108,22 @@ export class Countdown extends Script {
 		}
 	}
 
-  // Called once per second while clock is running
+  	// Called once per second while clock is running
 	private nextTick() {
-			// console.log("Ticked");
-			this.tickTimer = undefined;
-			var seconds = this.mSeconds;
-			var minutes = this.mMinutes;
-			if (--seconds === -1) {
-				if (--minutes === -1)
-					seconds = minutes = 0;	// All done
-				else
-					seconds = 59;
-			}
-			this.setSeconds(seconds);
-			this.setMinutes(minutes);
-			this.notifyZero(false);
-			this.manageTicking();	// Set up for next second
+		// console.log("Ticked");
+		this.tickTimer = undefined;
+		var seconds = this.mSeconds;
+		var minutes = this.mMinutes;
+		if (--seconds === -1) {
+			if (--minutes === -1)
+				seconds = minutes = 0;	// All done
+			else
+				seconds = 59;
+		}
+		this.setSeconds(seconds);
+		this.setMinutes(minutes);
+		this.notifyZero(false);
+		this.manageTicking();	// Set up for next second
 	}
 }
 
