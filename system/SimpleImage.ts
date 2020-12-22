@@ -28,28 +28,28 @@ export var SimpleImage: {
 	 Make a derived image from image at srcImage, storing the resulting image at destImage.
 	 No scaling or cropping is applied. The written image wil have its type determined by the
 	 file extension of destImage, allowing for conversion from, e.g., PNG to JPEG.
-	 The returned promise will be resolved once the image operation is complete.
+	 The returned promise will be resolved with destImage once the image operation is complete.
 	 */
-	derive(srcImage: string, destImage: string): Promise<void>;
+	derive(srcImage: string, destImage: string): Promise<string>;
 
 	/**
 	 Make a derived image from image at srcImage, storing the resulting image at destImage.
-	 Scale the image to specified size. The returned promise will be resolved once the image
-	 operation is complete.
+	 Scale the image to specified size. The returned promise will be resolved with destImage
+	 once the image operation is complete.
 	 */
 	derive(
 		srcImage: string, destImage: string,
 		scaleToWidth: number, scaleToHeight: number
-	) : Promise<void>;
+	): Promise<string>;
 
 	/**
 	 Make a derived image from image at srcImage, storing the resulting image at destImage.
 	 First crop the specified part of the source image, then scale the result to specified size.
-	 The returned promise will be resolved once the image operation is complete.
+	 The returned promise will be resolved with destImage once the image operation is complete.
 	 */
 	derive(
 		srcImage: string, destImage: string,
 		cropLeft: number, cropTop: number, cropWidth: number, cropHeight: number,
 		scaleToWidth: number, scaleToHeight: number
-	) : Promise<void>;
+	): Promise<string>;
 };

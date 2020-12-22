@@ -9,14 +9,12 @@
  * Access a SpotGroupItem under its assigned name.
  * Use dot notation to access nested spots inside groups.
  */
-export var Spot: {
-	[name: string]: SpotGroupItem;
-};
+export var Spot: SpotGroup;
 
 /**
  Items that can live in the root Spot object
  */
-interface SpotGroupItem {
+export interface SpotGroupItem {
 	isOfTypeName(typeName: string): SpotGroupItem|null;
 }
 
