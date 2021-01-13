@@ -23,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_lib/Metadata"], function (require, exports, Driver_1, SimpleHTTP_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.NetioPowerBox = void 0;
     var NetioPowerBox = (function (_super) {
         __extends(NetioPowerBox, _super);
         function NetioPowerBox(socket) {
@@ -52,7 +53,7 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
             set: function (value) {
                 this.mConnected = value;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         NetioPowerBox.prototype.createOutlets = function (outletNumber) {
