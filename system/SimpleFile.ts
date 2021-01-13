@@ -7,8 +7,8 @@
  * to live under script/files. Alternatively, you can specify one of the follwing
  * absolute paths:
  *
- * /public/*	Specifies a path under public
- * /temp/*		Specifies a path under temp
+ *	/public/*	Specifies a path under public
+ *	/temp/*		Specifies a path under temp
  *
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2017 by Mike Fahl.

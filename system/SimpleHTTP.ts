@@ -45,12 +45,12 @@ interface ReqOpts {
 		properties. Nested content is provided as an attribute with the
 		empty string as its key.
 	 */
-	interpretResponse: boolean;
+	interpretResponse?: boolean;
 
 	/*	Force interpretation as specified mime type. Useful if the service being called
 		doesn't return the correct mime type.
 	 */
-	interpretAs: string
+	interpretAs?: string;
 }
 
 /**
