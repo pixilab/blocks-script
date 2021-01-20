@@ -21,11 +21,11 @@ export interface Request {
 	setTimeout(seconds: number): Request;	// Maximum time the request may take
 	header(headerName:string, headerValue:string): Request; // Additional header sent with request
 
-	get(): Promise<Response>;	// Make a basic GET request
+	get<RetType>(): Promise<Response<RetType>>;	// Basic GET request, expected to return RetType (if interpreted)
 
 	// Default mediaType (aka "Content-Type") is "application/json" unless explicitly specified below
-	put(dataToSend: string,  mediaType?: string): Promise<Response>;	// PUT request with supplied data
-	post(dataToSend: string,  mediaType?: string): Promise<Response>;	// POST request with supplied data
+	put<RetType>(dataToSend: string,  mediaType?: string): Promise<Response<RetType>>;	// PUT request with supplied data
+	post<RetType>(dataToSend: string,  mediaType?: string): Promise<Response<RetType>>;	// POST request with supplied data
 }
 
 interface ReqOpts {
@@ -56,14 +56,14 @@ interface ReqOpts {
 /**
  Status and optional data and headers returned from a successful request.
  */
-export interface Response {
+export interface Response<T> {
 	status: number;			// Status code from request (e.g., 200)
-	data?: string;			// Data returned from request, if any
-	interpreted?: any;		// Interpreted data returned by request, if any
+	data?: string;			// Result from request, if any (not used if interpreted)
+	interpreted?: T;		// Interpreted data returned by request, if any
 	type?: string;			// Data type of any response (e.g. "application/json")
 
-	/*	Get the response message header value. If the message header is not present then
-		code null is returned. If the message header is present but has no
+	/*	Get the response message header value. If the message header is not present
+		then null is returned. If the message header is present but has no
 		value then the empty string is returned. If the message header is present
 		more than once then the values of joined together and separated by a ','
 		character.

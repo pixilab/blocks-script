@@ -55,13 +55,12 @@ export var SimpleFile: {
 
 	/**
 	 * Read data from a JSON file, returning it as an object, or an array-
-	 * like object (if the outermist JSON data is array). Fields in objects
+	 * like object (if the outermost JSON data is array). Fields in objects
 	 * hold primitive data and other, nested objects. This method of reading
 	 * JSON data is more efficient than reading it as text using the plain read call
 	 * and then converting it to JSON using the JSON.parse() method.
 	 */
 	readJson(fileName:string): Promise<any[]>;
-
 
 	/**
 	 * Move a file from src to dest. If dest exists and replace is true, then

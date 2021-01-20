@@ -22,10 +22,10 @@ interface Dictionary<TElem> { [id: string]: TElem; }
 interface Ctor<T> { new(... args: any[]): T ;}
 
 export interface StaticFeed<ListItem extends Object, DetailsItem extends ListItem> {
-	name: string;
+	readonly name: string;	// Internal (brief) name of this feed instance
 
-	listType: Ctor<ListItem>;
-	itemType: Ctor<DetailsItem>;
+	readonly listType: Ctor<ListItem>;	// Specifies type of items returned by getList
+	readonly itemType: Ctor<DetailsItem>; // Type of items returned by getDetails
 
 	getList(spec: FeedListSpec): Promise<ListData<ListItem>>;
 	getDetails(spec: FeedDetailsSpec): Promise<DetailsItem|undefined>;
@@ -49,13 +49,17 @@ export interface FeedListSpec extends FeedSpec {
  * Parameter block passed to feed instance's getDetails method.
  */
 export interface FeedDetailsSpec extends FeedSpec {
-	id?: number|string;	// ID to load details for (takes priority if specified)
+	id?: number|string;	// ID to load details for (takes precedence if specified)
 	index?: number;		// 0-based index to load details for (used if no id)
 }
 
+/**
+ * Wrapper for data returned by getList, augmenting the raw data items with pertinent
+ * metadata.
+ */
 export interface ListData<ListItem> {
 	items: ListItem[];		// Data returned from request
-	totalCount?: number;	// Total number of records (assumed to be items.length if not speified)
+	totalCount?: number;	// Total number of records (assumed to be items.length if not specified)
 }
 
 // Internal use only!

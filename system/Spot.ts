@@ -57,7 +57,7 @@ export interface BaseSpot {
 	unsubscribe(event: string, listener: Function): void;
 }
 
-export interface DisplaySpot extends SpotGroupItem, BaseSpot {
+export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name ("DisplaySpot")
 
 	/**
@@ -75,6 +75,11 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 * system-unique value.
 	 */
 	identity: string;
+
+	/**
+	 * Get any geolocation assoctaed with spot, or null if none.
+	 */
+	getGeoZone(): GeoZone|null;
 
 	/**
 	 * Load a Block with priority. Returns a promise that's fulfilled once
@@ -173,11 +178,12 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	/**
 	 * Same as gotoBlock, but returns a promise that will be rejected with
 	 * an error message if the specified block can't be found.
-	 *
-	 * This function used to be called tryGotoPage, which is still available
-	 * for backward compatibility.
 	 */
-	tryGotoBlock(path: string): Promise<any>;
+	tryGotoBlock(
+		path: string,			// Child block path to
+		play?:boolean, 			// Once found, tell the child to play or pause
+		seekToSeconds?: number // Once found, tell the child to seek to time pos
+	): Promise<any>;
 
 	/**
 	 * Force set of local tags to only those specified (comma separated). Does not
@@ -273,7 +279,7 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 }
 
 // Spot type named "Location" in Blocks UI
-export interface VirtualSpot extends SpotGroupItem, BaseSpot {
+export interface VirtualSpot extends SpotGroupItem, BaseSpot, GeoZonable  {
 	isOfTypeName(typeName: string): VirtualSpot | null;	// Check subtype by name ("VirtualSpot")
 
 	subscribe(event: "spot", listener: (sender: VirtualSpot, message:{
@@ -283,5 +289,26 @@ export interface VirtualSpot extends SpotGroupItem, BaseSpot {
 			'PlayingBlock' |	// Actually playing block changed (always media)
 			'Active'			// Spot activated by accessing its Location ID
 	})=>void): void;
+
+	/**
+	 * Get any geolocation assoctaed with spot, or null if none.
+	 */
+	getGeoZone(): GeoZone|null;
 }
 
+export interface GeoZonable {
+	/**
+	 * Get any geolocation assoctaed with spot, or null if none.
+	 */
+	getGeoZone(): GeoZone|null;
+}
+
+/**
+ * Optonal GeoZone information that may be available on DisplaySpot and VirtualSpot.
+ * All values are read-only.
+ */
+export interface GeoZone {
+	latitude: number;
+	longitude: number;
+	radius: number;	// In meters
+}

@@ -99,8 +99,8 @@ export function field(description?: string) {
 }
 
 /**
- * Decorator for explicit feed item ID field. Applied to an instance variable typically
- * of string or number type. Read-only by definition.
+ * Decorator for (presumably unique) Feed item ID field, if any. Applied to an
+ * instance variable typically of string or number type. Read-only by definition.
  */
 export function id(description?: string) {
 	return $metaSupport$.fieldMetadata( {description: description, id: true} );
