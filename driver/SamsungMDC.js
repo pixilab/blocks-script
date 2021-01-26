@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -36,7 +36,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.enableWakeOnLAN();
             _this.propList = [];
             _this.propList.push(_this.powerProp = new Power(_this));
-            _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33", 0x14, 0x21, 0x14, 0x40);
+            _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33", 0x14, 0x21, 0x04, 0x64);
             _this.propList.push(_this.inputProp);
             _this.propList.push(_this.volumeProp = new Volume(_this));
             socket.subscribe('connect', function (sender, message) {
