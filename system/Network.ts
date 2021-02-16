@@ -168,7 +168,9 @@ interface NetworkBase extends ScriptBaseEnv {
 	name: string;			// Leaf name of this network device
 	fullName: string;		// Full name, including enclosing containers
 	enabled: boolean;		// True if I'm enabled (else won't send data)
-	address: string;		// Target IP address (e.g., "10.0.2.45")
+	address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
+	options: string;		// Any "Custom Options" assigned to the Network Device
+	addressString: string;	// IP address exactly as set on the Network Device page.
 	port: number;			// Port number sending data to
 
 	/**

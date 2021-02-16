@@ -45,6 +45,11 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 
 	/**
 	 * Expose a named and indexed property of object type T.
+	 *
+	 * IMPORTANT: The name you specify here MUST be identical to
+	 * the instance variable name used to hold this indexed
+	 * property, or the property won't be found by task
+	 * expressions or other scripts.
 	 */
 	indexedProperty<T>(
 		name: string, 		// Name of the indexed property

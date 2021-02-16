@@ -87,6 +87,14 @@ export var SimpleFile: {
 	delete(fileOrDirectory: string, recursive?:boolean): Promise<void>;
 
 	/**
+	 Determine if the specified directory entry exists. Promise resolved as follows:
+	 	 0	Doesn't exist (is "falsey")
+	 	 1	Exists and is a file (is "truthy")
+	 	 2	Exists and is a directory (also "truthy")
+	 */
+	exists(fileOrDirectory: string): Promise<number>;
+
+	/**
 	 * List files and subdirectories in specified directory. Returns usable
 	 * path to each item, or name only (if leafNameOnly).
 	 *
