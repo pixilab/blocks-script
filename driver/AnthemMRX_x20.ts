@@ -126,7 +126,7 @@ export class AnthemMRX_x20 extends NetworkProjector {
 	public set powerAll(on: boolean) {
 		this.power = on;
 		if (this._powZone2) this['powerZone2'] = on;
-		if (this._powZone3?.set(on)) this.sendCorrection();
+		if (this._powZone3) this['powerZone3'] = on;
 		this._powerAll = on;
 	}
 	public get powerAll(): boolean {
@@ -203,7 +203,7 @@ export class AnthemMRX_x20 extends NetworkProjector {
 
 
     protected textReceived(text: string): void {
-		if (text == '') return;
+		// if (text == '') return;
 		// if (LOG_DEBUG) console.log(text);
 		let result = text;
 		let error = undefined;

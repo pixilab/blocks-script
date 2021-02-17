@@ -113,12 +113,11 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
                 return this._powerAll;
             },
             set: function (on) {
-                var _a;
                 this.power = on;
                 if (this._powZone2)
                     this['powerZone2'] = on;
-                if ((_a = this._powZone3) === null || _a === void 0 ? void 0 : _a.set(on))
-                    this.sendCorrection();
+                if (this._powZone3)
+                    this['powerZone3'] = on;
                 this._powerAll = on;
             },
             enumerable: false,
@@ -192,8 +191,6 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
                 message.substr(0, 100));
         };
         AnthemMRX_x20.prototype.textReceived = function (text) {
-            if (text == '')
-                return;
             var result = text;
             var error = undefined;
             var requestActive = this.currCmd !== undefined;
