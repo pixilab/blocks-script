@@ -6,11 +6,11 @@
 
  	Copyright (c) 2020 No Parking Production ApS, Denmark (https://noparking.dk). All Rights Reserved.
 	Created by: Samuel Walz <mail@samwalz.com>
-    Version: 0.3
+    Version: 0.6
     Features:
-    - power on/off (main / all)
-	- volume / mute (main)
-	- misc (front screen brightness, display message)
+    - power on/off (main / all / zone2 & 3)
+	- volume / mute (main / zone 2&3)
+	- misc (front screen brightness, display message, info)
 
  */
 
@@ -21,7 +21,8 @@ import {Driver} from "system_lib/Driver";
 
 const ZONE_ALL = 'Z0';
 const ZONE_MAIN = 'Z1';
-
+const ZONE_2 = 'Z2';
+const ZONE_3 = 'Z3';
 
 /* read / write */
 /* global */
@@ -47,6 +48,10 @@ const ERROR_OUT_OF_RANGE_PREFIX = '!R';
 const ERROR_INVALID_COMMAND_PREFIX = '!I';
 const ERROR_ZONE_OFF_PREFIX = '!Z';
 
+const VOL_MIN = -90;
+const VOL_MAX = 10;
+
+const LOG_DEBUG = true;
 
 @driver('NetworkTCP', { port: 14999 })
 export class AnthemMRX_x20 extends NetworkProjector {
@@ -56,23 +61,28 @@ export class AnthemMRX_x20 extends NetworkProjector {
 
 	private _fpb: NumState;
 	private _mut: BoolState;
-	private _powerAll: BoolState;
+	private _powerAll: boolean;
+	private _powZone2: BoolState;
+	private _powZone3: BoolState;
 	private _sip: BoolState;
 	private _vol: SignedNumberState;
 
-    constructor(socket: NetworkTCP) {
-        socket.setReceiveFraming(';');
+	private staticInfo: {};
+
+	private getToKnowRunning: boolean;
+
+	constructor(socket: NetworkTCP) {
+		socket.setReceiveFraming(';');
 		super(socket);
-        this.addState(this._power = new BoolState(ZONE_MAIN + CMD_POW, 'power'));
-		this.addState(this._powerAll = new BoolState(ZONE_ALL + CMD_POW, 'powerAll'));
+		this.staticInfo = {};
+		this.addState(this._power = new BoolState(ZONE_MAIN + CMD_POW, 'power'));
 		this.addState(this._fpb = new NumState(CMD_FPB, 'frontPanelBrightness', 0, 3));
 		this.addState(this._mut = new BoolState(ZONE_MAIN + CMD_MUT, 'mute'));
+		this.addState(this._sip = new BoolState(CMD_SIP, 'standbyIPControl'));
 		this.addState(this._vol = new SignedNumberState(ZONE_MAIN + CMD_VOL, 'volume'));
-        this.poll();	// Get polling going
+		this.poll();	// Get polling going
 		this.attemptConnect();	// Attempt initial connection
-        console.log(this.socket.fullName);
-        // socket.enableWakeOnLAN();
-
+		console.log(this.socket.fullName);
 	}
 
 	@property('Front panel brightness: 0=off, 1=low, 2=medium, 3=high')
@@ -80,43 +90,104 @@ export class AnthemMRX_x20 extends NetworkProjector {
 	@max(3)
 	public set frontPanelBrightness(value: number) {
 		if (this._fpb.set(Math.round(value))) {
-            this.sendCorrection();
-        }
+			this.sendCorrection();
+		}
 	}
 	public get frontPanelBrightness(): number {
-		return this._fpb.get();
+		const brightness = this._fpb.get();
+		return brightness ? brightness : 0;
+	}
+
+	@property('Info')
+	public get info(): string {
+		return '' +
+		// 'model and firmware: ' + this.staticInfo[CMD_IDQ] + '\n' +
+		'model: ' + this.staticInfo[CMD_IDM] + '\n' +
+		'software version: ' + this.staticInfo[CMD_IDS] + '\n' +
+		'region: ' + this.staticInfo[CMD_IDR] + '\n' +
+		'software date: ' + this.staticInfo[CMD_IDB] + '\n' +
+		'hardware version: ' + this.staticInfo[CMD_IDH] + '\n' +
+		'MCU MAC: ' + this.staticInfo[CMD_IDN] + '\n' +
+		'';
 	}
 
 	@property("Mute")
 	public set mute(value: boolean) {
 		if (this._mut.set(value)) {
-            this.sendCorrection();
-        }
+			this.sendCorrection();
+		}
 	}
 	public get mute(): boolean {
-		return this._mut.get();
+		const mute = this._mut.get();
+		return mute ? mute : false;
 	}
 
 	@property('Power All Zones on/off')
 	public set powerAll(on: boolean) {
-		if (this._powerAll.set(on))
-			this.sendCorrection();
+		this.power = on;
+		if (this._powZone2) this['powerZone2'] = on;
+		if (this._powZone3?.set(on)) this.sendCorrection();
+		this._powerAll = on;
 	}
 	public get powerAll(): boolean {
-		return this._power.get();
+		return this._powerAll;
+	}
+	private updatePowerAll(): void {
+		const mainOn = this._power.get();
+		const zone2On = (!this._powZone2 || this._powZone2.get());
+		const zone3On = (!this._powZone3 || this._powZone3.get());
+		const newValue = mainOn && zone2On && zone3On;
+		if (this._powerAll !== newValue) {
+			this._powerAll = newValue;
+			this.changed('powerAll');
+		}
+	}
+
+	private createDynamicPowerProperty (zone: number) : void {
+		if (LOG_DEBUG) console.log('trying to create dynamic power property for zone ' + zone);
+		const state: BoolState = this['_powZone' + zone];
+		this.property<boolean>('powerZone' + zone, { type: Boolean, description: 'Power Zone ' + zone + ' on/off)'}, setValue => {
+			if (setValue !== undefined) {
+				if (state?.set(setValue)) this.sendCorrection();
+			}
+			return state?.get();
+		});
+	}
+
+	@property("Standby IP Control. This must be enabled for the power-on command to operate via IP. Note that anabling this disables ECO mode.")
+	public set standbyIPControl(value: boolean) {
+		if (this._sip.set(value)) {
+			this.sendCorrection();
+		}
+	}
+	public get standbyIPControl(): boolean {
+		return this._sip.get();
 	}
 
 	@property("Volume, Main Zone")
-	@min(-90)
-	@max(10)
+	@min(VOL_MIN)
+	@max(VOL_MAX)
 	public set volume(value: number) {
 		if (this._vol.set(value)) {
-            this.sendCorrection();
-        }
+			this.sendCorrection();
+		}
 	}
 	public get volume(): number {
-		return this._vol.get();
+		const volume = this._vol.get();
+		return volume === undefined ? 0 : volume;
 	}
+
+	private createDynamicVolumeProperty (zone: number) : void {
+        if (LOG_DEBUG) console.log('trying  to create dynamic volume property for zone ' + zone);
+        const state: SignedNumberState = this['_volZone' + zone];
+		this.property<number>('volumeZone' + zone, { type: Number, min: VOL_MIN, max: VOL_MAX, description: 'Volume Zone ' + zone + ')'}, setValue => {
+			if (setValue !== undefined) {
+				if (state?.set(setValue)) this.sendCorrection();
+			}
+			const stateValue = state?.get();
+			return stateValue;
+		});
+    }
 
 	@callable('Display Message')
 	public displayMessage(
@@ -130,15 +201,16 @@ export class AnthemMRX_x20 extends NetworkProjector {
 		);
 	}
 
-    // @callable('wake device')
-    // public wakeUp () {
-    //     this.socket.wakeOnLAN();
-    // }
 
     protected textReceived(text: string): void {
+		if (text == '') return;
+		// if (LOG_DEBUG) console.log(text);
 		let result = text;
+		let error = undefined;
+		const requestActive = this.currCmd !== undefined;
 		if (text[0] == '!') {
 			const firstTwoChars = text.substr(0, 2);
+			error = firstTwoChars;
 			const followingChars = text.substr(2);
 			let failed = false;
 			switch (firstTwoChars) {
@@ -153,40 +225,155 @@ export class AnthemMRX_x20 extends NetworkProjector {
 					break;
 				case ERROR_ZONE_OFF_PREFIX:
 					console.warn('zone is off: "' + followingChars + '"');
-					failed = true;
+					// failed = true;
 					break;
 			}
 			if (failed) {
 				this.requestFailure(text);
 				return;
 			}
+		} else {
+			// console.log(text + ' vs ' + this.currCmd + ' ' + requestActive);
 		}
-		this.requestSuccess(result);
-		this.requestFinished();
+		if (requestActive) {
+			this.requestSuccess(result);
+			this.requestFinished();
+		}
+		this.processStatusChange(text, error);
     }
+	private processStatusChange(text: string, error?: string) {
+		const firstChar = text.substr(0, 1);
+		if (firstChar == 'Z') {
+			const zoneID = parseInt(text.substr(1, 1));
+			const cmd = text.substr(2, 3);
+			const value = text.substr(5);
+			switch(cmd) {
+				case CMD_MUT:
+					const newMute = value == '1';
+					if (zoneID == 1) this._mut.updateCurrent(newMute);
+					break;
+				case CMD_POW:
+					const newPower = value == '1';
+					if (zoneID == 1) this._power.updateCurrent(newPower);
+					else if (value !== '?') {
+						let state: BoolState = this['_powZone' + zoneID];
+						if (!state) state = this.setupStates(zoneID).pow;
+						state.updateCurrent(newPower);
+					}
+					this.updatePowerAll();
+					// update volume
+					if (!this.getToKnowRunning && newPower) this.request('Z' + zoneID + CMD_VOL);
+					break;
+				case CMD_VOL:
+					const newVolume = parseInt(value);
+					if (zoneID == 1) this._vol.updateCurrent(newVolume);
+					else if (value !== '?') {
+						let state: SignedNumberState = this['_volZone' + zoneID];
+						if (!state) state = this.setupStates(zoneID).vol;
+						state.updateCurrent(newVolume);
+					}
+					break;
+			}
+		} else if (text.length > 3) {
+			const cmd = text.substr(0, 3);
+			const value = text.substr(3);
+			switch (cmd) {
+				case CMD_FPB:
+					const newBrightness = parseInt(value);
+					this._fpb.updateCurrent(newBrightness);
+					break;
+				case CMD_IDB:
+				case CMD_IDH:
+				case CMD_IDM:
+				case CMD_IDN:
+				case CMD_IDQ:
+				case CMD_IDR:
+				case CMD_IDS:
+					this.staticInfo[cmd] = value;
+					this.changed('info');
+					break;
+			}
+		}
+	}
+
+
+	private setupStates(zone: number, zoneOff?: boolean): {pow: BoolState, vol: SignedNumberState} {
+		return {
+			pow: this.setupPowerState(zone),
+			vol: this.setupVolumeState(zone, zoneOff ? 0 : undefined),
+		};
+	}
+	private setupPowerState(zone: number): BoolState {
+		const state = this['_powZone' + zone] = new BoolState('Z' + zone + CMD_POW, 'powerZone' + zone);
+		this.addState(state);
+		this.createDynamicPowerProperty(zone);
+		return state;
+	}
+	private setupVolumeState(zone: number, initialVolume?: number): SignedNumberState {
+		const state = this['_volZone' + zone] = new SignedNumberState('Z' + zone + CMD_VOL, 'volumeZone' + zone);
+		if (initialVolume !== undefined) state.updateCurrent(initialVolume);
+		this.addState(state);
+		this.createDynamicVolumeProperty(zone);
+		return state;
+	}
+
     protected justConnected(): void {
         console.log('connected');
         this.connected = true;
+		this.getToKnowRunning = true;
+		this.requestPower().then(
+			() => this.requestVolumes().then(
+				() => this.requestStaticInfo().then(
+					() => this.getToKnowRunning = false
+				)
+			)
+		);
 	}
+	private requestPower(): Promise<void> {
+		return this.requestAllZones(CMD_POW);
+	}
+	private requestVolumes(): Promise<void> {
+		return this.requestAllZones(CMD_VOL);
+	}
+	private requestAllZones(cmd: string): Promise<void> {
+		return new Promise<void>((resolve) => {
+			this.request(ZONE_MAIN + cmd).finally(
+				() => this.request(ZONE_2 + cmd).finally (
+					() => this.request(ZONE_3 + cmd).finally(
+						() => resolve()
+					)
+				)
+			)
+		});
+	}
+	private requestStaticInfo() {
+		return new Promise<void>((resolve) => {
+			this.request(CMD_IDQ).finally(
+				() => this.request(CMD_IDM).finally(
+					() => this.request(CMD_IDS).finally(
+						() => this.request(CMD_IDR).finally(
+							() => this.request(CMD_IDB).finally(
+								() => this.request(CMD_IDH).finally(
+									() => this.request(CMD_IDN).finally(
+										() => resolve()
+									)
+								)
+							)
+						)
+					)
+				)
+			)
+		});
+	}
+
+
+
+
     protected getDefaultEoln(): string | undefined {
 		return ';';
 	}
     protected pollStatus(): boolean {
-		if (this.okToSendCommand()) {	// Don't interfere with command already in flight
-			const powerRequest = ZONE_MAIN + CMD_POW;
-			this.request(powerRequest).then(
-				reply => {
-					if (reply.substr(0, powerRequest.length) == powerRequest) {
-						const on = (parseInt(reply.substr(powerRequest.length)) & 1) != 0;
-						if (!this.inCmdHoldoff())
-							this._power.updateCurrent(on);
-					}
-				}
-			).catch(error => {
-				this.warnMsg("pollStatus error", error);
-				this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
-			});
-			// console.info("pollStatus");
+		if (this.okToSendCommand()) {
 		}
 		return true;	// Check back again in a bit
 	}
@@ -238,7 +425,8 @@ class StringState extends State<string> {
 }
 class SignedNumberState extends State<number> {
 	correct(drvr: NetworkProjector): Promise<string> {
-		return this.correct2(drvr, (this.wanted >= 0 ? '+' : '') + this.wanted.toString());
+		const request = this.correct2(drvr, (this.wanted >= 0 ? '+' : '') + this.wanted.toString());
+		return request;
 	}
 
 	set(v: number): boolean {
@@ -246,13 +434,8 @@ class SignedNumberState extends State<number> {
 	}
 
 
-	// get(): number {
-	// 	var result = super.get();
-	// 	// Better return min/0 than undefined or some invalid type of data
-	// 	if (typeof result !== 'number') {
-	// 		console.error("Value invalid for", this.baseCmd, result);
-	// 		result = this.min || 0;
-	// 	}
-	// 	return result;
-	// }
+	get(): number {
+		var result = super.get();
+		return result !== undefined ? result : 0;
+	}
 }

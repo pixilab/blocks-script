@@ -29,6 +29,8 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
     exports.AnthemMRX_x20 = void 0;
     var ZONE_ALL = 'Z0';
     var ZONE_MAIN = 'Z1';
+    var ZONE_2 = 'Z2';
+    var ZONE_3 = 'Z3';
     var CMD_FPB = 'FPB';
     var CMD_SIP = 'SIP';
     var CMD_MUT = 'MUT';
@@ -46,16 +48,20 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
     var ERROR_OUT_OF_RANGE_PREFIX = '!R';
     var ERROR_INVALID_COMMAND_PREFIX = '!I';
     var ERROR_ZONE_OFF_PREFIX = '!Z';
+    var VOL_MIN = -90;
+    var VOL_MAX = 10;
+    var LOG_DEBUG = true;
     var AnthemMRX_x20 = (function (_super) {
         __extends(AnthemMRX_x20, _super);
         function AnthemMRX_x20(socket) {
             var _this = this;
             socket.setReceiveFraming(';');
             _this = _super.call(this, socket) || this;
+            _this.staticInfo = {};
             _this.addState(_this._power = new NetworkProjector_1.BoolState(ZONE_MAIN + CMD_POW, 'power'));
-            _this.addState(_this._powerAll = new NetworkProjector_1.BoolState(ZONE_ALL + CMD_POW, 'powerAll'));
             _this.addState(_this._fpb = new NetworkProjector_1.NumState(CMD_FPB, 'frontPanelBrightness', 0, 3));
             _this.addState(_this._mut = new NetworkProjector_1.BoolState(ZONE_MAIN + CMD_MUT, 'mute'));
+            _this.addState(_this._sip = new NetworkProjector_1.BoolState(CMD_SIP, 'standbyIPControl'));
             _this.addState(_this._vol = new SignedNumberState(ZONE_MAIN + CMD_VOL, 'volume'));
             _this.poll();
             _this.attemptConnect();
@@ -64,7 +70,8 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
         }
         Object.defineProperty(AnthemMRX_x20.prototype, "frontPanelBrightness", {
             get: function () {
-                return this._fpb.get();
+                var brightness = this._fpb.get();
+                return brightness ? brightness : 0;
             },
             set: function (value) {
                 if (this._fpb.set(Math.round(value))) {
@@ -74,9 +81,24 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(AnthemMRX_x20.prototype, "info", {
+            get: function () {
+                return '' +
+                    'model: ' + this.staticInfo[CMD_IDM] + '\n' +
+                    'software version: ' + this.staticInfo[CMD_IDS] + '\n' +
+                    'region: ' + this.staticInfo[CMD_IDR] + '\n' +
+                    'software date: ' + this.staticInfo[CMD_IDB] + '\n' +
+                    'hardware version: ' + this.staticInfo[CMD_IDH] + '\n' +
+                    'MCU MAC: ' + this.staticInfo[CMD_IDN] + '\n' +
+                    '';
+            },
+            enumerable: false,
+            configurable: true
+        });
         Object.defineProperty(AnthemMRX_x20.prototype, "mute", {
             get: function () {
-                return this._mut.get();
+                var mute = this._mut.get();
+                return mute ? mute : false;
             },
             set: function (value) {
                 if (this._mut.set(value)) {
@@ -88,18 +110,59 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
         });
         Object.defineProperty(AnthemMRX_x20.prototype, "powerAll", {
             get: function () {
-                return this._power.get();
+                return this._powerAll;
             },
             set: function (on) {
-                if (this._powerAll.set(on))
+                var _a;
+                this.power = on;
+                if (this._powZone2)
+                    this['powerZone2'] = on;
+                if ((_a = this._powZone3) === null || _a === void 0 ? void 0 : _a.set(on))
                     this.sendCorrection();
+                this._powerAll = on;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        AnthemMRX_x20.prototype.updatePowerAll = function () {
+            var mainOn = this._power.get();
+            var zone2On = (!this._powZone2 || this._powZone2.get());
+            var zone3On = (!this._powZone3 || this._powZone3.get());
+            var newValue = mainOn && zone2On && zone3On;
+            if (this._powerAll !== newValue) {
+                this._powerAll = newValue;
+                this.changed('powerAll');
+            }
+        };
+        AnthemMRX_x20.prototype.createDynamicPowerProperty = function (zone) {
+            var _this = this;
+            if (LOG_DEBUG)
+                console.log('trying to create dynamic power property for zone ' + zone);
+            var state = this['_powZone' + zone];
+            this.property('powerZone' + zone, { type: Boolean, description: 'Power Zone ' + zone + ' on/off)' }, function (setValue) {
+                if (setValue !== undefined) {
+                    if (state === null || state === void 0 ? void 0 : state.set(setValue))
+                        _this.sendCorrection();
+                }
+                return state === null || state === void 0 ? void 0 : state.get();
+            });
+        };
+        Object.defineProperty(AnthemMRX_x20.prototype, "standbyIPControl", {
+            get: function () {
+                return this._sip.get();
+            },
+            set: function (value) {
+                if (this._sip.set(value)) {
+                    this.sendCorrection();
+                }
             },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(AnthemMRX_x20.prototype, "volume", {
             get: function () {
-                return this._vol.get();
+                var volume = this._vol.get();
+                return volume === undefined ? 0 : volume;
             },
             set: function (value) {
                 if (this._vol.set(value)) {
@@ -109,15 +172,34 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             enumerable: false,
             configurable: true
         });
+        AnthemMRX_x20.prototype.createDynamicVolumeProperty = function (zone) {
+            var _this = this;
+            if (LOG_DEBUG)
+                console.log('trying  to create dynamic volume property for zone ' + zone);
+            var state = this['_volZone' + zone];
+            this.property('volumeZone' + zone, { type: Number, min: VOL_MIN, max: VOL_MAX, description: 'Volume Zone ' + zone + ')' }, function (setValue) {
+                if (setValue !== undefined) {
+                    if (state === null || state === void 0 ? void 0 : state.set(setValue))
+                        _this.sendCorrection();
+                }
+                var stateValue = state === null || state === void 0 ? void 0 : state.get();
+                return stateValue;
+            });
+        };
         AnthemMRX_x20.prototype.displayMessage = function (message, row) {
             this.sendText(ZONE_MAIN + CMD_MSG +
                 Math.round(row) +
                 message.substr(0, 100));
         };
         AnthemMRX_x20.prototype.textReceived = function (text) {
+            if (text == '')
+                return;
             var result = text;
+            var error = undefined;
+            var requestActive = this.currCmd !== undefined;
             if (text[0] == '!') {
                 var firstTwoChars = text.substr(0, 2);
+                error = firstTwoChars;
                 var followingChars = text.substr(2);
                 var failed = false;
                 switch (firstTwoChars) {
@@ -132,7 +214,6 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
                         break;
                     case ERROR_ZONE_OFF_PREFIX:
                         console.warn('zone is off: "' + followingChars + '"');
-                        failed = true;
                         break;
                 }
                 if (failed) {
@@ -140,30 +221,124 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
                     return;
                 }
             }
-            this.requestSuccess(result);
-            this.requestFinished();
+            else {
+            }
+            if (requestActive) {
+                this.requestSuccess(result);
+                this.requestFinished();
+            }
+            this.processStatusChange(text, error);
+        };
+        AnthemMRX_x20.prototype.processStatusChange = function (text, error) {
+            var firstChar = text.substr(0, 1);
+            if (firstChar == 'Z') {
+                var zoneID = parseInt(text.substr(1, 1));
+                var cmd = text.substr(2, 3);
+                var value = text.substr(5);
+                switch (cmd) {
+                    case CMD_MUT:
+                        var newMute = value == '1';
+                        if (zoneID == 1)
+                            this._mut.updateCurrent(newMute);
+                        break;
+                    case CMD_POW:
+                        var newPower = value == '1';
+                        if (zoneID == 1)
+                            this._power.updateCurrent(newPower);
+                        else if (value !== '?') {
+                            var state = this['_powZone' + zoneID];
+                            if (!state)
+                                state = this.setupStates(zoneID).pow;
+                            state.updateCurrent(newPower);
+                        }
+                        this.updatePowerAll();
+                        if (!this.getToKnowRunning && newPower)
+                            this.request('Z' + zoneID + CMD_VOL);
+                        break;
+                    case CMD_VOL:
+                        var newVolume = parseInt(value);
+                        if (zoneID == 1)
+                            this._vol.updateCurrent(newVolume);
+                        else if (value !== '?') {
+                            var state = this['_volZone' + zoneID];
+                            if (!state)
+                                state = this.setupStates(zoneID).vol;
+                            state.updateCurrent(newVolume);
+                        }
+                        break;
+                }
+            }
+            else if (text.length > 3) {
+                var cmd = text.substr(0, 3);
+                var value = text.substr(3);
+                switch (cmd) {
+                    case CMD_FPB:
+                        var newBrightness = parseInt(value);
+                        this._fpb.updateCurrent(newBrightness);
+                        break;
+                    case CMD_IDB:
+                    case CMD_IDH:
+                    case CMD_IDM:
+                    case CMD_IDN:
+                    case CMD_IDQ:
+                    case CMD_IDR:
+                    case CMD_IDS:
+                        this.staticInfo[cmd] = value;
+                        this.changed('info');
+                        break;
+                }
+            }
+        };
+        AnthemMRX_x20.prototype.setupStates = function (zone, zoneOff) {
+            return {
+                pow: this.setupPowerState(zone),
+                vol: this.setupVolumeState(zone, zoneOff ? 0 : undefined),
+            };
+        };
+        AnthemMRX_x20.prototype.setupPowerState = function (zone) {
+            var state = this['_powZone' + zone] = new NetworkProjector_1.BoolState('Z' + zone + CMD_POW, 'powerZone' + zone);
+            this.addState(state);
+            this.createDynamicPowerProperty(zone);
+            return state;
+        };
+        AnthemMRX_x20.prototype.setupVolumeState = function (zone, initialVolume) {
+            var state = this['_volZone' + zone] = new SignedNumberState('Z' + zone + CMD_VOL, 'volumeZone' + zone);
+            if (initialVolume !== undefined)
+                state.updateCurrent(initialVolume);
+            this.addState(state);
+            this.createDynamicVolumeProperty(zone);
+            return state;
         };
         AnthemMRX_x20.prototype.justConnected = function () {
+            var _this = this;
             console.log('connected');
             this.connected = true;
+            this.getToKnowRunning = true;
+            this.requestPower().then(function () { return _this.requestVolumes().then(function () { return _this.requestStaticInfo().then(function () { return _this.getToKnowRunning = false; }); }); });
+        };
+        AnthemMRX_x20.prototype.requestPower = function () {
+            return this.requestAllZones(CMD_POW);
+        };
+        AnthemMRX_x20.prototype.requestVolumes = function () {
+            return this.requestAllZones(CMD_VOL);
+        };
+        AnthemMRX_x20.prototype.requestAllZones = function (cmd) {
+            var _this = this;
+            return new Promise(function (resolve) {
+                _this.request(ZONE_MAIN + cmd).finally(function () { return _this.request(ZONE_2 + cmd).finally(function () { return _this.request(ZONE_3 + cmd).finally(function () { return resolve(); }); }); });
+            });
+        };
+        AnthemMRX_x20.prototype.requestStaticInfo = function () {
+            var _this = this;
+            return new Promise(function (resolve) {
+                _this.request(CMD_IDQ).finally(function () { return _this.request(CMD_IDM).finally(function () { return _this.request(CMD_IDS).finally(function () { return _this.request(CMD_IDR).finally(function () { return _this.request(CMD_IDB).finally(function () { return _this.request(CMD_IDH).finally(function () { return _this.request(CMD_IDN).finally(function () { return resolve(); }); }); }); }); }); }); });
+            });
         };
         AnthemMRX_x20.prototype.getDefaultEoln = function () {
             return ';';
         };
         AnthemMRX_x20.prototype.pollStatus = function () {
-            var _this = this;
             if (this.okToSendCommand()) {
-                var powerRequest_1 = ZONE_MAIN + CMD_POW;
-                this.request(powerRequest_1).then(function (reply) {
-                    if (reply.substr(0, powerRequest_1.length) == powerRequest_1) {
-                        var on = (parseInt(reply.substr(powerRequest_1.length)) & 1) != 0;
-                        if (!_this.inCmdHoldoff())
-                            _this._power.updateCurrent(on);
-                    }
-                }).catch(function (error) {
-                    _this.warnMsg("pollStatus error", error);
-                    _this.disconnectAndTryAgainSoon();
-                });
             }
             return true;
         };
@@ -212,6 +387,11 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             __metadata("design:paramtypes", [Number])
         ], AnthemMRX_x20.prototype, "frontPanelBrightness", null);
         __decorate([
+            Metadata_1.property('Info'),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], AnthemMRX_x20.prototype, "info", null);
+        __decorate([
             Metadata_1.property("Mute"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
@@ -222,9 +402,14 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             __metadata("design:paramtypes", [Boolean])
         ], AnthemMRX_x20.prototype, "powerAll", null);
         __decorate([
+            Metadata_1.property("Standby IP Control. This must be enabled for the power-on command to operate via IP. Note that anabling this disables ECO mode."),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], AnthemMRX_x20.prototype, "standbyIPControl", null);
+        __decorate([
             Metadata_1.property("Volume, Main Zone"),
-            Metadata_1.min(-90),
-            Metadata_1.max(10),
+            Metadata_1.min(VOL_MIN),
+            Metadata_1.max(VOL_MAX),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], AnthemMRX_x20.prototype, "volume", null);
@@ -259,10 +444,15 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             return _super !== null && _super.apply(this, arguments) || this;
         }
         SignedNumberState.prototype.correct = function (drvr) {
-            return this.correct2(drvr, (this.wanted >= 0 ? '+' : '') + this.wanted.toString());
+            var request = this.correct2(drvr, (this.wanted >= 0 ? '+' : '') + this.wanted.toString());
+            return request;
         };
         SignedNumberState.prototype.set = function (v) {
             return _super.prototype.set.call(this, Math.round(v));
+        };
+        SignedNumberState.prototype.get = function () {
+            var result = _super.prototype.get.call(this);
+            return result !== undefined ? result : 0;
         };
         return SignedNumberState;
     }(NetworkProjector_1.State));
