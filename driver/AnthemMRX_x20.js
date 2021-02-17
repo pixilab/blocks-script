@@ -338,7 +338,13 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             return ';';
         };
         AnthemMRX_x20.prototype.pollStatus = function () {
+            var _this = this;
             if (this.okToSendCommand()) {
+                this.request(ZONE_MAIN + CMD_POW)
+                    .catch(function (error) {
+                    _this.warnMsg("pollStatus error", error);
+                    _this.disconnectAndTryAgainSoon();
+                });
             }
             return true;
         };

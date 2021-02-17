@@ -366,14 +366,16 @@ export class AnthemMRX_x20 extends NetworkProjector {
 		});
 	}
 
-
-
-
     protected getDefaultEoln(): string | undefined {
 		return ';';
 	}
     protected pollStatus(): boolean {
 		if (this.okToSendCommand()) {
+			this.request(ZONE_MAIN + CMD_POW)
+			.catch(error => {
+				this.warnMsg("pollStatus error", error);
+				this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
+			});
 		}
 		return true;	// Check back again in a bit
 	}
