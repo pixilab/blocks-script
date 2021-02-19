@@ -38,6 +38,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.socket = socket;
             _this.mLeftDown = false;
             _this.mRightDown = false;
+            _this.mPower = false;
             _this.mProgramParams = '';
             _this.mCurrentKeys = '';
             if (bufferSize)
@@ -56,23 +57,54 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         UIRobot.prototype.onConnectStateChanged = function (connected) {
             if (!connected)
                 this.mProgramParams = '';
-            this.changed("power");
+            else {
+                this.cancelWoLRetry();
+                this.mPower = true;
+                this.changed("power");
+            }
         };
         Object.defineProperty(UIRobot.prototype, "power", {
             get: function () {
-                return this.socket.connected && this.program !== UIRobot_1.kPowerDownProgram;
+                return this.mPower;
             },
             set: function (power) {
-                if (power) {
-                    if (!this.socket.connected)
-                        this.socket.wakeOnLAN();
+                if (this.mPower !== power) {
+                    this.mPower = power;
+                    this.cancelWoLRetry();
+                    if (power) {
+                        this.woLRetryAttempts = 0;
+                        this.tryWakeUp();
+                    }
+                    else
+                        this.program = UIRobot_1.kPowerDownProgram;
                 }
-                else
-                    this.program = UIRobot_1.kPowerDownProgram;
             },
             enumerable: false,
             configurable: true
         });
+        UIRobot.prototype.tryWakeUp = function () {
+            var _this = this;
+            if (!this.socket.connected) {
+                if (this.woLRetryAttempts < UIRobot_1.kWoLRetryMaxAttempts) {
+                    this.socket.wakeOnLAN();
+                    this.woLRetryPromise = wait(UIRobot_1.kWoLRetryInterval);
+                    this.woLRetryPromise.then(function () { return _this.tryWakeUp(); });
+                    this.woLRetryAttempts += 1;
+                }
+                else {
+                    this.woLRetryPromise = undefined;
+                    this.power = false;
+                }
+            }
+            else
+                this.woLRetryPromise = undefined;
+        };
+        UIRobot.prototype.cancelWoLRetry = function () {
+            if (this.woLRetryPromise) {
+                this.woLRetryPromise.cancel();
+                this.woLRetryPromise = undefined;
+            }
+        };
         Object.defineProperty(UIRobot.prototype, "leftDown", {
             get: function () {
                 return this.mLeftDown;
@@ -169,7 +201,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 args[_i - 1] = arguments[_i];
             }
             command += ' ' + args.join(' ');
-            console.log("-------------command", command);
             return this.socket.sendText(command);
         };
         UIRobot.prototype.parseProgramParams = function (programParams) {
@@ -188,6 +219,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         var UIRobot_1;
         UIRobot.kPowerDownProgram = "C:/Windows/System32/shutdown.exe||/s /f /t 0";
+        UIRobot.kWoLRetryInterval = 1000 * 20;
+        UIRobot.kWoLRetryMaxAttempts = 10;
         __decorate([
             Metadata_1.property("Power computer on/off"),
             __metadata("design:type", Boolean),
