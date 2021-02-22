@@ -293,57 +293,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 paramByte = Math.max(0, Math.round(paramByte)) & 0xff;
                 cmd.push(paramByte);
             }
-            if (this.correctionRetry) {
-                this.correctionRetry.cancel();
-                this.correctionRetry = undefined;
-            }
-            if (this.cmdTimeout) {
-                this.cmdTimeout.cancel();
-                this.cmdTimeout = undefined;
-            }
-        };
-        SamsungMDC.prototype.errorMsg = function () {
-            var messages = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                messages[_i] = arguments[_i];
-            }
-            messages.unshift(this.socket.fullName);
-            console.error(messages);
-        };
-        SamsungMDC.prototype.warnMsg = function () {
-            var messages = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                messages[_i] = arguments[_i];
-            }
-            messages.unshift(this.socket.fullName);
-            console.warn(messages);
-        };
-        SamsungMDC.prototype.getPropToSend = function () {
-            for (var _i = 0, _a = this.propList; _i < _a.length; _i++) {
-                var p = _a[_i];
-                if (p.needsCorrection())
-                    return p;
-            }
-        };
-        SamsungMDC.prototype.sendCorrection = function () {
-            var _this = this;
-            if (this.okToSendNewCommand()) {
-                var prop = this.getPropToSend();
-                if (prop) {
-                    if (prop.canSendOffline() || (this.powerProp.getCurrent() && this.socket.connected)) {
-                        debugMsg("sendCorrection prop", prop.name, "from", prop.getCurrent(), "to", prop.get());
-                        var promise = prop.correct();
-                        if (promise) {
-                            promise.catch(function () {
-                                if (_this.getPropToSend())
-                                    _this.retryCorrectionSoon();
-                            });
-                        }
-                        else
-                            this.retryCorrectionSoon();
-                    }
-                }
-            }
             else
                 cmd.push(0);
             var checksum = 0;
