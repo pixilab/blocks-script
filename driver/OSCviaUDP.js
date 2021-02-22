@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -54,12 +54,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.regExBoolean = /^false|true$/;
             return _this;
         }
+        OSCviaUDP.prototype.isOfTypeName = function (typeName) {
+            return typeName === "OSCviaUDP" ? this : null;
+        };
         OSCviaUDP.prototype.sendMessage = function (address, valueList) {
             var tagsAndBytes = {
                 tags: ',',
                 bytes: []
             };
-            this.parseValueList(valueList, tagsAndBytes);
+            this.parseValueList(valueList ? valueList : '', tagsAndBytes);
             var bytes = [];
             this.addRange(bytes, this.toOSCStringBytes(address));
             this.addRange(bytes, this.toOSCStringBytes(tagsAndBytes['tags']));
@@ -121,8 +124,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         OSCviaUDP.prototype.addFloat = function (value, valueString, tagsAndBytes) {
             var abs = Math.abs(value);
-            if (abs > MIN_ABS_FLOAT32 &&
-                valueString.length <= 7) {
+            if (valueString.length <= 7) {
                 tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT32;
                 this.addRange(tagsAndBytes['bytes'], this.getFloat32Bytes(value));
             }
@@ -215,7 +217,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         __decorate([
             Meta.callable('send OSC message'),
             __param(0, Meta.parameter('OSC address')),
-            __param(1, Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".')),
+            __param(1, Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", void 0)

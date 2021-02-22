@@ -84,8 +84,14 @@ export class Xicato extends Driver<NetworkTCP> {
 			console.warn("Can't read file", settingsFileName, error);
             SimpleFile.write(settingsFileName, JSON.stringify(new XicatoSettings()));
 		});
-
     }
+
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "Xicato" ? this : null;
+	}
 
     @property('Connected successfully to device', true)
   	public get connected(): boolean {

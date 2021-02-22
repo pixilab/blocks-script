@@ -50,19 +50,26 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         // });
     }
 
+	/**
+	 * Allow clients to check for my type, just as in some system object classes
+	 */
+	isOfTypeName(typeName: string) {
+		return typeName === "OSCviaUDP" ? this : null;
+	}
+
     @Meta.callable('send OSC message')
     public sendMessage(
         @Meta.parameter('OSC address')
         address: string,
-        @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".')
-        valueList: string,
+        @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)
+        valueList?: string,
     ) {
         var tagsAndBytes: {} =
         {
             tags: ',',
             bytes: []
         }
-        this.parseValueList(valueList, tagsAndBytes);
+        this.parseValueList(valueList ? valueList : '', tagsAndBytes);
 
         var bytes: number[] = [];
 
@@ -152,7 +159,7 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         tagsAndBytes: {}
     ) {
         var abs: number = Math.abs(value);
-        if (abs > MIN_ABS_FLOAT32 &&
+        if (//abs > MIN_ABS_FLOAT32 &&
             valueString.length <= 7) {
             tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT32;
             this.addRange(tagsAndBytes['bytes'], this.getFloat32Bytes(value));
