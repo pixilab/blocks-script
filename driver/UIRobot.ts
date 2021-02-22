@@ -39,8 +39,9 @@ export class UIRobot extends Driver<NetworkTCP> {
 		socket.enableWakeOnLAN();	// Allows us to use wakeOnLAN in power property
 		socket.autoConnect();
 
+		// Listen for connection attempt failure or connection state change
 		socket.subscribe('connect', (sender, message) => {
-			if (message.type === 'Connection')
+			if (message.type === 'Connection') // Connection state changed
 				this.onConnectStateChanged(sender.connected);
 		});
 
@@ -52,16 +53,10 @@ export class UIRobot extends Driver<NetworkTCP> {
 	/**	Connected state changed to the one specified by the parameter.
 	 */
 	protected onConnectStateChanged(connected: boolean) {
-		if (!connected) // Disconnected - clear out any "current program"
+		if (connected) 			// Just connected
+			this.power = true;	// Consider powered (likely turned on manually)
+		else	// Just disconnected - clear out any "current program"
 			this.mProgramParams = '';
-		else {	// Just connected
-			this.cancelWoLRetry();
-			/*	Consider powered on as well, in case was turned on manually. Set my
-				internal state and fire change notification to let others know.
-			 */
-			this.mPower = true;
-			this.changed("power");
-		}
 	}
 
 	/**

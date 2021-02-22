@@ -55,13 +55,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         UIRobot_1 = UIRobot;
         UIRobot.prototype.onConnectStateChanged = function (connected) {
-            if (!connected)
+            if (connected)
+                this.power = true;
+            else
                 this.mProgramParams = '';
-            else {
-                this.cancelWoLRetry();
-                this.mPower = true;
-                this.changed("power");
-            }
         };
         Object.defineProperty(UIRobot.prototype, "power", {
             get: function () {
