@@ -38,7 +38,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     var LABEL_IDEVT = "IDEVT";
     var LABEL_IDMSG = "IDMSG";
     var LABEL_IDSEND = "IDSEND";
-    var LABEL_LANG = "LANG";
     var LABEL_LANGUE = "LANGUE";
     var LABEL_MSTSTATUS = "MSTSTATUS";
     var LABEL_NUMDIFF = "NUMDIFF";
@@ -59,36 +58,32 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     var LABEL_TSTXNSEC = "TSTXNSEC";
     var LABEL_UNICAST = "UNICAST";
     var PORT_UNICAST = 5023;
+    var SERVER_IP = '10.0.2.10';
+    var MAX_WAIT_FOR_ACKNOWLEDGEMENT = 500;
+    var LOG_DEBUG = false;
     var EmZ_IP = (function (_super) {
         __extends(EmZ_IP, _super);
         function EmZ_IP(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             _this._lastEventID = 0;
+            _this._lastEventPlayerID = -1;
             _this._idDom = 0;
-            socket.subscribe('textReceived', function (sender, message) {
+            _this.messageQueue = [];
+            _this.currentSentMessage = null;
+            _this.sendResolver = null;
+            socket.subscribe('textReceived', function (_sender, message) {
                 _this.onMessage(message.text);
             });
-            var messageUnicastSetup = new EmZIPUnicastSetup();
-            messageUnicastSetup.ValueIDDOM = _this._idDom;
-            messageUnicastSetup.ValueADR = '192.168.1.10';
-            messageUnicastSetup.ValuePORT = socket.listenerPort;
-            _this.sendMessage(messageUnicastSetup);
+            var messageUnicastSetup = new EmZIPUnicastSetup(_this._idDom, SERVER_IP, socket.listenerPort);
+            _this.queueMessage(messageUnicastSetup);
             return _this;
         }
         EmZ_IP.prototype.playZone = function (zone) {
-            var simpleControl = new EmZIPSimpleControl();
-            simpleControl.ValueIDDOM = this._idDom;
-            simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_STOP;
-            simpleControl.ValueNUMZONE = 0;
-            simpleControl.ValueOFFSET = 0;
-            this.sendMessage(simpleControl);
-            simpleControl = new EmZIPSimpleControl();
-            simpleControl.ValueIDDOM = this._idDom;
-            simpleControl.ValueORDRE = EmZIPSimpleControl.ORDRE_PLAY_ZONE;
-            simpleControl.ValueNUMZONE = zone;
-            simpleControl.ValueOFFSET = 0;
-            this.sendMessage(simpleControl);
+            var simpleControl = new EmZIPSimpleControl(this._idDom, EmZIPSimpleControl.ORDRE_STOP);
+            this.queueMessage(simpleControl);
+            simpleControl = new EmZIPSimpleControl(this._idDom, EmZIPSimpleControl.ORDRE_PLAY_ZONE, zone);
+            this.queueMessage(simpleControl);
         };
         EmZ_IP.prototype.sendText = function (text) {
             return this.socket.sendText(text);
@@ -108,19 +103,45 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             configurable: true
         });
         EmZ_IP.prototype.sendMessage = function (message) {
+            var _this = this;
+            if (LOG_DEBUG)
+                console.info(this.socket.name + ': sending ' + EmZIPMessage.CDEToEnglish(message.ValueCDE));
             this.socket.sendText(message.ToString() + '\0');
+            this.currentSentMessage = message;
+            return new Promise(function (resolve, reject) {
+                _this.sendResolver = resolve;
+                wait(MAX_WAIT_FOR_ACKNOWLEDGEMENT).then(function () {
+                    reject('send timed out');
+                });
+            });
+        };
+        EmZ_IP.prototype.queueMessage = function (message) {
+            this.messageQueue.push(message);
+            this.workMessageQueue();
+        };
+        EmZ_IP.prototype.workMessageQueue = function () {
+            var _this = this;
+            if (this.messageQueue.length > 0 &&
+                this.currentSentMessage == null) {
+                this.sendMessage(this.messageQueue.shift()).then(function () {
+                    _this.workMessageQueue();
+                }).catch(function (error) {
+                    console.warn(error);
+                });
+            }
         };
         EmZ_IP.prototype.onMessage = function (message) {
             var emZIPMessage = EmZIPMessage.Parse(message);
             switch (emZIPMessage.ValueCDE) {
-                case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
+                case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
+                    this.ProcessAcknowledgement(emZIPMessage);
                     break;
                 case EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER:
                     break;
                 case EmZIPMessage.MESSAGE_TYPE_EVENT:
                     this.ProcessEvent(emZIPMessage);
                     break;
-                case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
+                case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
                     break;
                 default:
                     console.info("received unsupported message type: " + emZIPMessage.ToString());
@@ -128,6 +149,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
         };
         EmZ_IP.prototype.ProcessEvent = function (eventMessage) {
+            if (LOG_DEBUG)
+                console.log('received event: event id : ' + eventMessage.ValueIDEVT + ' language: ' + eventMessage.ValueLANGUE + ' opt: ' + eventMessage.ValueOPT);
             this._lastEventID++;
             this._lastEventPlayerID = eventMessage.ValuePLAYERID;
             this.changed("lastEventID");
@@ -165,12 +188,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(Driver_1.Driver));
     exports.EmZ_IP = EmZ_IP;
     var EmZIPMessage = (function () {
-        function EmZIPMessage(message) {
+        function EmZIPMessage(iddom, cde) {
             this._fields = {};
-            this._splitByLinebreak = '\n';
-            this._splitByEqual = '=';
-            if (message)
-                this.ParseMessage(message);
+            this.SetNumberValue(LABEL_IDDOM, iddom);
+            this.SetNumberValue(LABEL_CDE, cde);
         }
         Object.defineProperty(EmZIPMessage.prototype, "ValueIDDOM", {
             get: function () {
@@ -190,8 +211,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             configurable: true
         });
         EmZIPMessage.prototype.GetNumberValue = function (label) {
-            var value = this._fields[label];
-            return value ? parseInt(value) : -1;
+            return EmZIPMessage.GetNumber(label, this._fields);
         };
         EmZIPMessage.prototype.SetNumberValue = function (label, value) {
             var valueString = value;
@@ -203,39 +223,72 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         EmZIPMessage.prototype.SetValue = function (label, value) {
             this._fields[label] = String(value);
         };
+        EmZIPMessage.CDEToEnglish = function (cde) {
+            switch (cde) {
+                case EmZIPMessage.MESSAGE_TYPE_EVENT:
+                    return 'event';
+                case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
+                    return 'request for delay';
+                case EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER:
+                    return 'delay answer';
+                case EmZIPMessage.MESSAGE_TYPE_CONTROL:
+                    return 'control';
+                case EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL:
+                    return 'simple control';
+                case EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP:
+                    return 'unicast setup';
+                case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
+                    return 'acknowledgement';
+            }
+            return 'unknown';
+        };
+        EmZIPMessage.GetNumber = function (label, dict) {
+            var value = dict[label];
+            return value ? parseInt(value) : -1;
+        };
+        EmZIPMessage.GetString = function (label, dict) {
+            return dict[label];
+        };
         EmZIPMessage.prototype.ParseMessage = function (message) {
-            var fields = message.split(this._splitByLinebreak);
+            this._fields = EmZIPMessage.ParseMessageIntoDict(message);
+        };
+        EmZIPMessage.ParseMessageIntoDict = function (message) {
+            var dict = {};
+            var fields = message.split(EmZIPMessage.splitByLinebreak);
             for (var i = 0; i < fields.length; i++) {
-                var labelAndValue = fields[i].trim().split(this._splitByEqual);
+                var labelAndValue = fields[i].trim().split(EmZIPMessage.splitByEqual);
                 if (labelAndValue.length == 2) {
                     var label = labelAndValue[0].trim();
                     var value = labelAndValue[1].trim();
-                    this._fields[label] = value;
+                    dict[label] = value;
                 }
             }
+            return dict;
         };
         EmZIPMessage.prototype.RenderMessageField = function (label) {
             return label + "=" + this.GetValue(label) + MESSAGE_LINE_BREAK;
         };
         EmZIPMessage.Parse = function (message) {
-            var emZIPMessage = new EmZIPMessage(message);
-            switch (emZIPMessage.ValueCDE) {
+            var dict = this.ParseMessageIntoDict(message);
+            var iddom = this.GetNumber(LABEL_IDDOM, dict);
+            var cde = this.GetNumber(LABEL_CDE, dict);
+            switch (cde) {
                 case EmZIPMessage.MESSAGE_TYPE_EVENT:
-                    return new EmZIPEvent(message);
+                    return new EmZIPEvent(iddom, this.GetNumber(LABEL_IDEVT, dict), this.GetNumber(LABEL_NUMZONE, dict), this.GetNumber(LABEL_PLAYERID, dict), this.GetNumber(LABEL_LANGUE, dict), this.GetNumber(LABEL_OPT, dict), this.GetNumber(LABEL_OFFSET, dict));
                 case EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY:
-                    return new EmZIPRequestForDelay(message);
+                    return new EmZIPRequestForDelay(iddom, this.GetString(LABEL_IDSEND, dict), this.GetNumber(LABEL_IDMSG, dict));
                 case EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER:
-                    return new EmZIPDelayAnswer(message);
+                    return new EmZIPDelayAnswer(iddom, this.GetString(LABEL_IDDEST, dict), this.GetNumber(LABEL_IDMSG, dict), this.GetNumber(LABEL_TSRXSEC, dict), this.GetNumber(LABEL_TSRXNSEC, dict), this.GetNumber(LABEL_TSTXSEC, dict), this.GetNumber(LABEL_TSTXNSEC, dict));
                 case EmZIPMessage.MESSAGE_TYPE_CONTROL:
-                    return new EmZIPControl(message);
+                    return new EmZIPControl(iddom, this.GetNumber(LABEL_TSSEC, dict), this.GetNumber(LABEL_TSNSEC, dict), this.GetString(LABEL_MSTSTATUS, dict), this.GetString(LABEL_IDSSDOM, dict), this.GetNumber(LABEL_NUMDIFF, dict), this.GetNumber(LABEL_RELTMPS, dict), this.GetNumber(LABEL_RELTMPNS, dict));
                 case EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL:
-                    return new EmZIPSimpleControl(message);
+                    return new EmZIPSimpleControl(iddom, this.GetNumber(LABEL_ORDRE, dict), this.GetNumber(LABEL_NUMZONE, dict), this.GetNumber(LABEL_OFFSET, dict));
                 case EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP:
-                    return new EmZIPUnicastSetup(message);
+                    return new EmZIPUnicastSetup(iddom, this.GetString(LABEL_ADR, dict), this.GetNumber(LABEL_PORT, dict));
                 case EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT:
-                    return new EmZIPAcknowledgment(message);
+                    return new EmZIPAcknowledgment(iddom, this.GetNumber(LABEL_IDCDE, dict), this.GetNumber(LABEL_RESULT, dict), this.GetString(LABEL_ADR, dict), this.GetNumber(LABEL_PORT, dict));
             }
-            return emZIPMessage;
+            return new EmZIPMessage(iddom, cde);
         };
         EmZIPMessage.prototype.ToString = function () {
             return PROTOCOL_VERSION + MESSAGE_LINE_BREAK +
@@ -253,8 +306,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }());
     var EmZIPEvent = (function (_super) {
         __extends(EmZIPEvent, _super);
-        function EmZIPEvent(message) {
-            return _super.call(this, message) || this;
+        function EmZIPEvent(iddom, idevt, numzone, playerid, langue, opt, offset) {
+            var _this = _super.call(this, iddom, EmZIPMessage.MESSAGE_TYPE_EVENT) || this;
+            _this.SetNumberValue(LABEL_IDEVT, idevt);
+            _this.SetNumberValue(LABEL_NUMZONE, numzone);
+            _this.SetNumberValue(LABEL_PLAYERID, playerid);
+            _this.SetNumberValue(LABEL_LANGUE, langue);
+            _this.SetNumberValue(LABEL_OPT, opt);
+            _this.SetNumberValue(LABEL_OFFSET, offset);
+            return _this;
         }
         Object.defineProperty(EmZIPEvent.prototype, "ValueIDEVT", {
             get: function () { return this.GetNumberValue(LABEL_IDEVT); },
@@ -296,8 +356,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(EmZIPMessage));
     var EmZIPRequestForDelay = (function (_super) {
         __extends(EmZIPRequestForDelay, _super);
-        function EmZIPRequestForDelay(message) {
-            return _super.call(this, message) || this;
+        function EmZIPRequestForDelay(iddom, idsend, idmsg) {
+            var _this = _super.call(this, iddom, EmZIPMessage.MESSAGE_TYPE_REQUEST_FOR_DELAY) || this;
+            _this.SetValue(LABEL_IDSEND, idsend);
+            _this.SetNumberValue(LABEL_IDMSG, idmsg);
+            return _this;
         }
         Object.defineProperty(EmZIPRequestForDelay.prototype, "ValueIDSEND", {
             get: function () { return this._fields[LABEL_IDSEND]; },
@@ -313,10 +376,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(EmZIPMessage));
     var EmZIPDelayAnswer = (function (_super) {
         __extends(EmZIPDelayAnswer, _super);
-        function EmZIPDelayAnswer(message) {
-            var _this = _super.call(this, message) || this;
-            if (!message)
-                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER);
+        function EmZIPDelayAnswer(iddom, iddest, idmsg, tsrxsec, tsrxnsec, tstxsec, tstxnsec) {
+            var _this = _super.call(this, iddom, EmZIPMessage.MESSAGE_TYPE_DELAY_ANSWER) || this;
+            _this.SetValue(LABEL_IDDEST, iddest);
+            _this.SetNumberValue(LABEL_IDMSG, idmsg);
+            _this.SetNumberValue(LABEL_TSRXSEC, tsrxsec);
+            _this.SetNumberValue(LABEL_TSRXNSEC, tsrxnsec);
+            _this.SetNumberValue(LABEL_TSTXSEC, tstxsec);
+            _this.SetNumberValue(LABEL_TSTXNSEC, tstxnsec);
             return _this;
         }
         Object.defineProperty(EmZIPDelayAnswer.prototype, "ValueIDDEST", {
@@ -369,10 +436,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(EmZIPMessage));
     var EmZIPSimpleControl = (function (_super) {
         __extends(EmZIPSimpleControl, _super);
-        function EmZIPSimpleControl(message) {
-            var _this = _super.call(this, message) || this;
-            if (!message)
-                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL);
+        function EmZIPSimpleControl(iddom, ordre, numzone, offset) {
+            if (numzone === void 0) { numzone = 0; }
+            if (offset === void 0) { offset = 0; }
+            var _this = _super.call(this, iddom, EmZIPMessage.MESSAGE_TYPE_SIMPLE_CONTROL) || this;
+            _this.SetNumberValue(LABEL_ORDRE, ordre);
+            _this.SetNumberValue(LABEL_NUMZONE, numzone);
+            _this.SetNumberValue(LABEL_OFFSET, offset);
             return _this;
         }
         Object.defineProperty(EmZIPSimpleControl.prototype, "ValueORDRE", {
@@ -409,22 +479,70 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(EmZIPMessage));
     var EmZIPControl = (function (_super) {
         __extends(EmZIPControl, _super);
-        function EmZIPControl(message) {
-            var _this = _super.call(this, message) || this;
-            if (!message)
-                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_CONTROL);
+        function EmZIPControl(iddom, tssec, tsnsec, msstatus, idssdom, numdiff, reltmps, reltmpns) {
+            var _this = _super.call(this, iddom, EmZIPMessage.MESSAGE_TYPE_CONTROL) || this;
+            _this.SetNumberValue(LABEL_TSSEC, tssec);
+            _this.SetNumberValue(LABEL_TSNSEC, tsnsec);
+            _this.SetValue(LABEL_MSTSTATUS, msstatus);
+            _this.SetValue(LABEL_IDSSDOM, idssdom);
+            _this.SetNumberValue(LABEL_NUMDIFF, numdiff);
+            _this.SetNumberValue(LABEL_RELTMPS, reltmps);
+            _this.SetNumberValue(LABEL_RELTMPNS, reltmpns);
             return _this;
         }
+        Object.defineProperty(EmZIPControl.prototype, "ValueTSSEC", {
+            get: function () { return this.GetNumberValue(LABEL_TSSEC); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPControl.prototype, "ValueTSNSEC", {
+            get: function () { return this.GetNumberValue(LABEL_TSNSEC); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPControl.prototype, "ValueMSSTATUS", {
+            get: function () { return this.GetValue(LABEL_MSTSTATUS); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPControl.prototype, "ValueIDSSDOM", {
+            get: function () { return this.GetValue(LABEL_IDSSDOM); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPControl.prototype, "ValueRELTMPS", {
+            get: function () { return this.GetNumberValue(LABEL_RELTMPS); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPControl.prototype, "ValueRELTMPNS", {
+            get: function () { return this.GetNumberValue(LABEL_RELTMPNS); },
+            enumerable: true,
+            configurable: true
+        });
+        EmZIPControl.prototype.ToString = function () {
+            return _super.prototype.ToString.call(this) +
+                this.RenderMessageField(LABEL_TSSEC) +
+                this.RenderMessageField(LABEL_TSNSEC) +
+                this.RenderMessageField(LABEL_MSTSTATUS) +
+                this.RenderMessageField(LABEL_IDSSDOM) +
+                this.RenderMessageField(LABEL_NUMDIFF) +
+                this.RenderMessageField(LABEL_RELTMPS) +
+                this.RenderMessageField(LABEL_RELTMPNS) +
+                MESSAGE_LINE_BREAK;
+        };
+        EmZIPControl.MSSTATUS_PLAY = 'PLAY';
+        EmZIPControl.MSSTATUS_STOP = 'STOP';
+        EmZIPControl.MSSTATUS_PAUSE = 'PAUSE';
         return EmZIPControl;
     }(EmZIPMessage));
     var EmZIPUnicastSetup = (function (_super) {
         __extends(EmZIPUnicastSetup, _super);
-        function EmZIPUnicastSetup(message) {
-            var _this = _super.call(this, message) || this;
-            if (!message) {
-                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP);
-                _this.ValueUNICAST = EmZIPUnicastSetup.CDEUNICAST_INIT;
-            }
+        function EmZIPUnicastSetup(iddom, adr, port) {
+            var _this = _super.call(this, iddom, EmZIPMessage.MESSAGE_TYPE_UNICAST_SETUP) || this;
+            _this.SetNumberValue(LABEL_UNICAST, EmZIPUnicastSetup.CDEUNICAST_INIT);
+            _this.SetValue(LABEL_ADR, adr);
+            _this.SetNumberValue(LABEL_PORT, port);
             return _this;
         }
         Object.defineProperty(EmZIPUnicastSetup.prototype, "ValueUNICAST", {
@@ -457,12 +575,34 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(EmZIPMessage));
     var EmZIPAcknowledgment = (function (_super) {
         __extends(EmZIPAcknowledgment, _super);
-        function EmZIPAcknowledgment(message) {
-            var _this = _super.call(this, message) || this;
-            if (!message)
-                _this.SetValue(LABEL_CDE, EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT);
+        function EmZIPAcknowledgment(iddom, idcde, result, adr, port) {
+            var _this = _super.call(this, iddom, EmZIPMessage.MESSAGE_TYPE_ACKNOWLEDGMENT) || this;
+            _this.SetNumberValue(LABEL_IDCDE, idcde);
+            _this.SetNumberValue(LABEL_RESULT, result);
+            _this.SetValue(LABEL_ADR, adr);
+            _this.SetNumberValue(LABEL_PORT, port);
             return _this;
         }
+        Object.defineProperty(EmZIPAcknowledgment.prototype, "ValueIDCDE", {
+            get: function () { return this.GetNumberValue(LABEL_IDCDE); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPAcknowledgment.prototype, "ValueRESULT", {
+            get: function () { return this.GetNumberValue(LABEL_RESULT); },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPAcknowledgment.prototype, "ValueADR", {
+            get: function () { return this._fields[LABEL_ADR]; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EmZIPAcknowledgment.prototype, "ValuePORT", {
+            get: function () { return this.GetNumberValue(LABEL_PORT); },
+            enumerable: true,
+            configurable: true
+        });
         EmZIPAcknowledgment.prototype.ToString = function () {
             return _super.prototype.ToString.call(this) +
                 this.RenderMessageField(LABEL_IDCDE) +
@@ -471,6 +611,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.RenderMessageField(LABEL_PORT) +
                 MESSAGE_LINE_BREAK;
         };
+        EmZIPAcknowledgment.RESULT_OKAY = 6;
+        EmZIPAcknowledgment.RESULT_ERROR = 21;
         return EmZIPAcknowledgment;
     }(EmZIPMessage));
 });
