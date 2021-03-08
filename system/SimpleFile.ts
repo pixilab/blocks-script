@@ -60,7 +60,7 @@ export var SimpleFile: {
 	 * JSON data is more efficient than reading it as text using the plain read call
 	 * and then converting it to JSON using the JSON.parse() method.
 	 */
-	readJson(fileName:string): Promise<any[]>;
+	readJson(fileName:string): Promise<any|any[]>;
 
 	/**
 	 * Move a file from src to dest. If dest exists and replace is true, then

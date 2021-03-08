@@ -130,7 +130,7 @@ class NavigationMaster
         if (!master.hooked) return;
         for (let i = 0; i < master.targetSpots.length; i++) {
             var targetSpot = master.targetSpots[i];
-            targetSpot.gotoPage(message.targetPath);
+            targetSpot.gotoBlock(message.targetPath);
         }
         //console.log("Navigated to", message.targetPath);
     }

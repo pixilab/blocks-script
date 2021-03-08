@@ -12,6 +12,24 @@ export abstract class Feed {
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>) {
 		this.__feedEnv.establishFeed(feed);
 	}
+
+	/**
+	 * Turn an array-like object into a proper JavaScript array, which is returned.
+	 * Simply returns arr if already is fine.
+	 */
+	static makeJSArray(arr: any[]) {
+		if (Array.isArray(arr))
+			return arr;	// Already seems kosher
+		/*	Casts below required to convince TS compiler that arr is indeed
+			sufficiently array-like to provide length and indexed access,
+			even past the isArray check above.
+		 */
+		const result = [];
+		const length = (<any[]>arr).length;
+		for (var i = 0; i < length; ++i)
+			result.push((<any[]>arr)[i]);
+		return result;
+	}
 }
 
 

@@ -132,7 +132,7 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
                 return;
             for (var i = 0; i < master.targetSpots.length; i++) {
                 var targetSpot = master.targetSpots[i];
-                targetSpot.gotoPage(message.targetPath);
+                targetSpot.gotoBlock(message.targetPath);
             }
         };
         NavigationMaster.prototype.reHookUp = function () {

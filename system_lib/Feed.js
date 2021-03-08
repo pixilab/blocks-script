@@ -9,6 +9,15 @@ define(["require", "exports"], function (require, exports) {
         Feed.prototype.establishFeed = function (feed) {
             this.__feedEnv.establishFeed(feed);
         };
+        Feed.makeJSArray = function (arr) {
+            if (Array.isArray(arr))
+                return arr;
+            var result = [];
+            var length = arr.length;
+            for (var i = 0; i < length; ++i)
+                result.push(arr[i]);
+            return result;
+        };
         return Feed;
     }());
     exports.Feed = Feed;
