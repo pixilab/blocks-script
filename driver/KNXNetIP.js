@@ -60,26 +60,33 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
         }
         KNXNetIP.prototype.loadConfig = function () {
             var _this = this;
-            SimpleFile_1.SimpleFile.readJson('KNXNetIP/' + this.socket.name + '.json').then(function (data) {
-                if (data.analog) {
-                    for (var _i = 0, _a = data.analog; _i < _a.length; _i++) {
-                        var analog = _a[_i];
-                        if (!analog.type || analog.type === "5.001")
-                            _this.dynProps.push(new AnalogProp(_this, analog));
-                        else
-                            console.warn("Unsupported analog type", analog.type);
-                    }
-                }
-                if (data.digital) {
-                    for (var _b = 0, _c = data.digital; _b < _c.length; _b++) {
-                        var digital = _c[_b];
-                        if (!digital.type || digital.type.charAt(0) === "1")
-                            _this.dynProps.push(new DigitalProp(_this, digital));
-                        else
-                            console.warn("Unsupported digital type", digital.type);
-                    }
-                }
+            var configFile = 'KNXNetIP/' + this.socket.name + '.json';
+            SimpleFile_1.SimpleFile.exists(configFile).then(function (existence) {
+                if (existence === 1) // Is plain file
+                    SimpleFile_1.SimpleFile.readJson(configFile).then(function (data) { return _this.processConfig(data); });
+                else
+                    console.log('No configuration file "' + configFile + '" - providing only generic functionality');
             });
+        };
+        KNXNetIP.prototype.processConfig = function (config) {
+            if (config.analog) {
+                for (var _i = 0, _a = config.analog; _i < _a.length; _i++) {
+                    var analog = _a[_i];
+                    if (!analog.type || analog.type === "5.001")
+                        this.dynProps.push(new AnalogProp(this, analog));
+                    else
+                        console.warn("Unsupported analog type", analog.type);
+                }
+            }
+            if (config.digital) {
+                for (var _b = 0, _c = config.digital; _b < _c.length; _b++) {
+                    var digital = _c[_b];
+                    if (!digital.type || digital.type.charAt(0) === "1")
+                        this.dynProps.push(new DigitalProp(this, digital));
+                    else
+                        console.warn("Unsupported digital type", digital.type);
+                }
+            }
         };
         Object.defineProperty(KNXNetIP.prototype, "connected", {
             get: function () {

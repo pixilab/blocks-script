@@ -118,27 +118,37 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	}
 
 	/**
-	 * Attempt to load my configuration data, if any, setting up corresponding properties.
+	 * Load my configuration data, if any, setting up dynamic properties accordingly.
 	 */
 	private loadConfig() {
-		SimpleFile.readJson('KNXNetIP/' + this.socket.name + '.json').then((data: IConfig) => {
-			if (data.analog) {
-				for (const analog of data.analog) {	// Define one analog property per entry
-					if (!analog.type || analog.type === "5.001") // Only type we know of for now
-						this.dynProps.push(new AnalogProp(this, analog));
-					else
-						console.warn("Unsupported analog type", analog.type);
-				}
-			}
-			if (data.digital) {
-				for (const digital of data.digital) {	// Define one analog property per entry
-					if (!digital.type || digital.type.charAt(0) === "1") // Only type we know of for now
-						this.dynProps.push(new DigitalProp(this, digital));
-					else
-						console.warn("Unsupported digital type", digital.type);
-				}
-			}
+		const configFile = 'KNXNetIP/' + this.socket.name + '.json';
+
+		SimpleFile.exists(configFile).then(existence => {
+			if (existence === 1)	// Exists and is a plain file
+				SimpleFile.readJson(configFile).then(data => this.processConfig(data));
+			else
+				console.log('No configuration file "' + configFile + '" - providing only generic functionality');
 		});
+	}
+
+	private processConfig(config: IConfig) {
+		if (config.analog) {
+			for (const analog of config.analog) {	// Define one analog property per entry
+				if (!analog.type || analog.type === "5.001") // Only type we know of for now
+					this.dynProps.push(new AnalogProp(this, analog));
+				else
+					console.warn("Unsupported analog type", analog.type);
+			}
+		}
+		if (config.digital) {
+			for (const digital of config.digital) {	// Define one analog property per entry
+				if (!digital.type || digital.type.charAt(0) === "1") // Only type we know of for now
+					this.dynProps.push(new DigitalProp(this, digital));
+				else
+					console.warn("Unsupported digital type", digital.type);
+			}
+		}
+
 	}
 
 	@property("Connection established", true)
