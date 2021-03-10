@@ -23,7 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], function (require, exports, Metadata_1, Driver_1) {
+define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "system/SimpleFile"], function (require, exports, Metadata_1, Driver_1, SimpleFile_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.KNXNetIP = void 0;
@@ -37,6 +37,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.mConnected = false;
             _this.cmdQueue = [];
             _this.errCount = 0;
+            _this.dynProps = [];
             if (!_this.socket.listenerPort)
                 throw "Listening port not specified (e.g, 32331)";
             socket.subscribe('bytesReceived', function (sender, message) {
@@ -53,9 +54,33 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                     }
                 }
             });
+            _this.loadConfig();
             _this.checkStateSoon(5);
             return _this;
         }
+        KNXNetIP.prototype.loadConfig = function () {
+            var _this = this;
+            SimpleFile_1.SimpleFile.readJson('KNXNetIP/' + this.socket.name + '.json').then(function (data) {
+                if (data.analog) {
+                    for (var _i = 0, _a = data.analog; _i < _a.length; _i++) {
+                        var analog = _a[_i];
+                        if (!analog.type || analog.type === "5.001")
+                            _this.dynProps.push(new AnalogProp(_this, analog));
+                        else
+                            console.warn("Unsupported analog type", analog.type);
+                    }
+                }
+                if (data.digital) {
+                    for (var _b = 0, _c = data.digital; _b < _c.length; _b++) {
+                        var digital = _c[_b];
+                        if (!digital.type || digital.type.charAt(0) === "1")
+                            _this.dynProps.push(new DigitalProp(_this, digital));
+                        else
+                            console.warn("Unsupported digital type", digital.type);
+                    }
+                }
+            });
+        };
         Object.defineProperty(KNXNetIP.prototype, "connected", {
             get: function () {
                 return this.mConnected;
@@ -76,9 +101,11 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 _this.timer = undefined;
                 switch (_this.state) {
                     case 0:
-                        _this.sendConnectRequest();
-                        _this.setState(1);
-                        _this.checkStateSoon();
+                        if (_this.socket.enabled) {
+                            _this.sendConnectRequest();
+                            _this.setState(1);
+                            _this.checkStateSoon();
+                        }
                         break;
                     case 4:
                     case 2:
@@ -105,7 +132,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             }
         };
         KNXNetIP.prototype.sendQueuedCommand = function () {
-            if (this.cmdQueue.length) {
+            if (this.cmdQueue.length && this.connected) {
                 var toSend = this.cmdQueue[0];
                 toSend.handler(toSend);
                 this.setState(4);
@@ -226,15 +253,23 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         KNXNetIP.prototype.setScene = function (addr1, addr2, addr3, scene) {
             scene = Math.min(Math.max(0, scene), 63);
             var cmd = {
-                handler: this.sendSceneNumber.bind(this),
+                handler: this.sendSingleByteNumber.bind(this),
                 destAddr: calcAddr(addr1, addr2, addr3),
-                scene: scene
+                num: scene
             };
             this.queueCmd(cmd);
         };
+        KNXNetIP.prototype.enforceProps = function () {
+            if (this.connected) {
+                for (var _i = 0, _a = this.dynProps; _i < _a.length; _i++) {
+                    var dynProp = _a[_i];
+                    dynProp.sendWantedValue();
+                }
+            }
+        };
         KNXNetIP.prototype.queueCmd = function (cmd) {
             this.cmdQueue.push(cmd);
-            if (this.cmdQueue.length > 30) {
+            if (this.cmdQueue.length > 50) {
                 console.warn("Excessive command buffering - discarding old");
                 this.cmdQueue.shift();
             }
@@ -245,14 +280,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         KNXNetIP.prototype.sendOnOff = function (cmd) {
             cmd.seqId = this.seqCount;
-            var tunReq = [
-                0x06, 0x10,
-                1056 >> 8, 1056 & 0xff,
-                0x00, 0x15,
-                0x04,
-                this.channelId,
-                this.seqCount,
-                0,
+            this.sendTunReq([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0x11,
                 0x00,
                 0xbc,
@@ -263,20 +292,12 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 0x01,
                 0x00,
                 cmd.on ? 0x81 : 0x80
-            ];
-            this.socket.sendBytes(setLength(tunReq));
-            this.seqCount = ((this.seqCount + 1) & 0xff);
+            ]);
         };
-        KNXNetIP.prototype.sendSceneNumber = function (cmd) {
+        KNXNetIP.prototype.sendSingleByteNumber = function (cmd) {
             cmd.seqId = this.seqCount;
-            var tunReq = [
-                0x06, 0x10,
-                1056 >> 8, 1056 & 0xff,
-                0x00, 0x15,
-                0x04,
-                this.channelId,
-                this.seqCount,
-                0,
+            this.sendTunReq([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0x11,
                 0x00,
                 0xbc,
@@ -287,8 +308,18 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 0x02,
                 0x00,
                 0x80,
-                cmd.scene
-            ];
+                cmd.num
+            ]);
+        };
+        KNXNetIP.prototype.sendTunReq = function (tunReq) {
+            tunReq[0] = 0x06;
+            tunReq[1] = 0x10;
+            tunReq[2] = 1056 >> 8;
+            tunReq[3] = 1056 & 0xff;
+            tunReq[6] = 4;
+            tunReq[7] = this.channelId;
+            tunReq[8] = this.seqCount;
+            tunReq[9] = 0;
             this.socket.sendBytes(setLength(tunReq));
             this.seqCount = ((this.seqCount + 1) & 0xff);
         };
@@ -324,6 +355,12 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             __metadata("design:paramtypes", [Number, Number, Number, Number]),
             __metadata("design:returntype", void 0)
         ], KNXNetIP.prototype, "setScene", null);
+        __decorate([
+            Metadata_1.callable("Send all my dynamic property values"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", void 0)
+        ], KNXNetIP.prototype, "enforceProps", null);
         KNXNetIP = __decorate([
             Metadata_1.driver('NetworkUDP', { port: 3671, rcvPort: 32331 }),
             __metadata("design:paramtypes", [Object])
@@ -331,6 +368,76 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         return KNXNetIP;
     }(Driver_1.Driver));
     exports.KNXNetIP = KNXNetIP;
+    var AnalogProp = (function () {
+        function AnalogProp(owner, analog) {
+            var _this = this;
+            this.owner = owner;
+            this.analog = analog;
+            this.wantedValue = 0;
+            owner.property('analog_' + analog.name, {
+                type: "Number",
+                description: analog.description || "An analog channel value (normalized)",
+                min: 0,
+                max: 1
+            }, function (setValue) {
+                if (setValue !== undefined) {
+                    setValue = Math.max(0, Math.min(1, setValue));
+                    _this.wantedValue = setValue;
+                    if (_this.currValue !== setValue) {
+                        if (!_this.delayedSendTimer) {
+                            _this.delayedSendTimer = wait(150);
+                            _this.delayedSendTimer.then(function () {
+                                _this.delayedSendTimer = undefined;
+                                _this.sendWantedValue();
+                                _this.currValue = _this.wantedValue;
+                            });
+                        }
+                    }
+                }
+                return _this.wantedValue;
+            });
+        }
+        AnalogProp.prototype.sendWantedValue = function () {
+            var anal = this.analog;
+            var owner = this.owner;
+            var cmd = {
+                handler: owner.sendSingleByteNumber.bind(owner),
+                destAddr: calcAddr(anal.addr[0], anal.addr[1], anal.addr[2]),
+                num: Math.round(this.wantedValue * 100)
+            };
+            owner.queueCmd(cmd);
+        };
+        return AnalogProp;
+    }());
+    var DigitalProp = (function () {
+        function DigitalProp(owner, digital) {
+            var _this = this;
+            this.owner = owner;
+            this.digital = digital;
+            this.wantedValue = false;
+            owner.property('digital_' + digital.name, {
+                type: "Boolean",
+                description: digital.description || "An digital (on/off) channel value"
+            }, function (setValue) {
+                if (setValue !== undefined) {
+                    _this.wantedValue = setValue;
+                    _this.sendWantedValue();
+                }
+                return _this.wantedValue;
+            });
+        }
+        DigitalProp.prototype.sendWantedValue = function () {
+            var ch = this.digital;
+            var owner = this.owner;
+            var cmd = {
+                handler: owner.sendOnOff.bind(owner),
+                destAddr: calcAddr(ch.addr[0], ch.addr[1], ch.addr[2]),
+                on: this.wantedValue
+            };
+            owner.queueCmd(cmd);
+        };
+        return DigitalProp;
+    }());
     function calcAddr(addr1, addr2, addr3) {
         addr1 = Math.min(Math.max(0, addr1), 31);
         addr2 = Math.min(Math.max(0, addr2), 7);

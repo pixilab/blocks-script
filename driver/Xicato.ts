@@ -356,7 +356,7 @@ export class Xicato extends Driver<NetworkTCP> {
         return promise;
     }
     private handleGetPutResponse (
-        response: Response,
+        response: Response<any>,
         resolve: (value?: string | Thenable<string>) => void,
         reject: (error?: any) => void
     ) : void {

@@ -123,7 +123,6 @@ export class PJLink extends NetworkProjector {
 		);
 	}
 
-
 	protected sendCorrection(): boolean {
 		const didSend = super.sendCorrection();
 		if (didSend) {
