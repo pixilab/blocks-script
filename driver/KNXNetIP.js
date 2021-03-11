@@ -62,7 +62,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             var _this = this;
             var configFile = 'KNXNetIP/' + this.socket.name + '.json';
             SimpleFile_1.SimpleFile.exists(configFile).then(function (existence) {
-                if (existence === 1) // Is plain file
+                if (existence === 1)
                     SimpleFile_1.SimpleFile.readJson(configFile).then(function (data) { return _this.processConfig(data); });
                 else
                     console.log('No configuration file "' + configFile + '" - providing only generic functionality');
@@ -410,7 +410,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             var cmd = {
                 handler: owner.sendSingleByteNumber.bind(owner),
                 destAddr: calcAddr(anal.addr[0], anal.addr[1], anal.addr[2]),
-                num: Math.round(this.wantedValue * 100)
+                num: Math.round(this.wantedValue * 255)
             };
             owner.queueCmd(cmd);
         };

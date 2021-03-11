@@ -513,7 +513,7 @@ interface DynProp {
 }
 
 /**
- * An analog property, with a normalized value 0...1, sent as a 0...100 percentage.
+ * An analog property, with a normalized value 0...1, sent as a 0...255 value.
  */
 class AnalogProp implements DynProp {
 	private wantedValue = 0;	// Most recently set value
@@ -559,7 +559,7 @@ class AnalogProp implements DynProp {
 		const cmd: NumberCmd = {
 			handler: owner.sendSingleByteNumber.bind(owner),
 			destAddr: calcAddr(anal.addr[0], anal.addr[1], anal.addr[2]),
-			num: Math.round(this.wantedValue * 100)
+			num: Math.round(this.wantedValue * 255)
 		};
 		owner.queueCmd(cmd);
 	}
