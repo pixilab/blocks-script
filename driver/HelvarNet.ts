@@ -66,7 +66,19 @@ export class HelvarNet extends Driver<NetworkTCP> {
 		const cmd = "V:1,C:14,L:" + levelStr + ",@" + address + fadeParam(fadeTime);
 		this.sendCmd(cmd);
 	}
+	
+	@callable("Apply brightness level to a group of devices")
+	public levelToGroup(
+		@parameter("Brightness, 0..1") level: number,
+		@parameter("Target group, as '1234'") address: string,
+		@parameter("Transition time, in seconds", true) fadeTime?: number
 
+	) {
+		const levelStr = Math.round(level * 100).toString();
+		const cmd = "V:1,C:13,L:" + levelStr + ",G:" + address + fadeParam(fadeTime);
+		this.sendCmd(cmd);
+	}
+	
 	/**
 	 * Frame the command with leading > and trailing #.
 	 */
