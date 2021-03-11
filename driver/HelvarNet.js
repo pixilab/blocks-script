@@ -117,7 +117,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, String, Number]),
             __metadata("design:returntype", void 0)
-        ], HelvarNet.prototype, "levelToDevice", null);
+        ], HelvarNet.prototype, "levelToGroup", null);
         HelvarNet = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 50000 }),
             __metadata("design:paramtypes", [Object])
