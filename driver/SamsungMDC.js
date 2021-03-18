@@ -36,7 +36,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.enableWakeOnLAN();
             _this.propList = [];
             _this.propList.push(_this.powerProp = new Power(_this));
-            _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33", 0x14, 0x21, 0x14, 0x40);
+            _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33, HDMI2=34, URL=99", 0x14, 0x21, 9, 99);
             _this.propList.push(_this.inputProp);
             _this.propList.push(_this.volumeProp = new Volume(_this));
             socket.subscribe('connect', function (sender, message) {
