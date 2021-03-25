@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -178,12 +178,25 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
         ArtnetGnS.prototype.sceneAddExecute = function (sceneName, realmName, groupName, taskName, delay) {
             this.getScene(sceneName, true).addExecute(realmName, groupName, taskName, delay);
         };
+        ArtnetGnS.prototype.sceneAddCallScene = function (sceneName, sceneNameToCall, timefactor, delay) {
+            this.getScene(sceneName, true).addCallScene(sceneNameToCall, timefactor, delay);
+        };
         ArtnetGnS.prototype.sceneAddChannelsFadeToLabel = function (sceneName, label, fixtureName, channelNames, duration, delay) {
             var channels = this.getAnalogChannels(this.getFixtureChannels(fixtureName, channelNames));
             this.getScene(sceneName, true).addChannelsFadeToLabel(fixtureName, channels, label, duration, delay);
         };
         ArtnetGnS.prototype.sceneCall = function (sceneName, timefactor, seekTo, force) {
             var scene = this.getScene(sceneName, false);
+            if (timefactor) {
+                if (timefactor <= 0.0)
+                    return;
+                timefactor = 1.0 / timefactor;
+            }
+            scene.call(timefactor, seekTo, force);
+            return undefined;
+        };
+        ArtnetGnS.sceneCall = function (sceneName, timefactor, seekTo, force) {
+            var scene = ArtnetGnS.getScene(sceneName, false);
             if (timefactor) {
                 if (timefactor <= 0.0)
                     return;
@@ -459,6 +472,12 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             }
             return ArtnetGnS.scenes[sceneName];
         };
+        ArtnetGnS.getScene = function (sceneName, createIfMissing) {
+            if (!ArtnetGnS.scenes[sceneName] && createIfMissing) {
+                ArtnetGnS.scenes[sceneName] = new ArtnetScene();
+            }
+            return ArtnetGnS.scenes[sceneName];
+        };
         ArtnetGnS.prototype.getStringArray = function (list) {
             var result = [];
             var listParts = split(list, { separator: ',', quotes: ['"', '\''], brackets: { '[': ']' } });
@@ -714,6 +733,16 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             __metadata("design:returntype", void 0)
         ], ArtnetGnS.prototype, "sceneAddExecute", null);
         __decorate([
+            Metadata_1.callable('add call scene to scene'),
+            __param(0, Metadata_1.parameter('scene name')),
+            __param(1, Metadata_1.parameter('scene name to call')),
+            __param(2, Metadata_1.parameter('timefactor')),
+            __param(3, Metadata_1.parameter('delay in seconds', true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], ArtnetGnS.prototype, "sceneAddCallScene", null);
+        __decorate([
             Metadata_1.callable('add fade to label to scene'),
             __param(0, Metadata_1.parameter('scene name')),
             __param(1, Metadata_1.parameter('label')),
@@ -950,6 +979,10 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             this.sceneItems.push(new ArtnetSceneExecute(realm, group, task, 0, delay));
             this.applyChanges();
         };
+        ArtnetScene.prototype.addCallScene = function (sceneName, timefactor, delay) {
+            this.sceneItems.push(new ArtnetSceneCallScene(sceneName, timefactor, 0, delay));
+            this.applyChanges();
+        };
         ArtnetScene.prototype.applyChanges = function () {
             this.sceneItems.sort(function (a, b) {
                 if (a.delay > b.delay)
@@ -1131,5 +1164,20 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
             }
         };
         return ArtnetSceneExecute;
+    }(ArtnetSceneItem));
+    var ArtnetSceneCallScene = (function (_super) {
+        __extends(ArtnetSceneCallScene, _super);
+        function ArtnetSceneCallScene(sceneName, timefactor, duration, delay) {
+            var _this = _super.call(this, duration, delay) || this;
+            _this.sceneName = sceneName;
+            _this.timefactor = timefactor;
+            return _this;
+        }
+        ArtnetSceneCallScene.prototype.call = function (factor) {
+            if (factor > 0.9 && factor < 1.1) {
+                ArtnetGnS.sceneCall(this.sceneName, this.timefactor);
+            }
+        };
+        return ArtnetSceneCallScene;
     }(ArtnetSceneItem));
 });
