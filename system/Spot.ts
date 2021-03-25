@@ -196,9 +196,10 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	 * Ask spot to scroll horizontally and/or vertically, to the specified position.
 	 * This assumes the existence of Scroller(s) on the client side, to do the actual
 	 * scrolling. The position is specified as a normalized value 0...1, where 0
-	 * is no scrolling, and 1 is the maximum amount of scrolling.
+	 * is no scrolling, and 1 is the maximum amount of scrolling. If "seconds" is
+	 * specified, then scroll gradually over that time.
 	 */
-	scrollTo(x: number|undefined, y?:number): void;
+	scrollTo(x: number|undefined, y?:number, seconds?: number): void;
 
 	/**
 	 * Tell any active Locator on this Spot to locate the location ID

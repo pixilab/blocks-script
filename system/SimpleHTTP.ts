@@ -51,6 +51,11 @@ interface ReqOpts {
 		doesn't return the correct mime type.
 	 */
 	interpretAs?: string;
+
+	// Options applicable only for interpreting CSV data.
+	columnSeparator?: string, 	// Separator character; default is ',' other common option is '\t'
+	escapeChar?: string,		// Escape character; default is none
+	quote?: string | false 		// Quote charagter to use, none if false; default is '"'
 }
 
 /**

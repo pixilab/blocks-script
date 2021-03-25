@@ -9,6 +9,12 @@ export abstract class Feed {
 		this.__feedEnv = env;
 	}
 
+	/**
+	 * Publish a static feed instance under its name. The idea being that a backend may provide
+	 * several different "presentations", "collections" or "themes" for presenting different sets
+	 * of objects. Each of those have the same internal structure, but are designed to be shown
+	 * on different spots or based on some other selection criteria.
+	 */
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>) {
 		this.__feedEnv.establishFeed(feed);
 	}
@@ -39,6 +45,9 @@ interface Dictionary<TElem> { [id: string]: TElem; }
 // A class constructor function
 interface Ctor<T> { new(... args: any[]): T ;}
 
+/**
+ * Interface to be implemented by each static feed instance published through establishFeed.
+ */
 export interface StaticFeed<ListItem extends Object, DetailsItem extends ListItem> {
 	readonly name: string;	// Internal (brief) name of this feed instance
 
@@ -49,6 +58,11 @@ export interface StaticFeed<ListItem extends Object, DetailsItem extends ListIte
 	getDetails(spec: FeedDetailsSpec): Promise<DetailsItem|undefined>;
 }
 
+/**
+ * Common information passed into getList and getDetails requests, including possibly useful
+ * Spot-side settings such as tags and spot parameters, which may be used to modify the query
+ * sent to the backend. E.g., if the backend request directly supports language preferences.
+ */
 interface FeedSpec {
 	spotTags: Dictionary<true>;	// All tags applied to the spot (e.g., language preference)
 	spotParameters: Dictionary<string|number|boolean>;	// All local spot parameters
