@@ -103,6 +103,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             messages.unshift(this.socket.fullName);
             console.warn(messages);
         };
+        NetworkProjector.prototype.infoMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            messages.unshift(this.socket.fullName);
+            console.info(messages);
+        };
         NetworkProjector.prototype.reqToSend = function () {
             for (var _i = 0, _a = this.propList; _i < _a.length; _i++) {
                 var p = _a[_i];
@@ -148,6 +156,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NetworkProjector.prototype.attemptConnect = function () {
             var _this = this;
             if (!this.socket.connected && !this.connecting && this.socket.enabled) {
+                this.infoMsg("attemptConnect");
                 this.socket.connect().then(function () { return _this.justConnected(); }, function (error) { return _this.connectStateChanged(); });
                 this.connecting = true;
             }
@@ -156,6 +165,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.connectStateChanged = function () {
             this.connecting = false;
+            this.infoMsg("connectStateChanged", this.socket.connected);
             if (!this.socket.connected) {
                 this.connected = false;
                 if (this.correctionRetry)

@@ -152,6 +152,14 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		console.warn(messages);
 	}
 
+	/**
+	 Log an info message, incriminating my network connection's name
+	 */
+	protected infoMsg(...messages: any[]) {
+		messages.unshift(this.socket.fullName);
+		console.info(messages);
+	}
+
 	/*	Get first state that wants to send a request, else undefined.
 	 */
 	protected reqToSend(): State<any>|undefined {
@@ -218,7 +226,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected attemptConnect() {
 		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-			// console.info("attemptConnect");
+			this.infoMsg("attemptConnect");
 			this.socket.connect().then(
 				() => this.justConnected(),
 				error => this.connectStateChanged()
@@ -239,7 +247,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected connectStateChanged() {
 		this.connecting = false;
-		// console.info("connectStateChanged", this.socket.connected);
+		this.infoMsg("connectStateChanged", this.socket.connected);
 		if (!this.socket.connected) {
 			this.connected = false;	// Tell clients connection dropped
 			if (this.correctionRetry)

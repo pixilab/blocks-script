@@ -147,28 +147,30 @@ export class UIRobot extends Driver<NetworkTCP> {
 	@property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS")
 	public set program(programParams: string) {
 		// console.log("program", programParams);
-		// First stop the previously runnig program, if any
-		const runningProgram = this.parseProgramParams(this.mProgramParams);
-		if (runningProgram) {
-			this.sendCommand(
-				'Terminate',
-				runningProgram.program
-			);
-		}
+		if (this.mProgramParams !== programParams) { // Only send command if this is indeed news
+			// First stop the previously runnig program, if any
+			const runningProgram = this.parseProgramParams(this.mProgramParams);
+			if (runningProgram) {
+				this.sendCommand(
+					'Terminate',
+					runningProgram.program
+				);
+			}
 
-		// Then launch any new program
-		const newProgram = this.parseProgramParams(programParams);
+			// Then launch any new program
+			const newProgram = this.parseProgramParams(programParams);
 
-		if (newProgram) {
-			this.mProgramParams = programParams;
-			this.sendCommand(
-				'Launch',
-				newProgram.workingDir,
-				newProgram.program,
-				...newProgram.arguments
-			);
-		} else {
-			this.mProgramParams = '';
+			if (newProgram) {
+				this.mProgramParams = programParams;
+				this.sendCommand(
+					'Launch',
+					newProgram.workingDir,
+					newProgram.program,
+					...newProgram.arguments
+				);
+			} else {
+				this.mProgramParams = '';
+			}
 		}
 	}
 	public get program(): string {
@@ -183,6 +185,11 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 * 	control
 	 * 	alt
 	 * 	altgr
+	 * KEY may be expressed as:
+	 * 	 - an upper case alphabetic (ASCII) character
+	 * 	 - a digit
+	 * 	 - a VK_XXX "virtual key code" from the list found here:
+	 * 	 	https://docs.oracle.com/javase/7/docs/api/java/awt/event/KeyEvent.html
 	 * The keys sent are only remembered a short while and then reset, this is because
 	 * we'd like some feedback when pusing a button on the panel.
 	 */

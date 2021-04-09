@@ -136,19 +136,21 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 return this.mProgramParams;
             },
             set: function (programParams) {
-                var runningProgram = this.parseProgramParams(this.mProgramParams);
-                if (runningProgram) {
-                    this.sendCommand('Terminate', runningProgram.program);
-                }
-                var newProgram = this.parseProgramParams(programParams);
-                if (newProgram) {
-                    this.mProgramParams = programParams;
-                    this.sendCommand.apply(this, __spreadArrays(['Launch',
-                        newProgram.workingDir,
-                        newProgram.program], newProgram.arguments));
-                }
-                else {
-                    this.mProgramParams = '';
+                if (this.mProgramParams !== programParams) {
+                    var runningProgram = this.parseProgramParams(this.mProgramParams);
+                    if (runningProgram) {
+                        this.sendCommand('Terminate', runningProgram.program);
+                    }
+                    var newProgram = this.parseProgramParams(programParams);
+                    if (newProgram) {
+                        this.mProgramParams = programParams;
+                        this.sendCommand.apply(this, __spreadArrays(['Launch',
+                            newProgram.workingDir,
+                            newProgram.program], newProgram.arguments));
+                    }
+                    else {
+                        this.mProgramParams = '';
+                    }
                 }
             },
             enumerable: false,
