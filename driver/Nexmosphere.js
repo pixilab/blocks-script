@@ -100,8 +100,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 var ctor = Nexmosphere_1.interfaceRegistry[modelInfo.modelCode];
                 if (ctor)
                     this.interfaces[index] = new ctor(this, index);
-                else
-                    console.warn("Unknown modelcode from controller", modelInfo.modelCode);
+                else {
+                    console.warn("Unknown interface model - using generic 'unknown' type", modelInfo.modelCode);
+                    this.interfaces[index] = new UnknownInterface(this, index);
+                }
             }
             else {
                 console.warn("Unknown command received from controller", msg);
@@ -131,6 +133,26 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         return BaseInterface;
     }());
+    var UnknownInterface = (function (_super) {
+        __extends(UnknownInterface, _super);
+        function UnknownInterface(driver, index) {
+            var _this = _super.call(this, driver, index) || this;
+            _this.propName = _this.getNamePrefix() + "_unknown";
+            _this.driver.property(_this.propName, {
+                type: String,
+                description: "Raw data last received from unknown device type",
+                readOnly: true
+            }, function (setValue) {
+                return _this.propValue;
+            });
+            return _this;
+        }
+        UnknownInterface.prototype.receiveData = function (data) {
+            this.propValue = data;
+            this.driver.changed(this.propName);
+        };
+        return UnknownInterface;
+    }(BaseInterface));
     var RfidInterface = (function (_super) {
         __extends(RfidInterface, _super);
         function RfidInterface(driver, index) {

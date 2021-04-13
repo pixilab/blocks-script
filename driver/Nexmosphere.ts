@@ -115,8 +115,10 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 			const ctor = Nexmosphere.interfaceRegistry[modelInfo.modelCode];
 			if (ctor)
 				this.interfaces[index] = new ctor(this, index);
-			else
-				console.warn("Unknown modelcode from controller", modelInfo.modelCode)
+			else {
+				console.warn("Unknown interface model - using generic 'unknown' type", modelInfo.modelCode);
+				this.interfaces[index] = new UnknownInterface(this, index);
+			}
 
 		} else {
 			console.warn("Unknown command received from controller", msg)
@@ -144,6 +146,34 @@ abstract class BaseInterface {
 	abstract receiveData(data: string, tag?: TagInfo): void;
 }
 
+// Generic interface used when no matching type found, just providing its last data as a string
+class UnknownInterface extends BaseInterface {
+
+	private readonly propName: string;
+	private propValue: string;
+
+	constructor(driver: Nexmosphere, index: number) {
+		super(driver, index);
+		this.propName = this.getNamePrefix() + "_unknown";
+		this.driver.property<string>(
+			this.propName,
+			{
+				type: String,
+				description: "Raw data last received from unknown device type",
+				readOnly: true
+			},
+			setValue => {
+				return this.propValue;
+			}
+		);
+	}
+
+	receiveData(data: string) {
+		this.propValue = data;
+		this.driver.changed(this.propName);
+	}
+}
+// Instantiated manually, so no need to register
 
 /**
  * RFID detector.
