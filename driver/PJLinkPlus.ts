@@ -3,6 +3,8 @@
  * Version 2.3b
  * - supports class 2 commands
  * - supports authentication
+ *
+ * IMPORTANT: This driver assumes the existence of lib/md5, and won't work without that library file.
  */
 import {NetworkTCP} from 'system/Network';
 import {NetworkProjector, State, BoolState, NumState} from 'driver/NetworkProjector';

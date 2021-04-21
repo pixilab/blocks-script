@@ -67,9 +67,9 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 
 		this.propList.push(this.powerProp = new Power(this));
 		this.inputProp = new NumProp(this,
-			"input", "Source input number; HDMI1=33",
+			"input", "Source input number; HDMI1=33, HDMI2=34, URL=99",
 			0x14, 0x21,
-			0x14, 0x40
+			9, 99		 // Constraints based on MDC spec 2015
 		);
 		this.propList.push(this.inputProp);
 		this.propList.push(this.volumeProp = new Volume(this));

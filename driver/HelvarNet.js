@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -63,6 +63,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var cmd = "V:1,C:14,L:" + levelStr + ",@" + address + fadeParam(fadeTime);
             this.sendCmd(cmd);
         };
+        HelvarNet.prototype.levelToGroup = function (level, address, fadeTime) {
+            var levelStr = Math.round(level * 100).toString();
+            var cmd = "V:1,C:13,L:" + levelStr + ",G:" + address + fadeParam(fadeTime);
+            this.sendCmd(cmd);
+        };
         HelvarNet.prototype.sendCmd = function (cmd) {
             cmd = '>' + cmd + '#';
             this.socket.sendText(cmd, null);
@@ -104,6 +109,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Number, String, Number]),
             __metadata("design:returntype", void 0)
         ], HelvarNet.prototype, "levelToDevice", null);
+        __decorate([
+            Metadata_1.callable("Apply brightness level to a group of devices"),
+            __param(0, Metadata_1.parameter("Brightness, 0..1")),
+            __param(1, Metadata_1.parameter("Target group, as '1234'")),
+            __param(2, Metadata_1.parameter("Transition time, in seconds", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, String, Number]),
+            __metadata("design:returntype", void 0)
+        ], HelvarNet.prototype, "levelToGroup", null);
         HelvarNet = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 50000 }),
             __metadata("design:paramtypes", [Object])

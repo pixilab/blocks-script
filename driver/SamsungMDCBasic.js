@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -121,9 +121,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Number])
         ], SamsungMDCBasic.prototype, "volume", null);
         __decorate([
-            Metadata_1.property("Input (source) number. HDMI1=0x21. HDMI2=0x22"),
-            Metadata_1.min(0x14),
-            Metadata_1.max(0x40),
+            Metadata_1.property("Input (source) number; HDMI1=33, HDMI2=34, URL=99"),
+            Metadata_1.min(4),
+            Metadata_1.max(99),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SamsungMDCBasic.prototype, "input", null);

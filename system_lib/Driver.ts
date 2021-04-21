@@ -3,7 +3,7 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {ScriptBase} from "system_lib/ScriptBase";
+import {ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
 import * as Meta from "system_lib/Metadata";
 
 /**
@@ -17,7 +17,7 @@ export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFa
 			// Re-emit message associated with basic "connected" state
 			scriptFacade.subscribe('connect', (sender:any, message:any) => {
 				if (message.type === 'Connection')
-					this.__scriptFacade.firePropChanged('connected')
+					this.__scriptFacade.changed('connected')
 			});
 		}
 	}
@@ -33,11 +33,8 @@ export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFa
 }
 
 // Internal implementation - not for direct client access
-interface DriverFacade {
-	isOfTypeName(typeName: string): any|null;	// Check subtype by name
-	changed(prop: string|Function): void;
-	property(p1: any, p2?: any, p3?: any): void;
-	firePropChanged(prop: string): void;
+interface DriverFacade extends ScriptBaseEnv {
+	// Check subtype by name, returning the implementing object (if any)
+	isOfTypeName(typeName: string): any|null;
 	subscribe(name: string, listener: Function): void;
-	unsubscribe(name: string, listener: Function): void;
 }

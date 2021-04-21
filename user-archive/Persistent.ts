@@ -8,11 +8,11 @@ import {PrimTypeSpecifier} from "system/PubSub";
 
 
 /**
- * A user script publishing "persistent variables". The value of those variables is written to a
- * file in script/files/Persistent. The content of that file also determines which variables
- * that are available. Thus, to add more variables, shut down the server, add entries to the
- * script/files/Persistent file (make sure you follow the JSON syntax properly), then restart the
- * server.
+ * A user script publishing "persistent variables". Those variables are written to
+ * script/files/Persistent.json. The content of that file also dictate which variables
+ * are available, and their type. Thus, to add more variables, shut down the server, add
+ * entries to the script/files/Persistent.json file (make sure you follow the JSON
+ * syntax properly), then restart the server.
  */
 export class Persistent extends Script {
 	private data: any;
@@ -62,7 +62,7 @@ export class Persistent extends Script {
 	}
 
 	/**
-	 * Make and publish a property with name of typeName.
+	 * Make and publish a property with name of type typeName.
 	 */
 	private makeProperty(name: string, typeName: string) {
 	 	// Capitalize type name for dynamic property definition

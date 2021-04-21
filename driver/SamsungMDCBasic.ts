@@ -62,8 +62,8 @@ export class SamsungMDCBasic extends Driver<NetworkTCP> {
 		return this.mVolume;
 	}
 
-	@property("Input (source) number. HDMI1=0x21. HDMI2=0x22")
-	@min(0x14) @max(0x40) // Somewhat arbitrary constraints
+	@property("Input (source) number; HDMI1=33, HDMI2=34, URL=99")
+	@min(4) @max(99)	// Constraints based on MDC spec 2015
 	public set input(
 		input: number
 	) {

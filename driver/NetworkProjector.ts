@@ -7,8 +7,6 @@ import {NetworkTCP} from "system/Network";
 import {callable, parameter, property} from "system_lib/Metadata";
 import {Driver} from "system_lib/Driver";
 
-const REQUEST_TIMEOUT = 8000;
-
 /**
  Common functionality needed by projectors controlled over the network.
  */
@@ -154,6 +152,14 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		console.warn(messages);
 	}
 
+	/**
+	 Log an info message, incriminating my network connection's name
+	 */
+	protected infoMsg(...messages: any[]) {
+		messages.unshift(this.socket.fullName);
+		console.info(messages);
+	}
+
 	/*	Get first state that wants to send a request, else undefined.
 	 */
 	protected reqToSend(): State<any>|undefined {
@@ -220,7 +226,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected attemptConnect() {
 		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-			// console.info("attemptConnect");
+			this.infoMsg("attemptConnect");
 			this.socket.connect().then(
 				() => this.justConnected(),
 				error => this.connectStateChanged()
@@ -241,7 +247,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected connectStateChanged() {
 		this.connecting = false;
-		// console.info("connectStateChanged", this.socket.connected);
+		this.infoMsg("connectStateChanged", this.socket.connected);
 		if (!this.socket.connected) {
 			this.connected = false;	// Tell clients connection dropped
 			if (this.correctionRetry)
@@ -333,7 +339,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 			this.currResolver = resolve;
 			this.currRejector = reject;
 		});
-		this.cmdTimeout = wait(REQUEST_TIMEOUT);	// Should be ample time to respond
+		this.cmdTimeout = wait(4000);	// Should be ample time to respond
 		this.cmdTimeout.then(() =>
 			this.requestFailure("Timeout for " + cmd)
 		);

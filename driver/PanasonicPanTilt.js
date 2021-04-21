@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -20,7 +20,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, Driver_1, Meta) {
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_lib/Metadata", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, Driver_1, Meta, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PanasonicPanTilt = void 0;
@@ -46,6 +49,10 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
             enumerable: false,
             configurable: true
         });
+        PanasonicPanTilt.prototype.recallPreset = function (preset) {
+            preset = Math.min(100, Math.max(1, preset));
+            return this.sendRawCommand('R' + toTwoDec(preset - 1));
+        };
         Object.defineProperty(PanasonicPanTilt.prototype, "pan", {
             get: function () {
                 return this.mPan;
@@ -91,10 +98,17 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
             return result;
         };
         __decorate([
-            Meta.property("Camera power control"),
+            Meta.property("Power control"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], PanasonicPanTilt.prototype, "power", null);
+        __decorate([
+            Meta.callable("Recall memory preset"),
+            __param(0, Metadata_1.parameter("Preset to recall; 1...100")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number]),
+            __metadata("design:returntype", void 0)
+        ], PanasonicPanTilt.prototype, "recallPreset", null);
         __decorate([
             Meta.property("Camera pan, normalized 0…1"),
             Meta.min(0),
@@ -195,5 +209,13 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
         if (numDigits > 4)
             return 'FFFF';
         return '000'.substr(numDigits - 1) + hexDigits;
+    }
+    function toTwoDec(num) {
+        num = Math.round(Math.min(99, num));
+        var digits = num.toString();
+        var numDigits = digits.length;
+        if (numDigits < 2)
+            digits = '0' + digits;
+        return digits;
     }
 });

@@ -1,7 +1,6 @@
 /*
-* Driver for the UIRobot program running on a computer accessed over the network.
-* Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
-*/
+ * Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ */
 
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
@@ -12,6 +11,8 @@ export class UIRobot extends Driver<NetworkTCP> {
 	private mLeftDown = false;
 	private mRightDown = false;
 
+	private mPower = false;	// Current power state
+
 	// The currently running program including dir and params (pipe-separated).
 	private mProgramParams: string = '';
 
@@ -19,8 +20,17 @@ export class UIRobot extends Driver<NetworkTCP> {
 	private mCurrentKeys: string = '';
 	private mKeyRlsTimer?: CancelablePromise<void>;	// Set while key down timer running
 
+	// A promise which will be resolved when we want to retry WoL, will be cancelled on successful connection.
+	private woLRetryPromise: CancelablePromise<void>;
+	// How many times we've sent the WoL package.
+	private woLRetryAttempts: number;
+
 	// Program and arguments that need to run on peer to shut down. Assumes Windows.
 	static readonly kPowerDownProgram = "C:/Windows/System32/shutdown.exe||/s /f /t 0";
+	// The interval at which we will send the WoL command when powering on.
+	static readonly kWoLRetryInterval = 1000 * 20;
+	// The max number of attempts to try waking up the target PC through WoL.
+	static readonly kWoLRetryMaxAttempts = 10;
 
 	public constructor(protected socket: NetworkTCP, bufferSize?: number) {
 		super(socket);
@@ -29,8 +39,9 @@ export class UIRobot extends Driver<NetworkTCP> {
 		socket.enableWakeOnLAN();	// Allows us to use wakeOnLAN in power property
 		socket.autoConnect();
 
+		// Listen for connection attempt failure or connection state change
 		socket.subscribe('connect', (sender, message) => {
-			if (message.type === 'Connection')
+			if (message.type === 'Connection') // Connection state changed
 				this.onConnectStateChanged(sender.connected);
 		});
 
@@ -42,11 +53,10 @@ export class UIRobot extends Driver<NetworkTCP> {
 	/**	Connected state changed to the one specified by the parameter.
 	 */
 	protected onConnectStateChanged(connected: boolean) {
-		if (!connected)
+		if (connected) 			// Just connected
+			this.power = true;	// Consider powered (likely turned on manually)
+		else	// Just disconnected - clear out any "current program"
 			this.mProgramParams = '';
-
-		// We consider connection state as our "power" property's, so fire change for that
-		this.changed("power");
 	}
 
 	/**
@@ -56,21 +66,55 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 */
 	@property("Power computer on/off")
 	public set power(power: boolean) {
-		if (power) {
-			if (!this.socket.connected)	// No need if already online
-				this.socket.wakeOnLAN();
-		} else
-			this.program = UIRobot.kPowerDownProgram;
+		if (this.mPower !== power) {	// This is news
+			this.mPower = power;		// Consider state change taken
+			this.cancelWoLRetry();		// Only one pending at a time
+			if (power) {				// Turn power on
+				this.woLRetryAttempts = 0;
+				this.tryWakeUp();
+			} else // Turn power OFF using designated command
+				this.program = UIRobot.kPowerDownProgram;
+		}
 	}
 
 	/**
-	 * Consider power OFF if peer not connected OR if the last command sent was kPowerDownProgram.
-	 * Note that the power ON state will be delayed visavi setting the property, since I won't
-	 * consider power to be on until the computer actually connects, which will take quite a while
-	 * from setting power to true.
+	 * Return the most recently set power state. If you want to know whether we're
+	 * successfully connected, use the "connected" read-only property instead.
 	 */
 	public get power(): boolean {
-		return this.socket.connected && this.program !== UIRobot.kPowerDownProgram;
+		return this.mPower;
+	}
+
+	/**
+	 * Send a WoL-package as long as we are not yet connected.
+	 * Sometimes the package won't reach its destination, so we schedule yet another
+	 * WoL-package to be sent in the near future, which will be cancelled if we get
+	 * a succesfull connection status before it fires. Also, don't try more than 10 times.
+	 */
+	private tryWakeUp() {
+		if (!this.socket.connected) {	// No need if already online
+			if (this.woLRetryAttempts < UIRobot.kWoLRetryMaxAttempts) {
+				// More re-tries to go
+				this.socket.wakeOnLAN();
+				this.woLRetryPromise = wait(UIRobot.kWoLRetryInterval);
+				this.woLRetryPromise.then(() => this.tryWakeUp());
+				this.woLRetryAttempts += 1;
+			} else { // Too many retries - give up
+				this.woLRetryPromise = undefined;
+				this.power = false; // Auto-revert to power off state at this point
+			}
+		} else
+			this.woLRetryPromise = undefined;
+	}
+
+	/**
+	 * If we have a prominent WoL retry, cancel it.
+	 */
+	private cancelWoLRetry() {
+		if (this.woLRetryPromise) {
+			this.woLRetryPromise.cancel();
+			this.woLRetryPromise = undefined;
+		}
 	}
 
 	@property("Left mouse button down")
@@ -103,28 +147,30 @@ export class UIRobot extends Driver<NetworkTCP> {
 	@property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS")
 	public set program(programParams: string) {
 		// console.log("program", programParams);
-		// First stop the previously runnig program, if any
-		const runningProgram = this.parseProgramParams(this.mProgramParams);
-		if (runningProgram) {
-			this.sendCommand(
-				'Terminate',
-				runningProgram.program
-			);
-		}
+		if (this.mProgramParams !== programParams) { // Only send command if this is indeed news
+			// First stop the previously runnig program, if any
+			const runningProgram = this.parseProgramParams(this.mProgramParams);
+			if (runningProgram) {
+				this.sendCommand(
+					'Terminate',
+					runningProgram.program
+				);
+			}
 
-		// Then launch any new program
-		const newProgram = this.parseProgramParams(programParams);
+			// Then launch any new program
+			const newProgram = this.parseProgramParams(programParams);
 
-		if (newProgram) {
-			this.mProgramParams = programParams;
-			this.sendCommand(
-				'Launch',
-				newProgram.workingDir,
-				newProgram.program,
-				...newProgram.arguments
-			);
-		} else {
-			this.mProgramParams = '';
+			if (newProgram) {
+				this.mProgramParams = programParams;
+				this.sendCommand(
+					'Launch',
+					newProgram.workingDir,
+					newProgram.program,
+					...newProgram.arguments
+				);
+			} else {
+				this.mProgramParams = '';
+			}
 		}
 	}
 	public get program(): string {
@@ -139,6 +185,11 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 * 	control
 	 * 	alt
 	 * 	altgr
+	 * KEY may be expressed as:
+	 * 	 - an upper case alphabetic (ASCII) character
+	 * 	 - a digit
+	 * 	 - a VK_XXX "virtual key code" from the list found here:
+	 * 	 	https://docs.oracle.com/javase/7/docs/api/java/awt/event/KeyEvent.html
 	 * The keys sent are only remembered a short while and then reset, this is because
 	 * we'd like some feedback when pusing a button on the panel.
 	 */
@@ -189,7 +240,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 */
 	protected sendCommand(command: string, ...args: any[]) {
 		command += ' ' + args.join(' ');
-		console.log("-------------command", command);
+		// console.log("command", command);
 		return this.socket.sendText(command);
 	}
 

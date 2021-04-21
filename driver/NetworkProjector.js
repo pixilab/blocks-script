@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -27,7 +27,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NumState = exports.BoolState = exports.State = exports.NetworkProjector = void 0;
-    var REQUEST_TIMEOUT = 8000;
     var NetworkProjector = (function (_super) {
         __extends(NetworkProjector, _super);
         function NetworkProjector(socket) {
@@ -104,6 +103,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             messages.unshift(this.socket.fullName);
             console.warn(messages);
         };
+        NetworkProjector.prototype.infoMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            messages.unshift(this.socket.fullName);
+            console.info(messages);
+        };
         NetworkProjector.prototype.reqToSend = function () {
             for (var _i = 0, _a = this.propList; _i < _a.length; _i++) {
                 var p = _a[_i];
@@ -149,6 +156,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NetworkProjector.prototype.attemptConnect = function () {
             var _this = this;
             if (!this.socket.connected && !this.connecting && this.socket.enabled) {
+                this.infoMsg("attemptConnect");
                 this.socket.connect().then(function () { return _this.justConnected(); }, function (error) { return _this.connectStateChanged(); });
                 this.connecting = true;
             }
@@ -157,6 +165,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.connectStateChanged = function () {
             this.connecting = false;
+            this.infoMsg("connectStateChanged", this.socket.connected);
             if (!this.socket.connected) {
                 this.connected = false;
                 if (this.correctionRetry)
@@ -217,7 +226,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 _this.currResolver = resolve;
                 _this.currRejector = reject;
             });
-            this.cmdTimeout = wait(REQUEST_TIMEOUT);
+            this.cmdTimeout = wait(4000);
             this.cmdTimeout.then(function () {
                 return _this.requestFailure("Timeout for " + cmd);
             });

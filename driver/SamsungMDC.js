@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -36,7 +36,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             socket.enableWakeOnLAN();
             _this.propList = [];
             _this.propList.push(_this.powerProp = new Power(_this));
-            _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33", 0x14, 0x21, 0x14, 0x40);
+            _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33, HDMI2=34, URL=99", 0x14, 0x21, 9, 99);
             _this.propList.push(_this.inputProp);
             _this.propList.push(_this.volumeProp = new Volume(_this));
             socket.subscribe('connect', function (sender, message) {
@@ -292,57 +292,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 cmd.push(1);
                 paramByte = Math.max(0, Math.round(paramByte)) & 0xff;
                 cmd.push(paramByte);
-            }
-            if (this.correctionRetry) {
-                this.correctionRetry.cancel();
-                this.correctionRetry = undefined;
-            }
-            if (this.cmdTimeout) {
-                this.cmdTimeout.cancel();
-                this.cmdTimeout = undefined;
-            }
-        };
-        SamsungMDC.prototype.errorMsg = function () {
-            var messages = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                messages[_i] = arguments[_i];
-            }
-            messages.unshift(this.socket.fullName);
-            console.error(messages);
-        };
-        SamsungMDC.prototype.warnMsg = function () {
-            var messages = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                messages[_i] = arguments[_i];
-            }
-            messages.unshift(this.socket.fullName);
-            console.warn(messages);
-        };
-        SamsungMDC.prototype.getPropToSend = function () {
-            for (var _i = 0, _a = this.propList; _i < _a.length; _i++) {
-                var p = _a[_i];
-                if (p.needsCorrection())
-                    return p;
-            }
-        };
-        SamsungMDC.prototype.sendCorrection = function () {
-            var _this = this;
-            if (this.okToSendNewCommand()) {
-                var prop = this.getPropToSend();
-                if (prop) {
-                    if (prop.canSendOffline() || (this.powerProp.getCurrent() && this.socket.connected)) {
-                        debugMsg("sendCorrection prop", prop.name, "from", prop.getCurrent(), "to", prop.get());
-                        var promise = prop.correct();
-                        if (promise) {
-                            promise.catch(function () {
-                                if (_this.getPropToSend())
-                                    _this.retryCorrectionSoon();
-                            });
-                        }
-                        else
-                            this.retryCorrectionSoon();
-                    }
-                }
             }
             else
                 cmd.push(0);

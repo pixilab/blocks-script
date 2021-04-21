@@ -23,21 +23,24 @@ define(["require", "exports"], function (require, exports) {
                     set: function (value) {
                         var oldValue = gsFunc();
                         if (oldValue !== gsFunc(value))
-                            this.__scriptFacade.firePropChanged(name);
+                            this.__scriptFacade.changed(name);
                     }
                 });
             }
         };
-        ScriptBase.prototype.changed = function (prop) {
-            this.__scriptFacade.changed(prop);
+        ScriptBase.prototype.indexedProperty = function (name, itemType) {
+            return this.__scriptFacade.indexedProperty(name, itemType);
+        };
+        ScriptBase.prototype.changed = function (propName) {
+            this.__scriptFacade.changed(propName);
         };
         ScriptBase.prototype.makeJSArray = function (arr) {
             if (Array.isArray(arr))
                 return arr;
-            var arrayLike = arr;
             var result = [];
-            for (var i = 0; i < arrayLike.length; ++i)
-                result.push(arrayLike[i]);
+            var length = arr.length;
+            for (var i = 0; i < length; ++i)
+                result.push(arr[i]);
             return result;
         };
         return ScriptBase;

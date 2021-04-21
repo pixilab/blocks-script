@@ -25,5 +25,11 @@ export var SimpleProcess: {
 	 * Returns a Promise that will be fulfilled with the output of the process,
 	 * or rejected if an error occurs.
 	 */
-	start(cmdNameOrPath: string, args?: string[]): Promise<string>
+	start(cmdNameOrPath: string, args?: string[]): Promise<string>;
+
+	/**
+	 Path to the blocks root. Occasionally useful for running external programs
+	 operating on files inside the Blocks root. Read-only.
+	 */
+	blocksRoot: string;
 };

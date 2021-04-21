@@ -2,7 +2,7 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
@@ -23,6 +23,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_lib/Metadata"], function (require, exports, Driver_1, SimpleHTTP_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.NetioPowerBox = void 0;
     var NetioPowerBox = (function (_super) {
         __extends(NetioPowerBox, _super);
         function NetioPowerBox(socket) {
@@ -52,7 +53,7 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
             set: function (value) {
                 this.mConnected = value;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         NetioPowerBox.prototype.createOutlets = function (outletNumber) {
