@@ -9,7 +9,8 @@
 
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {driver} from "system_lib/Metadata";
+import {driver, parameter} from "system_lib/Metadata";
+import * as Meta from "../system_lib/Metadata";
 
 // A simple map-like object type
 interface Dictionary<TElem> { [id: string]: TElem; }
@@ -61,6 +62,19 @@ export class VISCA extends Driver<NetworkTCP> {
 
 		// Query all informants of initial status
 		this.pollState();
+	}
+
+	/**
+	 * Recall a preset by number. Note that this doesn't update
+	 * other parameters according to what the preset states,
+	 * so those will likely be out of sync.
+	 */
+	@Meta.callable("Recall memory preset")
+	public recallPreset(
+		@parameter("Preset to recall; 0...254")
+		preset: number
+	): void {
+		this.commander.send(new RecallPresetCmd(preset));
 	}
 
 	/**
@@ -378,6 +392,12 @@ class FocusCmd extends Instr {
 	}
 }
 
+class RecallPresetCmd extends Instr {
+	constructor(presetNumber: number) {
+		const cmd = [0x81, 1, 4, 0x3f, 2, Math.round(Math.min(254, presetNumber))];
+		super('RecallPreset', cmd);
+	}
+}
 
 // 8x 01 06 03 VV WW 0Y 0Y 0Y 0Y 0Z 0Z 0Z 0Z FF
 class PanTiltCmd extends Instr {

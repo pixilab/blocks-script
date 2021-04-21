@@ -20,7 +20,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.VISCA = void 0;
@@ -42,6 +45,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.pollState();
             return _this;
         }
+        VISCA.prototype.recallPreset = function (preset) {
+            this.commander.send(new RecallPresetCmd(preset));
+        };
         VISCA.prototype.pollState = function () {
             for (var _i = 0, _a = this.informants; _i < _a.length; _i++) {
                 var inf = _a[_i];
@@ -70,6 +76,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         VISCA.prototype.propValueNum = function (propName) {
             return Math.round(this.propValue(propName));
         };
+        __decorate([
+            Meta.callable("Recall memory preset"),
+            __param(0, Metadata_1.parameter("Preset to recall; 0...254")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number]),
+            __metadata("design:returntype", void 0)
+        ], VISCA.prototype, "recallPreset", null);
         VISCA = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 1259 }),
             __metadata("design:paramtypes", [Object])
@@ -273,6 +286,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return _super.call(this, 'Focus', Instr.pushNibs([0x81, 1, 4, 0x48], Math.round(value))) || this;
         }
         return FocusCmd;
+    }(Instr));
+    var RecallPresetCmd = (function (_super) {
+        __extends(RecallPresetCmd, _super);
+        function RecallPresetCmd(presetNumber) {
+            var _this = this;
+            var cmd = [0x81, 1, 4, 0x3f, 2, Math.round(Math.min(254, presetNumber))];
+            _this = _super.call(this, 'RecallPreset', cmd) || this;
+            return _this;
+        }
+        return RecallPresetCmd;
     }(Instr));
     var PanTiltCmd = (function (_super) {
         __extends(PanTiltCmd, _super);
