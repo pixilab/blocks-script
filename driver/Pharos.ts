@@ -1,5 +1,7 @@
-/*	Controls a Pharos lighting controller, calling up a number of named scenes.
+/*
+	Controls a Pharos lighting controller, calling up named scenes.
 	https://www.pharoscontrols.com/products/controllers/
+	NOTE: In use at Recolab.
 
  	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
