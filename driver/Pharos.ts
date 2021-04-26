@@ -1,7 +1,24 @@
 /*
 	Controls a Pharos lighting controller, calling up named scenes.
 	https://www.pharoscontrols.com/products/controllers/
-	NOTE: In use at Recolab.
+
+	Scene recall requests are sent to the Pharos over TCP port 3000 as strings
+	in the following format (each terminated by a carriage return):
+
+		scenon#
+		scenoff#
+
+	where N# is a number 0...kNumScenes-1, like this:
+
+		scenon0
+		scenon1
+		scenoff12
+
+	Note that the Pharos MUST be configured to receive those strings each
+	one explicitly terminated by \r, due to the way the Pharos parses the
+	incoming data. See this application note for more details:
+
+	https://dl.pharoscontrols.com/documentation/application_notes/Ethernet_Integration.pdf
 
  	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
