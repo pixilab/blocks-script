@@ -43,6 +43,9 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
             enumerable: false,
             configurable: true
         });
+        Driver.prototype.subscribe = function (name, listener) {
+            this.__scriptFacade.subscribe(name, listener);
+        };
         __decorate([
             Meta.property("Connected to peer"),
             __metadata("design:type", Boolean),

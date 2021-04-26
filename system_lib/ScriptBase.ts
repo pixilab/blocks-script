@@ -72,6 +72,13 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 	}
 
 	/**
+	 * Forward any event unsubscription to my associated facade.
+	 */
+	unsubscribe(event: string, listener: Function): void {
+		this.__scriptFacade.unsubscribe(event, listener);
+	}
+
+	/**
 	 * Turn an array-like object into a proper JavaScript array, which is returned.
 	 * Simply returns arr if already is fine.
 	 */

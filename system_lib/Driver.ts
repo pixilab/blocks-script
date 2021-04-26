@@ -30,6 +30,14 @@ export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFa
 		// Always false for facade that doesn't have connected property
 		return (<any>this.__scriptFacade).connected ? true : false;
 	}
+
+	/**
+	 * Foward any event subscriptions through facade, e.g., providing
+	 * 'finished' callback also for use in driver clients.
+	 */
+	subscribe(name: string, listener: Function): void {
+		this.__scriptFacade.subscribe(name, listener);
+	}
 }
 
 // Internal implementation - not for direct client access
