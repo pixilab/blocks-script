@@ -20,38 +20,53 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], function (require, exports, ScriptBase_1, Meta) {
+define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"], function (require, exports, Metadata_1, Driver_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Driver = void 0;
-    var Driver = (function (_super) {
-        __extends(Driver, _super);
-        function Driver(scriptFacade) {
-            var _this = _super.call(this, scriptFacade) || this;
-            if (scriptFacade.isOfTypeName("NetworkTCP")) {
-                scriptFacade.subscribe('connect', function (sender, message) {
-                    if (message.type === 'Connection')
-                        _this.__scriptFacade.changed('connected');
-                });
-            }
+    exports.Pharos = void 0;
+    var Pharos = (function (_super) {
+        __extends(Pharos, _super);
+        function Pharos(socket) {
+            var _this = _super.call(this, socket) || this;
+            _this.socket = socket;
+            socket.autoConnect();
+            _this.scene = _this.indexedProperty("scene", Scene);
+            for (var pix = 0; pix < Pharos_1.kNumScenes; ++pix)
+                _this.scene.push(new Scene(_this, pix));
             return _this;
         }
-        Object.defineProperty(Driver.prototype, "connected", {
+        Pharos_1 = Pharos;
+        var Pharos_1;
+        Pharos.kNumScenes = 25;
+        Pharos = Pharos_1 = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 3000 }),
+            __metadata("design:paramtypes", [Object])
+        ], Pharos);
+        return Pharos;
+    }(Driver_1.Driver));
+    exports.Pharos = Pharos;
+    var Scene = (function () {
+        function Scene(owner, ix) {
+            this.owner = owner;
+            this.ix = ix;
+            this.mState = 0;
+        }
+        Object.defineProperty(Scene.prototype, "state", {
             get: function () {
-                return this.__scriptFacade.connected ? true : false;
+                return this.mState;
+            },
+            set: function (value) {
+                this.mState = value;
+                this.owner.socket.sendText("scen" + (this.mState ? 'on' : 'off') + this.ix);
             },
             enumerable: false,
             configurable: true
         });
-        Driver.prototype.subscribe = function (name, listener) {
-            this.__scriptFacade.subscribe(name, listener);
-        };
         __decorate([
-            Meta.property("Connected to peer"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [])
-        ], Driver.prototype, "connected", null);
-        return Driver;
-    }(ScriptBase_1.ScriptBase));
-    exports.Driver = Driver;
+            Metadata_1.property("Scene being on (1) or off (0)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Scene.prototype, "state", null);
+        return Scene;
+    }());
 });

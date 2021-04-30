@@ -11,6 +11,7 @@ import {Request, SimpleHTTP} from "system/SimpleHTTP";
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import * as Meta from "system_lib/Metadata";
+import {parameter} from "system_lib/Metadata";
 
 @Meta.driver('NetworkTCP', { port: 80 })
 export class PanasonicPanTilt extends Driver<NetworkTCP> {
@@ -30,13 +31,29 @@ export class PanasonicPanTilt extends Driver<NetworkTCP> {
 		this.processor = new CmdProcessor(socket.address);
 	}
 
-	@Meta.property("Camera power control")
+	@Meta.property("Power control")
 	set power(state: boolean) {
 		this.mPower = state;
 		this.sendRawCommand('O' + (state ? '1' : '0'));
 	}
+
 	get power(): boolean {
 		return this.mPower;
+	}
+
+	/**
+	 * Recall a preset by number. Note that this doesn't update
+	 * other parameters according to what the preset states,
+	 * so those will likely be out of sync.
+	 */
+	@Meta.callable("Recall memory preset")
+	public recallPreset(
+		@parameter("Preset to recall; 1...100")
+		preset: number
+	) {
+		preset = Math.min(100, Math.max(1, preset));	// Clip to allowed range
+		// Preset 1...100 is sent as 0...99 according to the docs
+		return this.sendRawCommand('R' + toTwoDec(preset - 1));
 	}
 
 	@Meta.property("Camera pan, normalized 0…1")
@@ -203,7 +220,7 @@ class Cmd {
 }
 
 /**
- * Convert num to exactly four hex digit (upper case).
+ * Convert num to exactly four hex digits (upper case).
  */
 function toFourHex(num: number): string {
 	num = Math.round(num);
@@ -212,4 +229,16 @@ function toFourHex(num: number): string {
 	if (numDigits > 4)	// Woops - no can do - clip to max
 		return 'FFFF';
 	return '000'.substr(numDigits-1) + hexDigits;
+}
+
+/**
+ * Convert num to exactly two decimal digits.
+ */
+function toTwoDec(num: number): string {
+	num = Math.round(Math.min(99, num));
+	let digits = num.toString();
+	const numDigits = digits.length;
+	if (numDigits < 2)
+		digits = '0' + digits;
+	return digits;
 }
