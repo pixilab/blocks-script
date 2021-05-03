@@ -34,6 +34,9 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.changed = function (propName) {
             this.__scriptFacade.changed(propName);
         };
+        ScriptBase.prototype.unsubscribe = function (event, listener) {
+            this.__scriptFacade.unsubscribe(event, listener);
+        };
         ScriptBase.prototype.makeJSArray = function (arr) {
             if (Array.isArray(arr))
                 return arr;

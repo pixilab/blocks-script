@@ -12,7 +12,8 @@ export class WallClock extends Script {
 
 	public constructor(env : ScriptEnv) {
 		super(env);
-		this.updateClock();	// Get us going
+		// Get us going soon, but avoid firing change notification from constructor
+		wait(100).then(() => this.updateClock());
 	}
 
 	@property("Time of day, as H:MM", true)

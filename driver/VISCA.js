@@ -31,37 +31,70 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         __extends(VISCA, _super);
         function VISCA(socket) {
             var _this = _super.call(this, socket) || this;
+            _this.socket = socket;
             _this.props = {};
             _this.informants = [];
-            _this.commander = new Commander(socket);
-            socket.autoConnect();
-            _this.informants.push(new Query('PowerQ', [0x81, 9, 4, 0], _this.addProp(new Power(_this))));
+            _this.mReady = false;
+            _this.retainedStateProps = {};
+            _this.toSend = {};
+            _this.sendQ = [];
+            _this.fromCam = [];
+            socket.autoConnect(true);
+            _this.powerQuery = new Query('PowerQ', [0x81, 9, 4, 0], _this.addProp(new Power(_this)));
+            _this.informants.push(_this.powerQuery);
             _this.informants.push(new Query('AutofocusQ', [0x81, 9, 4, 0x38], _this.addProp(new Autofocus(_this))));
             _this.informants.push(new Query('ZoomQ', [0x81, 9, 4, 0x47], _this.addProp(new Zoom(_this))));
             _this.informants.push(new Query('FocusQ', [0x81, 9, 4, 0x48], _this.addProp(new Focus(_this))));
             _this.informants.push(new Query('PanTiltQ', [0x81, 9, 6, 0x12], _this.addProp(new Pan(_this)), _this.addProp(new Tilt(_this))));
             _this.addProp(new PanSpeed(_this));
             _this.addProp(new TiltSpeed(_this));
-            _this.pollState();
+            socket.subscribe('connect', function (sender, message) {
+                if (message.type === 'Connection')
+                    _this.onConnectStateChanged(sender.connected);
+            });
+            if (socket.connected)
+                _this.onConnectStateChanged(true);
+            socket.subscribe('bytesReceived', function (sender, message) {
+                _this.gotDataFromCam(message.rawData);
+            });
+            _this.init();
             return _this;
         }
+        VISCA.prototype.addRetainedStateProp = function (propName) {
+            this.retainedStateProps[propName] = true;
+        };
+        Object.defineProperty(VISCA.prototype, "ready", {
+            get: function () {
+                return this.mReady;
+            },
+            set: function (value) {
+                this.mReady = value;
+            },
+            enumerable: false,
+            configurable: true
+        });
         VISCA.prototype.recallPreset = function (preset) {
-            this.commander.send(new RecallPresetCmd(preset));
+            this.send(new RecallPresetCmd(preset));
         };
         VISCA.prototype.pollState = function () {
-            for (var _i = 0, _a = this.informants; _i < _a.length; _i++) {
-                var inf = _a[_i];
-                this.commander.send(inf);
+            if (!this.initialPollDone) {
+                for (var _i = 0, _a = this.informants; _i < _a.length; _i++) {
+                    var inf = _a[_i];
+                    this.send(inf);
+                }
             }
+            else
+                this.send(this.powerQuery);
         };
         VISCA.prototype.pollStateSoon = function (howSoonMillis) {
             var _this = this;
-            if (howSoonMillis === void 0) { howSoonMillis = 8000; }
+            if (howSoonMillis === void 0) { howSoonMillis = 12000; }
+            this.stopPolling();
             if (!this.pollStateTimer) {
                 this.pollStateTimer = wait(howSoonMillis);
                 this.pollStateTimer.then(function () {
                     _this.pollStateTimer = undefined;
-                    _this.pollState();
+                    _this.init();
                 });
             }
         };
@@ -76,44 +109,41 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         VISCA.prototype.propValueNum = function (propName) {
             return Math.round(this.propValue(propName));
         };
-        __decorate([
-            Meta.callable("Recall memory preset"),
-            __param(0, Metadata_1.parameter("Preset to recall; 0...254")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number]),
-            __metadata("design:returntype", void 0)
-        ], VISCA.prototype, "recallPreset", null);
-        VISCA = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 1259 }),
-            __metadata("design:paramtypes", [Object])
-        ], VISCA);
-        return VISCA;
-    }(Driver_1.Driver));
-    exports.VISCA = VISCA;
-    var Commander = (function () {
-        function Commander(socket) {
-            var _this = this;
-            this.socket = socket;
-            this.toSend = {};
-            this.sendQ = [];
-            this.fromCam = [];
-            socket.autoConnect(true);
-            socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection')
-                    _this.onConnectStateChanged(sender.connected);
-            });
-            if (socket.connected)
-                this.onConnectStateChanged(true);
-            socket.subscribe('bytesReceived', function (sender, message) {
-                _this.gotDataFromCam(message.rawData);
-            });
-        }
-        Commander.prototype.onConnectStateChanged = function (connected) {
+        VISCA.prototype.init = function () {
+            if (this.socket.connected)
+                this.poll();
+        };
+        VISCA.prototype.onConnectStateChanged = function (connected) {
             this.fromCam = [];
             if (connected)
-                this.sendNext();
+                this.poll();
+            else
+                this.stopPolling();
+            this.changed(Power.propName);
         };
-        Commander.prototype.send = function (instr) {
+        VISCA.prototype.stopPolling = function () {
+            if (this.pollTimer)
+                this.pollTimer.cancel();
+            this.pollTimer = undefined;
+            this.initialPollDone = false;
+            for (var prop in this.props) {
+                if (!this.retainedStateProps[prop])
+                    this.props[prop].reset();
+            }
+        };
+        VISCA.prototype.poll = function () {
+            var _this = this;
+            this.pollState();
+            if (!this.pollTimer) {
+                this.pollTimer = wait(1000 * 60);
+                this.pollTimer.then(function () {
+                    _this.pollTimer = undefined;
+                    if (_this.socket.connected)
+                        _this.poll();
+                });
+            }
+        };
+        VISCA.prototype.send = function (instr) {
             var existing = this.toSend[instr.name];
             if (existing) {
                 var qix = this.sendQ.indexOf(existing);
@@ -127,7 +157,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.toSend[instr.name] = instr;
             this.sendNext();
         };
-        Commander.prototype.sendNext = function () {
+        VISCA.prototype.sendNext = function () {
             var _this = this;
             if (!this.sendTimeout && this.socket.connected) {
                 var toSend = this.sendQ.shift();
@@ -146,11 +176,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 }
             }
         };
-        Commander.prototype.instrDone = function () {
+        VISCA.prototype.instrDone = function () {
             this.currInstr = undefined;
             this.sendNext();
         };
-        Commander.prototype.gotDataFromCam = function (bytes) {
+        VISCA.prototype.gotDataFromCam = function (bytes) {
             this.fromCam = this.fromCam.concat(bytes);
             var len = this.fromCam.length;
             if (len >= 3) {
@@ -170,7 +200,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 console.warn("Discarding excessive data", excess);
             }
         };
-        Commander.prototype.processDataFromCam = function (packet) {
+        VISCA.prototype.processDataFromCam = function (packet) {
             var msg = packet[1];
             switch (msg) {
                 case 0x41:
@@ -197,15 +227,38 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     break;
             }
         };
-        Commander.prototype.currInstrFailed = function (error) {
+        VISCA.prototype.setInitialPollDone = function () {
+            this.initialPollDone = true;
+            this.ready = true;
+        };
+        VISCA.prototype.currInstrFailed = function (error) {
             var instr = this.currInstr;
-            if (instr)
-                instr.reportFailed(error);
+            if (instr) {
+                if (this.propValue(Power.propName))
+                    instr.reportFailed(error);
+            }
             else
                 console.warn("Spurious error from camera", error);
         };
-        return Commander;
-    }());
+        __decorate([
+            Metadata_1.property("Set once camera considered ready to be controlled", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], VISCA.prototype, "ready", null);
+        __decorate([
+            Meta.callable("Recall memory preset"),
+            __param(0, Metadata_1.parameter("Preset to recall; 0...254")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number]),
+            __metadata("design:returntype", void 0)
+        ], VISCA.prototype, "recallPreset", null);
+        VISCA = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 1259 }),
+            __metadata("design:paramtypes", [Object])
+        ], VISCA);
+        return VISCA;
+    }(Driver_1.Driver));
+    exports.VISCA = VISCA;
     function bytesToString(bytes) {
         var result = '';
         var hasData = false;
@@ -319,26 +372,29 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         }
         Property.prototype.inform = function (reply) {
         };
+        Property.prototype.reset = function () {
+            var hadState = this.state;
+            this.state = undefined;
+            if (hadState !== undefined)
+                this.owner.changed(this.name);
+        };
         Property.prototype.getValue = function () {
             return this.propGS();
         };
         Property.prototype.propGS = function (val) {
             if (val !== undefined) {
-                var news = val !== this.wanted;
-                this.wanted = val;
+                var news = val !== this.state;
                 this.state = val;
                 if (news)
                     this.desiredStateChanged(val);
             }
             var result = this.state;
             if (result === undefined)
-                result = this.wanted;
-            if (result === undefined)
                 result = this.defaultState;
             return result;
         };
-        Property.prototype.setState = function (val) {
-            if (this.getValue() !== val) {
+        Property.prototype.gotDeviceState = function (val) {
+            if (val !== undefined && this.getValue() !== val) {
                 this.state = val;
                 this.owner.changed(this.name);
             }
@@ -362,16 +418,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             }, function (num) { return _this.propGS(num); });
             return _this;
         }
-        NumProp.prototype.setState = function (val) {
-            return _super.prototype.setState.call(this, val);
-        };
-        NumProp.collectNibs = function (reply, nibCount, offs) {
+        NumProp.prototype.collectNibs = function (reply, nibCount, offs) {
             if (offs === void 0) { offs = 2; }
             var result = 0;
             for (var nib = nibCount; nib; --nib)
                 result = (result << 4) + (reply[offs++] & 0x0f);
             if (nibCount === 4 && (result & 0x8000))
                 result = result - 0x10000;
+            if (result < this.min || result > this.max) {
+                console.warn("Nupermic feedback out of whack", this.name, result);
+                result = undefined;
+            }
             return result;
         };
         return NumProp;
@@ -379,35 +436,45 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var Power = (function (_super) {
         __extends(Power, _super);
         function Power(owner) {
-            var _this = _super.call(this, owner, "power", false) || this;
-            owner.property("power", { type: Boolean }, function (val) { return _this.propGS(val); });
+            var _this = _super.call(this, owner, Power.propName, false) || this;
+            owner.addRetainedStateProp(Power.propName);
+            owner.property(Power.propName, { type: Boolean }, function (val) { return _this.propGS(val); });
             return _this;
         }
         Power.prototype.desiredStateChanged = function (state) {
-            this.owner.commander.send(new PowerCmd(state));
+            this.owner.send(new PowerCmd(state));
             if (state)
                 this.owner.pollStateSoon();
+            else
+                this.owner.ready = false;
+        };
+        Power.prototype.propGS = function (val) {
+            return _super.prototype.propGS.call(this, val) && this.owner.connected;
         };
         Power.prototype.inform = function (reply) {
-            this.setState(reply[2] === 2);
+            var wasOn = this.getValue();
+            if (this.gotDeviceState(reply[2] === 2) && !wasOn)
+                this.owner.pollStateSoon();
         };
+        Power.propName = "power";
         return Power;
     }(Property));
     var Autofocus = (function (_super) {
         __extends(Autofocus, _super);
         function Autofocus(owner) {
             var _this = _super.call(this, owner, Autofocus.propName, false) || this;
+            owner.addRetainedStateProp(Autofocus.propName);
             owner.property(Autofocus.propName, { type: Boolean }, function (val) { return _this.propGS(val); });
             return _this;
         }
         Autofocus.prototype.desiredStateChanged = function (state) {
-            this.owner.commander.send(new AutofocusCmd(state));
+            this.owner.send(new AutofocusCmd(state));
             if (!state) {
-                this.owner.commander.send(new FocusCmd(this.owner.propValueNum(Focus.propName)));
+                this.owner.send(new FocusCmd(this.owner.propValueNum(Focus.propName)));
             }
         };
         Autofocus.prototype.inform = function (reply) {
-            this.setState(reply[2] === 2);
+            this.gotDeviceState(reply[2] === 2);
         };
         Autofocus.propName = "autofocus";
         return Autofocus;
@@ -418,10 +485,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _super.call(this, owner, "zoom", 0, 0, 0x4000) || this;
         }
         Zoom.prototype.desiredStateChanged = function (value) {
-            this.owner.commander.send(new ZoomCmd(value));
+            this.owner.send(new ZoomCmd(value));
         };
         Zoom.prototype.inform = function (reply) {
-            this.setState(NumProp.collectNibs(reply, 4));
+            this.gotDeviceState(this.collectNibs(reply, 4));
         };
         return Zoom;
     }(NumProp));
@@ -432,10 +499,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         }
         Focus.prototype.desiredStateChanged = function (value) {
             if (!this.owner.propValue(Autofocus.propName))
-                this.owner.commander.send(new FocusCmd(value));
+                this.owner.send(new FocusCmd(value));
         };
         Focus.prototype.inform = function (reply) {
-            this.setState(NumProp.collectNibs(reply, 4));
+            this.gotDeviceState(this.collectNibs(reply, 4));
         };
         Focus.propName = "focus";
         return Focus;
@@ -446,10 +513,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _super.call(this, owner, Pan.propName, 0, -2448, 2448) || this;
         }
         Pan.prototype.desiredStateChanged = function (value) {
-            this.owner.commander.send(new PanTiltCmd(this.owner));
+            this.owner.send(new PanTiltCmd(this.owner));
         };
         Pan.prototype.inform = function (reply) {
-            this.setState(NumProp.collectNibs(reply, 4));
+            this.gotDeviceState(this.collectNibs(reply, 4));
         };
         Pan.propName = "pan";
         return Pan;
@@ -460,11 +527,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _super.call(this, owner, Tilt.propName, 0, -356, 1296) || this;
         }
         Tilt.prototype.desiredStateChanged = function (value) {
-            this.owner.commander.send(new PanTiltCmd(this.owner));
+            this.owner.send(new PanTiltCmd(this.owner));
         };
         Tilt.prototype.inform = function (reply) {
-            var state = NumProp.collectNibs(reply, 4, 6);
-            this.setState(state);
+            var state = this.collectNibs(reply, 4, 6);
+            if (state !== undefined) {
+                this.gotDeviceState(state);
+                this.owner.setInitialPollDone();
+            }
         };
         Tilt.propName = "tilt";
         return Tilt;
@@ -472,7 +542,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var PanSpeed = (function (_super) {
         __extends(PanSpeed, _super);
         function PanSpeed(owner) {
-            return _super.call(this, owner, PanSpeed.propName, 24, 1, 24) || this;
+            var _this = _super.call(this, owner, PanSpeed.propName, 24, 1, 24) || this;
+            owner.addRetainedStateProp(PanSpeed.propName);
+            return _this;
         }
         PanSpeed.propName = "panSpeed";
         return PanSpeed;
@@ -480,7 +552,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var TiltSpeed = (function (_super) {
         __extends(TiltSpeed, _super);
         function TiltSpeed(owner) {
-            return _super.call(this, owner, TiltSpeed.propName, 24, 1, 20) || this;
+            var _this = _super.call(this, owner, TiltSpeed.propName, 24, 1, 20) || this;
+            owner.addRetainedStateProp(TiltSpeed.propName);
+            return _this;
         }
         TiltSpeed.propName = "tiltSpeed";
         return TiltSpeed;

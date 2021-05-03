@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         function WallClock(env) {
             var _this = _super.call(this, env) || this;
             _this.mClockTime = "0:00";
-            _this.updateClock();
+            wait(100).then(function () { return _this.updateClock(); });
             return _this;
         }
         Object.defineProperty(WallClock.prototype, "currentTime", {
