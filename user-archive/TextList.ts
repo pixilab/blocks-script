@@ -1,5 +1,11 @@
-/*
- * Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+/*	Reads a number of text lines from script/files/TextList.txt, exposing the content of each
+	line as an indexed property. Provides functions to re-load the text from the file (in case
+	it changes externally) and to randomize the lines.
+
+	IMPORTANT: Assumes the text file mentioned above to exist on the Blocks server. This is a
+	plain text file containing a reasonable number of lines.
+
+	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 import {Script, ScriptEnv} from "system_lib/Script";
