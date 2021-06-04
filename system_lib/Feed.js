@@ -10,7 +10,7 @@ define(["require", "exports"], function (require, exports) {
             this.__feedEnv.establishFeed(feed);
         };
         Feed.makeJSArray = function (arr) {
-            if (Array.isArray(arr))
+            if (Array.isArray(arr) && arr.sort && arr.splice)
                 return arr;
             var result = [];
             var length = arr.length;

@@ -80,23 +80,22 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 
 	/**
 	 * Turn an array-like object into a proper JavaScript array, which is returned.
-	 * Simply returns arr if already is fine.
+	 * Simply returns arr if already appears to be fine.
 	 */
-	makeJSArray(arr: any[]) {
-		if (Array.isArray(arr))
-			return arr;	// Already seems kosher
-		/*	Casts below required to convince TS compiler that arr is indeed
-			sufficiently array-like to provide length and indexed access,
-			even past the isArray check above.
-		 */
-		const result = [];
-		const length = (<any[]>arr).length;
+	makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
+		if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
+			return arrayLike;	// Already seems like a bona fide JS array
+
+		const realArray: T[] = [];
+		const length = arrayLike.length;
 		for (var i = 0; i < length; ++i)
-			result.push((<any[]>arr)[i]);
-		return result;
+			realArray.push(arrayLike[i]);
+		return realArray;
 	}
 }
 
+// An array-like type having "index signature" and a length property
+type IndexedAny<T> = { [index:number]: T; readonly length: number };
 
 /**
  * An array-like type holding "indexed items".

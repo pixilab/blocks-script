@@ -37,14 +37,14 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.unsubscribe = function (event, listener) {
             this.__scriptFacade.unsubscribe(event, listener);
         };
-        ScriptBase.prototype.makeJSArray = function (arr) {
-            if (Array.isArray(arr))
-                return arr;
-            var result = [];
-            var length = arr.length;
+        ScriptBase.prototype.makeJSArray = function (arrayLike) {
+            if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
+                return arrayLike;
+            var realArray = [];
+            var length = arrayLike.length;
             for (var i = 0; i < length; ++i)
-                result.push(arr[i]);
-            return result;
+                realArray.push(arrayLike[i]);
+            return realArray;
         };
         return ScriptBase;
     }());

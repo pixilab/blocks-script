@@ -21,22 +21,22 @@ export abstract class Feed {
 
 	/**
 	 * Turn an array-like object into a proper JavaScript array, which is returned.
-	 * Simply returns arr if already is fine.
+	 * Simply returns arr if already appears to be fine.
 	 */
-	static makeJSArray(arr: any[]) {
-		if (Array.isArray(arr))
-			return arr;	// Already seems kosher
-		/*	Casts below required to convince TS compiler that arr is indeed
-			sufficiently array-like to provide length and indexed access,
-			even past the isArray check above.
-		 */
-		const result = [];
-		const length = (<any[]>arr).length;
+	static makeJSArray<T>(arr: IndexedAny<T>): T[] {
+		if (Array.isArray(arr) && arr.sort && arr.splice)
+			return arr;	// Already seems like a bona fide JS array
+
+		const result: T[] = [];
+		const length = arr.length;
 		for (var i = 0; i < length; ++i)
-			result.push((<any[]>arr)[i]);
+			result.push(arr[i]);
 		return result;
 	}
 }
+
+// An array-like type having "index signature" and a length property
+type IndexedAny<T> = { [index:number]: T; readonly length: number };
 
 
 // A simple map-like object type
