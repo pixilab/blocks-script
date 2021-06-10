@@ -3,7 +3,7 @@
  *
  * Text files must be UTF-8 encoded (or pure ASCII, which is a subset of UTF-8).
  *
- * By default (if a relative path or dile name is specified), files are assumed
+ * By default (if a relative path or file name is specified), files are assumed
  * to live under script/files. Alternatively, you can specify one of the follwing
  * absolute paths:
  *

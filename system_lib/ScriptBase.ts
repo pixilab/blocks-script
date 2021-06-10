@@ -9,7 +9,7 @@ interface Ctor<T> { new(... args: any[]): T ;}
 /**
  * Common stuff shared between user scripts and drivers.
  */
-export class ScriptBase<FC extends ScriptBaseEnv> {
+export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	protected readonly __scriptFacade: FC;	// Internal use only!
 
 	constructor(scriptFacade: FC) {
@@ -60,12 +60,6 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 
 	/**	Inform others that prop has changed, causing any
 	 *	subscribers to be notified soon.
-	 *
-	 *  NOTE: I used to alternatively accept a function (then using its
-	 *  name) in Blocks <= 4.3. Newer code should use property name
-	 *  only (while the underlying implementation will still accept
-	 *  a function for the forseeable future for the sake of
-	 *  backward compatibility)
 	 */
 	changed(propName: string): void {
 		this.__scriptFacade.changed(propName);
@@ -94,6 +88,25 @@ export class ScriptBase<FC extends ScriptBaseEnv> {
 	}
 }
 
+/**	Inform others that propName has changed, causing any
+ *	subscribers to be notified.
+ */
+interface ChangeNotifier {
+	changed(propName: string): void;
+}
+
+/**
+ * Base your IndexedProperty elements on this class to support "changed" notifications, like
+ * in the top level script/driver object.
+ */
+export class AggregateElem implements ChangeNotifier {
+	private readonly __scriptFacade: ChangeNotifier;	// Internal use only!
+
+	changed(propName: string): void {
+		this.__scriptFacade.changed(propName);
+	}
+}
+
 // An array-like type having "index signature" and a length property
 type IndexedAny<T> = { [index:number]: T; readonly length: number };
 
@@ -102,7 +115,7 @@ type IndexedAny<T> = { [index:number]: T; readonly length: number };
  */
 export interface IndexedProperty<T> {
 
-	[index:number] : T;	// Read-only array-like object
+	[index:number] : T;	// Read-only array-like with T
 
 	/**
 	 * Add an item to my list. Items can not be removed, and will be published
@@ -118,7 +131,7 @@ export interface IndexedProperty<T> {
 }
 
 // Common environment used by user scripts as well as device drivers
-export interface ScriptBaseEnv  {
+export interface ScriptBaseEnv extends ChangeNotifier  {
 	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 
 	// Following are INTERNAL implementation details only. DO NOT CALL directly from scripts/drivers!
