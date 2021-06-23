@@ -5,7 +5,7 @@
 
 	IMPORTANT: For this script to work, you must first configure an outgoing email
 	server using a top-level 'mail:' entry in your Blocks configuration file, see
-	https://int.pixilab.se/docs/blocks/server_configuration_file#top_level_mail_item
+	https://pixilab.se/docs/blocks/server_configuration_file#top_level_mail_item
 
  Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se).
  All Rights Reserved.

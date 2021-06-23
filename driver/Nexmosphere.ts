@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ * Created 2021 by Mattias Andersson.
+ */
+
+
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {callable, driver} from "system_lib/Metadata";
