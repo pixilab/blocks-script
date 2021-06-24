@@ -55,7 +55,7 @@ export interface StaticFeed<ListItem extends Object, DetailsItem extends ListIte
 	readonly itemType: Ctor<DetailsItem>; // Type of items returned by getDetails
 
 	getList(spec: FeedListSpec): Promise<ListData<ListItem>>;
-	getDetails(spec: FeedDetailsSpec): Promise<DetailsItem|undefined>;
+	getDetails(spec: FeedDetailsSpec): Promise<DetailsItem | undefined> | DetailsItem | undefined;
 }
 
 /**
