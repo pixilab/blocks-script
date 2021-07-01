@@ -55,7 +55,7 @@ export class Script extends ScriptBase<ScriptEnv> {
  */
 export interface PropertyAccessor<PropType> {
 	value: PropType;	// Current property value (read only if property is read only)
-	available: boolean;	// Property has been attached and is now live (read only)
+	readonly available: boolean;	// Property has been attached and is now live
 	close(): void;	// Close down this accessor - can no longer be used
 }
 

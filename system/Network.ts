@@ -26,7 +26,7 @@ export var Network: { [deviceName: string]:
 export interface NetworkTCP extends NetworkBase {
 	isOfTypeName(typeName: string): NetworkTCP|null;	// Check subtype by name
 
-	connected: boolean;		// True if I'm currently connected (read-only)
+	readonly connected: boolean;		// True if I'm currently connected
 
 	/**
 	 * Specify end-of-data framing for textReceived. If not set, this defaults to any of CR/LF,
@@ -123,7 +123,7 @@ interface NetworkTCPDriverMetaData {
 export interface NetworkUDP extends NetworkBase {
 	isOfTypeName(typeName: string): NetworkUDP|null;	// Check subtype by name
 
-	listenerPort: number;	// UDP listener port number, if any, else 0 (read only)
+	readonly listenerPort: number;	// UDP listener port number, if any, else 0
 
 	// Text to send (append \r or other framing before calling, if needed)
 	sendText(text:string): void;

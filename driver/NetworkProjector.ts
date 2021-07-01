@@ -527,6 +527,10 @@ export class NumState extends State<number> {
 	 Override to validate in range.
 	 */
 	set(v: number): boolean {
+		if (typeof v !== 'number') {
+			console.error("Value not numeric", this.baseCmd, v);
+			return false;
+		}
 		if (v < this.min || v > this.max) {
 			console.error("Value out of range for", this.baseCmd, v);
 			return false;

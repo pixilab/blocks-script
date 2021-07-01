@@ -23,15 +23,15 @@ export abstract class Feed {
 	 * Turn an array-like object into a proper JavaScript array, which is returned.
 	 * Simply returns arr if already appears to be fine.
 	 */
-	static makeJSArray<T>(arr: IndexedAny<T>): T[] {
-		if (Array.isArray(arr) && arr.sort && arr.splice)
-			return arr;	// Already seems like a bona fide JS array
+	static makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
+		if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
+			return arrayLike;	// Already seems like a bona fide JS array
 
-		const result: T[] = [];
-		const length = arr.length;
+		const realArray: T[] = [];
+		const length = arrayLike.length;
 		for (var i = 0; i < length; ++i)
-			result.push(arr[i]);
-		return result;
+			realArray.push(arrayLike[i]);
+		return realArray;
 	}
 }
 
@@ -55,7 +55,7 @@ export interface StaticFeed<ListItem extends Object, DetailsItem extends ListIte
 	readonly itemType: Ctor<DetailsItem>; // Type of items returned by getDetails
 
 	getList(spec: FeedListSpec): Promise<ListData<ListItem>>;
-	getDetails(spec: FeedDetailsSpec): Promise<DetailsItem|undefined>;
+	getDetails(spec: FeedDetailsSpec): Promise<DetailsItem | undefined> | DetailsItem | undefined;
 }
 
 /**

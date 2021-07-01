@@ -1,7 +1,7 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ScriptBase = void 0;
+    exports.AggregateElem = exports.ScriptBase = void 0;
     var ScriptBase = (function () {
         function ScriptBase(scriptFacade) {
             this.__scriptFacade = scriptFacade;
@@ -49,4 +49,13 @@ define(["require", "exports"], function (require, exports) {
         return ScriptBase;
     }());
     exports.ScriptBase = ScriptBase;
+    var AggregateElem = (function () {
+        function AggregateElem() {
+        }
+        AggregateElem.prototype.changed = function (propName) {
+            this.__scriptFacade.changed(propName);
+        };
+        return AggregateElem;
+    }());
+    exports.AggregateElem = AggregateElem;
 });

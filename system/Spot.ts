@@ -26,8 +26,8 @@ export interface SpotGroup extends SpotGroupItem {
  * Basic Spot properties available for most spot types.
  */
 export interface BaseSpot {
-	fullName: string;		// Full path name (read-only)
-	name: string;			// Leaf spot name (read only)
+	readonly fullName: string;		// Full path name
+	readonly name: string;			// Leaf spot name
 
 	/**
 	 Default block name as "group/leaf", or empty string
@@ -306,10 +306,9 @@ export interface GeoZonable {
 
 /**
  * Optonal GeoZone information that may be available on DisplaySpot and VirtualSpot.
- * All values are read-only.
  */
 export interface GeoZone {
-	latitude: number;
-	longitude: number;
-	radius: number;	// In meters
+	readonly latitude: number;
+	readonly longitude: number;
+	readonly radius: number;	// In meters
 }

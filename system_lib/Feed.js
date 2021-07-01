@@ -9,14 +9,14 @@ define(["require", "exports"], function (require, exports) {
         Feed.prototype.establishFeed = function (feed) {
             this.__feedEnv.establishFeed(feed);
         };
-        Feed.makeJSArray = function (arr) {
-            if (Array.isArray(arr) && arr.sort && arr.splice)
-                return arr;
-            var result = [];
-            var length = arr.length;
+        Feed.makeJSArray = function (arrayLike) {
+            if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
+                return arrayLike;
+            var realArray = [];
+            var length = arrayLike.length;
             for (var i = 0; i < length; ++i)
-                result.push(arr[i]);
-            return result;
+                realArray.push(arrayLike[i]);
+            return realArray;
         };
         return Feed;
     }());

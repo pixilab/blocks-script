@@ -354,6 +354,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             return this.correct2(drvr, this.wanted.toString());
         };
         NumState.prototype.set = function (v) {
+            if (typeof v !== 'number') {
+                console.error("Value not numeric", this.baseCmd, v);
+                return false;
+            }
             if (v < this.min || v > this.max) {
                 console.error("Value out of range for", this.baseCmd, v);
                 return false;

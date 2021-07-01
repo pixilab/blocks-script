@@ -92,7 +92,7 @@ interface Ctor<T> { new(... args: any[]): T ;}
 
 /**
  * Decorator for a feed item data field. Applied to an instance variable.
- * Field value is read-only by definition.
+ * Field value is read-only.
  */
 export function field(description?: string) {
 	return $metaSupport$.fieldMetadata({description: description} );
