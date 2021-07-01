@@ -58,7 +58,7 @@ import { Md5 } from 'lib/md5';
  * fixed parameters
  */
 /** status poll interval in milliseconds */       const STATUS_POLL_INTERVAL = 20000;
-const LOG_DEBUG = true
+const LOG_DEBUG = false
 const PJLINK_PASSWORD = 'JBMIAProjectorLink';
 const CREATE_DYNAMIC_PROPERTIES = false;
 

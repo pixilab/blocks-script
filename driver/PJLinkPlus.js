@@ -56,7 +56,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
     var ERR_4 = 'ERR4';
     var ERR_A = 'ERRA';
     var STATUS_POLL_INTERVAL = 20000;
-    var LOG_DEBUG = true;
+    var LOG_DEBUG = false;
     var PJLINK_PASSWORD = 'JBMIAProjectorLink';
     var CREATE_DYNAMIC_PROPERTIES = false;
     var MUTE_MIN = 10;
