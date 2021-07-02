@@ -50,7 +50,7 @@ import { Md5 } from 'lib/md5';
  */
 /** Not supported / Not installed */              const ERR_1 = 'ERR1';
 /** Out of parameter */                           const ERR_2 = 'ERR2';
-/** Unavialable time for any reason */            const ERR_3 = 'ERR3';
+/** Unavailable time for any reason */            const ERR_3 = 'ERR3';
 /** Projector / Display failure */                const ERR_4 = 'ERR4';
 /** Invalid password */                           const ERR_A = 'ERRA';
 
@@ -58,9 +58,11 @@ import { Md5 } from 'lib/md5';
  * fixed parameters
  */
 /** status poll interval in milliseconds */       const STATUS_POLL_INTERVAL = 20000;
-const LOG_DEBUG = false
+const LOG_DEBUG = false;
 const PJLINK_PASSWORD = 'JBMIAProjectorLink';
 const CREATE_DYNAMIC_PROPERTIES = false;
+const MAX_ATTEMPT_CONNECT_DELAY = 180; // seconds max delay between attempt connect
+const MS_PER_S = 1000;
 
 /*
  * other constants
@@ -119,7 +121,6 @@ export class PJLinkPlus extends NetworkProjector {
     private statusPoller: CancelablePromise<void>;
     private keepPollingStatus: boolean;
 
-    private fetchingDeviceInfo: Promise<void> = null;
     private fetchDeviceInfoResolve: (value?: any) => void = null;
     private fetchDeviceInfoReject: (value?: any) => void = null;
 	private fetchDeviceInfoRejectTimer: CancelablePromise<void> = null;
@@ -171,7 +172,7 @@ export class PJLinkPlus extends NetworkProjector {
     private _hasFilter : boolean;
     private _filterUsageTime : number = -1;
     private _filterReplacementModelNumber : string;
-    // error / warning reated
+    // error / warning related
     private _errorStatus : string = '000000';
     private _errorStatusFan : number = 0;
     private _errorStatusLamp : number = 0;
@@ -212,7 +213,7 @@ export class PJLinkPlus extends NetworkProjector {
         [CMD_FREZ] : {dynamic: true,  cmdClass: 2, read: true,  write: true,  needsPower: true },
     }
     private commandReplyCache: Dictionary<CommandReply> = {};
-    private cacheFilePath : string;
+    private readonly cacheFilePath : string;
     private currentQuery: PJLinkQuery;
 
     private inputInformation : NumDict<InputTypeInfo> = {
@@ -224,15 +225,17 @@ export class PJLinkPlus extends NetworkProjector {
         6 : {label: 'Internal', sourceIDs: []},
     }
 
-    private configurationFilePath: string;
+    private readonly configurationFilePath: string;
     private configuration: PJLinkConfiguration;
 
-	private logPrefix = '[-]';
+	private readonly logPrefix: string;
+	private gotToKnowDevice: boolean;
+	private authFailCount: number = 0;
 
 	constructor(socket: NetworkTCP) {
 
         super(socket);
-		this.logPrefix = '[' + this.socket.name + ']';
+		this.logPrefix = '[PJ:' + this.socket.name + ']';
 
         this.addState(this._power = new BoolState('POWR', 'power'));
         this.addState(this._input = new StringState(CMD_INPT, 'input', () => this._power.getCurrent()));
@@ -261,7 +264,7 @@ export class PJLinkPlus extends NetworkProjector {
 			this.debugLog('got configuration via socket options');
 			// start polling and connect
 			this.poll();
-			this.attemptConnect();
+			// this.attemptConnect();
 		} else {
 			SimpleFile.read(this.configurationFilePath).then(readValue => {
 	            this.configuration = JSON.parse(readValue);
@@ -271,12 +274,29 @@ export class PJLinkPlus extends NetworkProjector {
 			}).finally(() => {
 	            this.pjlinkPassword = this.configuration.password;
 	            // start polling and connect
-	            this.poll();
-	            this.attemptConnect();
+	            // this.attemptConnect();
+				this.poll();
 	        });
 		}
-
     }
+	protected pollStatus(): boolean {
+		return this.socket.enabled && !this.discarded;
+	}
+	protected poll() {
+		if (!this.socket.connected && !this.connecting && !this.connectDly) {
+			this.connectionAttemptCount++;
+			this.infoMsg('connection attempt #' + this.connectionAttemptCount);
+			this.attemptConnect();
+		}
+		const pollDelay = Math.min((18 + this.connectionAttemptCount * 2), MAX_ATTEMPT_CONNECT_DELAY);
+		this.poller = wait(pollDelay * MS_PER_S);
+		this.debugLog('poll: waiting ' + pollDelay + ' seconds')
+		this.poller.then(()=> {
+			if (this.pollStatus())	// Keep polling?
+				this.poll();
+		})
+	}
+
 
 	/**
 	 * Allow clients to check for my type, just as in some system object classes
@@ -297,23 +317,55 @@ export class PJLinkPlus extends NetworkProjector {
         return SimpleFile.write(this.configurationFilePath, cfg.toJSON());
     }
 
-    protected pollStatus(): boolean {
-		return true;
+
+
+
+	private connectionAttemptCount: number = 0;
+	// override in order to count connection attempts
+	attemptConnect() {
+		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
+			this.socket.connect().then(
+				() => this.justConnected(),
+				error => this.connectStateChanged()
+			);
+			this.connecting = true;
+		}
+	}
+	connectStateChanged() {
+		this.connecting = false;
+		// this.infoMsg("connectStateChanged", this.socket.connected);
+		if (!this.socket.connected) {
+			if (this.connected) this.infoMsg('connection lost');
+			this.connected = false;	// Tell clients connection dropped
+			if (this.correctionRetry)
+				this.correctionRetry.cancel();
+			if (this.reqToSend())
+				this.connectSoon();	// Got data to send - attempt to re-connect soon
+		}
 	}
 
-    justConnected (): void {
+	justConnected (): void {
+		this.connectionAttemptCount = 0;
+		this.infoMsg('connection established');
+		this.connected = true;
         wait(200).then(() => {
             if (this.unauthenticated) {
-                this.warnMsg('not authenticated');
+                this.warnMsg('not authenticated - potentially wrong password');
+				this.connecting = false;
             }
             else {
-                this.getToKnowDevice().then(
-                    _resolve =>  {
-                        this.debugLog('got to know device - starting to poll');
-                        this.startPollDeviceStatus();
-                    },
-                    _reject => this.warnMsg('could not get to know device')
-                );
+				if (this.gotToKnowDevice) {
+					this.startPollDeviceStatus();
+				} else {
+					this.getToKnowDevice().then(
+	                    _resolve =>  {
+	                        this.debugLog('got to know device - starting to poll');
+							this.gotToKnowDevice = true;
+	                        this.startPollDeviceStatus();
+	                    },
+	                    reject => this.warnMsg('could not get to know device: ' + reject)
+	                );
+				}
             }
         });
     }
@@ -335,8 +387,8 @@ export class PJLinkPlus extends NetworkProjector {
                             if (CREATE_DYNAMIC_PROPERTIES) this.createDynamicInputProperties();
                             resolveGetToKnow();
                         },
-                        _reject => {
-                            rejectGetToKnow();
+                        reject => {
+                            rejectGetToKnow(reject);
                         });
                     }
                     else {
@@ -344,57 +396,45 @@ export class PJLinkPlus extends NetworkProjector {
                         resolveGetToKnow();
                     }
                 },
-                _reject => {
-                    rejectGetToKnow();
+                reject => {
+                    rejectGetToKnow(reject);
                 });
             });
         });
     }
 
     private tryLoadCacheFromDisk () : Promise<void> {
-        return new Promise<void> ((resolve, _reject) => {
+        return new Promise<void> ((resolve, reject) => {
             SimpleFile.read(this.cacheFilePath).then(readValue => {
                 this.commandReplyCache = JSON.parse(readValue);
                 this.debugLog('successfully loaded command reply cache');
                 resolve();
             }).catch(_error => {
-                SimpleFile.write(this.cacheFilePath, JSON.stringify(this.commandReplyCache));
-                resolve();
+                SimpleFile.write(this.cacheFilePath, JSON.stringify(this.commandReplyCache)).then(() => {
+					resolve();
+				}).catch(error => { reject(error); });
             });
         });
     }
     private cacheCommandReply (command: string, reply: string) {
-        var existingItem = this.commandReplyCache[command];
+        const existingItem = this.commandReplyCache[command];
         if (existingItem && existingItem.reply == reply) return;
         this.commandReplyCache[command] = {reply: reply};
         SimpleFile.write(this.cacheFilePath, JSON.stringify(this.commandReplyCache)).then(_resolve => {
             this.debugLog('updated cache file \'' + this.cacheFilePath + '\' with ' + command + '=\'' + reply + '\'');
         });
     }
-
     private tryGetStaticInformation (cmdClass: number) : Promise<void> {
-        return new Promise((resolveGetStatic, rejectGetStatic) => {
-            var commands : string[] = PJLinkPlus.getStaticCommands(cmdClass);
-            this.fetchDeviceInformation(commands).then(_resolve => {
-                resolveGetStatic();
-            },
-            reject => {
-                rejectGetStatic(reject);
-            });
-        });
+		return this.fetchDeviceInformation(PJLinkPlus.getStaticCommands(cmdClass));
     }
-
-
-
     private static getStaticCommands (cmdClass: number) : string[] {
-        var commands : string[] = [];
-        for (var command in this.commandInformation) {
-            var info = this.commandInformation[command];
+        let commands : string[] = [];
+        for (const command in this.commandInformation) {
+            const info = this.commandInformation[command];
             if (!info.dynamic && info.cmdClass == cmdClass) commands.push(command);
         }
         return commands;
     }
-
 
     /* power status */
     @property("Power status (detailed: 0, 1, 2, 3 -> off, on, cooling, warming)", true)
@@ -459,7 +499,7 @@ export class PJLinkPlus extends NetworkProjector {
     }
     private setInputClass1 (type: number, id: number) : boolean {
         if (type < INPT_RGB || type > INPT_NETWORK) return false;
-        if (id === NaN) {
+        if (isNaN(id)) {
             this.warnMsg('not a valid input id (1-9)');
             return false;
         }
@@ -475,8 +515,8 @@ export class PJLinkPlus extends NetworkProjector {
             this.warnMsg('\'' + id + '\'not a valid input id (1-9 A-Z)');
             return false;
         }
-        var inputValue = type + id;
-        if (this._validInputs.indexOf(inputValue) === -1) {
+		const inputValue = type + id;
+		if (this._validInputs.indexOf(inputValue) === -1) {
             this.warnMsg('not a valid input id - valid input ids: ' + this._validInputs.join(', '));
             return false;
         }
@@ -515,16 +555,16 @@ export class PJLinkPlus extends NetworkProjector {
         this.mute = value ? 21 : 20;
     }
     public get muteAudio () : boolean {
-        var currentValue = this._mute.get();
-        return currentValue == 31 || currentValue == 21;
+		const currentValue = this._mute.get();
+		return currentValue == 31 || currentValue == 21;
     }
     @property("Mute video")
     public set muteVideo (value: boolean) {
         this.mute = value ? 11 : 10;
     }
     public get muteVideo () : boolean {
-        var currentValue = this._mute.get();
-        return currentValue == 31 || currentValue == 11;
+		const currentValue = this._mute.get();
+		return currentValue == 31 || currentValue == 11;
     }
 
     /* resolution */
@@ -662,8 +702,8 @@ export class PJLinkPlus extends NetworkProjector {
             this.warnMsg('last known connection date unknown');
             return false;
         }
-        var msSinceLastConnection = now.getTime() - this._lastKnownConnectionDate.getTime();
-        // console.warn(msSinceLastConnection);
+		const msSinceLastConnection = now.getTime() - this._lastKnownConnectionDate.getTime();
+		// console.warn(msSinceLastConnection);
         return msSinceLastConnection < 42000;
     }
 
@@ -673,14 +713,14 @@ export class PJLinkPlus extends NetworkProjector {
             return 'call "fetchDeviceInfo" at least once before requesting "detailedStatusReport"';
         }
         return 'Device: ' + this._manufactureName + ' ' + this._productName + ' ' +  this._deviceName + this._lineBreak +
-            'Power status: ' + this.translatePowerCode(this._powerStatus) + this._lineBreak +
+            'Power status: ' + PJLinkPlus.translatePowerCode(this._powerStatus) + this._lineBreak +
             'Error status: (' + this._errorStatus + ')' + this._lineBreak +
-            '  Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
-            '  Lamp' + (this._lampCount > 1 ? 's' : '') + ': ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
-            '  Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
-            '  Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
-            '  Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? this.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
-            '  Other: ' + this.translateErrorCode(this._errorStatusOther) + this._lineBreak +
+            '  Fan: ' + PJLinkPlus.translateErrorCode(this._errorStatusFan) + this._lineBreak +
+            '  Lamp' + (this._lampCount > 1 ? 's' : '') + ': ' + (this._hasLamps !== undefined && this._hasLamps ? PJLinkPlus.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
+            '  Temperature: ' + PJLinkPlus.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
+            '  Cover open: ' + PJLinkPlus.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
+            '  Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? PJLinkPlus.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
+            '  Other: ' + PJLinkPlus.translateErrorCode(this._errorStatusOther) + this._lineBreak +
             (this._lampCount > 0 ? 'Lamp status: ' + this._lineBreak : '') +
             (this._lampCount > 0 ? 'Lamp one: ' + (this._lampOneActive ? 'on' : 'off') + ', ' + this._lampOneHours + ' lighting hours' + this._lineBreak : '') +
             (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
@@ -695,7 +735,7 @@ export class PJLinkPlus extends NetworkProjector {
             '(class ' + this._class + ', status report last updated ' + this._infoFetchDate + ')';
     }
 
-    private translateErrorCode (code : number) : string {
+    private static translateErrorCode (code : number) : string {
         switch (code) {
             case 0:
                 return 'OK';
@@ -706,7 +746,7 @@ export class PJLinkPlus extends NetworkProjector {
         }
         return 'unknown error code';
     }
-    private translatePowerCode (code : number) : string {
+    private static translatePowerCode (code : number) : string {
         switch (code) {
             case 0:
                 return 'Off';
@@ -721,19 +761,17 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
     private nextParameterToFetch () : string {
-        var parameter : string;
-        while (parameter === undefined &&
-                this._currentParameterFetchList.length > 0) {
-            parameter = this._currentParameterFetchList.pop();
-            if (this.skipDeviceParameters.indexOf(parameter) > -1) parameter = undefined;
+        while (this._currentParameterFetchList.length > 0) {
+            const parameter = this._currentParameterFetchList.pop();
+            if (this.skipDeviceParameters.indexOf(parameter) <= -1) return parameter;
         }
-        return parameter;
+        return undefined;
     }
 
     private fetchDeviceInformation (wantedInfo : string[]) : Promise<void> {
         this.debugLog('trying to get info: \'' + wantedInfo.join(', ') + '\'');
         this._currentParameterFetchList = wantedInfo.slice().reverse();
-        this.fetchingDeviceInfo = new Promise<void>((resolve, reject)=>{
+        return new Promise<void>((resolve, reject)=>{
             if (this.fetchDeviceInfoResolve) {
                 reject('fetch already in progress');
             }
@@ -744,11 +782,11 @@ export class PJLinkPlus extends NetworkProjector {
                 this.fetchDeviceInfoRejectTimer = wait(2000 * wantedInfo.length);
 				this.fetchDeviceInfoRejectTimer.then(() => {
 					this.debugLog('fetchDeviceInformation timed out: reject');
+					delete this.fetchDeviceInfoResolve;
                     reject('fetch timeout');
                 });
             }
         });
-        return this.fetchingDeviceInfo;
     }
     private fetchInfoLoop () : void {
         if (!this.keepFetchingInfo()) return;
@@ -765,7 +803,10 @@ export class PJLinkPlus extends NetworkProjector {
             this.fetchInfo(this.currentQuery).then(
                 reply => {
                     this.processInfoQueryReply(this.currentQuery, reply);
-                }
+                },
+				error => {
+                	this.debugLog(error);
+				}
             ).finally(()=>{
 				wait(100).then(() => {
 					this.fetchInfoLoop();
@@ -792,7 +833,6 @@ export class PJLinkPlus extends NetworkProjector {
         }
     }
     private cleanUpFetchingDeviceInformation () : void {
-        delete this.fetchingDeviceInfo;
         delete this.fetchDeviceInfoResolve;
         delete this.fetchDeviceInfoReject;
 		this.fetchDeviceInfoRejectTimer.cancel();
@@ -805,8 +845,8 @@ export class PJLinkPlus extends NetworkProjector {
                 reject('device needs to be powered on for command ' + query.command);
                 return;
             }
-            var cachedReply = this.commandReplyCache[query.command];
-            if (cachedReply) {
+			const cachedReply = this.commandReplyCache[query.command];
+			if (cachedReply) {
                 this.debugLog('used cached reply for command ' + query.command);
                 resolve(cachedReply.reply);
                 return;
@@ -817,7 +857,7 @@ export class PJLinkPlus extends NetworkProjector {
                         this.processInfoQueryError(query.command, reply);
                         if (reply == ERR_1) reject('command not available: ' + query.command);
                     } else {
-                        this.debugLog('got reply for \'' + this._currentParameter + '\':' + reply);
+                        // this.debugLog('got reply for \'' + this._currentParameter + '\':' + reply);
                         // successful fetch and parameter is not dynamic? cache & skip next time
                         if (!PJLinkPlus.isCommandDynamic(query.command)) {
                             this.cacheCommandReply(query.command, reply);
@@ -828,9 +868,13 @@ export class PJLinkPlus extends NetworkProjector {
                 },
                 error => {
                     this.processInfoQueryError(query.command, error);
-                    reject(error);
+                    this.debugLog('error.. will wait 1s')
+                    wait(1000).then(() => {
+                    	this.debugLog('.. now reject')
+						reject('fetchInfo.queryRequest.error: ' + error);
+					});
                 }
-            );
+            ).catch(error => { reject('fetchInfo.queryRequest.catch: ' + error); });
         });
     }
     private startPollDeviceStatus () {
@@ -842,13 +886,14 @@ export class PJLinkPlus extends NetworkProjector {
     }
     private pollDeviceStatus(skipInterval: boolean = false) {
         if (!this.connected) {
+			this.debugLog('abort poll; connected: ' + this.connected);
             this.abortPollDeviceStatus();
             return;
         }
         this.keepPollingStatus = true;
         // status interval minus up to 10% (to create some variation)
         let waitDuration = skipInterval ? 7 : Math.floor(STATUS_POLL_INTERVAL + Math.random() * (STATUS_POLL_INTERVAL * 0.1));
-        this.debugLog('going to wait for ' + waitDuration + ' ms');
+        // this.debugLog('going to wait for ' + waitDuration + ' ms');
 		this.statusPoller = wait(waitDuration);
 		this.statusPoller.then(()=> {
             if (!this.keepPollingStatus) return;
@@ -860,11 +905,15 @@ export class PJLinkPlus extends NetworkProjector {
                 reject => {
                     this.debugLog('poll device status error: ' + reject);
                 });
+			} else {
+				this.debugLog('no fetch; socket.connected: ' + this.socket.connected + '  connected: ' + this.connected);
 			}
 		}).finally(()=>{
-			if (!this.discarded && this.socket.name !== 'DETACHED') {
+			const detached = this.socket.name === 'DETACHED';
+			if (!this.discarded && !detached) {
                 this.pollDeviceStatus(); // Keep polling
             } else {
+				this.debugLog('abort poll; discarded: ' + this.discarded + '  detached: ' + detached);
                 this.abortPollDeviceStatus();
             }
 		});
@@ -872,7 +921,7 @@ export class PJLinkPlus extends NetworkProjector {
     private abortPollDeviceStatus () : void {
         this.keepPollingStatus = false;
         this.abortFetchDeviceInformation();
-        console.log('aborting polling device status');
+        this.debugLog('aborting polling device status');
         if (this.statusPoller) delete this.statusPoller;
     }
 
@@ -892,8 +941,8 @@ export class PJLinkPlus extends NetworkProjector {
     private processInfoQueryReply (query : PJLinkQuery, reply : string) {
         switch (query.command) {
             case CMD_POWR:
-                var newPowerStatus = parseInt(reply);
-                if (this._powerStatus != newPowerStatus) {
+				const newPowerStatus = parseInt(reply);
+				if (this._powerStatus != newPowerStatus) {
                     this.powerStatus = newPowerStatus;
                     // updating detailed status
                     this.isOff = this._powerStatus == 0;
@@ -906,12 +955,12 @@ export class PJLinkPlus extends NetworkProjector {
                 break;
             case CMD_INPT:
                 if (reply.length == 2) {
-                    var oldType = this._inputType;
-                    var newType = parseInt(reply[0]);
-                    var newSource = reply[1];
-                    var typeChanged = false;
-                    var sourceChanged = false;
-                    if (newType != this._inputType) {
+					const oldType = this._inputType;
+					const newType = parseInt(reply[0]);
+					const newSource = reply[1];
+					let typeChanged = false;
+					let sourceChanged = false;
+					if (newType != this._inputType) {
                         this._inputType = newType;
                         typeChanged = true;
                     }
@@ -932,13 +981,13 @@ export class PJLinkPlus extends NetworkProjector {
                 this._mute.updateCurrent(parseInt(reply));
                 break;
             case CMD_ERST:
-                var errorNames = ['Fan', 'Lamp', 'Temperature', 'CoverOpen', 'Filter', 'Other'];
-                this._errorStatus = reply;
+				const errorNames = ['Fan', 'Lamp', 'Temperature', 'CoverOpen', 'Filter', 'Other'];
+				this._errorStatus = reply;
                 if (reply.length == 6) {
-                    var list = [0, 0, 0, 0, 0, 0];
-                    var warning = false;
-                    var error = false;
-                    for (let i = 0; i < reply.length; i++) {
+					const list = [0, 0, 0, 0, 0, 0];
+					let warning = false;
+					let error = false;
+					for (let i = 0; i < reply.length; i++) {
                         list[i] = parseInt(reply[i]);
                         error = error || list[i] == 2;
                         warning = warning || list[i] == 1;
@@ -958,13 +1007,13 @@ export class PJLinkPlus extends NetworkProjector {
                 break;
             case CMD_LAMP:
                 this._hasLamps = true;
-                var lampNames = ['One', 'Two', 'Three', 'Four'];
-                var lampData = reply.split(' ');
-                this._lampCount = lampData.length / 2;
+				const lampNames = ['One', 'Two', 'Three', 'Four'];
+				const lampData = reply.split(' ');
+				this._lampCount = lampData.length / 2;
                 for (let i = 0; i < this._lampCount; i++) {
-                    var newHours = parseInt(lampData[i * 2]);
-                    var newActive = parseInt(lampData[i * 2 + 1]) == 1;
-                    if ((<any>this)['_lamp' + lampNames[i] + 'Hours'] != newHours) {
+					const newHours = parseInt(lampData[i * 2]);
+					const newActive = parseInt(lampData[i * 2 + 1]) == 1;
+					if ((<any>this)['_lamp' + lampNames[i] + 'Hours'] != newHours) {
 						(<any>this)['_lamp' + lampNames[i] + 'Hours'] = newHours;
 						(<any>this).changed('lamp' + lampNames[i] + 'Hours');
                     }
@@ -976,7 +1025,7 @@ export class PJLinkPlus extends NetworkProjector {
                 break;
             case CMD_INST:
                 this._validInputs = reply.split(' ');
-                for (var i = 0; i < this._validInputs.length; i++) {
+                for (let i = 0; i < this._validInputs.length; i++) {
                     this.addValidInput(this._validInputs[i]);
                 }
                 break;
@@ -995,9 +1044,9 @@ export class PJLinkPlus extends NetworkProjector {
             case CMD_CLSS:
                 this._class = parseInt(reply);
                 // skip unsupported parameters (since we now know the PJLink class)
-                for (var infoKey in PJLinkPlus.commandInformation) {
-                    var info = PJLinkPlus.commandInformation[infoKey];
-                    if (info.cmdClass > this._class) {
+                for (const infoKey in PJLinkPlus.commandInformation) {
+					const info = PJLinkPlus.commandInformation[infoKey];
+					if (info.cmdClass > this._class) {
                         this.addCommandToSkip(infoKey);
                     }
                 }
@@ -1012,8 +1061,8 @@ export class PJLinkPlus extends NetworkProjector {
                 // nothing yet
                 break;
             case CMD_IRES:
-                var newInputResolution : Resolution;
-                if (reply == IRES_NO_SIGNAL) {
+				let newInputResolution: Resolution;
+				if (reply == IRES_NO_SIGNAL) {
                     newInputResolution = new Resolution(-1, -1);
                 }
                 else if (reply == IRES_UNKNOWN_SIGNAL) {
@@ -1030,8 +1079,8 @@ export class PJLinkPlus extends NetworkProjector {
                 }
                 break;
             case CMD_RRES:
-                var newRecommendedResolution : Resolution = PJLinkPlus.parseResolution(reply);
-                if (!this._recommendedResolution ||
+				const newRecommendedResolution: Resolution = PJLinkPlus.parseResolution(reply);
+				if (!this._recommendedResolution ||
                 this._recommendedResolution.horizontal != newRecommendedResolution.horizontal ||
                 this._recommendedResolution.vertical != newRecommendedResolution.vertical) {
                     this._recommendedResolution = newRecommendedResolution;
@@ -1039,9 +1088,9 @@ export class PJLinkPlus extends NetworkProjector {
                 }
                 break;
             case CMD_FILT:
-                var newHasFilter = true;
-                var newFilterUsageTime = parseInt(reply);
-                if (this._hasFilter != newHasFilter) {
+				const newHasFilter = true;
+				const newFilterUsageTime = parseInt(reply);
+				if (this._hasFilter != newHasFilter) {
                     this._hasFilter = newHasFilter;
                     this.changed('hasFilter');
                 }
@@ -1054,8 +1103,8 @@ export class PJLinkPlus extends NetworkProjector {
                 // Maximum length of the parameter is 128 bytes.
                 // If there are multiple replacement model numbers, they are separated by (SP).
                 // empty reply: there is no replacement model number
-                var newLampReplacementModelNumber = reply;
-                if (this._lampReplacementModelNumber != newLampReplacementModelNumber) {
+				const newLampReplacementModelNumber = reply;
+				if (this._lampReplacementModelNumber != newLampReplacementModelNumber) {
                     this._lampReplacementModelNumber = newLampReplacementModelNumber;
                     this.changed('lampReplacementModelNumber');
                 }
@@ -1064,8 +1113,8 @@ export class PJLinkPlus extends NetworkProjector {
                 // Maximum length of the parameter is 128 bytes.
                 // If there are multiple replacement model numbers, they are separated by (SP).
                 // empty reply: there is no replacement model number
-                var newFilterReplacementModelNumber = reply;
-                if (this._filterReplacementModelNumber != newFilterReplacementModelNumber) {
+				const newFilterReplacementModelNumber = reply;
+				if (this._filterReplacementModelNumber != newFilterReplacementModelNumber) {
                     this._filterReplacementModelNumber = newFilterReplacementModelNumber;
                     this.changed('filterReplacementModelNumber');
                 }
@@ -1107,15 +1156,15 @@ export class PJLinkPlus extends NetworkProjector {
             this.warnMsg('wrong length of input chars: \'' + inputChars + '\'');
             return;
         }
-        var type = parseInt(inputChars[0]);
-        if (type === undefined ||
+		const type = parseInt(inputChars[0]);
+		if (type === undefined ||
             type < INPT_RGB ||
             type > INPT_INTERNAL) {
             this.warnMsg('invalid input type: \'' + inputChars + '\'');
             return;
         }
-        var sourceID = inputChars[1];
-        this.inputInformation[type].sourceIDs.push(sourceID);
+		const sourceID = inputChars[1];
+		this.inputInformation[type].sourceIDs.push(sourceID);
     }
 
     addCommandToSkip (command : string) {
@@ -1125,50 +1174,51 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
 	request(question: string, param?: string): Promise<string> {
-        var pjClass = PJLinkPlus.determineCommandClass(question);
-        if (question == CMD_INPT) {
+		let pjClass = PJLinkPlus.determineCommandClass(question);
+		if (question == CMD_INPT) {
             pjClass = this._class;
         }
-		var toSend = '%' + pjClass + question;
-		toSend += ' ';
-		toSend += (param === undefined) ? '?' : param;
-		this.socket.sendText(this.authenticationSequence + toSend).catch(
-			err=>{
-                console.log('send failed: ' + err);
-                this.sendFailed(err);
-            }
-		);
-		const result = this.startRequest(toSend);
-		result.finally(()=> {
-			asap(()=> {	// Send further corrections soon, once this cycle settled
-				this.sendCorrection();
-			});
-		});
-		return result;
+		const toSend = '%' + pjClass + question + ' ' + ((param === undefined) ? '?' : param);
+		return this.sendMessageWithAuthentication(toSend);
 	}
     queryRequest(query: PJLinkQuery): Promise<string> {
         const toSend = query.encode();
-        this.socket.sendText(this.authenticationSequence + toSend).catch(
-			err=>{
-                console.log('send failed: ' + err);
-                this.sendFailed(err);
-            }
-		);
-		const result = this.startRequest(toSend);
-		result.finally(()=> {
-			asap(()=> {	// Send further corrections soon, once this cycle settled
-				this.sendCorrection();
-			});
-		});
-		return result;
+        return this.sendMessageWithAuthentication(toSend);
     }
+    sendMessageWithAuthentication(message: string): Promise<string> {
+    	return new Promise((resolve, reject) => {
+    		// this.debugLog('sendText: "' + message + '"');
+			this.socket.sendText(this.authenticationSequence + message).catch(
+				error => {
+					// this.warnMsg('send failed: ' + error);
+					this.sendFailed(error);
+				}
+			);
+			this.startRequest(message).then(
+				result => {
+					resolve(result);
+				},
+				error => {
+					reject(error);
+				}
+			).catch(error => {
+				reject(error);
+			}).finally(()=> {
+				asap(()=> {	// Send further corrections soon, once this cycle settled
+					this.sendCorrection();
+				});
+			});
 
-    protected textReceived(text: string): void {
+		});
+	}
+
+	protected textReceived(text: string): void {
+    	// this.debugLog('textReceived(' + text + ')')
         // response == proof of healthy connection
         this._lastKnownConnectionDate = new Date();
 
 		if (text.indexOf('PJLINK ') === 0) {	// Initial handshake sent spontaneously by projector
-			if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0)) {
+			if (text.indexOf('PJLINK 1') === 0) {
                 this.randomAuthSequence = text.substr('PJLINK 1'.length + 1);
                 const sequence = this.randomAuthSequence + '' + this.pjlinkPassword;
                 const md5Sequence = Md5.hashAsciiStr(sequence);
@@ -1178,10 +1228,18 @@ export class PJLinkPlus extends NetworkProjector {
                 this.connected = true;
             }
             else if (text.indexOf('PJLINK ' + ERR_A) === 0) {
-                this.connected = false;
-                this.unauthenticated = true;
-                this.warnMsg('authentication failed');
-                this.requestFailure(text);
+				this.authFailCount++;
+				this.unauthenticated = true;
+				this.connecting = false;
+				this.connected = false;
+				if (this.socket.connected) this.socket.disconnect();
+                this.warnMsg('authentication failed - potentially wrong password [try #' + this.authFailCount + ']');
+                this.requestFailure('"' + text + '"');
+                const maxAuthFail = 10;
+				if (this.authFailCount > maxAuthFail) {
+					this.errorMsg('authentication failed > ' + maxAuthFail + ' times. discarding driver.');
+					this.discard();
+				}
             }
 			else {
                 this.connected = true;
@@ -1206,7 +1264,7 @@ export class PJLinkPlus extends NetworkProjector {
 			if (text.indexOf(expectedResponse) === 0) {
 				// Reply on expected command/question
 				text = text.substr(expectedResponse.length);	// Trailing text
-				var treatAsOk = text.indexOf('ERR') !== 0;
+				let treatAsOk = text.indexOf('ERR') !== 0;
 				if (!treatAsOk) {	// Got error from projector
 					/*	Some errors are "terminal", meaning there's no reason to
 						attempt the command again. For those, just log them then
@@ -1227,7 +1285,8 @@ export class PJLinkPlus extends NetworkProjector {
                     case ERR_A: // bad authentication
                         this.connected = false;
                         this.unauthenticated = true;
-                        this.warnMsg('authentication failed');
+                        this.authFailCount++;
+                        this.warnMsg('authentication failed - potentially wrong password');
                         break;
                     case ERR_3:	// Bad time for this command (usually in standby or not yet awake)
 						// console.info("PJLink ERR3");
@@ -1240,6 +1299,7 @@ export class PJLinkPlus extends NetworkProjector {
                     case ERR_4:
                         // this would mean that the projector is not able to operate properly
                         // this.errorMsg('projector not able to operate properly : ERR4 received');
+						this.debugLog('abort poll; ERR_4!');
                         this.abortPollDeviceStatus();
                         break;
 					}
@@ -1302,7 +1362,7 @@ export class PJLinkPlus extends NetworkProjector {
 
     @callable("Send custom request")
     public customRequest (question: string, param?: string) : Promise<void> {
-        var request = this.request(question, param == "" ? undefined : param).then(
+        return this.request(question, param == "" ? undefined : param).then(
 			reply => {
 				this._customRequestResult = reply;
                 this.changed('customRequestResponse');
@@ -1311,17 +1371,15 @@ export class PJLinkPlus extends NetworkProjector {
 				this._customRequestResult = "request failed: " + error;
 			}
 		);
-        return request;
     }
 
     static parseResolution (reply : string) : Resolution | null {
-        var parts : string[] = reply.split(RESOLUTION_SPLIT);
+        const parts : string[] = reply.split(RESOLUTION_SPLIT);
         if (parts.length == 2) {
-            var resolution : Resolution = new Resolution(
+            return new Resolution(
                 parseInt(parts[0]),
                 parseInt(parts[1])
             );
-            return resolution;
         }
         return null;
     }
@@ -1341,12 +1399,11 @@ export class PJLinkPlus extends NetworkProjector {
         // extract class, command, and separator
         const separator = text.substr(6, 1);
         if (separator != SEPARATOR_RESPONSE) return null;
-        const message : PJLinkResponse = new PJLinkResponse (
+        return new PJLinkResponse (
             parseInt(text[1]),
             text.substr(2, 4),
             text.substr(7)
         );
-        return message;
     }
 	debugLog(message: string) {
 		if (LOG_DEBUG) console.log(this.logPrefix + ' ' + message);
@@ -1354,12 +1411,38 @@ export class PJLinkPlus extends NetworkProjector {
 	debugWarn(message: string) {
 		if (LOG_DEBUG) console.warn(this.logPrefix + ' ' + message);
 	}
-	errorMsg(message: string) {
-		console.error(this.logPrefix + ' ' + message);
+	errorMsg(...messages: any[]) {
+		console.error(this.logPrefix + ' ' + messages.join(', '));
 	}
-	warnMsg(message: string) {
-		console.warn(this.logPrefix + ' ' + message);
+	infoMsg(...messages: any[]) {
+		console.log(this.logPrefix + ' ' + messages.join(', '));
 	}
+	warnMsg(...messages: any[]) {
+		console.warn(this.logPrefix + ' ' + messages.join(', '));
+	}
+}
+class TracePromise<T> implements Thenable<T> {
+
+	private readonly promise : Promise<T>;
+	private _callback : promiseCallback<T>;
+
+	constructor(callback: promiseCallback<T>) {
+		this._callback = callback;
+		this.promise = new Promise<T>(callback);
+	}
+
+	catch<U>(onRejected?: (error: any) => (Thenable<U> | U)): Thenable<U> {
+		return this.promise.catch(onRejected);
+	}
+
+	finally<U>(finallyHandler: () => void): Promise<U> {
+		return this.promise.finally(finallyHandler);
+	}
+
+	then<U>(onFulfilled?: (value: T) => (Thenable<U> | U), onRejected?: (error: any) => void): Thenable<U> {
+		return this.promise.then(onFulfilled, onRejected);
+	}
+
 }
 class StringState extends State<string> {
 	correct(drvr: NetworkProjector): Promise<string> {
@@ -1430,10 +1513,6 @@ class Resolution {
 class PJLinkConfiguration {
     public password: string = PJLINK_PASSWORD;
     toJSON () : string {
-        const json =
-        '{\n' +
-        '    "password" : "' + this.password + '"\n' +
-        '}';
-        return json;
+        return '{\n    "password" : "' + this.password + '"\n}';
     }
 }
