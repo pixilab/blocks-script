@@ -59,6 +59,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
     var LOG_DEBUG = false;
     var PJLINK_PASSWORD = 'JBMIAProjectorLink';
     var CREATE_DYNAMIC_PROPERTIES = false;
+    var MAX_ATTEMPT_CONNECT_DELAY = 180;
+    var MS_PER_S = 1000;
     var MUTE_MIN = 10;
     var MUTE_MAX = 31;
     var RESOLUTION_SPLIT = 'x';
@@ -91,7 +93,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 CMD_FILT,
             ];
             _this.authenticationSequence = '';
-            _this.fetchingDeviceInfo = null;
             _this.fetchDeviceInfoResolve = null;
             _this.fetchDeviceInfoReject = null;
             _this.fetchDeviceInfoRejectTimer = null;
@@ -132,8 +133,9 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 5: { label: 'Network', sourceIDs: [] },
                 6: { label: 'Internal', sourceIDs: [] },
             };
-            _this.logPrefix = '[-]';
-            _this.logPrefix = '[' + _this.socket.name + ']';
+            _this.authFailCount = 0;
+            _this.connectionAttemptCount = 0;
+            _this.logPrefix = '[PJ:' + _this.socket.name + ']';
             _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
             _this.addState(_this._input = new StringState(CMD_INPT, 'input', function () { return _this._power.getCurrent(); }));
             _this.addState(_this._mute = new NetworkProjector_1.NumState(CMD_AVMT, 'mute', MUTE_MIN, MUTE_MAX, function () { return _this._power.getCurrent(); }));
@@ -150,7 +152,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 _this.pjlinkPassword = _this.configuration.password;
                 _this.debugLog('got configuration via socket options');
                 _this.poll();
-                _this.attemptConnect();
             }
             else {
                 SimpleFile_1.SimpleFile.read(_this.configurationFilePath).then(function (readValue) {
@@ -161,12 +162,29 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 }).finally(function () {
                     _this.pjlinkPassword = _this.configuration.password;
                     _this.poll();
-                    _this.attemptConnect();
                 });
             }
             return _this;
         }
         PJLinkPlus_1 = PJLinkPlus;
+        PJLinkPlus.prototype.pollStatus = function () {
+            return this.socket.enabled && !this.discarded;
+        };
+        PJLinkPlus.prototype.poll = function () {
+            var _this = this;
+            if (!this.socket.connected && !this.connecting && !this.connectDly) {
+                this.connectionAttemptCount++;
+                this.infoMsg('connection attempt #' + this.connectionAttemptCount);
+                this.attemptConnect();
+            }
+            var pollDelay = Math.min((18 + this.connectionAttemptCount * 2), MAX_ATTEMPT_CONNECT_DELAY);
+            this.poller = wait(pollDelay * MS_PER_S);
+            this.debugLog('poll: waiting ' + pollDelay + ' seconds');
+            this.poller.then(function () {
+                if (_this.pollStatus())
+                    _this.poll();
+            });
+        };
         PJLinkPlus.prototype.isOfTypeName = function (typeName) {
             return typeName === "PJLinkPlus" ? this : _super.prototype.isOfTypeName.call(this, typeName);
         };
@@ -182,20 +200,46 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 cfg = this.configuration;
             return SimpleFile_1.SimpleFile.write(this.configurationFilePath, cfg.toJSON());
         };
-        PJLinkPlus.prototype.pollStatus = function () {
-            return true;
+        PJLinkPlus.prototype.attemptConnect = function () {
+            var _this = this;
+            if (!this.socket.connected && !this.connecting && this.socket.enabled) {
+                this.socket.connect().then(function () { return _this.justConnected(); }, function (error) { return _this.connectStateChanged(); });
+                this.connecting = true;
+            }
+        };
+        PJLinkPlus.prototype.connectStateChanged = function () {
+            this.connecting = false;
+            if (!this.socket.connected) {
+                if (this.connected)
+                    this.infoMsg('connection lost');
+                this.connected = false;
+                if (this.correctionRetry)
+                    this.correctionRetry.cancel();
+                if (this.reqToSend())
+                    this.connectSoon();
+            }
         };
         PJLinkPlus.prototype.justConnected = function () {
             var _this = this;
+            this.connectionAttemptCount = 0;
+            this.infoMsg('connection established');
+            this.connected = true;
             wait(200).then(function () {
                 if (_this.unauthenticated) {
-                    _this.warnMsg('not authenticated');
+                    _this.warnMsg('not authenticated - potentially wrong password');
+                    _this.connecting = false;
                 }
                 else {
-                    _this.getToKnowDevice().then(function (_resolve) {
-                        _this.debugLog('got to know device - starting to poll');
+                    if (_this.gotToKnowDevice) {
                         _this.startPollDeviceStatus();
-                    }, function (_reject) { return _this.warnMsg('could not get to know device'); });
+                    }
+                    else {
+                        _this.getToKnowDevice().then(function (_resolve) {
+                            _this.debugLog('got to know device - starting to poll');
+                            _this.gotToKnowDevice = true;
+                            _this.startPollDeviceStatus();
+                        }, function (reject) { return _this.warnMsg('could not get to know device: ' + reject); });
+                    }
                 }
             });
         };
@@ -212,29 +256,30 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                                 if (CREATE_DYNAMIC_PROPERTIES)
                                     _this.createDynamicInputProperties();
                                 resolveGetToKnow();
-                            }, function (_reject) {
-                                rejectGetToKnow();
+                            }, function (reject) {
+                                rejectGetToKnow(reject);
                             });
                         }
                         else {
                             resolveGetToKnow();
                         }
-                    }, function (_reject) {
-                        rejectGetToKnow();
+                    }, function (reject) {
+                        rejectGetToKnow(reject);
                     });
                 });
             });
         };
         PJLinkPlus.prototype.tryLoadCacheFromDisk = function () {
             var _this = this;
-            return new Promise(function (resolve, _reject) {
+            return new Promise(function (resolve, reject) {
                 SimpleFile_1.SimpleFile.read(_this.cacheFilePath).then(function (readValue) {
                     _this.commandReplyCache = JSON.parse(readValue);
                     _this.debugLog('successfully loaded command reply cache');
                     resolve();
                 }).catch(function (_error) {
-                    SimpleFile_1.SimpleFile.write(_this.cacheFilePath, JSON.stringify(_this.commandReplyCache));
-                    resolve();
+                    SimpleFile_1.SimpleFile.write(_this.cacheFilePath, JSON.stringify(_this.commandReplyCache)).then(function () {
+                        resolve();
+                    }).catch(function (error) { reject(error); });
                 });
             });
         };
@@ -249,15 +294,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             });
         };
         PJLinkPlus.prototype.tryGetStaticInformation = function (cmdClass) {
-            var _this = this;
-            return new Promise(function (resolveGetStatic, rejectGetStatic) {
-                var commands = PJLinkPlus_1.getStaticCommands(cmdClass);
-                _this.fetchDeviceInformation(commands).then(function (_resolve) {
-                    resolveGetStatic();
-                }, function (reject) {
-                    rejectGetStatic(reject);
-                });
-            });
+            return this.fetchDeviceInformation(PJLinkPlus_1.getStaticCommands(cmdClass));
         };
         PJLinkPlus.getStaticCommands = function (cmdClass) {
             var commands = [];
@@ -353,7 +390,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         PJLinkPlus.prototype.setInputClass1 = function (type, id) {
             if (type < INPT_RGB || type > INPT_NETWORK)
                 return false;
-            if (id === NaN) {
+            if (isNaN(id)) {
                 this.warnMsg('not a valid input id (1-9)');
                 return false;
             }
@@ -633,14 +670,14 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     return 'call "fetchDeviceInfo" at least once before requesting "detailedStatusReport"';
                 }
                 return 'Device: ' + this._manufactureName + ' ' + this._productName + ' ' + this._deviceName + this._lineBreak +
-                    'Power status: ' + this.translatePowerCode(this._powerStatus) + this._lineBreak +
+                    'Power status: ' + PJLinkPlus_1.translatePowerCode(this._powerStatus) + this._lineBreak +
                     'Error status: (' + this._errorStatus + ')' + this._lineBreak +
-                    '  Fan: ' + this.translateErrorCode(this._errorStatusFan) + this._lineBreak +
-                    '  Lamp' + (this._lampCount > 1 ? 's' : '') + ': ' + (this._hasLamps !== undefined && this._hasLamps ? this.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
-                    '  Temperature: ' + this.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
-                    '  Cover open: ' + this.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
-                    '  Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? this.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
-                    '  Other: ' + this.translateErrorCode(this._errorStatusOther) + this._lineBreak +
+                    '  Fan: ' + PJLinkPlus_1.translateErrorCode(this._errorStatusFan) + this._lineBreak +
+                    '  Lamp' + (this._lampCount > 1 ? 's' : '') + ': ' + (this._hasLamps !== undefined && this._hasLamps ? PJLinkPlus_1.translateErrorCode(this._errorStatusLamp) : '[no lamps]') + this._lineBreak +
+                    '  Temperature: ' + PJLinkPlus_1.translateErrorCode(this._errorStatusTemperature) + this._lineBreak +
+                    '  Cover open: ' + PJLinkPlus_1.translateErrorCode(this._errorStatusCoverOpen) + this._lineBreak +
+                    '  Filter: ' + (this._hasFilter !== undefined && this._hasFilter ? PJLinkPlus_1.translateErrorCode(this._errorStatusFilter) : '[no filter]') + this._lineBreak +
+                    '  Other: ' + PJLinkPlus_1.translateErrorCode(this._errorStatusOther) + this._lineBreak +
                     (this._lampCount > 0 ? 'Lamp status: ' + this._lineBreak : '') +
                     (this._lampCount > 0 ? 'Lamp one: ' + (this._lampOneActive ? 'on' : 'off') + ', ' + this._lampOneHours + ' lighting hours' + this._lineBreak : '') +
                     (this._lampCount > 1 ? 'Lamp two: ' + (this._lampTwoActive ? 'on' : 'off') + ', ' + this._lampTwoHours + ' lighting hours' + this._lineBreak : '') +
@@ -657,7 +694,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             enumerable: false,
             configurable: true
         });
-        PJLinkPlus.prototype.translateErrorCode = function (code) {
+        PJLinkPlus.translateErrorCode = function (code) {
             switch (code) {
                 case 0:
                     return 'OK';
@@ -668,7 +705,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             }
             return 'unknown error code';
         };
-        PJLinkPlus.prototype.translatePowerCode = function (code) {
+        PJLinkPlus.translatePowerCode = function (code) {
             switch (code) {
                 case 0:
                     return 'Off';
@@ -682,20 +719,18 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             return 'unknown power code';
         };
         PJLinkPlus.prototype.nextParameterToFetch = function () {
-            var parameter;
-            while (parameter === undefined &&
-                this._currentParameterFetchList.length > 0) {
-                parameter = this._currentParameterFetchList.pop();
-                if (this.skipDeviceParameters.indexOf(parameter) > -1)
-                    parameter = undefined;
+            while (this._currentParameterFetchList.length > 0) {
+                var parameter_1 = this._currentParameterFetchList.pop();
+                if (this.skipDeviceParameters.indexOf(parameter_1) <= -1)
+                    return parameter_1;
             }
-            return parameter;
+            return undefined;
         };
         PJLinkPlus.prototype.fetchDeviceInformation = function (wantedInfo) {
             var _this = this;
             this.debugLog('trying to get info: \'' + wantedInfo.join(', ') + '\'');
             this._currentParameterFetchList = wantedInfo.slice().reverse();
-            this.fetchingDeviceInfo = new Promise(function (resolve, reject) {
+            return new Promise(function (resolve, reject) {
                 if (_this.fetchDeviceInfoResolve) {
                     reject('fetch already in progress');
                 }
@@ -706,11 +741,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     _this.fetchDeviceInfoRejectTimer = wait(2000 * wantedInfo.length);
                     _this.fetchDeviceInfoRejectTimer.then(function () {
                         _this.debugLog('fetchDeviceInformation timed out: reject');
+                        delete _this.fetchDeviceInfoResolve;
                         reject('fetch timeout');
                     });
                 }
             });
-            return this.fetchingDeviceInfo;
         };
         PJLinkPlus.prototype.fetchInfoLoop = function () {
             var _this = this;
@@ -728,6 +763,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 this.currentQuery = new PJLinkQuery(pjClass, this._currentParameter);
                 this.fetchInfo(this.currentQuery).then(function (reply) {
                     _this.processInfoQueryReply(_this.currentQuery, reply);
+                }, function (error) {
+                    _this.debugLog(error);
                 }).finally(function () {
                     wait(100).then(function () {
                         _this.fetchInfoLoop();
@@ -755,7 +792,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             }
         };
         PJLinkPlus.prototype.cleanUpFetchingDeviceInformation = function () {
-            delete this.fetchingDeviceInfo;
             delete this.fetchDeviceInfoResolve;
             delete this.fetchDeviceInfoReject;
             this.fetchDeviceInfoRejectTimer.cancel();
@@ -782,7 +818,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                             reject('command not available: ' + query.command);
                     }
                     else {
-                        _this.debugLog('got reply for \'' + _this._currentParameter + '\':' + reply);
                         if (!PJLinkPlus_1.isCommandDynamic(query.command)) {
                             _this.cacheCommandReply(query.command, reply);
                             _this.addCommandToSkip(query.command);
@@ -791,8 +826,12 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     }
                 }, function (error) {
                     _this.processInfoQueryError(query.command, error);
-                    reject(error);
-                });
+                    _this.debugLog('error.. will wait 1s');
+                    wait(1000).then(function () {
+                        _this.debugLog('.. now reject');
+                        reject('fetchInfo.queryRequest.error: ' + error);
+                    });
+                }).catch(function (error) { reject('fetchInfo.queryRequest.catch: ' + error); });
             });
         };
         PJLinkPlus.prototype.startPollDeviceStatus = function () {
@@ -806,12 +845,12 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             var _this = this;
             if (skipInterval === void 0) { skipInterval = false; }
             if (!this.connected) {
+                this.debugLog('abort poll; connected: ' + this.connected);
                 this.abortPollDeviceStatus();
                 return;
             }
             this.keepPollingStatus = true;
             var waitDuration = skipInterval ? 7 : Math.floor(STATUS_POLL_INTERVAL + Math.random() * (STATUS_POLL_INTERVAL * 0.1));
-            this.debugLog('going to wait for ' + waitDuration + ' ms');
             this.statusPoller = wait(waitDuration);
             this.statusPoller.then(function () {
                 if (!_this.keepPollingStatus)
@@ -824,11 +863,16 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                         _this.debugLog('poll device status error: ' + reject);
                     });
                 }
+                else {
+                    _this.debugLog('no fetch; socket.connected: ' + _this.socket.connected + '  connected: ' + _this.connected);
+                }
             }).finally(function () {
-                if (!_this.discarded && _this.socket.name !== 'DETACHED') {
+                var detached = _this.socket.name === 'DETACHED';
+                if (!_this.discarded && !detached) {
                     _this.pollDeviceStatus();
                 }
                 else {
+                    _this.debugLog('abort poll; discarded: ' + _this.discarded + '  detached: ' + detached);
                     _this.abortPollDeviceStatus();
                 }
             });
@@ -836,7 +880,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         PJLinkPlus.prototype.abortPollDeviceStatus = function () {
             this.keepPollingStatus = false;
             this.abortFetchDeviceInformation();
-            console.log('aborting polling device status');
+            this.debugLog('aborting polling device status');
             if (this.statusPoller)
                 delete this.statusPoller;
         };
@@ -902,11 +946,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                         var list = [0, 0, 0, 0, 0, 0];
                         var warning = false;
                         var error = false;
-                        for (var i_1 = 0; i_1 < reply.length; i_1++) {
-                            list[i_1] = parseInt(reply[i_1]);
-                            error = error || list[i_1] == 2;
-                            warning = warning || list[i_1] == 1;
-                            this['_errorStatus' + errorNames[i_1]] = list[i_1];
+                        for (var i = 0; i < reply.length; i++) {
+                            list[i] = parseInt(reply[i]);
+                            error = error || list[i] == 2;
+                            warning = warning || list[i] == 1;
+                            this['_errorStatus' + errorNames[i]] = list[i];
                         }
                         if (this._hasError != error) {
                             this._hasError = error;
@@ -925,16 +969,16 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     var lampNames = ['One', 'Two', 'Three', 'Four'];
                     var lampData = reply.split(' ');
                     this._lampCount = lampData.length / 2;
-                    for (var i_2 = 0; i_2 < this._lampCount; i_2++) {
-                        var newHours = parseInt(lampData[i_2 * 2]);
-                        var newActive = parseInt(lampData[i_2 * 2 + 1]) == 1;
-                        if (this['_lamp' + lampNames[i_2] + 'Hours'] != newHours) {
-                            this['_lamp' + lampNames[i_2] + 'Hours'] = newHours;
-                            this.changed('lamp' + lampNames[i_2] + 'Hours');
+                    for (var i = 0; i < this._lampCount; i++) {
+                        var newHours = parseInt(lampData[i * 2]);
+                        var newActive = parseInt(lampData[i * 2 + 1]) == 1;
+                        if (this['_lamp' + lampNames[i] + 'Hours'] != newHours) {
+                            this['_lamp' + lampNames[i] + 'Hours'] = newHours;
+                            this.changed('lamp' + lampNames[i] + 'Hours');
                         }
-                        if (this['_lamp' + lampNames[i_2] + 'Active'] != newActive) {
-                            this['_lamp' + lampNames[i_2] + 'Active'] = newActive;
-                            this.changed('lamp' + lampNames[i_2] + 'Active');
+                        if (this['_lamp' + lampNames[i] + 'Active'] != newActive) {
+                            this['_lamp' + lampNames[i] + 'Active'] = newActive;
+                            this.changed('lamp' + lampNames[i] + 'Active');
                         }
                     }
                     break;
@@ -974,7 +1018,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 case CMD_INNM:
                     break;
                 case CMD_IRES:
-                    var newInputResolution;
+                    var newInputResolution = void 0;
                     if (reply == IRES_NO_SIGNAL) {
                         newInputResolution = new Resolution(-1, -1);
                     }
@@ -1074,45 +1118,40 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             }
         };
         PJLinkPlus.prototype.request = function (question, param) {
-            var _this = this;
             var pjClass = PJLinkPlus_1.determineCommandClass(question);
             if (question == CMD_INPT) {
                 pjClass = this._class;
             }
-            var toSend = '%' + pjClass + question;
-            toSend += ' ';
-            toSend += (param === undefined) ? '?' : param;
-            this.socket.sendText(this.authenticationSequence + toSend).catch(function (err) {
-                console.log('send failed: ' + err);
-                _this.sendFailed(err);
-            });
-            var result = this.startRequest(toSend);
-            result.finally(function () {
-                asap(function () {
-                    _this.sendCorrection();
-                });
-            });
-            return result;
+            var toSend = '%' + pjClass + question + ' ' + ((param === undefined) ? '?' : param);
+            return this.sendMessageWithAuthentication(toSend);
         };
         PJLinkPlus.prototype.queryRequest = function (query) {
-            var _this = this;
             var toSend = query.encode();
-            this.socket.sendText(this.authenticationSequence + toSend).catch(function (err) {
-                console.log('send failed: ' + err);
-                _this.sendFailed(err);
-            });
-            var result = this.startRequest(toSend);
-            result.finally(function () {
-                asap(function () {
-                    _this.sendCorrection();
+            return this.sendMessageWithAuthentication(toSend);
+        };
+        PJLinkPlus.prototype.sendMessageWithAuthentication = function (message) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                _this.socket.sendText(_this.authenticationSequence + message).catch(function (error) {
+                    _this.sendFailed(error);
+                });
+                _this.startRequest(message).then(function (result) {
+                    resolve(result);
+                }, function (error) {
+                    reject(error);
+                }).catch(function (error) {
+                    reject(error);
+                }).finally(function () {
+                    asap(function () {
+                        _this.sendCorrection();
+                    });
                 });
             });
-            return result;
         };
         PJLinkPlus.prototype.textReceived = function (text) {
             this._lastKnownConnectionDate = new Date();
             if (text.indexOf('PJLINK ') === 0) {
-                if (this.unauthenticated = (text.indexOf('PJLINK 1') === 0)) {
+                if (text.indexOf('PJLINK 1') === 0) {
                     this.randomAuthSequence = text.substr('PJLINK 1'.length + 1);
                     var sequence = this.randomAuthSequence + '' + this.pjlinkPassword;
                     var md5Sequence = md5_1.Md5.hashAsciiStr(sequence);
@@ -1122,10 +1161,19 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                     this.connected = true;
                 }
                 else if (text.indexOf('PJLINK ' + ERR_A) === 0) {
-                    this.connected = false;
+                    this.authFailCount++;
                     this.unauthenticated = true;
-                    this.warnMsg('authentication failed');
-                    this.requestFailure(text);
+                    this.connecting = false;
+                    this.connected = false;
+                    if (this.socket.connected)
+                        this.socket.disconnect();
+                    this.warnMsg('authentication failed - potentially wrong password [try #' + this.authFailCount + ']');
+                    this.requestFailure('"' + text + '"');
+                    var maxAuthFail = 10;
+                    if (this.authFailCount > maxAuthFail) {
+                        this.errorMsg('authentication failed > ' + maxAuthFail + ' times. discarding driver.');
+                        this.discard();
+                    }
                 }
                 else {
                     this.connected = true;
@@ -1157,7 +1205,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                             case ERR_A:
                                 this.connected = false;
                                 this.unauthenticated = true;
-                                this.warnMsg('authentication failed');
+                                this.authFailCount++;
+                                this.warnMsg('authentication failed - potentially wrong password');
                                 break;
                             case ERR_3:
                                 this.projectorBusy();
@@ -1167,6 +1216,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                                 this.warnMsg('PJLink response: ' + currCmd + ', ' + text);
                                 break;
                             case ERR_4:
+                                this.debugLog('abort poll; ERR_4!');
                                 this.abortPollDeviceStatus();
                                 break;
                         }
@@ -1222,19 +1272,17 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         });
         PJLinkPlus.prototype.customRequest = function (question, param) {
             var _this = this;
-            var request = this.request(question, param == "" ? undefined : param).then(function (reply) {
+            return this.request(question, param == "" ? undefined : param).then(function (reply) {
                 _this._customRequestResult = reply;
                 _this.changed('customRequestResponse');
             }, function (error) {
                 _this._customRequestResult = "request failed: " + error;
             });
-            return request;
         };
         PJLinkPlus.parseResolution = function (reply) {
             var parts = reply.split(RESOLUTION_SPLIT);
             if (parts.length == 2) {
-                var resolution = new Resolution(parseInt(parts[0]), parseInt(parts[1]));
-                return resolution;
+                return new Resolution(parseInt(parts[0]), parseInt(parts[1]));
             }
             return null;
         };
@@ -1254,8 +1302,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             var separator = text.substr(6, 1);
             if (separator != SEPARATOR_RESPONSE)
                 return null;
-            var message = new PJLinkResponse(parseInt(text[1]), text.substr(2, 4), text.substr(7));
-            return message;
+            return new PJLinkResponse(parseInt(text[1]), text.substr(2, 4), text.substr(7));
         };
         PJLinkPlus.prototype.debugLog = function (message) {
             if (LOG_DEBUG)
@@ -1265,11 +1312,26 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             if (LOG_DEBUG)
                 console.warn(this.logPrefix + ' ' + message);
         };
-        PJLinkPlus.prototype.errorMsg = function (message) {
-            console.error(this.logPrefix + ' ' + message);
+        PJLinkPlus.prototype.errorMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            console.error(this.logPrefix + ' ' + messages.join(', '));
         };
-        PJLinkPlus.prototype.warnMsg = function (message) {
-            console.warn(this.logPrefix + ' ' + message);
+        PJLinkPlus.prototype.infoMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            console.log(this.logPrefix + ' ' + messages.join(', '));
+        };
+        PJLinkPlus.prototype.warnMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            console.warn(this.logPrefix + ' ' + messages.join(', '));
         };
         var PJLinkPlus_1;
         PJLinkPlus.commandInformation = (_a = {},
@@ -1501,6 +1563,22 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         return PJLinkPlus;
     }(NetworkProjector_1.NetworkProjector));
     exports.PJLinkPlus = PJLinkPlus;
+    var TracePromise = (function () {
+        function TracePromise(callback) {
+            this._callback = callback;
+            this.promise = new Promise(callback);
+        }
+        TracePromise.prototype.catch = function (onRejected) {
+            return this.promise.catch(onRejected);
+        };
+        TracePromise.prototype.finally = function (finallyHandler) {
+            return this.promise.finally(finallyHandler);
+        };
+        TracePromise.prototype.then = function (onFulfilled, onRejected) {
+            return this.promise.then(onFulfilled, onRejected);
+        };
+        return TracePromise;
+    }());
     var StringState = (function (_super) {
         __extends(StringState, _super);
         function StringState() {
@@ -1560,10 +1638,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             this.password = PJLINK_PASSWORD;
         }
         PJLinkConfiguration.prototype.toJSON = function () {
-            var json = '{\n' +
-                '    "password" : "' + this.password + '"\n' +
-                '}';
-            return json;
+            return '{\n    "password" : "' + this.password + '"\n}';
         };
         return PJLinkConfiguration;
     }());
