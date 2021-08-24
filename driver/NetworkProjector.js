@@ -353,8 +353,15 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NumState.prototype.correct = function (drvr) {
             return this.correct2(drvr, this.wanted.toString());
         };
+        NumState.prototype.updateCurrent = function (newState) {
+            if (!isNaN(newState))
+                _super.prototype.updateCurrent.call(this, newState);
+        };
+        NumState.prototype.needsCorrection = function () {
+            return !isNaN(this.wanted) && _super.prototype.needsCorrection.call(this);
+        };
         NumState.prototype.set = function (v) {
-            if (typeof v !== 'number') {
+            if (!(typeof v === 'number') || isNaN(v)) {
                 console.error("Value not numeric", this.baseCmd, v);
                 return false;
             }
@@ -366,7 +373,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NumState.prototype.get = function () {
             var result = _super.prototype.get.call(this);
-            if (typeof result !== 'number') {
+            if (typeof result !== 'number' || isNaN(result)) {
                 console.error("Value invalid for", this.baseCmd, result);
                 result = this.min || 0;
             }
