@@ -46,7 +46,7 @@ interface DriverInfo {
 
 /**
  * Annotation for user script class, specifying role required to set properties exposed
- * by script, where role is one of the following: "Admin", "Manager", "Creator", "Editor",
+ * by the script, where role is one of the following: "Admin", "Manager", "Creator", "Editor",
  * "Contributor", "Staff" or "Spot".
  */
 export function roleRequired(role: string) {
@@ -142,7 +142,12 @@ export function max(max:number) {
  you may return a promise eventually resolving with the result value.
 
  The roleRequired parameter, if specified, limits who can call the resource from the
- outside, and accepts the same values as the roleRequired decorator.
+ outside, and accepts the same values as the roleRequired decorator. Unless already
+ authenticated by other means, call authenticated resources with a slightly different
+ URL:
+
+ 	/rest/script/invoke-auth/<user-script-name>/<method-name>
+
  */
 export function resource(roleRequired?: string) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {

@@ -6,6 +6,7 @@ import {SetterGetter, SGOptions} from "system/PubSub";
 
 
 interface Ctor<T> { new(... args: any[]): T ;}
+
 /**
  * Common stuff shared between user scripts and drivers.
  */
@@ -16,7 +17,7 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 		this.__scriptFacade = scriptFacade;
 	}
 
-	/** Expose a named property of primitive type T with specified options and getter/setter function.
+	/** Expose a named property of type T with specified options and getter/setter function.
 	 */
 	property<T>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): void {
 		this.__scriptFacade.property(name, options, gsFunc);
@@ -70,6 +71,20 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	 */
 	unsubscribe(event: string, listener: Function): void {
 		this.__scriptFacade.unsubscribe(event, listener);
+	}
+
+
+	/**
+	 Allows a script/driver to request reinitialization of itself.
+	 This can be useful in cases where configuration has been changed in such
+	 a way that the script needs to be re-instantiated. E.g., to change its
+	 set of dynamic properties. While dynamic properties can be ADDED at any time,
+	 they can not be revoked or replaced. If you need to do so, call reInitilize
+	 and your script's constructor will be called to initialize a new instance
+	 afresh.
+	 */
+	public reInitialize() {
+		this.__scriptFacade.reInitialize();
 	}
 
 	/**
@@ -130,12 +145,14 @@ export interface IndexedProperty<T> {
 	length: number;
 }
 
-// Common environment used by user scripts as well as device drivers
+/*	Common environment used by user scripts as well as device drivers
+	These are INTERNAL implementation details, and may change.
+	DO NOT CALL directly from scripts/drivers!
+ */
 export interface ScriptBaseEnv extends ChangeNotifier  {
 	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
-
-	// Following are INTERNAL implementation details only. DO NOT CALL directly from scripts/drivers!
 	changed(prop: string): void; // Named child property has changed
 	property(name: string, options: SGOptions, gsFunc: SetterGetter<any>): void;
 	indexedProperty<T>(name: string, elemType: Ctor<T>): T[];
+	reInitialize(): void;
 }

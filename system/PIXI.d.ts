@@ -5,6 +5,7 @@
 	Created 2017 by Mike Fahl.
 */
 
+
 /**	Make a promise that will be fulfilled after milliseconds.
  */
 declare function wait(milliseconds: number): CancelablePromise<void>;
@@ -112,3 +113,20 @@ interface promiseCallback<T> {
 
 // Standard "require" function for requiring modules, as expected by TypeScript's module implementation
 declare function require(name: string): any;
+
+/**
+ * Data indicating a time position and rate. Used for various playback,
+ * timing and sync purposes. Create new TimeFlow objects using the
+ * "newTimeFlow" global function declared below.
+ */
+interface TimeFlow {
+	readonly currentTime: number;	// Time now, extrapolated from most recent data
+	readonly position: number;		// Time position most recently reported, in mS
+	readonly rate: number;			// Time flow rate, in seconds per second (0 is stopped)
+	readonly end:number;			// End time, if known, else 0
+	readonly dead: boolean;			// TimeFlow is invalid - do not use any of its values
+
+	readonly serverTime?: number;	// Corresponding server time (mS, monotonous)
+}
+// Create a TimeFlow object (including its internal system-related data)
+declare function newTimeFlow(position: number, rate: number, end?: number, dead?: boolean): any;
