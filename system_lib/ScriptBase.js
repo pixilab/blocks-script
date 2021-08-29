@@ -37,6 +37,9 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.unsubscribe = function (event, listener) {
             this.__scriptFacade.unsubscribe(event, listener);
         };
+        ScriptBase.prototype.reInitialize = function () {
+            this.__scriptFacade.reInitialize();
+        };
         ScriptBase.prototype.makeJSArray = function (arrayLike) {
             if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
                 return arrayLike;
