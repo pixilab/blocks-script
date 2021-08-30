@@ -120,7 +120,8 @@ export var SimpleFile: {
  *
  * IMPORTANT: The files and directories entries are "array-like" in that they
  * have length and can be indexed into, but they aren't true JavaScript
- * arrays (e.g., they don't support forEach, etc methods).
+ * arrays (e.g., they don't support forEach, etc methods). If you need true
+ * JS arrays, use the Feed.makeJSArray function to convert.
  */
 export interface DirInfo {
 	files: string[];			// Plain files found in the specified directory
