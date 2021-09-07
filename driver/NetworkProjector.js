@@ -34,8 +34,13 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.socket = socket;
             _this.propList = [];
             socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection')
+                if (message.type === 'Connection') {
+                    if (_this.socket.connected)
+                        _this.infoMsg("connected");
+                    else
+                        _this.warnMsg("connection dropped");
                     _this.connectStateChanged();
+                }
             });
             socket.subscribe('textReceived', function (sender, msg) {
                 return _this.textReceived(msg.text);
@@ -165,7 +170,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.connectStateChanged = function () {
             this.connecting = false;
-            this.infoMsg("connectStateChanged", this.socket.connected);
             if (!this.socket.connected) {
                 this.connected = false;
                 if (this.correctionRetry)

@@ -39,8 +39,13 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		super(socket);
 		this.propList = [];
 		socket.subscribe('connect', (sender, message)=> {
-			if (message.type === 'Connection')
-				this.connectStateChanged()
+			if (message.type === 'Connection') {
+				if (this.socket.connected)
+					this.infoMsg("connected");
+				else
+					this.warnMsg("connection dropped");
+				this.connectStateChanged();
+			}
 		});
 		socket.subscribe('textReceived', (sender, msg)=>
 			this.textReceived(msg.text)
@@ -247,7 +252,6 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected connectStateChanged() {
 		this.connecting = false;
-		this.infoMsg("connectStateChanged", this.socket.connected);
 		if (!this.socket.connected) {
 			this.connected = false;	// Tell clients connection dropped
 			if (this.correctionRetry)
