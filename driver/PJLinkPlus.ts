@@ -148,7 +148,7 @@ export class PJLinkPlus extends NetworkProjector {
     private _manufactureName : string;
     private _productName : string;
     private _otherInformation : string;
-    private _class : number;
+    private _class : number = 1;	// Reasonable default, until we know better (to avoid "%undefinedINPT") error
     private _serialNumber : string;
     private _softwareVersion : string;
     // lamp information

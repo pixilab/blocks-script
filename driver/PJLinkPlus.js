@@ -100,6 +100,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             _this._isWarmingUp = false;
             _this._inputType = 0;
             _this._inputSource = '-';
+            _this._class = 1;
             _this._lampCount = 0;
             _this._lampOneHours = -1;
             _this._lampTwoHours = -1;
