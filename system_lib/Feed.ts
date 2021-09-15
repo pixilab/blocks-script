@@ -54,8 +54,16 @@ export interface StaticFeed<ListItem extends Object, DetailsItem extends ListIte
 	readonly listType: Ctor<ListItem>;	// Specifies type of items returned by getList
 	readonly itemType: Ctor<DetailsItem>; // Type of items returned by getDetails
 
+	/*	Obtain a ListData object containing an array of ListItem objects,
+		returned through a Promise
+	 */
 	getList(spec: FeedListSpec): Promise<ListData<ListItem>>;
-	getDetails(spec: FeedDetailsSpec): Promise<DetailsItem | undefined> | DetailsItem | undefined;
+
+	/*	Provide full details of requested object. This function is not needed if
+		listType and itemType specify the same type (in which case getList has already
+		provided all data required).
+	 */
+	getDetails?(spec: FeedDetailsSpec): Promise<DetailsItem | undefined> | DetailsItem | undefined;
 }
 
 /**

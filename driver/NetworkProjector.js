@@ -34,8 +34,13 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.socket = socket;
             _this.propList = [];
             socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection')
+                if (message.type === 'Connection') {
+                    if (_this.socket.connected)
+                        _this.infoMsg("connected");
+                    else
+                        _this.warnMsg("connection dropped");
                     _this.connectStateChanged();
+                }
             });
             socket.subscribe('textReceived', function (sender, msg) {
                 return _this.textReceived(msg.text);
@@ -165,7 +170,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.connectStateChanged = function () {
             this.connecting = false;
-            this.infoMsg("connectStateChanged", this.socket.connected);
             if (!this.socket.connected) {
                 this.connected = false;
                 if (this.correctionRetry)
@@ -353,8 +357,15 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NumState.prototype.correct = function (drvr) {
             return this.correct2(drvr, this.wanted.toString());
         };
+        NumState.prototype.updateCurrent = function (newState) {
+            if (!isNaN(newState))
+                _super.prototype.updateCurrent.call(this, newState);
+        };
+        NumState.prototype.needsCorrection = function () {
+            return !isNaN(this.wanted) && _super.prototype.needsCorrection.call(this);
+        };
         NumState.prototype.set = function (v) {
-            if (typeof v !== 'number') {
+            if (!(typeof v === 'number') || isNaN(v)) {
                 console.error("Value not numeric", this.baseCmd, v);
                 return false;
             }
@@ -366,7 +377,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NumState.prototype.get = function () {
             var result = _super.prototype.get.call(this);
-            if (typeof result !== 'number') {
+            if (typeof result !== 'number' || isNaN(result)) {
                 console.error("Value invalid for", this.baseCmd, result);
                 result = this.min || 0;
             }

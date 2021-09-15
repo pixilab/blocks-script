@@ -5,6 +5,7 @@
 	Created 2017 by Mike Fahl.
 */
 
+
 /**	Make a promise that will be fulfilled after milliseconds.
  */
 declare function wait(milliseconds: number): CancelablePromise<void>;
@@ -112,3 +113,46 @@ interface promiseCallback<T> {
 
 // Standard "require" function for requiring modules, as expected by TypeScript's module implementation
 declare function require(name: string): any;
+
+/**
+ * Data indicating a time position and rate. Used for various playback,
+ * timing and sync purposes. Also includes some generally useful, time-related
+ * constants and functions.
+ */
+declare class TimeFlow  {
+	readonly currentTime: number;	// Time now, extrapolated from most recent data
+	readonly position: number;		// Time position most recently reported, in mS
+	readonly rate: number;			// Time flow rate, in seconds per second (0 is stopped)
+	readonly end:number;			// End time, if known, else 0
+	readonly dead: boolean;			// TimeFlow is invalid - do not use any of its values
+
+	readonly serverTime?: number;	// Corresponding server time (mS, monotonous)
+
+	constructor(position: number, rate: number, end?: number, dead?: boolean);
+
+
+	/*	Following are some useful constants and functions. Not really limited to
+		TimeFlow, but often used in conjunction.
+	 */
+	static readonly SecondsPerMinute: number;	//  = 60
+	static readonly MinutesPerHour: number;		//  = 60
+	static readonly HoursPerDay : number;		// = 24
+	static readonly Second: number;	// Milliseconds per second; = 1000
+	static readonly Minute: number;	// Millseconds per minute; = Second * SecondsPerMinute
+	static readonly Hour: number;	// Millseconds per hour;  = Minute * MinutesPerHour
+	static readonly Day: number;	// Millseconds per day; = HoursPerDay * Hour
+
+	/**	Convert timeInMilliseconds to a string in the format HH:MM:SS.fff.
+	 If no format specified, always return at least seconds.fractions, else return
+	 only the parts specified by the format, which may contain either of "hmsf"
+	 characters.
+	 */
+	static millisToString(timeInMilliseconds: number, format?: string): string;
+
+	/**	Convert time from str to milliseconds. If format is set to "hm",
+	 the string 12:30 will be parsed as hours and minutes, otherwise
+	 seconds is the default base, wih minutes and hours separated by colon,
+	 and fractions (up to three digits) by a period.
+	 */
+	static stringToMillis(str: string, format?: string): number
+}

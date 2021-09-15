@@ -39,8 +39,13 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		super(socket);
 		this.propList = [];
 		socket.subscribe('connect', (sender, message)=> {
-			if (message.type === 'Connection')
-				this.connectStateChanged()
+			if (message.type === 'Connection') {
+				if (this.socket.connected)
+					this.infoMsg("connected");
+				else
+					this.warnMsg("connection dropped");
+				this.connectStateChanged();
+			}
 		});
 		socket.subscribe('textReceived', (sender, msg)=>
 			this.textReceived(msg.text)
@@ -247,7 +252,6 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected connectStateChanged() {
 		this.connecting = false;
-		this.infoMsg("connectStateChanged", this.socket.connected);
 		if (!this.socket.connected) {
 			this.connected = false;	// Tell clients connection dropped
 			if (this.correctionRetry)
@@ -455,7 +459,7 @@ export abstract class State<T> {
 				this.notifyListeners();
 				// console.info("updateCurrent wag dog", this.baseCmd, newState);
 			} else if (this.wanted === undefined)
-				this.notifyListeners(); // Had nop wanted state - notify for current
+				this.notifyListeners(); // Had no wanted state - notify for current
 		}
 	}
 
@@ -519,15 +523,27 @@ export class NumState extends State<number> {
 		super(baseCmd, propName, correctionApprover);
 	}
 
+
 	correct(drvr: NetworkProjector): Promise<string> {
 		return this.correct2(drvr, this.wanted.toString());
+	}
+
+	// Avoid getting NaN into my state
+	updateCurrent(newState: number) {
+		if (!isNaN(newState))
+			super.updateCurrent(newState);
+	}
+
+	// Ignore NaN wanted state for correction
+	needsCorrection(): boolean {
+		return !isNaN(this.wanted) && super.needsCorrection();
 	}
 
 	/**
 	 Override to validate in range.
 	 */
 	set(v: number): boolean {
-		if (typeof v !== 'number') {
+		if (!(typeof v === 'number') || isNaN(v)) {
 			console.error("Value not numeric", this.baseCmd, v);
 			return false;
 		}
@@ -538,11 +554,10 @@ export class NumState extends State<number> {
 		return super.set(v);
 	}
 
-
 	get(): number {
 		var result = super.get();
-		// Better return min/0 than undefined or some invalid type of data
-		if (typeof result !== 'number') {
+		// Better return min/0 than undefined, NaN or some invalid type of data
+		if (typeof result !== 'number' || isNaN(result)) {
 			console.error("Value invalid for", this.baseCmd, result);
 			result = this.min || 0;
 		}
