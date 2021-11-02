@@ -26,7 +26,7 @@ export interface Channel {
  * channel's internal resolution (e.g., 8 or 16 bits).
  */
 export interface AnalogChannel extends Channel {
-	isOfTypeName(typeName: string): AnalogChannel|null;
+	isOfTypeName(typeName: 'AnalogChannel'): AnalogChannel|null;
 	maxValue: number;	// Read-only maximum of "value" (1 indicates normalized channel).
 }
 
@@ -38,7 +38,7 @@ export interface AnalogChannel extends Channel {
  * to 0...1.
  */
 export interface RangeChannel extends Channel {
-	isOfTypeName(typeName: string): RangeChannel|null;
+	isOfTypeName(typeName: 'RangeChannel'): RangeChannel|null;
 	state: string;		// Name of currently selected range
 	ranges: Range[];	// Read-only list of ranges
 }

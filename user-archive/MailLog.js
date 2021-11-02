@@ -26,15 +26,16 @@ define(["require", "exports", "system_lib/Script", "system/SimpleMail", "system/
     exports.MailLog = void 0;
     var MailLog = (function (_super) {
         __extends(MailLog, _super);
-        function MailLog(env) {
-            return _super.call(this, env) || this;
+        function MailLog() {
+            return _super !== null && _super.apply(this, arguments) || this;
         }
         MailLog.prototype.sendLogTo = function (email) {
             var timeStamp = new Date().toString();
             return SimpleProcess_1.SimpleProcess.start('/usr/bin/zip', [
-                '-q',
-                MailLog.kBlocksRoot + 'temp/latest-log.zip',
-                MailLog.kBlocksRoot + 'logs/latest.log'
+                '--quiet',
+                '--junk-paths',
+                SimpleProcess_1.SimpleProcess.blocksRoot + '/temp/latest-log.zip',
+                SimpleProcess_1.SimpleProcess.blocksRoot + '/logs/latest.log'
             ]).then(function () {
                 return SimpleMail_1.SimpleMail.send(email, "Blocks log file", "Here's the PIXILAB Blocks log file from " + timeStamp + "<br>", '/temp/latest-log.zip');
             }).finally(function () {
@@ -43,7 +44,6 @@ define(["require", "exports", "system_lib/Script", "system/SimpleMail", "system/
                 return console.error("Failed emailing log file; " + errorMsg);
             });
         };
-        MailLog.kBlocksRoot = '/home/pixi-server/PIXILAB-Blocks-root/';
         __decorate([
             Metadata_1.callable("Send the latest.log file to specified email address"),
             __metadata("design:type", Function),

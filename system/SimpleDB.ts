@@ -1,8 +1,21 @@
-/*
- * Simple SQL database API for PIXILAB Blocks
- * Vaguely inspired by https://node-postgres.com/api
- *
- * Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+/*	Simple SQL database API for PIXILAB Blocks
+	Vaguely inspired by https://node-postgres.com/api
+
+	For this API to work, you must specify database settings in the Blocks configuration file,
+	like this:
+
+	databases:
+	  postgres:
+	    url: jdbc:postgresql:database-name
+	    options:
+	      user: db-user-name
+	      password: the-password
+
+	This API is based on the Java JDBC API. Blocks includes a JDBC Postgres driver. Drivers for other
+	databases can be added by including those on the Java library path. Learn more about the Postgres
+	JDBC options at https://jdbc.postgresql.org/documentation/head/connect.html
+
+	Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 /**

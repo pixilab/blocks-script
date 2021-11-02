@@ -1,30 +1,21 @@
-/* 	A user script for emailing the latest log file, as a zip-compressed enclosure.
-	The script is desiged to be used with a standard PIXILAB Blocks server. There
-	are hard coded path to where the Blocks root is, as well as an assumption on
-	a Linux-style ZIP command being available in the the usual place.
+/*	Zip and email the latest Blocks log file. This script assumes a unix-style environment
+	(i.e., Mac/Linux), in that it calls the command line zip utility. It may not work without
+	changes under Windows (which presumably also has a command line zip utility, likely in
+	another location taking different options).
 
-	IMPORTANT: For this script to work, you must first configure an outgoing email
-	server using a top-level 'mail:' entry in your Blocks configuration file, see
-	https://pixilab.se/docs/blocks/server_configuration_file#top_level_mail_item
+	Furthermore, for emailing to work, you must have the appropriate mail settings in your
+	Blocks configuration file.
 
- Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se).
- All Rights Reserved.
+	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
+import {Script} from "system_lib/Script";
 import {SimpleMail} from "system/SimpleMail";
 import {SimpleProcess} from "system/SimpleProcess";
 import {callable} from "system_lib/Metadata";
 import {SimpleFile} from "system/SimpleFile";
 
 export class MailLog extends Script {
-	// Standard location of Blocks root on a Linux server
-	static readonly kBlocksRoot = '/home/pixi-server/PIXILAB-Blocks-root/';
-
-	public constructor(env: ScriptEnv) {
-		super(env);
-	}
-
 	/**
 	 * Our single function, doing the zipping, emailing and clean-up.
 	 * All system functions that may take some time to complete return
@@ -44,9 +35,10 @@ export class MailLog extends Script {
 
 		return SimpleProcess.start(	// Zip the log, storing it in the temp directory
 			'/usr/bin/zip', [
-				'-q',	// Run the command in "quiet" mode
-				MailLog.kBlocksRoot + 'temp/latest-log.zip',	// File written to
-				MailLog.kBlocksRoot + 'logs/latest.log'			// What's zipped
+				'--quiet',			// Do not output unnecessary data to stdout
+				'--junk-paths',		// Store just the file - not its enclosing directories
+			   SimpleProcess.blocksRoot + '/temp/latest-log.zip',	// File written to
+			   SimpleProcess.blocksRoot + '/logs/latest.log'		// What's zipped
 			]
 		).then(() =>				// Then email the ZIP to the specified address
 			SimpleMail.send(
