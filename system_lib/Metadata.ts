@@ -72,7 +72,7 @@ export function callable(description?: string) {
 }
 
 /**
- Optional function parameter decorator, providing a textual description of the parameter.
+ Optional callable method parameter decorator, providing a textual description of the parameter.
  Also allows trailing parameters to be marked as optional (typically used with
  '?' after the param name in the param list to also inform the compiler).
  */

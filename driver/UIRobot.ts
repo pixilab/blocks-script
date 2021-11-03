@@ -4,7 +4,7 @@
 
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {callable, driver, property} from "system_lib/Metadata";
+import {callable, driver, parameter, property} from "system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 3047 })
 export class UIRobot extends Driver<NetworkTCP> {
@@ -142,6 +142,21 @@ export class UIRobot extends Driver<NetworkTCP> {
 	@callable("Move mouse by specified distance")
 	public moveMouse(x: number, y: number): void {
 		this.sendCommand('MouseMove', x, y)
+	}
+
+	@callable("Transitory command to run")
+	public transitoryCommand(
+		@parameter("Path to executable command to run") exePath: string,
+		@parameter("Working directory to be applied") workingDirectory: string,
+		@parameter("Additional arguments, separated by vertical bar", true)args?: string
+	) {
+		let params: string[] = [];
+		if (args) // Put arguments into params array
+			params = args.split('|');
+		// Prepend working directory and command path
+		params.unshift(exePath);
+		params.unshift(workingDirectory);
+		return this.sendCommand('Launch', ...params);
 	}
 
 	@property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS")
