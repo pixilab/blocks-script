@@ -26,7 +26,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 	private woLRetryAttempts: number;
 
 	// Program and arguments that need to run on peer to shut down. Assumes Windows.
-	static readonly kPowerDownProgram = "C:/Windows/System32/shutdown.exe||/s /f /t 0";
+	static readonly kPowerDownProgram = {program: "C:/Windows/System32/shutdown.exe", path: "C:/Windows/System32", params: "/s|/f|/t 0"};
 	// The interval at which we will send the WoL command when powering on.
 	static readonly kWoLRetryInterval = 1000 * 20;
 	// The max number of attempts to try waking up the target PC through WoL.
@@ -73,7 +73,7 @@ export class UIRobot extends Driver<NetworkTCP> {
 				this.woLRetryAttempts = 0;
 				this.tryWakeUp();
 			} else // Turn power OFF using designated command
-				this.program = UIRobot.kPowerDownProgram;
+				this.transitoryCommand(UIRobot.kPowerDownProgram.program, UIRobot.kPowerDownProgram.path, UIRobot.kPowerDownProgram.params);
 		}
 	}
 
