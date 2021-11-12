@@ -90,6 +90,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	private timer?: CancelablePromise<void>;	// Set if have pending timer to checkStateSoon
 	private errCount = 0;		// To rereset connection after "too many errors"
 	private dynProps: DynProp[] = [];
+	private connTimeoutWarned = false;	// To not nag on failed connection attempts
 
 	public constructor(private socket: NetworkUDP) {
 		super(socket);
@@ -183,12 +184,16 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 				console.error("Response too slow in state " + this.state);
 				// Deliberate fallthrough to other slow state that won't log errors
 			case State.CONNECTING:
-				console.warn("CONNECTING timeout");
+				if (!this.connTimeoutWarned) {
+					console.warn("CONNECTING timeout");
+					this.connTimeoutWarned = true;	// Do not nag in log
+				}
 				this.setState(State.DISCONNECTED);	// Regress to disconnected state
 				this.checkStateSoon();	// Re-try soon
 				break;
 			case State.CONNECTED_IDLE:	// Keep connection alive by sending conn state requests every now and then
 				this.sendConnectionStateRequest();
+				this.connTimeoutWarned = false;
 				break;
 			}
 		});
@@ -234,6 +239,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			break;
 		case Command.CONNECTIONSTATE_RESPONSE:
 			this.gotConnectionStateResponse(reply);
+			this.connTimeoutWarned = false;
 			break;
 		case Command.TUNNEL_RESPONSE:
 			this.gotTunnelResponse(reply);

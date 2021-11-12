@@ -102,7 +102,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.socket.sendBytes(cmd);
         };
         __decorate([
-            Metadata_1.property("The target ID"),
+            Metadata_1.property("Target display ID (must match dispplay's setting)"),
             Metadata_1.min(0),
             Metadata_1.max(254),
             __metadata("design:type", Number),

@@ -29,8 +29,9 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	private static interfaceRegistry: Dictionary<BaseInterfaceCtor<BaseInterface>>;
 
 	private lastTag: TagInfo;	// Store most recent RFID taginfo here, awaiting the port message
-	private readonly interfaces: BaseInterface[]; //Store the interface interfaces
+	private readonly interfaces: BaseInterface[]; // Holds the interfaces discovered
 	private pollIndex = 0;		// Most recently polled interface
+	private awake = false;		// Set once we receive first data from device
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
@@ -39,17 +40,27 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 		socket.autoConnect();
 		// Listen for data from the Nexmosphere bus
 		socket.subscribe('textReceived', (sender, message) => {
-			if (message.text)
-				this.handleMessage(message.text);
-			// Else ignore empty message, sometimes resulting from separated CR/LF chars
+			if (message.text) { // Ignore empty message, sometimes caused by separated CR/LF chars
+				if (this.awake)
+					this.handleMessage(message.text);
+				else {
+					// First data from device - reset polling and consider me awake now
+					this.awake = true;
+					this.pollIndex = 0;
+				}
+			}
 		});
-
 
 		// Poll for connected interfaces once connected
 		socket.subscribe('connect', (sender, message) => {
 			// Initiate polling once connected and only first time (may reconnect several times)
-			if (message.type === 'Connection' && socket.connected && !this.pollIndex)
-				this.pollNextPort();
+			if (message.type === 'Connection' && socket.connected) { // Just connected
+				if (!this.pollIndex)	// Not yet polled for interfaces
+					this.pollNext();	// Get started
+			} else {	// COnnection failed or disconnected
+				if (!this.interfaces.length)	// Got NO interfaces - re-start polling on next connect
+					this.pollIndex = 0;
+			}
 		});
 	}
 
@@ -61,21 +72,27 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 		});
 	}
 
-	/*	Poll current port, then next one (if any) with some delay between each,
-		since no reply if nothing connected
-	 */
-	private pollNextPort() {
+	/*	Poll next port, then next one (if any) with some delay between each.
+	*/
+	private pollNext() {
 		++this.pollIndex;	// Poll next index
 		this.queryPortConfig(this.pollIndex);
+		let pollAgain = false;
 		if (this.pollIndex <= kNumInterfaces) // Poll next one soon
-			wait(100).then(() => this.pollNextPort());
+			pollAgain = true;
+		else if (!this.interfaces.length) {	// Restart poll if no fish so far
+			this.pollIndex = 0;
+			pollAgain = true;
+		}
+		if (pollAgain)
+			wait(this.pollIndex > 1 ? 150 : 600).then(() => this.pollNext());
 	}
 
 	/**
 	 * Send a query for what's connected to port (1-based)
 	 */
 	private queryPortConfig(portNumber: number,) {
-		var sensorMessage: string = (("000" + portNumber).slice(-3)); //pad index with leading zeros and convert to string.
+		var sensorMessage: string = (("000" + portNumber).slice(-3)); // Pad index with leading zeroes
 		this.send("D" + sensorMessage + "B[TYPE]");
 	}
 
@@ -87,12 +104,17 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 		this.socket.sendText(rawData, "\r\n");
 	}
 
+	// Expose reInitialize to tasks to re-build set of dynamic properties
+	@callable("Re-initialize driver, after changing device configuration")
+	reInitialize() {
+		super.reInitialize();
+	}
 
 	/**
 	 * Look for the messages we care about and act on those.
 	 */
 	private handleMessage(msg: string) {
-		console.debug("handleMessage", msg);
+		// console.debug("handleMessage", msg);
 		var parseResult = kRfidPacketParser.exec(msg);
 		if (parseResult) {
 			// Just store first part until the port packet arrives
@@ -138,7 +160,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 abstract class BaseInterface {
 
 
-	constructor(
+	protected constructor(
 		protected readonly driver: Nexmosphere,
 		protected readonly index: number
 	) {
@@ -334,7 +356,7 @@ class QuadButtonInterface extends BaseInterface {
 		this.buttons = [];
 		for (var ix = 0; ix < 4; ++ix) {
 			this.buttons.push(new Button(this.getNamePrefix() + "_btn_" + (ix + 1), this.driver));
-			console.log("For buttons_" + (ix + 1));
+			// console.log("For buttons_" + (ix + 1));
 		}
 	}
 

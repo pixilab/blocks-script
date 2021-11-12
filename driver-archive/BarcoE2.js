@@ -32,6 +32,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function BarcoE2(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.mLive = 0;
             socket.autoConnect();
             return _this;
         }

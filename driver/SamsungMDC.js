@@ -188,7 +188,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         SamsungMDC.prototype.dataReceived = function (rawData) {
             var buf = this.receivedData;
-            rawData = makeJSArray(rawData);
+            rawData = this.makeJSArray(rawData);
             buf = this.receivedData = buf ? buf.concat(rawData) : rawData;
             debugMsg("Got some data back");
             if (buf.length > 5 + 1) {
@@ -436,15 +436,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         return Volume;
     }(NumProp));
-    function makeJSArray(arr) {
-        if (Array.isArray(arr))
-            return arr;
-        var arrayLike = arr;
-        var result = [];
-        for (var i = 0; i < arrayLike.length; ++i)
-            result.push(arrayLike[i]);
-        return result;
-    }
     function debugMsg() {
         var messages = [];
         for (var _i = 0; _i < arguments.length; _i++) {

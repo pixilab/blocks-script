@@ -38,6 +38,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             _this.cmdQueue = [];
             _this.errCount = 0;
             _this.dynProps = [];
+            _this.connTimeoutWarned = false;
             if (!_this.socket.listenerPort)
                 throw "Listening port not specified (e.g, 32331)";
             socket.subscribe('bytesReceived', function (sender, message) {
@@ -118,12 +119,16 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                     case 2:
                         console.error("Response too slow in state " + _this.state);
                     case 1:
-                        console.warn("CONNECTING timeout");
+                        if (!_this.connTimeoutWarned) {
+                            console.warn("CONNECTING timeout");
+                            _this.connTimeoutWarned = true;
+                        }
                         _this.setState(0);
                         _this.checkStateSoon();
                         break;
                     case 3:
                         _this.sendConnectionStateRequest();
+                        _this.connTimeoutWarned = false;
                         break;
                 }
             });
@@ -159,6 +164,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                     break;
                 case 520:
                     this.gotConnectionStateResponse(reply);
+                    this.connTimeoutWarned = false;
                     break;
                 case 1057:
                     this.gotTunnelResponse(reply);

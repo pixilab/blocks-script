@@ -7,7 +7,7 @@ import {callable, driver, parameter, property} from "system_lib/Metadata";
 @driver('NetworkTCP', { port: 9878 })
 export class BarcoE2 extends Driver<NetworkTCP> {
 
-	private mLive: number;
+	private mLive: number = 0;
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
