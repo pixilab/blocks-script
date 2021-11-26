@@ -2,11 +2,12 @@
  * Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-export abstract class Feed {
-	protected readonly __feedEnv: FeedEnv;	// Internal use only!
+import {ScriptBase, ScriptBaseEnv} from "./ScriptBase";
+
+export abstract class Feed  extends ScriptBase<FeedEnv>{
 
 	protected constructor(env: FeedEnv) {
-		this.__feedEnv = env;
+		super(env);
 	}
 
 	/**
@@ -16,7 +17,7 @@ export abstract class Feed {
 	 * on different spots or based on some other selection criteria.
 	 */
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>) {
-		this.__feedEnv.establishFeed(feed);
+		this.__scriptFacade.establishFeed(feed);
 	}
 
 	/**
@@ -103,6 +104,6 @@ export interface ListData<ListItem> {
 }
 
 // Internal use only!
-export interface FeedEnv  {
+export interface FeedEnv extends ScriptBaseEnv {
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>): void;
 }

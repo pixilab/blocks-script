@@ -133,7 +133,6 @@ export interface IndexedProperty<T> {
 	 */
 	push(item: T): void
 
-
 	/**
 	 * Number of items in me.
 	 */
