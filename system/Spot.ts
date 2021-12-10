@@ -98,9 +98,20 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	reload(reloadBrowser?:boolean): void;
 
 	/**
-	 * Turn power on/off, if possible. Returns current power state.
+	 * Turn power on/off, if possible. Returns most recently set power state.
+	 * NOTE: Prior to Blocks 5.5, this returned the current power state, which
+	 * would lag the wanted power state during power-up.
+	 *
+	 * Alternatively, call wakeUp below from a task, to turn power on and wait
+	 * for spot to connect before proceeding (possibly consolidated inside an
+	 * await statement, to wait for more than one starting in parallell).
 	 */
 	power: boolean;
+
+	/**
+	 * Power up the display spot. Promise resolved once spot has connected.
+	 */
+	wakeUp(timeoutSeconds?: number): Promise<any>;
 
 	/**
 	 * Current time position (e.g., in video), in seconds. Write to position the video.
