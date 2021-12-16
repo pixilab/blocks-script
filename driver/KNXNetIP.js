@@ -39,24 +39,26 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             _this.errCount = 0;
             _this.dynProps = [];
             _this.connTimeoutWarned = false;
-            if (!_this.socket.listenerPort)
-                throw "Listening port not specified (e.g, 32331)";
-            socket.subscribe('bytesReceived', function (sender, message) {
-                try {
-                    _this.processReply(message.rawData);
-                    _this.errCount = 0;
-                }
-                catch (error) {
-                    console.error(error);
-                    if (++_this.errCount > 5) {
+            if (!socket.enabled) {
+                if (!_this.socket.listenerPort)
+                    throw "Listening port not specified (e.g, 32331)";
+                socket.subscribe('bytesReceived', function (sender, message) {
+                    try {
+                        _this.processReply(message.rawData);
                         _this.errCount = 0;
-                        _this.setState(0);
-                        _this.checkStateSoon();
                     }
-                }
-            });
-            _this.loadConfig();
-            _this.checkStateSoon(5);
+                    catch (error) {
+                        console.error(error);
+                        if (++_this.errCount > 5) {
+                            _this.errCount = 0;
+                            _this.setState(0);
+                            _this.checkStateSoon();
+                        }
+                    }
+                });
+                _this.loadConfig();
+                _this.checkStateSoon(5);
+            }
             return _this;
         }
         KNXNetIP.prototype.loadConfig = function () {
@@ -118,13 +120,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                     case 4:
                     case 2:
                         console.error("Response too slow in state " + _this.state);
+                        _this.resetConnection();
+                        break;
                     case 1:
                         if (!_this.connTimeoutWarned) {
                             console.warn("CONNECTING timeout");
                             _this.connTimeoutWarned = true;
                         }
-                        _this.setState(0);
-                        _this.checkStateSoon();
+                        _this.resetConnection();
                         break;
                     case 3:
                         _this.sendConnectionStateRequest();
@@ -132,6 +135,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                         break;
                 }
             });
+        };
+        KNXNetIP.prototype.resetConnection = function () {
+            this.setState(0);
+            this.checkStateSoon();
         };
         KNXNetIP.prototype.setState = function (state) {
             this.state = state;

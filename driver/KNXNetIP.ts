@@ -94,28 +94,30 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 
 	public constructor(private socket: NetworkUDP) {
 		super(socket);
-		if (!this.socket.listenerPort)
-			throw "Listening port not specified (e.g, 32331)"
+		if (!socket.enabled) {	// Do nothing unless network port is enabled
+			if (!this.socket.listenerPort)
+				throw "Listening port not specified (e.g, 32331)"
 
-		socket.subscribe('bytesReceived', (sender, message) => {
-			// console.log("bytesReceived", message.rawData.length);
-			try {
-				this.processReply(message.rawData);
-				this.errCount = 0;
-			} catch (error) {
-				console.error(error);
-				// Reset state after "too many errors"
-				if (++this.errCount > 5) {
+			socket.subscribe('bytesReceived', (sender, message) => {
+				// console.log("bytesReceived", message.rawData.length);
+				try {
+					this.processReply(message.rawData);
 					this.errCount = 0;
-					this.setState(State.DISCONNECTED);
-					this.checkStateSoon();
+				} catch (error) {
+					console.error(error);
+					// Reset state after "too many errors"
+					if (++this.errCount > 5) {
+						this.errCount = 0;
+						this.setState(State.DISCONNECTED);
+						this.checkStateSoon();
+					}
 				}
-			}
-		});
+			});
 
-		this.loadConfig();
+			this.loadConfig();
 
-		this.checkStateSoon(5);
+			this.checkStateSoon(5);
+		}
 	}
 
 	/**
@@ -179,17 +181,17 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 					this.checkStateSoon();	// Make sure I succeed reasonably soon
 				}
 				break;
-			case State.TUNNELING:		// Presumably failed doing state work fast enough
+			case State.TUNNELING:		// Presumably failed doing state's work fast enough
 			case State.CONNECTIONSTATE_REQUESTED:
 				console.error("Response too slow in state " + this.state);
-				// Deliberate fallthrough to other slow state that won't log errors
+				this.resetConnection();
+				break;
 			case State.CONNECTING:
 				if (!this.connTimeoutWarned) {
 					console.warn("CONNECTING timeout");
 					this.connTimeoutWarned = true;	// Do not nag in log
 				}
-				this.setState(State.DISCONNECTED);	// Regress to disconnected state
-				this.checkStateSoon();	// Re-try soon
+				this.resetConnection();
 				break;
 			case State.CONNECTED_IDLE:	// Keep connection alive by sending conn state requests every now and then
 				this.sendConnectionStateRequest();
@@ -197,6 +199,15 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 				break;
 			}
 		});
+	}
+
+	/**
+	 * Connection considered "failed". Revert to DISCONNECTED and check back soon to attempt
+	 * to re-connect.
+	 */
+	private resetConnection() {
+		this.setState(State.DISCONNECTED);	// Regress to disconnected state
+		this.checkStateSoon();	// Re-try soon
 	}
 
 	/**
