@@ -94,7 +94,9 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 
 	public constructor(private socket: NetworkUDP) {
 		super(socket);
-		if (!socket.enabled) {	// Do nothing unless network port is enabled
+		this.loadConfig();
+
+		if (socket.enabled) {	// Don't fire up socket listener and state polling unless enabled
 			if (!this.socket.listenerPort)
 				throw "Listening port not specified (e.g, 32331)"
 
@@ -114,9 +116,15 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 				}
 			});
 
-			this.loadConfig();
-
 			this.checkStateSoon(5);
+
+			// Stop any cyclic activity if socket closed (e.g., driver disabled)
+			socket.subscribe('finish', () => {
+				if (this.timer) {
+					this.timer.cancel();
+					this.timer = undefined;
+				}
+			});
 		}
 	}
 

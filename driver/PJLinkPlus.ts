@@ -107,7 +107,6 @@ export class PJLinkPlus extends NetworkProjector {
     // from original PJLink implementation by Mike
     private unauthenticated: boolean;	// True if projector requires authentication
     private busyHoldoff?: CancelablePromise<void>;	// See projectorBusy()
-    // private recentCmdHoldoff?: CancelablePromise<void>;	// See sentCommand()
 
     private pjlinkPassword : string;
     private randomAuthSequence : string;
@@ -119,8 +118,6 @@ export class PJLinkPlus extends NetworkProjector {
     private fetchingDeviceInfo: Promise<void> = null;
     private fetchDeviceInfoResolve: (value?: any) => void = null;
     private fetchDeviceInfoReject: (value?: any) => void = null;
-    // private delayedDeviceInfoFetch: CancelablePromise<void>;
-    // private static delayedFetchInterval: number = 10000;
     private _infoFetchDate : Date;
     private _lastKnownConnectionDate : Date;
     private _lastKnownConnectionDateSet: boolean = false;
@@ -208,7 +205,7 @@ export class PJLinkPlus extends NetworkProjector {
         [CMD_FREZ] : {dynamic: true,  cmdClass: 2, read: true,  write: true,  needsPower: true },
     }
     private commandReplyCache: Dictionary<CommandReply> = {};
-    private cacheFilePath : string;
+    private readonly cacheFilePath : string;
     private currentQuery: PJLinkQuery;
 
     private inputInformation : NumDict<InputTypeInfo> = {
@@ -220,7 +217,7 @@ export class PJLinkPlus extends NetworkProjector {
         6 : {label: 'Internal', sourceIDs: []},
     }
 
-    private configurationFilePath: string;
+    private readonly configurationFilePath: string;
     private configuration: PJLinkConfiguration;
 
 	constructor(socket: NetworkTCP) {
@@ -254,9 +251,20 @@ export class PJLinkPlus extends NetworkProjector {
             this.storePassword(PJLINK_PASSWORD);
 		}).finally(() => {
             this.pjlinkPassword = this.configuration.password;
-            // start polling and connect
-            this.poll();
-            this.attemptConnect();
+            if (this.socket.enabled) {
+				// start polling and connect
+				this.poll();
+				this.attemptConnect();
+
+				// Stop any cyclic activity if socket closed (e.g., driver disabled)
+				this.socket.subscribe('finish', () => {
+					if (this.statusPoller) {
+						this.statusPoller.cancel();
+						this.statusPoller = undefined;
+					}
+				});
+
+			} // Else don't start polling or attempt to connect
         });
     }
 
@@ -854,7 +862,10 @@ export class PJLinkPlus extends NetworkProjector {
         this.keepPollingStatus = false;
         this.abortFetchDeviceInformation();
         console.log('aborting polling device status');
-        if (this.statusPoller) delete this.statusPoller;
+        if (this.statusPoller) {
+			this.statusPoller.cancel();
+        	delete this.statusPoller;
+		}
     }
 
     private processInfoQueryError (command : string, error : string) {

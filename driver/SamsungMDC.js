@@ -32,25 +32,32 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             _this.mId = 0;
-            socket.autoConnect(true);
-            socket.enableWakeOnLAN();
-            _this.propList = [];
-            _this.propList.push(_this.powerProp = new Power(_this));
-            _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33, HDMI2=34, URL=99", 0x14, 0x21, 9, 99);
-            _this.propList.push(_this.inputProp);
-            _this.propList.push(_this.volumeProp = new Volume(_this));
-            socket.subscribe('connect', function (sender, message) {
-                return _this.connectStateChanged(message.type);
-            });
-            socket.subscribe('bytesReceived', function (sender, msg) {
-                return _this.dataReceived(msg.rawData);
-            });
-            socket.subscribe('finish', function (sender) {
-                return _this.discard();
-            });
-            if (socket.connected)
-                _this.pollNow();
-            debugMsg("driver initialized");
+            if (socket.enabled) {
+                socket.autoConnect(true);
+                socket.enableWakeOnLAN();
+                _this.propList = [];
+                _this.propList.push(_this.powerProp = new Power(_this));
+                _this.inputProp = new NumProp(_this, "input", "Source input number; HDMI1=33, HDMI2=34, URL=99", 0x14, 0x21, 9, 99);
+                _this.propList.push(_this.inputProp);
+                _this.propList.push(_this.volumeProp = new Volume(_this));
+                socket.subscribe('connect', function (sender, message) {
+                    return _this.connectStateChanged(message.type);
+                });
+                socket.subscribe('bytesReceived', function (sender, msg) {
+                    return _this.dataReceived(msg.rawData);
+                });
+                socket.subscribe('finish', function (sender) {
+                    return _this.discard();
+                });
+                if (socket.connected)
+                    _this.pollNow();
+                socket.subscribe('finish', function () {
+                    if (_this.poller) {
+                        _this.poller.cancel();
+                        _this.poller = undefined;
+                    }
+                });
+            }
             return _this;
         }
         SamsungMDC.prototype.isOfTypeName = function (typeName) {

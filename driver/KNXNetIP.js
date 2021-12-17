@@ -39,7 +39,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             _this.errCount = 0;
             _this.dynProps = [];
             _this.connTimeoutWarned = false;
-            if (!socket.enabled) {
+            _this.loadConfig();
+            if (socket.enabled) {
                 if (!_this.socket.listenerPort)
                     throw "Listening port not specified (e.g, 32331)";
                 socket.subscribe('bytesReceived', function (sender, message) {
@@ -56,8 +57,13 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                         }
                     }
                 });
-                _this.loadConfig();
                 _this.checkStateSoon(5);
+                socket.subscribe('finish', function () {
+                    if (_this.timer) {
+                        _this.timer.cancel();
+                        _this.timer = undefined;
+                    }
+                });
             }
             return _this;
         }

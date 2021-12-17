@@ -58,6 +58,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 _this.gotDataFromCam(message.rawData);
             });
             _this.init();
+            socket.subscribe('finish', function () {
+                _this.stopPolling();
+                if (_this.pollStateTimer) {
+                    _this.pollStateTimer.cancel();
+                    _this.pollStateTimer = undefined;
+                }
+            });
             return _this;
         }
         VISCA.prototype.addRetainedStateProp = function (propName) {
@@ -110,7 +117,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return Math.round(this.propValue(propName));
         };
         VISCA.prototype.init = function () {
-            if (this.socket.connected)
+            if (this.socket.connected && this.socket.enabled)
                 this.poll();
         };
         VISCA.prototype.onConnectStateChanged = function (connected) {
@@ -133,14 +140,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         VISCA.prototype.poll = function () {
             var _this = this;
-            this.pollState();
-            if (!this.pollTimer) {
-                this.pollTimer = wait(1000 * 60);
-                this.pollTimer.then(function () {
-                    _this.pollTimer = undefined;
-                    if (_this.socket.connected)
-                        _this.poll();
-                });
+            if (this.socket.enabled) {
+                this.pollState();
+                if (!this.pollTimer) {
+                    this.pollTimer = wait(1000 * 60);
+                    this.pollTimer.then(function () {
+                        _this.pollTimer = undefined;
+                        if (_this.socket.connected)
+                            _this.poll();
+                    });
+                }
             }
         };
         VISCA.prototype.send = function (instr) {

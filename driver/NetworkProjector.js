@@ -86,11 +86,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         });
         NetworkProjector.prototype.discard = function () {
             this.discarded = true;
-            if (this.poller)
+            if (this.poller) {
                 this.poller.cancel();
-            if (this.correctionRetry)
+                this.poller = undefined;
+            }
+            if (this.correctionRetry) {
                 this.correctionRetry.cancel();
-            delete this.poller;
+                this.correctionRetry = undefined;
+            }
         };
         NetworkProjector.prototype.errorMsg = function () {
             var messages = [];
@@ -195,18 +198,20 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.poll = function () {
             var _this = this;
-            this.poller = wait(21333);
-            this.poller.then(function () {
-                var continuePolling = true;
-                if (!_this.socket.connected) {
-                    if (!_this.connecting && !_this.connectDly)
-                        _this.attemptConnect();
-                }
-                else
-                    continuePolling = _this.pollStatus();
-                if (continuePolling && !_this.discarded)
-                    _this.poll();
-            });
+            if (this.socket.enabled) {
+                this.poller = wait(21333);
+                this.poller.then(function () {
+                    var continuePolling = true;
+                    if (!_this.socket.connected) {
+                        if (!_this.connecting && !_this.connectDly)
+                            _this.attemptConnect();
+                    }
+                    else
+                        continuePolling = _this.pollStatus();
+                    if (continuePolling && !_this.discarded)
+                        _this.poll();
+                });
+            }
         };
         NetworkProjector.prototype.pollStatus = function () {
             return false;

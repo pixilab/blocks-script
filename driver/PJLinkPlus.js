@@ -147,8 +147,16 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 _this.storePassword(PJLINK_PASSWORD);
             }).finally(function () {
                 _this.pjlinkPassword = _this.configuration.password;
-                _this.poll();
-                _this.attemptConnect();
+                if (_this.socket.enabled) {
+                    _this.poll();
+                    _this.attemptConnect();
+                    _this.socket.subscribe('finish', function () {
+                        if (_this.statusPoller) {
+                            _this.statusPoller.cancel();
+                            _this.statusPoller = undefined;
+                        }
+                    });
+                }
             });
             return _this;
         }
@@ -833,8 +841,10 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             this.keepPollingStatus = false;
             this.abortFetchDeviceInformation();
             console.log('aborting polling device status');
-            if (this.statusPoller)
+            if (this.statusPoller) {
+                this.statusPoller.cancel();
                 delete this.statusPoller;
+            }
         };
         PJLinkPlus.prototype.processInfoQueryError = function (command, error) {
             switch (error) {

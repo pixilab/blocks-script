@@ -61,32 +61,41 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 
 	constructor(protected socket: NetworkTCP) {
 		super(socket);
-		socket.autoConnect(true);
-		socket.enableWakeOnLAN();
-		this.propList = [];
+		if (socket.enabled) {	// Do nothing unless socket is enabled
+			socket.autoConnect(true);
+			socket.enableWakeOnLAN();
+			this.propList = [];
 
-		this.propList.push(this.powerProp = new Power(this));
-		this.inputProp = new NumProp(this,
-			"input", "Source input number; HDMI1=33, HDMI2=34, URL=99",
-			0x14, 0x21,
-			9, 99		 // Constraints based on MDC spec 2015
-		);
-		this.propList.push(this.inputProp);
-		this.propList.push(this.volumeProp = new Volume(this));
+			this.propList.push(this.powerProp = new Power(this));
+			this.inputProp = new NumProp(this,
+										 "input", "Source input number; HDMI1=33, HDMI2=34, URL=99",
+										 0x14, 0x21,
+										 9, 99		 // Constraints based on MDC spec 2015
+			);
+			this.propList.push(this.inputProp);
+			this.propList.push(this.volumeProp = new Volume(this));
 
-		socket.subscribe('connect', (sender, message)=>
+			socket.subscribe('connect', (sender, message) =>
 				this.connectStateChanged(message.type)
-		);
-		socket.subscribe('bytesReceived', (sender, msg)=>
-			this.dataReceived(msg.rawData)
-		);
+			);
+			socket.subscribe('bytesReceived', (sender, msg) =>
+				this.dataReceived(msg.rawData)
+			);
 
-		socket.subscribe('finish', sender =>
-			this.discard()
-		);
-		if (socket.connected)	// Already connected - get going right away
-			this.pollNow();
-		debugMsg("driver initialized");
+			socket.subscribe('finish', sender =>
+				this.discard()
+			);
+			if (socket.connected)	// Already connected - get going right away
+				this.pollNow();
+
+			// Shut down cyclic polling if socket shut down (e.g., if disabled)
+			socket.subscribe('finish', () => {
+				if (this.poller) {
+					this.poller.cancel();
+					this.poller = undefined;
+				}
+			});
+		}
 	}
 
 	/**

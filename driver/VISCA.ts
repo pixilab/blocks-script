@@ -82,6 +82,15 @@ export class VISCA extends Driver<NetworkTCP> {
 			this.gotDataFromCam(message.rawData);
 		});
 		this.init();
+
+		// Stop any cyclic activity if socket closed (e.g., driver disabled)
+		socket.subscribe('finish', () => {
+			this.stopPolling();
+			if (this.pollStateTimer) {	// Initial state polling too
+				this.pollStateTimer.cancel();
+				this.pollStateTimer = undefined;
+			}
+		});
 	}
 
 	/**
@@ -189,7 +198,7 @@ export class VISCA extends Driver<NetworkTCP> {
 
 	init() {
 		// Query for initial status
-		if (this.socket.connected)
+		if (this.socket.connected && this.socket.enabled)
 			this.poll();
 	}
 
@@ -225,14 +234,16 @@ export class VISCA extends Driver<NetworkTCP> {
 	 * Assumes connected when called.
 	 */
 	private poll() {
-		this.pollState();
-		if (!this.pollTimer) {
-			this.pollTimer = wait(1000 * 60);
-			this.pollTimer.then(() => {
-				this.pollTimer = undefined;
-				if (this.socket.connected)
-					this.poll();
-			});
+		if (this.socket.enabled) {	// Only if we're enabled
+			this.pollState();
+			if (!this.pollTimer) {
+				this.pollTimer = wait(1000 * 60);
+				this.pollTimer.then(() => {
+					this.pollTimer = undefined;
+					if (this.socket.connected)
+						this.poll();
+				});
+			}
 		}
 	}
 
