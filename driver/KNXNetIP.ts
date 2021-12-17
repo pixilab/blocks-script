@@ -6,7 +6,7 @@
 
 Driver user instruction.
 The basic functionality of the driver has three callable, setScene(number 0-63), setOnoff(boolean) and enforceProp that can be run from task.
-It is also possible to setup analog and digital devices via a .json configuration file placed in /script/files/ .
+It is also possible to setup analog and digital groups via a .json configuration file placed in /script/files/ .
 This file should be named as the device name in tcp devices in Blocks. ie MyKNXDevice.json
 Structure the json data in the config file as in the following example:
 {
