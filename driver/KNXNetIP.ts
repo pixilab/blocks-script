@@ -3,6 +3,42 @@
 	Loosely based on documentation found here: http://www.eb-systeme.de/?page_id=479
 
  	Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+
+Driver user instruction.
+The basic functionality of the driver has three callable, setScene(number 0-63), setOnoff(boolean) and enforceProp that can be run from task.
+It is also possible to setup analog and digital devices via a .json configuration file placed in /script/files/ .
+This file should be named as the device name in tcp devices in Blocks. ie MyKNXDevice.json
+Structure the json data in the config file as in the following example:
+{
+	"analog": [
+		{
+			"name": "Some analog group name here",
+			"description": "Some description here",
+			"addr": [1, 2, 101]
+		},
+    {
+			"name": "Another analog group name here",
+			"description": "Some description here",
+			"addr": [1, 2, 103]
+		}
+	],
+	"digital": [
+		{
+			"name": "Some digital group property name here",
+			"description": "Some description here",
+			"addr": [1, 2, 100]
+		},
+		{
+			"name": "Another digital group property name here",
+			"description": "Some description here",
+			"addr": [1, 2, 102]
+		},
+	]
+}	
+Where "analog" and "digital" sets the datatype. 
+"analog" represent KNX datatype 5.001 = 8-bit unsigned value, like dim value (0..100%), blinds position (0..100%)
+"digital represent KNX datatype 1.001 = boolean, like switching, move up/down, step
+The callable enforceProp will send all the currently stored values in Blocks to the KNX groups. 
  */
 
 import {callable, parameter, driver, property} from "system_lib/Metadata";
