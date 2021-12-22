@@ -151,20 +151,17 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             if (options !== '') {
                 _this.configuration = JSON.parse(options);
                 _this.pjlinkPassword = _this.configuration.password;
-                _this.debugLog('got configuration via socket options');
-                _this.poll();
-            }
-            else {
-                SimpleFile_1.SimpleFile.read(_this.configurationFilePath).then(function (readValue) {
-                    _this.configuration = JSON.parse(readValue);
-                }).catch(function (_error) {
-                    console.log('creating configuration file for "' + _this.socket.name + '" under "' + _this.configurationFilePath + '" - please fill out password if needed');
-                    _this.storePassword(PJLINK_PASSWORD);
-                }).finally(function () {
-                    _this.pjlinkPassword = _this.configuration.password;
+                if (_this.socket.enabled) {
                     _this.poll();
-                });
-            }
+                    _this.attemptConnect();
+                    _this.socket.subscribe('finish', function () {
+                        if (_this.statusPoller) {
+                            _this.statusPoller.cancel();
+                            _this.statusPoller = undefined;
+                        }
+                    });
+                }
+            });
             return _this;
         }
         PJLinkPlus_1 = PJLinkPlus;
@@ -881,9 +878,11 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         PJLinkPlus.prototype.abortPollDeviceStatus = function () {
             this.keepPollingStatus = false;
             this.abortFetchDeviceInformation();
-            this.debugLog('aborting polling device status');
-            if (this.statusPoller)
+            console.log('aborting polling device status');
+            if (this.statusPoller) {
+                this.statusPoller.cancel();
                 delete this.statusPoller;
+            }
         };
         PJLinkPlus.prototype.processInfoQueryError = function (command, error) {
             switch (error) {

@@ -61,32 +61,41 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 
 	constructor(protected socket: NetworkTCP) {
 		super(socket);
-		socket.autoConnect(true);
-		socket.enableWakeOnLAN();
-		this.propList = [];
+		if (socket.enabled) {	// Do nothing unless socket is enabled
+			socket.autoConnect(true);
+			socket.enableWakeOnLAN();
+			this.propList = [];
 
-		this.propList.push(this.powerProp = new Power(this));
-		this.inputProp = new NumProp(this,
-			"input", "Source input number; HDMI1=33, HDMI2=34, URL=99",
-			0x14, 0x21,
-			9, 99		 // Constraints based on MDC spec 2015
-		);
-		this.propList.push(this.inputProp);
-		this.propList.push(this.volumeProp = new Volume(this));
+			this.propList.push(this.powerProp = new Power(this));
+			this.inputProp = new NumProp(this,
+										 "input", "Source input number; HDMI1=33, HDMI2=34, URL=99",
+										 0x14, 0x21,
+										 9, 99		 // Constraints based on MDC spec 2015
+			);
+			this.propList.push(this.inputProp);
+			this.propList.push(this.volumeProp = new Volume(this));
 
-		socket.subscribe('connect', (sender, message)=>
+			socket.subscribe('connect', (sender, message) =>
 				this.connectStateChanged(message.type)
-		);
-		socket.subscribe('bytesReceived', (sender, msg)=>
-			this.dataReceived(msg.rawData)
-		);
+			);
+			socket.subscribe('bytesReceived', (sender, msg) =>
+				this.dataReceived(msg.rawData)
+			);
 
-		socket.subscribe('finish', sender =>
-			this.discard()
-		);
-		if (socket.connected)	// Already connected - get going right away
-			this.pollNow();
-		debugMsg("driver initialized");
+			socket.subscribe('finish', sender =>
+				this.discard()
+			);
+			if (socket.connected)	// Already connected - get going right away
+				this.pollNow();
+
+			// Shut down cyclic polling if socket shut down (e.g., if disabled)
+			socket.subscribe('finish', () => {
+				if (this.poller) {
+					this.poller.cancel();
+					this.poller = undefined;
+				}
+			});
+		}
 	}
 
 	/**
@@ -159,7 +168,7 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 	/**	Get first property that wants to send a command, else undefined.
 	 */
 	private getPropToSend(): Prop<any>|undefined {
-		for (var p of this.propList)
+		for (let p of this.propList)
 			if (p.needsCorrection())
 				return p;
 	}
@@ -249,7 +258,7 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 			if (reply.length >= 4) { // Got at least the number of status bytes I need
 				debugMsg("Got status pollSoon reply", reply);
 				this.powerProp.updateCurrent(!!reply[0]); // Prop is boolean
-				var volNorm = reply[1];
+				let volNorm = reply[1];
 				if (volNorm == 0xff)		// Models without audio reports as 0xff - make this zero vol
 					volNorm = 0;
 				volNorm = volNorm / 100;	// Prop is normalized
@@ -265,13 +274,13 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 	 */
 	private dataReceived(rawData: number[]): void {
 		// Append to any already receivedData if I get partial packets
-		var buf = this.receivedData;
+		let buf = this.receivedData;
 		/*	Note that rawData received is "array-like" in that it has elements and a
 			length, but not much more. So we need to convert it to a proper JS array to
 			call Array methods on it. For more on array-like objects, see
 			https://dzone.com/articles/js-array-from-an-array-like-object
 		*/
-		rawData = makeJSArray(rawData);
+		rawData = this.makeJSArray(rawData);
 		buf = this.receivedData = buf ? buf.concat(rawData) : rawData;
 
 		debugMsg("Got some data back");
@@ -281,7 +290,7 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 				if (buf[CmdSlots.kHeader] !== kHeaderData)
 					this.currCmdErr('Invalid header in reply');
 				else if (buf[CmdSlots.kAck] === kAckData) {
-					var responseType = buf[CmdSlots.kCmdType];
+					let responseType = buf[CmdSlots.kCmdType];
 					if (buf[CmdSlots.kCmdType] === 0xff) {
 						responseType = buf[CmdSlots.kRespToCmdType];
 						if (responseType === this.currCmd.cmdType) {
@@ -410,9 +419,9 @@ class Command {
 			cmd.push(0);	// No param, so zero length parameter block
 
 		// Calculate crummy checksum
-		var checksum = 0;
+		let checksum = 0;
 		const count = cmd.length;
-		for (var ix = 1; ix < count; ++ix)
+		for (let ix = 1; ix < count; ++ix)
 			checksum += cmd[ix];
 		// Append to command, truncated to a byte
 		cmd.push(checksum & 0xff);
@@ -641,21 +650,6 @@ class Volume extends NumProp {
 	correct(): Promise<number[]>  {
 		return super.correct(this.wanted * 100);
 	}
-}
-
-/**
- * Turn an array-like object into a proper JavaScript array, which is returned.
- * Simply returns arr if already is fine.
- */
-function makeJSArray(arr: any[]) {
-	if (Array.isArray(arr))
-		return arr;	// Already seems kosher - no need to convert
-
-	const arrayLike: any[] = arr; // Needed since TS compiler thinks it knows better
-	const result = [];
-	for (var i = 0; i < arrayLike.length; ++i)
-		result.push(arrayLike[i]);
-	return result;
 }
 
 /**

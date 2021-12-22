@@ -63,7 +63,7 @@ interface ReqOpts {
  */
 export interface Response<T> {
 	status: number;			// Status code from request (e.g., 200)
-	data?: string;			// Result from request, if any (not used if interpreted)
+	data?: string;			// Result from request, if any (not available if interpreted)
 	interpreted?: T;		// Interpreted data returned by request, if any
 	type?: string;			// Data type of any response (e.g. "application/json")
 

@@ -19,6 +19,7 @@ export interface SpotGroupItem {
 }
 
 export interface SpotGroup extends SpotGroupItem {
+	isOfTypeName(typeName: "SpotGroup"): SpotGroup|null;	// Check subtype by type name
 	[name: string]: SpotGroupItem|any;
 }
 
@@ -58,28 +59,28 @@ export interface BaseSpot {
 }
 
 export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
-	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name ("DisplaySpot")
+	isOfTypeName(typeName: "DisplaySpot"): DisplaySpot|null;
 
 	/**
-	 True if the spot is connected. Read only.
+	 True if the spot is connected.
 	 */
-	connected: boolean;
+	readonly connected: boolean;
 
 	/**
-	 * Dot-separated IP address of display spot, if connected, else null. Read only.
+	 * Dot-separated IP address of display spot, if connected, else null.
 	 */
-	address: string;
+	readonly address: string;
 
 	/**
 	 * Identification, based on MAC address, serial number, given ID, or similar
 	 * system-unique value.
 	 */
-	identity: string;
+	readonly identity: string;
 
 	/**
-	 * Get any geolocation assoctaed with spot, or null if none.
+	 * Get any geolocation associated with spot, or null if none.
 	 */
-	getGeoZone(): GeoZone|null;
+	readonly geoZone: GeoZone|null;
 
 	/**
 	 * Load a Block with priority. Returns a promise that's fulfilled once
@@ -97,9 +98,20 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	reload(reloadBrowser?:boolean): void;
 
 	/**
-	 * Turn power on/off, if possible.
+	 * Turn power on/off, if possible. Returns most recently set power state.
+	 * NOTE: Prior to Blocks 5.5, this returned the current power state, which
+	 * would lag the wanted power state during power-up.
+	 *
+	 * Alternatively, call wakeUp below from a task, to turn power on and wait
+	 * for spot to connect before proceeding (possibly consolidated inside an
+	 * await statement, to wait for more than one starting in parallell).
 	 */
 	power: boolean;
+
+	/**
+	 * Power up the display spot. Promise resolved once spot has connected.
+	 */
+	wakeUp(timeoutSeconds?: number): Promise<any>;
 
 	/**
 	 * Current time position (e.g., in video), in seconds. Write to position the video.
@@ -137,7 +149,7 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	active: boolean;
 
 	/**
-	 Control audio volume, if possible, as 0...1.
+	 Controls or returns audio volume, if possible, as 0...1.
 	 */
 	volume: number;
 
@@ -146,6 +158,11 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	 * Multiple classes separated by space.
 	 */
 	customClasses: string;
+
+	/**
+	 * Most recently scanned value, when using keyboard-emulating scanner.
+	 */
+	readonly scannerInput: string;
 
 	/**
 	 Ask Spot to reveal the specified child block, in the current root block.
@@ -269,7 +286,7 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 
 // Spot type named "Visitor Spot" in Blocks UI
 export interface MobileSpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name ("MobileSpot")
+	isOfTypeName(typeName: "MobileSpot"): MobileSpot | null;
 
 	subscribe(event: "spot", listener: (sender: MobileSpot, message:{
 		type:
@@ -281,7 +298,7 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 
 // Spot type named "Location" in Blocks UI
 export interface VirtualSpot extends SpotGroupItem, BaseSpot, GeoZonable  {
-	isOfTypeName(typeName: string): VirtualSpot | null;	// Check subtype by name ("VirtualSpot")
+	isOfTypeName(typeName: "VirtualSpot"): VirtualSpot | null;
 
 	subscribe(event: "spot", listener: (sender: VirtualSpot, message:{
 		type:

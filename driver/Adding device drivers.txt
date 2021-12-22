@@ -1,0 +1,6 @@
+Rarely used device drivers have been moved to the "driver-archive" directory. Hence, they're not
+automatically made asvailable if you copy this script directory from Github onto your Blocks server.
+To activate such a device driver, simply move it (both the JS and TS files) from the "driver-archive"
+to the "driver" directory. Any drivers located in the "driver-archive" directory will be ignored.
+
+Learn more about creating device drivers at https://pixilab.se/docs/blocks/drivers/the-movie

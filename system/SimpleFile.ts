@@ -49,7 +49,9 @@ export var SimpleFile: {
 	 * Read data from an XML file, returning it as an object, corresponding to
 	 * the root element in the XML file. Attributes are provided as named
 	 * properties. Nested content is provided as an attribute with the
-	 * empty string as its key.
+	 * empty string as its key. The returned object, while providing the
+	 * correct data, isn't a true Javascript object, so may not work
+	 * with some Javascript functions.
 	 */
 	readXml(fileName:string): Promise<any[]>;
 
@@ -58,7 +60,12 @@ export var SimpleFile: {
 	 * like object (if the outermost JSON data is array). Fields in objects
 	 * hold primitive data and other, nested objects. This method of reading
 	 * JSON data is more efficient than reading it as text using the plain read call
-	 * and then converting it to JSON using the JSON.parse() method.
+	 * and then converting it to JSON using the JSON.parse() method. The returned
+	 * object, while providing the correct data, isn't a genuine Javascript
+	 * object, so may not work with some Javascript functions (such as
+	 * JSON.stringify). If you run into such problems, read as text instead using
+	 * the plain read call, then use JSON.parse to convert the text to true
+	 * Javascript objects.
 	 */
 	readJson(fileName:string): Promise<any|any[]>;
 

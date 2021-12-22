@@ -26,79 +26,50 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.BarcoE2_JSON = void 0;
-    var BarcoE2_JSON = (function (_super) {
-        __extends(BarcoE2_JSON, _super);
-        function BarcoE2_JSON(socket) {
+    exports.BarcoE2 = void 0;
+    var BarcoE2 = (function (_super) {
+        __extends(BarcoE2, _super);
+        function BarcoE2(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.mLive = 0;
             socket.autoConnect();
             return _this;
         }
-        BarcoE2_JSON.prototype.activatePreset = function (preset, preview) {
-            if (preview)
-                this.mPreview = preset;
-            else
-                this.mLive = preset;
-            return this.send(new Command("activatePreset", { id: preset, type: preview ? 0 : 1 }));
+        BarcoE2.prototype.activatePreset = function (preset) {
+            this.mLive = preset;
+            return this.send(preset);
         };
-        Object.defineProperty(BarcoE2_JSON.prototype, "preview", {
-            get: function () {
-                return this.mPreview;
-            },
-            set: function (preset) {
-                this.activatePreset(preset, true);
-            },
-            enumerable: false,
-            configurable: true
-        });
-        Object.defineProperty(BarcoE2_JSON.prototype, "live", {
+        Object.defineProperty(BarcoE2.prototype, "live", {
             get: function () {
                 return this.mLive;
             },
             set: function (preset) {
-                this.activatePreset(preset, false);
+                this.activatePreset(preset);
             },
             enumerable: false,
             configurable: true
         });
-        BarcoE2_JSON.prototype.send = function (cmd) {
-            var cmdJson = JSON.stringify(cmd);
-            return this.socket.sendText(cmdJson);
+        BarcoE2.prototype.send = function (preset) {
+            return this.socket.sendText("PRESET -a " + preset);
         };
         __decorate([
-            Metadata_1.callable("Load a preset into Live or Preview"),
+            Metadata_1.callable("Load a preset into Program or Preview"),
             __param(0, Metadata_1.parameter("Preset number")),
-            __param(1, Metadata_1.parameter("Load into Preview", true)),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Number, Boolean]),
+            __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
-        ], BarcoE2_JSON.prototype, "activatePreset", null);
-        __decorate([
-            Metadata_1.property("Current preview preset"),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], BarcoE2_JSON.prototype, "preview", null);
+        ], BarcoE2.prototype, "activatePreset", null);
         __decorate([
             Metadata_1.property("Current live preset"),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
-        ], BarcoE2_JSON.prototype, "live", null);
-        BarcoE2_JSON = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 9999 }),
+        ], BarcoE2.prototype, "live", null);
+        BarcoE2 = __decorate([
+            Metadata_1.driver('NetworkTCP', { port: 9878 }),
             __metadata("design:paramtypes", [Object])
-        ], BarcoE2_JSON);
-        return BarcoE2_JSON;
+        ], BarcoE2);
+        return BarcoE2;
     }(Driver_1.Driver));
-    exports.BarcoE2_JSON = BarcoE2_JSON;
-    var Command = (function () {
-        function Command(method, params) {
-            this.method = method;
-            this.jsonrpc = "2.0";
-            this.id = Command.nextId++;
-            this.params = params;
-        }
-        Command.nextId = 1;
-        return Command;
-    }());
+    exports.BarcoE2 = BarcoE2;
 });

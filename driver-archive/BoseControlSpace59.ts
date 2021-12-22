@@ -6,7 +6,7 @@ in the mixer, and then specified in the config of this driver.
 
 Originally made to work at Recolab.
 
-Example config data (JSON format). Note that as of thid writing,
+Example config data (JSON format). Note that as of this writing,
 only the "gain" module type is supported (providing its gain and
 mute sub-properties).
 

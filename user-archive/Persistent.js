@@ -28,7 +28,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile"], functio
                     console.error("Failed parsing JSON data from file", Persistent.kFileName, parseError);
                 }
             }).catch(function (error) {
-                console.error("Failed reading file; use initial sample data", Persistent.kFileName, error);
+                console.error("Failed reading file; using default sample data", Persistent.kFileName, error);
                 _this.data = {
                     "aNumber": 12,
                     "aString": "Billy",
@@ -66,7 +66,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile"], functio
             if (!this.mPersistor) {
                 this.mPersistor = wait(200);
                 this.mPersistor.then(function () {
-                    delete _this.mPersistor;
+                    _this.mPersistor = undefined;
                     var jsonData = JSON.stringify(_this.data, null, 2);
                     SimpleFile_1.SimpleFile.write(Persistent.kFileName, jsonData);
                 });

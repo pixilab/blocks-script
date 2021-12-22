@@ -9,14 +9,14 @@ mail:
   sender: info@pixilab.se		# Defaults to username if not specified
   smtp.auth: true
   smtp.starttls.enable: true
-  smtp.host: g8qp-rh7b.accessdomain.com
+  smtp.host: mail.pixilab.se
   smtp.port: 587
-  smtp.ssl.trust: g8qp-rh7b.accessdomain.com
+  smtp.ssl.trust: mail.pixilab.se
 
 You must specify EITHER the relevant smtp OR ipap options, as documented here
 http://connector.sourceforge.net/doc-files/Properties.html
 Note that the "mail."-prefix is implied in each configuration option under "mail"
-in the Blocks' cofiguraiton file, and should not be included
+in the Blocks' cofiguration file, and should not be included
 
 Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
 Created 2019 by Mike Fahl.
@@ -26,7 +26,7 @@ Created 2019 by Mike Fahl.
 
 export var SimpleMail: {
 	/**
-	 * Send email with specified subject and nody to destEmailAddr.
+	 * Send email with specified subject and body to destEmailAddr.
 	 * The body is sent as HTML, so you can use simple HTML constructs
 	 * such as <h1> and <br>
 	 *

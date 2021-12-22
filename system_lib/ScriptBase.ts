@@ -22,26 +22,21 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	property<T>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): void {
 		this.__scriptFacade.property(name, options, gsFunc);
 
-		// Make assignment work also for direct JS use (instance-specific, so apply to 'this')
-		if (options && options.readOnly) {	// Define as read-only
-			Object.defineProperty(this, name, {
-				get: function () {
-					return gsFunc();
-				}
-			});
-		} else {	// Define as R/W
-			// defineProperty on 'this', not on prototype, as gsFunc is instance-specific
-			Object.defineProperty(this, name, {
-				get: function () {
-					return gsFunc();
-				},
-				set: function (value) {
-					const oldValue = gsFunc();
-					if (oldValue !== gsFunc(value))
-						this.__scriptFacade.changed(name);
-				}
-			});
+		// Make assignment work also for direct JS use
+		const propDescriptor: PropertyDescriptor & ThisType<any> = {
+			get: function () {	// Always define getter
+				return gsFunc();
+			}
+		};
+		if (!options || !options.readOnly) {	// Read/write
+			propDescriptor.set = function (value) {	// Define setter also
+				const oldValue = gsFunc();	// Detect change and fire notification
+				if (oldValue !== gsFunc(value)) // Always obains new value
+					this.__scriptFacade.changed(name);
+			};
 		}
+		// defineProperty on 'this', not on prototype, as gsFunc is instance-specific
+		Object.defineProperty(this, name, propDescriptor);
 	}
 
 	/**
@@ -137,7 +132,6 @@ export interface IndexedProperty<T> {
 	 * with an index range corresponding to the number of elements.
 	 */
 	push(item: T): void
-
 
 	/**
 	 * Number of items in me.

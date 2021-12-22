@@ -34,15 +34,28 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             _this.pollIndex = 0;
+            _this.awake = false;
             _this.interfaces = [];
             socket.autoConnect();
             socket.subscribe('textReceived', function (sender, message) {
-                if (message.text)
-                    _this.handleMessage(message.text);
+                if (message.text) {
+                    if (_this.awake)
+                        _this.handleMessage(message.text);
+                    else {
+                        _this.awake = true;
+                        _this.pollIndex = 0;
+                    }
+                }
             });
             socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection' && socket.connected && !_this.pollIndex)
-                    _this.pollNextPort();
+                if (message.type === 'Connection' && socket.connected) {
+                    if (!_this.pollIndex)
+                        _this.pollNext();
+                }
+                else {
+                    if (!_this.interfaces.length)
+                        _this.pollIndex = 0;
+                }
             });
             return _this;
         }
@@ -58,12 +71,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 Nexmosphere_1.interfaceRegistry[name] = ctor;
             });
         };
-        Nexmosphere.prototype.pollNextPort = function () {
+        Nexmosphere.prototype.pollNext = function () {
             var _this = this;
             ++this.pollIndex;
             this.queryPortConfig(this.pollIndex);
+            var pollAgain = false;
             if (this.pollIndex <= kNumInterfaces)
-                wait(100).then(function () { return _this.pollNextPort(); });
+                pollAgain = true;
+            else if (!this.interfaces.length) {
+                this.pollIndex = 0;
+                pollAgain = true;
+            }
+            if (pollAgain)
+                wait(this.pollIndex > 1 ? 150 : 600).then(function () { return _this.pollNext(); });
         };
         Nexmosphere.prototype.queryPortConfig = function (portNumber) {
             var sensorMessage = (("000" + portNumber).slice(-3));
@@ -72,8 +92,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         Nexmosphere.prototype.send = function (rawData) {
             this.socket.sendText(rawData, "\r\n");
         };
+        Nexmosphere.prototype.reInitialize = function () {
+            _super.prototype.reInitialize.call(this);
+        };
         Nexmosphere.prototype.handleMessage = function (msg) {
-            console.debug("handleMessage", msg);
             var parseResult = kRfidPacketParser.exec(msg);
             if (parseResult) {
                 this.lastTag = {
@@ -116,6 +138,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], Nexmosphere.prototype, "send", null);
+        __decorate([
+            Metadata_1.callable("Re-initialize driver, after changing device configuration"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", void 0)
+        ], Nexmosphere.prototype, "reInitialize", null);
         Nexmosphere = Nexmosphere_1 = __decorate([
             Metadata_1.driver('NetworkTCP', { port: 4001 }),
             __metadata("design:paramtypes", [Object])
@@ -256,7 +284,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.buttons = [];
             for (var ix = 0; ix < 4; ++ix) {
                 _this.buttons.push(new Button(_this.getNamePrefix() + "_btn_" + (ix + 1), _this.driver));
-                console.log("For buttons_" + (ix + 1));
             }
             return _this;
         }

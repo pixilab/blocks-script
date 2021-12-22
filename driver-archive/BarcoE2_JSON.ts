@@ -8,9 +8,8 @@ import {callable, driver, parameter, property} from "system_lib/Metadata";
 @driver('NetworkTCP', { port: 9999 })
 export class BarcoE2_JSON extends Driver<NetworkTCP> {
 
-	private mPreview: number;
-	private mLive: number;
-
+	private mPreview: number = 0;
+	private mLive: number = 0;
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);

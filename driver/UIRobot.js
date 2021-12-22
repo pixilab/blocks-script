@@ -20,6 +20,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var __spreadArrays = (this && this.__spreadArrays) || function () {
     for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
     for (var r = Array(s), k = 0, i = 0; i < il; i++)
@@ -131,6 +134,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         UIRobot.prototype.moveMouse = function (x, y) {
             this.sendCommand('MouseMove', x, y);
         };
+        UIRobot.prototype.transitoryCommand = function (exePath, workingDirectory, args) {
+            var params = [];
+            if (args)
+                params = args.split('|');
+            params.unshift(exePath);
+            params.unshift(workingDirectory);
+            return this.sendCommand.apply(this, __spreadArrays(['Launch'], params));
+        };
         Object.defineProperty(UIRobot.prototype, "program", {
             get: function () {
                 return this.mProgramParams;
@@ -241,6 +252,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Number, Number]),
             __metadata("design:returntype", void 0)
         ], UIRobot.prototype, "moveMouse", null);
+        __decorate([
+            Metadata_1.callable("Transitory command to run"),
+            __param(0, Metadata_1.parameter("Path to executable command to run")),
+            __param(1, Metadata_1.parameter("Working directory to be applied")),
+            __param(2, Metadata_1.parameter("Additional arguments, separated by vertical bar", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String]),
+            __metadata("design:returntype", void 0)
+        ], UIRobot.prototype, "transitoryCommand", null);
         __decorate([
             Metadata_1.property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS"),
             __metadata("design:type", String),

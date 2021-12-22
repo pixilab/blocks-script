@@ -8,25 +8,19 @@ define(["require", "exports"], function (require, exports) {
         }
         ScriptBase.prototype.property = function (name, options, gsFunc) {
             this.__scriptFacade.property(name, options, gsFunc);
-            if (options && options.readOnly) {
-                Object.defineProperty(this, name, {
-                    get: function () {
-                        return gsFunc();
-                    }
-                });
+            var propDescriptor = {
+                get: function () {
+                    return gsFunc();
+                }
+            };
+            if (!options || !options.readOnly) {
+                propDescriptor.set = function (value) {
+                    var oldValue = gsFunc();
+                    if (oldValue !== gsFunc(value))
+                        this.__scriptFacade.changed(name);
+                };
             }
-            else {
-                Object.defineProperty(this, name, {
-                    get: function () {
-                        return gsFunc();
-                    },
-                    set: function (value) {
-                        var oldValue = gsFunc();
-                        if (oldValue !== gsFunc(value))
-                            this.__scriptFacade.changed(name);
-                    }
-                });
-            }
+            Object.defineProperty(this, name, propDescriptor);
         };
         ScriptBase.prototype.indexedProperty = function (name, itemType) {
             return this.__scriptFacade.indexedProperty(name, itemType);

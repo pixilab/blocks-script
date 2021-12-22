@@ -52,7 +52,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		);
 
 		socket.subscribe('finish', (sender)=>
-			this.discard()
+			this.discard()	// Shut me down if socket is discarded (e.g., was disabled)
 		);
 	}
 
@@ -134,11 +134,14 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 
 	protected discard() {
 		this.discarded = true;
-		if (this.poller)
+		if (this.poller) {
 			this.poller.cancel();
-		if (this.correctionRetry)
+			this.poller = undefined;
+		}
+		if (this.correctionRetry) {
 			this.correctionRetry.cancel();
-		delete this.poller;
+			this.correctionRetry = undefined;
+		}
 	}
 
 	/**
@@ -291,17 +294,19 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 of sync if status changed behind our back.
 	 */
 	protected poll() {
-		this.poller = wait(21333);
-		this.poller.then(()=> {
-			var continuePolling = true;
-			if (!this.socket.connected) {
-				if (!this.connecting && !this.connectDly)
-					this.attemptConnect();	// Status retrieved once connected
-			} else  // I'm connected - move ahead to poll for current status
-				continuePolling = this.pollStatus();
-			if (continuePolling && !this.discarded)	// Keep polling
-				this.poll();
-		})
+		if (this.socket.enabled) {	// Only if we're enabled
+			this.poller = wait(21333);
+			this.poller.then(() => {
+				var continuePolling = true;
+				if (!this.socket.connected) {
+					if (!this.connecting && !this.connectDly)
+						this.attemptConnect();	// Status retrieved once connected
+				} else  // I'm connected - move ahead to poll for current status
+					continuePolling = this.pollStatus();
+				if (continuePolling && !this.discarded)	// Keep polling
+					this.poll();
+			});
+		}
 	}
 
 	/**
