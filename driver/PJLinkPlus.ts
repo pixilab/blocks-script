@@ -122,6 +122,7 @@ export class PJLinkPlus extends NetworkProjector {
 
     private fetchDeviceInfoResolve: (value?: any) => void = null;
     private fetchDeviceInfoReject: (value?: any) => void = null;
+    private fetchDeviceInfoRejectTimer: CancelablePromise<void> = null;
     private _infoFetchDate : Date;
     private _lastKnownConnectionDate : Date;
     private _lastKnownConnectionDateSet: boolean = false;
@@ -224,72 +225,70 @@ export class PJLinkPlus extends NetworkProjector {
     private readonly configurationFilePath: string;
     private configuration: PJLinkConfiguration;
 
-	private readonly logPrefix: string;
-	private gotToKnowDevice: boolean;
-	private authFailCount: number = 0;
+    private readonly logPrefix: string;
+    private gotToKnowDevice: boolean;
+    private authFailCount: number = 0;
 
-	constructor(socket: NetworkTCP) {
+    constructor(socket: NetworkTCP) {
 
         super(socket);
-		this.logPrefix = '[PJ:' + this.socket.name + ']';
+        this.logPrefix = '[PJ:' + this.socket.name + ']';
 
         this.addState(this._power = new BoolState('POWR', 'power'));
         this.addState(this._input = new StringState(CMD_INPT, 'input', () => this._power.getCurrent()));
-		this.addState(this._mute = new NumState(
-			CMD_AVMT, 'mute',
-			MUTE_MIN, MUTE_MAX,
+        this.addState(this._mute = new NumState(
+            CMD_AVMT, 'mute',
+            MUTE_MIN, MUTE_MAX,
             () => this._power.getCurrent()
-		));
+        ));
         this.addState(this._freeze = new BoolState(CMD_FREZ, 'freeze', () => this._power.getCurrent()));
-		/*	Set some reasonable default value to not return undefined, as the mute value
-			isn't read back from the projector.
-		 */
-		this._mute.set(MUTE_MIN);
+        /* Set some reasonable default value to not return undefined, as the mute value
+           isn't read back from the projector.
+        */
+        this._mute.set(MUTE_MIN);
 
         socket.subscribe('connect', (_sender, _message)=> {
-			this.onConnectStateChange();
-		});
+            this.onConnectStateChange();
+        });
 
         this.cacheFilePath = CACHE_BASE_PATH + '/' + this.socket.name + '.json';
         this.configurationFilePath = CONFIG_BASE_PATH + '/' + this.socket.name + '.cfg.json';
 
-		const options = socket.options.trim();
-		if (options !== '') {
-			this.configuration = JSON.parse(options);
-			this.pjlinkPassword = this.configuration.password;
-			this.debugLog('got configuration via socket options');
+        this.getConfiguration(socket).finally(()=>{
             if (this.socket.enabled) {
-			    // start polling and connect
-			    this.poll();
-			    // this.attemptConnect();
-            }
-		} else {
-			SimpleFile.read(this.configurationFilePath).then(readValue => {
-	            this.configuration = JSON.parse(readValue);
-			}).catch(_error => {
-				console.log('creating configuration file for "' + this.socket.name + '" under "' + this.configurationFilePath + '" - please fill out password if needed');
-	            this.storePassword(PJLINK_PASSWORD);
-			}).finally(() => {
-	            this.pjlinkPassword = this.configuration.password;
-	            if (this.socket.enabled) {
-				    // start polling and connect
-				    this.poll();
-				    this.attemptConnect();
+                // start polling and connect
+                this.poll();
+                this.attemptConnect();
 
-				    // Stop any cyclic activity if socket closed (e.g., driver disabled)
-				    this.socket.subscribe('finish', () => {
-					    if (this.statusPoller) {
-						    this.statusPoller.cancel();
-						    this.statusPoller = undefined;
-					    }
-				    });
-			    } // Else don't start polling or attempt to connect
-	        });
-		}
+                // Stop any cyclic activity if socket closed (e.g., driver disabled)
+                this.socket.subscribe('finish', () => {
+                    if (this.statusPoller) {
+                        this.statusPoller.cancel();
+                        this.statusPoller = undefined;
+                    }
+                });
+            } // Else don't start polling or attempt to connect
+        });
     }
-	protected pollStatus(): boolean {
-		return this.socket.enabled && !this.discarded;
-	}
+    private async getConfiguration(socket: NetworkTCP) {
+        const options = socket.options.trim();
+        if (options !== '') {
+            this.configuration = JSON.parse(options);
+            this.pjlinkPassword = this.configuration.password;
+            this.debugLog('got configuration via socket options');
+        } else {
+            try {
+                this.configuration = await SimpleFile.readJson(this.configurationFilePath);
+            } catch (_error) {
+                console.log('creating configuration file for "' + this.socket.name + '" under "' + this.configurationFilePath + '" - please fill out password if needed');
+                await this.storePassword(PJLINK_PASSWORD);
+            }
+        }
+        this.pjlinkPassword = this.configuration.password;
+    }
+    protected pollStatus(): boolean {
+        return this.socket.enabled && !this.discarded;
+    }
 	protected poll() {
 		if (!this.socket.connected && !this.connecting && !this.connectDly) {
 			this.connectionAttemptCount++;
@@ -324,9 +323,6 @@ export class PJLinkPlus extends NetworkProjector {
         if (!cfg) cfg = this.configuration;
         return SimpleFile.write(this.configurationFilePath, cfg.toJSON());
     }
-
-
-
 
 	private connectionAttemptCount: number = 0;
 	// override in order to count connection attempts
