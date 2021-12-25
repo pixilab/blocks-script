@@ -6,8 +6,6 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -43,7 +41,7 @@ define(["require", "exports", "../system/SimpleProcess", "../system/Spot", "../s
                 console.log('path:"' + path + '"');
                 WakeOnLan.wakeonlanPath = path;
             }).catch(function (error) {
-                console.log(error, process.fullStdErr, process.fullStdOut);
+                console.log("Failed using 'which' to locate wakeonlan - using default at", WakeOnLan.wakeonlanPath, error, process.fullStdErr, process.fullStdOut);
             });
             return _this;
         }
@@ -56,15 +54,17 @@ define(["require", "exports", "../system/SimpleProcess", "../system/Spot", "../s
                     var mac = id.substr(MAC_ID_PREFIX.length).replace(/(.{2})/g, "$1:").slice(0, 17);
                     var process = WakeOnLan.wakeOnLan(mac, ip);
                     process.promise.catch(function (error) {
-                        console.error(error);
+                        return console.error("Failed running wakeonlan command line program", error);
                     });
                 }
+                else
+                    console.error("Can't get MAC address from spot ID", id);
             }
         };
         WakeOnLan.prototype.wakeUp = function (mac, ip) {
             var process = WakeOnLan.wakeOnLan(mac, ip);
             process.promise.catch(function (error) {
-                console.error(error);
+                console.error("Failed running wakeonlan command line program", error);
             });
         };
         WakeOnLan.wakeOnLan = function (mac, ip) {
@@ -78,17 +78,17 @@ define(["require", "exports", "../system/SimpleProcess", "../system/Spot", "../s
         };
         WakeOnLan.wakeonlanPath = '/usr/local/bin/wakeonlan';
         __decorate([
-            Metadata_1.callable('wake Spot'),
-            __param(0, Metadata_1.parameter('spot path')),
-            __param(1, Metadata_1.parameter('destination IP', true)),
+            Metadata_1.callable('Wake up Display Spot'),
+            __param(0, Metadata_1.parameter('Full dot-separated path to a Display Spot')),
+            __param(1, Metadata_1.parameter('Destination IP (e.g., subnet-specific broadcast address)', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", void 0)
         ], WakeOnLan.prototype, "wakeSpot", null);
         __decorate([
-            Metadata_1.callable('wake device'),
-            __param(0, Metadata_1.parameter('MAC')),
-            __param(1, Metadata_1.parameter('destination IP', true)),
+            Metadata_1.callable('Wake up device at specified MAC address'),
+            __param(0, Metadata_1.parameter('MAC address of device')),
+            __param(1, Metadata_1.parameter('Destination IP (e.g., subnet-specific broadcast address)', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", void 0)
