@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -23,7 +25,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
+define(["require", "exports", "system_lib/Metadata", "system_lib/Metadata", "../system_lib/NetworkDriver"], function (require, exports, Meta, Metadata_1, NetworkDriver_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OSCviaUDP = void 0;
@@ -57,6 +59,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         OSCviaUDP.prototype.isOfTypeName = function (typeName) {
             return typeName === "OSCviaUDP" ? this : null;
         };
+        Object.defineProperty(OSCviaUDP.prototype, "connected", {
+            get: function () {
+                return this.socket.enabled;
+            },
+            set: function (_conn) { },
+            enumerable: false,
+            configurable: true
+        });
         OSCviaUDP.prototype.sendMessage = function (address, valueList) {
             var tagsAndBytes = {
                 tags: ',',
@@ -215,6 +225,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 Math.abs(value) <= MAX_SAFE_INT;
         };
         __decorate([
+            Metadata_1.property("True if driver is enabled", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], OSCviaUDP.prototype, "connected", null);
+        __decorate([
             Meta.callable('send OSC message'),
             __param(0, Meta.parameter('OSC address')),
             __param(1, Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)),
@@ -227,6 +242,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Object])
         ], OSCviaUDP);
         return OSCviaUDP;
-    }(Driver_1.Driver));
+    }(NetworkDriver_1.NetworkDriver));
     exports.OSCviaUDP = OSCviaUDP;
 });

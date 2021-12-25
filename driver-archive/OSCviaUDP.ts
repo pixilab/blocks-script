@@ -33,11 +33,13 @@ const split: any = require("lib/split-string");
 import { NetworkUDP } from "system/Network";
 import { Driver } from "system_lib/Driver";
 import * as Meta from "system_lib/Metadata";
+import { property } from "system_lib/Metadata";
+import { NetworkDriver } from "../system_lib/NetworkDriver";
 
 
 
 @Meta.driver('NetworkUDP', { port: 8000 })
-export class OSCviaUDP extends Driver<NetworkUDP> {
+export class OSCviaUDP extends NetworkDriver {
 
     regExFloat: RegExp = /^[-\+]?\d+\.\d+$/;
     regExInteger: RegExp = /^[-\+]?\d+$/;
@@ -50,12 +52,18 @@ export class OSCviaUDP extends Driver<NetworkUDP> {
         // });
     }
 
-	/**
-	 * Allow clients to check for my type, just as in some system object classes
-	 */
-	isOfTypeName(typeName: string) {
-		return typeName === "OSCviaUDP" ? this : null;
-	}
+    /**
+     * Allow clients to check for my type, just as in some system object classes
+     */
+    isOfTypeName(typeName: string) {
+        return typeName === "OSCviaUDP" ? this : null;
+    }
+
+    @property("True if driver is enabled", true)
+    public get connected(): boolean {
+        return this.socket.enabled;
+    }
+	public set connected(_conn: boolean) {}
 
     @Meta.callable('send OSC message')
     public sendMessage(
