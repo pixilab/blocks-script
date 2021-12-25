@@ -118,7 +118,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 
 			this.checkStateSoon(5);
 
-			// Stop any cyclic activity if socket closed (e.g., driver disabled)
+			// Stop any cyclic activity if socket discarded (e.g., driver disabled)
 			socket.subscribe('finish', () => {
 				if (this.timer) {
 					this.timer.cancel();

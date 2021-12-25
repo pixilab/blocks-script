@@ -260,7 +260,7 @@ export class PJLinkPlus extends NetworkProjector {
                 this.poll();
                 this.attemptConnect();
 
-                // Stop any cyclic activity if socket closed (e.g., driver disabled)
+                // Stop any cyclic activity if socket discarded (e.g., driver disabled)
                 this.socket.subscribe('finish', () => {
                     if (this.statusPoller) {
                         this.statusPoller.cancel();

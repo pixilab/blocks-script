@@ -82,19 +82,10 @@ export class SamsungMDC extends Driver<NetworkTCP> {
 				this.dataReceived(msg.rawData)
 			);
 
-			socket.subscribe('finish', sender =>
-				this.discard()
-			);
+			socket.subscribe('finish', sender => this.discard());
+
 			if (socket.connected)	// Already connected - get going right away
 				this.pollNow();
-
-			// Shut down cyclic polling if socket shut down (e.g., if disabled)
-			socket.subscribe('finish', () => {
-				if (this.poller) {
-					this.poller.cancel();
-					this.poller = undefined;
-				}
-			});
 		}
 	}
 
