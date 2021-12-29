@@ -43,7 +43,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             if (socket.enabled) {
                 if (!_this.socket.listenerPort)
                     throw "Listening port not specified (e.g, 32331)";
+                socket.subscribe('finish', function () {
+                    if (_this.timer) {
+                        _this.timer.cancel();
+                        _this.timer = undefined;
+                    }
+                });
                 socket.subscribe('bytesReceived', function (sender, message) {
+                    debugLog("bytesReceived", message.rawData.length);
                     try {
                         _this.processReply(message.rawData);
                         _this.errCount = 0;
@@ -58,12 +65,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                     }
                 });
                 _this.checkStateSoon(5);
-                socket.subscribe('finish', function () {
-                    if (_this.timer) {
-                        _this.timer.cancel();
-                        _this.timer = undefined;
-                    }
-                });
             }
             return _this;
         }
@@ -147,6 +148,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             this.checkStateSoon();
         };
         KNXNetIP.prototype.setState = function (state) {
+            debugLog("setState", state);
             this.state = state;
             this.connected = state >= 2 && state <= 4;
             if (state === 3) {
@@ -189,11 +191,12 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                     this.gotDisconnectRequest(reply);
                     break;
                 default:
-                    console.warn("Comand not implemented", command);
+                    console.warn("Unknown msg from gateway", command);
                     break;
             }
         };
         KNXNetIP.prototype.gotDisconnectRequest = function (packet) {
+            debugLog("gotDisconnectRequest");
             var reqChannelId = packet[6];
             if (reqChannelId === this.channelId)
                 this.setState(0);
@@ -201,6 +204,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             this.socket.sendBytes(setLength(disconnectResponse));
         };
         KNXNetIP.prototype.gotConnectionResponse = function (packet) {
+            debugLog("gotConnectionResponse");
             this.verifyState(1);
             var error = packet[7];
             if (error)
@@ -213,6 +217,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                 throw "Packet unexpected in state. Expected " + expectedState + ' had ' + this.state;
         };
         KNXNetIP.prototype.gotConnectionStateResponse = function (packet) {
+            debugLog("gotConnectionStateResponse");
             this.verifyState(2);
             var error = packet[7];
             if (error)
@@ -220,6 +225,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             this.setState(3);
         };
         KNXNetIP.prototype.gotTunnelResponse = function (packet) {
+            debugLog("gotTunnelResponse");
             this.verifyState(4);
             var error = packet[9];
             if (error)
@@ -232,6 +238,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             }
         };
         KNXNetIP.prototype.gotTunnelRequest = function (packet) {
+            debugLog("gotTunnelRequest");
             this.sendTunnelAck(packet[7], packet[8]);
         };
         KNXNetIP.prototype.sendConnectRequest = function () {
@@ -474,9 +481,17 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
         var length = pkg.length;
         pkg[4] = length >> 8;
         pkg[5] = length & 0xff;
+        debugLog("About to send cmd", pkg[2], pkg[3]);
         return pkg;
     }
     function get16bit(rawData, offs) {
         return (rawData[offs] << 8) + rawData[offs + 1];
+    }
+    function debugLog() {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        console.debug(args);
     }
 });
