@@ -21,6 +21,7 @@ const notifyPattern: RegExp = /^(NOTIFY|OK) (get|set|sscurrent_ex) (\S*) (\d\d?)
 @driver('NetworkTCP', {port: 49280})
 export class YamahaQL1 extends Driver<NetworkTCP> {
 	private keepAliver: KeepAliver;
+	private toldConnFailed = false;	// To not nag in log if can't connect
 
 	private mNumFaders: number = 32; // How many faders to publish in GUI
 	private mScene: number;
@@ -58,10 +59,13 @@ export class YamahaQL1 extends Driver<NetworkTCP> {
 					if (this.socket.connected) {
 						// Get current status for everything we're interested in
 						this.pollEverything();
+						this.toldConnFailed = false;
 					} else
 						console.warn("Connection dropped unexpectedly");
-				} else
-					console.error(message.type);
+				} else if (!this.toldConnFailed) {
+					console.warn(message.type);
+					this.toldConnFailed = true;
+				}
 			});
 		} // Else socket is disabled - do nothing further (can't send any data anyway)
 	}

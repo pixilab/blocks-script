@@ -33,6 +33,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
         function YamahaQL1(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.toldConnFailed = false;
             _this.mNumFaders = 32;
             _this.master = _this.indexedProperty("master", Fader);
             _this.fader = _this.indexedProperty("fader", Fader);
@@ -49,12 +50,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
                     if (message.type === 'Connection') {
                         if (_this.socket.connected) {
                             _this.pollEverything();
+                            _this.toldConnFailed = false;
                         }
                         else
                             console.warn("Connection dropped unexpectedly");
                     }
-                    else
-                        console.error(message.type);
+                    else if (!_this.toldConnFailed) {
+                        console.warn(message.type);
+                        _this.toldConnFailed = true;
+                    }
                 });
             }
             return _this;
