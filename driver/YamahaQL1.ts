@@ -12,13 +12,13 @@
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
-import {IndexedProperty, AggregateElem} from "system_lib/ScriptBase";
+import {AggregateElem, IndexedProperty} from "system_lib/ScriptBase";
 
 /* RegExp for matching external status updates§
 */
 const notifyPattern: RegExp = /^(NOTIFY|OK) (get|set|sscurrent_ex) (\S*) (\d\d?)(?: 0 |)(?:"([^"]*)|(\S*))/;
 
-@driver('NetworkTCP', { port: 49280 })
+@driver('NetworkTCP', {port: 49280})
 export class YamahaQL1 extends Driver<NetworkTCP> {
 	private keepAliver: KeepAliver;
 
@@ -34,45 +34,43 @@ export class YamahaQL1 extends Driver<NetworkTCP> {
 		this.fader = this.indexedProperty("fader", Fader);
 
 		// ST L (Main steroe och L fader)
-		this.master.push(new Fader(this, 0));
-		this.master[0].mCommandPath = 'MIXER:Current/St';
+		this.master.push(new Fader(this, 0, 'MIXER:Current/St'));
 		// ST R (Main steroe och R fader)
-		this.master.push(new Fader(this, 1));
-		this.master[1].mCommandPath = 'MIXER:Current/St';
+		this.master.push(new Fader(this, 1, 'MIXER:Current/St'));
 
 		// Add all normal channels
-		for(let i=0; i<this.mNumFaders; ++i)
-		{
-			this.fader.push(new Fader(this, i));
-			this.fader[i].mCommandPath = 'MIXER:Current/InCh';
-		}
+		for (let i = 0; i < this.mNumFaders; ++i)
+			this.fader.push(new Fader(this, i, 'MIXER:Current/InCh'));
 
-		socket.autoConnect();
+		if (socket.enabled) {
+			socket.autoConnect();
+			this.keepAliver = new KeepAliver(this);
 
-		this.keepAliver = new KeepAliver(this);
+			// Stop any cyclic activity if socket discarded (e.g., driver disabled)
+			socket.subscribe('finish', () => this.keepAliver.discard());
 
-		// Subscribe to data received from device
-		socket.subscribe('textReceived', (sender, message) => this.gotData(message.text));
+			// Subscribe to data received from device
+			socket.subscribe('textReceived', (sender, message) => this.gotData(message.text));
 
-		// Listen for connection state change
-		socket.subscribe('connect', (sender, message) => {
-			if (message.type === 'Connection') {
-				if (this.socket.connected) {
-					// Get current status for everything we're interested in
-					this.pollEverything();
-				} else {
-					console.error("Connection dropped unexpectedly");
-				}
-			} else
-				console.error(message.type);
-		});
+			// Listen for connection state change
+			socket.subscribe('connect', (sender, message) => {
+				if (message.type === 'Connection') {
+					if (this.socket.connected) {
+						// Get current status for everything we're interested in
+						this.pollEverything();
+					} else
+						console.warn("Connection dropped unexpectedly");
+				} else
+					console.error(message.type);
+			});
+		} // Else socket is disabled - do nothing further (can't send any data anyway)
 	}
 
 	/** Data received from console.
-	*/
+	 */
 	private gotData(data: string) {
 		const result = data.match(notifyPattern);
-		if (result && result.length > 4 && !(result[1]== 'OK' && result[2] == 'set')) // Ignore ack from our own commands
+		if (result && result.length > 4 && !(result[1] == 'OK' && result[2] == 'set')) // Ignore ack from our own commands
 		{
 			/*	result[0] == Whole string
 				result[1] == OK|NOTIFY
@@ -82,47 +80,34 @@ export class YamahaQL1 extends Driver<NetworkTCP> {
 				result[5] == name if any
 				result[6] == fader value
 			*/
-			if(result[3] == 'MIXER:Current/InCh/Fader/Level')
-			{
-				this.fader[Number(result[4])].mLevel = Number(result[6])*0.01;
+			if (result[3] == 'MIXER:Current/InCh/Fader/Level') {
+				this.fader[Number(result[4])].mLevel = Number(result[6]) * 0.01;
 				this.fader[Number(result[4])].changed('level');
-			}
-			else if(result[3] == 'MIXER:Current/InCh/Fader/On')
-			{
-				this.fader[Number(result[4])].mOn = Number(result[6])?true:false;
+			} else if (result[3] == 'MIXER:Current/InCh/Fader/On') {
+				this.fader[Number(result[4])].mOn = !!Number(result[6]);
 				this.fader[Number(result[4])].changed('on');
-			}
-			else if(result[3] == 'MIXER:Current/InCh/Label/Name')
-			{
+			} else if (result[3] == 'MIXER:Current/InCh/Label/Name') {
 				this.fader[Number(result[4])].mLabel = result[5];
 				this.fader[Number(result[4])].changed('label');
-			}
-			else if(result[3] == 'MIXER:Current/St/Fader/Level')
-			{
-				this.master[Number(result[4])].mLevel = Number(result[6])*0.01;
+			} else if (result[3] == 'MIXER:Current/St/Fader/Level') {
+				this.master[Number(result[4])].mLevel = Number(result[6]) * 0.01;
 				this.master[Number(result[4])].changed('level');
-			}
-			else if(result[3] == 'MIXER:Current/St/Fader/On')
-			{
-				this.master[Number(result[4])].mOn = Number(result[6])?true:false;
+			} else if (result[3] == 'MIXER:Current/St/Fader/On') {
+				this.master[Number(result[4])].mOn = !!Number(result[6]);
 				this.master[Number(result[4])].changed('on');
-			}
-			else if(result[3] == 'MIXER:Current/St/Label/Name')
-			{
+			} else if (result[3] == 'MIXER:Current/St/Label/Name') {
 				this.master[Number(result[4])].mLabel = result[5];
 				this.master[Number(result[4])].changed('label');
-			}
-			else if(result[3] == 'NOTIFY sscurrent_ex MIXER:Lib/Scene') // Scene changed
-			{
+			} else if (result[3] == 'NOTIFY sscurrent_ex MIXER:Lib/Scene') {
+				// Scene changed
 				this.mScene = Number(result[4]);
 				this.changed('current_scene');
 			}
-
 		}
 	}
 
 	/**	Allow raw command string as well, for "no driver" backward compatibility.
-	*/
+	 */
 	@callable("Send a command")
 	public sendText(
 		@parameter("Command to send") cmd: string,
@@ -135,38 +120,49 @@ export class YamahaQL1 extends Driver<NetworkTCP> {
 	@min(0) @max(300)
 	public set current_scene(val: number) {
 		this.mScene = val;
-		this.sendText("ssrecall_ex MIXER:Lib/Scene "+ val);
+		this.sendText("ssrecall_ex MIXER:Lib/Scene " + val);
 	}
 	public get current_scene(): number {
 		return this.mScene;
 	}
 
-	private pollEverything()
-	{
+	private pollEverything() {
 		// console.log('Polling for current status');
 		this.sendText('sscurrent_ex MIXER:Lib/Scene');
 		this.sendText('get MIXER:Current/St/Fader/Level 0 0');
 		this.sendText('get MIXER:Current/St/Fader/On 0 0');
 		this.sendText('get MIXER:Current/St/Label/Name 0 0');
 
-		for(let i=0; i<this.mNumFaders; ++i)
-		{
-			this.sendText('get MIXER:Current/InCh/Fader/Level '+ i +' 0');
-			this.sendText('get MIXER:Current/InCh/Fader/On '+ i +' 0');
-			this.sendText('get MIXER:Current/InCh/Label/Name '+ i +' 0');
+		for (let i = 0; i < this.mNumFaders; ++i) {
+			this.sendText('get MIXER:Current/InCh/Fader/Level ' + i + ' 0');
+			this.sendText('get MIXER:Current/InCh/Fader/On ' + i + ' 0');
+			this.sendText('get MIXER:Current/InCh/Label/Name ' + i + ' 0');
 		}
 	}
 }
 
 class KeepAliver {
+	private pending: CancelablePromise<any>;
+
 	constructor(private YamahaQL1: YamahaQL1) {
 		this.saySomethingInAWhile();
 	}
 
+	/**
+	 * Discard me, stopping my regular saySomethingInAWhile calls
+	 */
+	discard() {
+		if (this.pending) {
+			this.pending.cancel();
+			this.pending = undefined;
+		}
+	}
+
 	/** Send some data once in a while to keep connection open.
-	*/
+	 */
 	private saySomethingInAWhile() {
-		wait(20000).then(() => {
+		this.pending = wait(20000);
+		this.pending.then(() => {
 			this.sayNow();
 			this.saySomethingInAWhile();	// Ad infinitum
 		});
@@ -180,13 +176,17 @@ class KeepAliver {
 }
 
 class Fader extends AggregateElem {
-	mId: number;
+	private mId: number;
+
 	mLabel: string = '';
 	mLevel: number = 0;
 	mOn: boolean = false;
-	mCommandPath: string;
 
-	constructor(private owner: YamahaQL1, id: number) {
+	constructor(
+		private owner: YamahaQL1,
+		id: number,
+		private mCommandPath: string
+	) {
 		super();
 		this.mId = id;
 	}
@@ -195,9 +195,10 @@ class Fader extends AggregateElem {
 	get label(): string {
 		return this.mLabel;
 	}
+
 	set label(value: string) {
 		if (value !== undefined) {
-			this.owner.sendText('set '+ this.mCommandPath +'/Label/Name '+this.mId+' 0 "'+ value +'"');
+			this.owner.sendText('set ' + this.mCommandPath + '/Label/Name ' + this.mId + ' 0 "' + value + '"');
 			this.mLabel = value;
 		}
 	}
@@ -207,9 +208,10 @@ class Fader extends AggregateElem {
 	get level(): number {
 		return this.mLevel;
 	}
+
 	set level(value: number) {
-		if(value <= -60) value = -327.68;
-		this.owner.sendText('set '+ this.mCommandPath +'/Fader/Level '+this.mId+' 0 '+ Math.round(value*100));
+		if (value <= -60) value = -327.68;
+		this.owner.sendText('set ' + this.mCommandPath + '/Fader/Level ' + this.mId + ' 0 ' + Math.round(value * 100));
 		this.mLevel = value;
 	}
 
@@ -217,9 +219,10 @@ class Fader extends AggregateElem {
 	get on(): boolean {
 		return this.mOn;
 	}
+
 	set on(value: boolean) {
 		if (value !== undefined) {
-			this.owner.sendText('set '+ this.mCommandPath +'/Fader/On '+this.mId+' 0 '+ (value?1:0));
+			this.owner.sendText('set ' + this.mCommandPath + '/Fader/On ' + this.mId + ' 0 ' + (value ? 1 : 0));
 			this.mOn = value;
 		}
 	}

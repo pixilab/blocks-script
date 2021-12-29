@@ -36,29 +36,27 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
             _this.mNumFaders = 32;
             _this.master = _this.indexedProperty("master", Fader);
             _this.fader = _this.indexedProperty("fader", Fader);
-            _this.master.push(new Fader(_this, 0));
-            _this.master[0].mCommandPath = 'MIXER:Current/St';
-            _this.master.push(new Fader(_this, 1));
-            _this.master[1].mCommandPath = 'MIXER:Current/St';
-            for (var i = 0; i < _this.mNumFaders; ++i) {
-                _this.fader.push(new Fader(_this, i));
-                _this.fader[i].mCommandPath = 'MIXER:Current/InCh';
+            _this.master.push(new Fader(_this, 0, 'MIXER:Current/St'));
+            _this.master.push(new Fader(_this, 1, 'MIXER:Current/St'));
+            for (var i = 0; i < _this.mNumFaders; ++i)
+                _this.fader.push(new Fader(_this, i, 'MIXER:Current/InCh'));
+            if (socket.enabled) {
+                socket.autoConnect();
+                _this.keepAliver = new KeepAliver(_this);
+                socket.subscribe('finish', function () { return _this.keepAliver.discard(); });
+                socket.subscribe('textReceived', function (sender, message) { return _this.gotData(message.text); });
+                socket.subscribe('connect', function (sender, message) {
+                    if (message.type === 'Connection') {
+                        if (_this.socket.connected) {
+                            _this.pollEverything();
+                        }
+                        else
+                            console.warn("Connection dropped unexpectedly");
+                    }
+                    else
+                        console.error(message.type);
+                });
             }
-            socket.autoConnect();
-            _this.keepAliver = new KeepAliver(_this);
-            socket.subscribe('textReceived', function (sender, message) { return _this.gotData(message.text); });
-            socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection') {
-                    if (_this.socket.connected) {
-                        _this.pollEverything();
-                    }
-                    else {
-                        console.error("Connection dropped unexpectedly");
-                    }
-                }
-                else
-                    console.error(message.type);
-            });
             return _this;
         }
         YamahaQL1.prototype.gotData = function (data) {
@@ -69,7 +67,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
                     this.fader[Number(result[4])].changed('level');
                 }
                 else if (result[3] == 'MIXER:Current/InCh/Fader/On') {
-                    this.fader[Number(result[4])].mOn = Number(result[6]) ? true : false;
+                    this.fader[Number(result[4])].mOn = !!Number(result[6]);
                     this.fader[Number(result[4])].changed('on');
                 }
                 else if (result[3] == 'MIXER:Current/InCh/Label/Name') {
@@ -81,7 +79,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
                     this.master[Number(result[4])].changed('level');
                 }
                 else if (result[3] == 'MIXER:Current/St/Fader/On') {
-                    this.master[Number(result[4])].mOn = Number(result[6]) ? true : false;
+                    this.master[Number(result[4])].mOn = !!Number(result[6]);
                     this.master[Number(result[4])].changed('on');
                 }
                 else if (result[3] == 'MIXER:Current/St/Label/Name') {
@@ -145,9 +143,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
             this.YamahaQL1 = YamahaQL1;
             this.saySomethingInAWhile();
         }
+        KeepAliver.prototype.discard = function () {
+            if (this.pending) {
+                this.pending.cancel();
+                this.pending = undefined;
+            }
+        };
         KeepAliver.prototype.saySomethingInAWhile = function () {
             var _this = this;
-            wait(20000).then(function () {
+            this.pending = wait(20000);
+            this.pending.then(function () {
                 _this.sayNow();
                 _this.saySomethingInAWhile();
             });
@@ -161,9 +166,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
     }());
     var Fader = (function (_super) {
         __extends(Fader, _super);
-        function Fader(owner, id) {
+        function Fader(owner, id, mCommandPath) {
             var _this = _super.call(this) || this;
             _this.owner = owner;
+            _this.mCommandPath = mCommandPath;
             _this.mLabel = '';
             _this.mLevel = 0;
             _this.mOn = false;
