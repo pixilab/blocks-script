@@ -23,10 +23,10 @@ declare global {
  types).
 
  Note to self: I must pass in baseDriverType as a string, since those are typically
- defined as interfaces (they're implemented in Java), so I can't get the param type
- using design:paramtypes, as that will just say 'Object' for an interface.
+ defined as interfaces (implemented in Java-land). So I can't get the param type
+ using design:paramtypes since that then just says 'Object'.
  */
-export function driver(baseDriverType: string, typeSpecificMeta: any) {
+export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP', typeSpecificMeta: any) {
 	const info: DriverInfo = {
 		paramTypes: [baseDriverType],
 		info: typeSpecificMeta
@@ -44,12 +44,14 @@ interface DriverInfo {
 	paramTypes: string[];
 }
 
+// List of valid role identifiers
+type RoleRequired = 'Admin'|'Manager'|'Creator'|'Editor'|'Contributor'|'Staff'|'Spot';
+
 /**
  * Annotation for user script class, specifying role required to set properties exposed
- * by the script, where role is one of the following: "Admin", "Manager", "Creator", "Editor",
- * "Contributor", "Staff" or "Spot".
+ * by the script.
  */
-export function roleRequired(role: string) {
+export function roleRequired(role: RoleRequired) {
 	return function(target: any): void {
 		return Reflect.defineMetadata("pixi:roleRequired", role, target);
 	}
@@ -91,8 +93,8 @@ export function parameter(description?: string, optional?: boolean) {
 interface Ctor<T> { new(... args: any[]): T ;}
 
 /**
- * Decorator for a feed item data field. Applied to an instance variable.
- * Field value is read-only.
+ * Decorator for a feed item data field. Applied to an instance variable, which must
+ * be of primitive type (i.e., string, number or boolean). Field values are read-only.
  */
 export function field(description?: string) {
 	return $metaSupport$.fieldMetadata({description: description} );
@@ -149,7 +151,7 @@ export function max(max:number) {
  	/rest/script/invoke-auth/<user-script-name>/<method-name>
 
  */
-export function resource(roleRequired?: string) {
+export function resource(roleRequired?: RoleRequired) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
 		const info = {	// Information provided about this resource
 			auth: roleRequired || ""
