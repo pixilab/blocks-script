@@ -83,7 +83,7 @@ export class VISCA extends Driver<NetworkTCP> {
 		});
 		this.init();
 
-		// Stop any cyclic activity if socket closed (e.g., driver disabled)
+		// Stop any cyclic activity if socket discarded (e.g., driver disabled)
 		socket.subscribe('finish', () => {
 			this.stopPolling();
 			if (this.pollStateTimer) {	// Initial state polling too

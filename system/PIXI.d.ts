@@ -19,10 +19,10 @@ declare function asap(callback: Function): void;
  	with a space as separator.
  */
 interface Console {
-	log(...toLog: string[]): void;		// Synonymous with info
-	info(...toLog: string[]): void;		// Log as info message
-	error(...toLog: string[]): void;		// Log as error message
-	warn(...toLog: string[]): void;		// Log as warning message
+	log(...toLog: any[]): void;			// Synonymous with info
+	info(...toLog: any[]): void;		// Log as info message
+	error(...toLog: any[]): void;		// Log as error message
+	warn(...toLog: any[]): void;		// Log as warning message
 }
 declare var console: Console;	// Globally accessible through "console"
 
@@ -33,7 +33,8 @@ declare var console: Console;	// Globally accessible through "console"
 	the callback from one fulfillment can in its turn return a promise, and so on.
 	Learn more about Promises here:
 	https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises
- */
+*/
+// @ts-ignore // the fact that Promise may also be declared elsewhere
 declare class Promise<T> implements Thenable<T> {
 	constructor(callback: promiseCallback<T>);
 

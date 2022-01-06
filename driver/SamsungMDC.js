@@ -46,17 +46,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 socket.subscribe('bytesReceived', function (sender, msg) {
                     return _this.dataReceived(msg.rawData);
                 });
-                socket.subscribe('finish', function (sender) {
-                    return _this.discard();
-                });
+                socket.subscribe('finish', function (sender) { return _this.discard(); });
                 if (socket.connected)
                     _this.pollNow();
-                socket.subscribe('finish', function () {
-                    if (_this.poller) {
-                        _this.poller.cancel();
-                        _this.poller = undefined;
-                    }
-                });
             }
             return _this;
         }

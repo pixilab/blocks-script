@@ -100,8 +100,16 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			if (!this.socket.listenerPort)
 				throw "Listening port not specified (e.g, 32331)"
 
+			// Stop any cyclic activity if socket discarded (e.g., driver disabled)
+			socket.subscribe('finish', () => {
+				if (this.timer) {
+					this.timer.cancel();
+					this.timer = undefined;
+				}
+			});
+
 			socket.subscribe('bytesReceived', (sender, message) => {
-				// console.log("bytesReceived", message.rawData.length);
+				debugLog("bytesReceived", message.rawData.length);
 				try {
 					this.processReply(message.rawData);
 					this.errCount = 0;
@@ -117,14 +125,6 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			});
 
 			this.checkStateSoon(5);
-
-			// Stop any cyclic activity if socket closed (e.g., driver disabled)
-			socket.subscribe('finish', () => {
-				if (this.timer) {
-					this.timer.cancel();
-					this.timer = undefined;
-				}
-			});
 		}
 	}
 
@@ -185,7 +185,6 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 				if (this.socket.enabled) {
 					this.sendConnectRequest();
 					this.setState(State.CONNECTING);
-					// console.log("CONNECTING");
 					this.checkStateSoon();	// Make sure I succeed reasonably soon
 				}
 				break;
@@ -222,7 +221,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * Change my state. Also determines if I'm considered connected.
 	 */
 	private setState(state: State) {
-		// console.log("setState", state);
+		debugLog("setState", state);
 		this.state = state;
 		this.connected = state >= State.CONNECTIONSTATE_REQUESTED && state <= State.TUNNELING;
 		if (state === State.CONNECTED_IDLE) { // In "connected & idle" state
@@ -248,10 +247,9 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			throw "Invalid Header";
 		const command = get16bit(reply, 2);
 		const expectedLength = get16bit(reply, 4);
-		// console.log("Length", reply[4], reply[5], expectedLength);
 		if (expectedLength !== reply.length)
 			throw "Invalid reply expectedLength, expected " + expectedLength + ' got ' + reply.length;
-		// console.log("Got command", command);
+		// debugLog("Cmd from gateway", command);
 		switch (command) {
 		case Command.CONNECTION_RESPONSE:
 			this.gotConnectionResponse(reply);
@@ -270,7 +268,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			this.gotDisconnectRequest(reply);
 			break;
 		default:	// Log and ignore unknown commands for now
-			console.warn("Comand not implemented", command);
+			console.warn("Unknown msg from gateway", command);
 			break;
 		}
 	}
@@ -279,6 +277,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * Peer wants to disconnect from me. Just ack that request and consider me disconnected.
 	 */
 	private gotDisconnectRequest(packet: number[]) {
+		debugLog("gotDisconnectRequest");
 		const reqChannelId = packet[6];
 		if (reqChannelId === this.channelId) 	// Handle only if my current channel ID
 			this.setState(State.DISCONNECTED);
@@ -293,7 +292,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * If all is well, bump my state and send a CONNECTIONSTATE_REQUEST.
 	 */
 	private gotConnectionResponse(packet: number[]) {
-		// console.log("gotConnectionResponse");
+		debugLog("gotConnectionResponse");
 		this.verifyState(State.CONNECTING);
 		const error = packet[7];
 		if (error)
@@ -308,7 +307,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	}
 
 	private gotConnectionStateResponse(packet: number[]) {
-		// console.log("gotConnectionStateResponse");
+		debugLog("gotConnectionStateResponse");
 		this.verifyState(State.CONNECTIONSTATE_REQUESTED);
 		const error = packet[7];
 		if (error)
@@ -317,6 +316,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	}
 
 	private gotTunnelResponse(packet: number[]) {
+		debugLog("gotTunnelResponse");
 		this.verifyState(State.TUNNELING);
 		const error = packet[9];
 		if (error)
@@ -335,6 +335,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * keep peer happy.
 	 */
 	private gotTunnelRequest(packet: number[]) {
+		debugLog("gotTunnelRequest");
 		this.sendTunnelAck(packet[7], packet[8]);
 	}
 
@@ -647,6 +648,7 @@ function calcAddr(addr1: number, addr2: number, addr3: number) {
 	const length = pkg.length;
 	pkg[4] = length >> 8;
 	pkg[5] = length & 0xff;
+	debugLog("About to send cmd", pkg[2], pkg[3]);
 	return pkg;
 }
 
@@ -657,3 +659,9 @@ function get16bit(rawData: number[], offs: number) {
 	return (rawData[offs] << 8) + rawData[offs+1];
 }
 
+/**
+Internal "verbose" log function, making my logging easy to turn on/off in one place.
+*/
+function debugLog(...args: any[]) {
+	console.debug(args);
+}
