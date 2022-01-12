@@ -8,7 +8,7 @@
  */
 
 import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
+import {NetworkDriver} from "system_lib/NetworkDriver";
 import * as Meta from "system_lib/Metadata";
 
 const CMD_SHUTDOWN =         [0xff, 0x16, 0x01, 0x30, 0x30, 0x30, 0x31, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe];
@@ -16,31 +16,33 @@ const CMD_RESTART_COMPUTER = [0xff, 0x16, 0x01, 0x30, 0x30, 0x30, 0x31, 0x31, 0x
 const CMD_RESTART_WINDOWS =  [0xff, 0x16, 0x01, 0x30, 0x30, 0x30, 0x31, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe];
 
 @Meta.driver('NetworkTCP', { port: 4550 })
-export class MedialonAppLauncher extends Driver<NetworkTCP> {
-	private _socket: NetworkTCP;
-	private _power: boolean;
-	private _shuttingDown: boolean;
+export class MedialonAppLauncher extends NetworkDriver {
+    private _socket: NetworkTCP;
+    private _power: boolean;
+    private _shuttingDown: boolean;
     public constructor(private socket: NetworkTCP) {
         super(socket);
-		this._socket = socket;
+        this._socket = socket;
         socket.enableWakeOnLAN();
         socket.autoConnect(true);
 
         socket.subscribe("textReceived", (sender, message) => {
             console.info("Data received", message.text);
         });
-		socket.subscribe('connect', ((sender, message) => {
-			if (this._shuttingDown) return;
-			switch (message.type) {
-				case "Connection":
-					this.setPowerState(true);
-					break;
-				case "ConnectionFailed":
-					this.setPowerState(false);
-					break;
-			}
-		}));
+        socket.subscribe('connect', ((sender, message) => {
+            if (this._shuttingDown) return;
+            switch (message.type) {
+                case "Connection":
+                    this.setPowerState(true);
+                    break;
+                case "ConnectionFailed":
+                    this.setPowerState(false);
+                    break;
+            }
+        }));
     }
+    /** Allow clients to check for my type, just as in some system object classes */
+    isOfTypeName(typeName: string) { return typeName === "MedialonAppLauncher" ? this : null; }
 
 	@Meta.property('Power on/off')
 	public set power(on: boolean) {

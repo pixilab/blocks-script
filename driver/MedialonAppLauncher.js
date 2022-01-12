@@ -22,7 +22,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Meta) {
+define(["require", "exports", "system_lib/NetworkDriver", "system_lib/Metadata"], function (require, exports, NetworkDriver_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MedialonAppLauncher = void 0;
@@ -54,6 +54,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }));
             return _this;
         }
+        MedialonAppLauncher.prototype.isOfTypeName = function (typeName) { return typeName === "MedialonAppLauncher" ? this : null; };
         Object.defineProperty(MedialonAppLauncher.prototype, "power", {
             get: function () {
                 return this._power;
@@ -127,6 +128,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Object])
         ], MedialonAppLauncher);
         return MedialonAppLauncher;
-    }(Driver_1.Driver));
+    }(NetworkDriver_1.NetworkDriver));
     exports.MedialonAppLauncher = MedialonAppLauncher;
 });
