@@ -383,7 +383,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NumState.prototype.get = function () {
             var result = _super.prototype.get.call(this);
             if (typeof result !== 'number' || isNaN(result)) {
-                console.error("Value invalid for", this.baseCmd, result);
+                console.error("Invalid value for", this.propName, result);
                 result = this.min || 0;
             }
             return result;

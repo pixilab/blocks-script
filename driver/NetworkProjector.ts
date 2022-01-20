@@ -411,7 +411,7 @@ export abstract class State<T> {
 
 	constructor(
 		protected baseCmd: string, 	// Base part of command to send
-		private propName: string, 	// Name of associated property
+		protected propName: string, 	// Name of associated property
 		private correctionApprover?: ()=>boolean // If specified, do NOT attempt to correct if returns false
 	) {}
 
@@ -563,7 +563,7 @@ export class NumState extends State<number> {
 		var result = super.get();
 		// Better return min/0 than undefined, NaN or some invalid type of data
 		if (typeof result !== 'number' || isNaN(result)) {
-			console.error("Value invalid for", this.baseCmd, result);
+			console.error("Invalid value for", this.propName, result);
 			result = this.min || 0;
 		}
 		return result;
