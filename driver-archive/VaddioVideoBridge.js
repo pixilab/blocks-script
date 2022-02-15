@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -92,14 +94,14 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"],
         VaddioVideoBridge.userNameReq = /.+vaddio-av-bridge-2x1[0-9,A-F-]+/;
         VaddioVideoBridge.loginAccepted = /.+Vaddio Interactive Shell.+/;
         __decorate([
-            Metadata_1.property("Selected input number"),
-            Metadata_1.min(1),
-            Metadata_1.max(2),
+            (0, Metadata_1.property)("Selected input number"),
+            (0, Metadata_1.min)(1),
+            (0, Metadata_1.max)(2),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], VaddioVideoBridge.prototype, "input", null);
         VaddioVideoBridge = VaddioVideoBridge_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 23 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 23 }),
             __metadata("design:paramtypes", [Object])
         ], VaddioVideoBridge);
         return VaddioVideoBridge;

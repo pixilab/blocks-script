@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -45,7 +47,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleMail", "system/
             });
         };
         __decorate([
-            Metadata_1.callable("Send the latest.log file to specified email address"),
+            (0, Metadata_1.callable)("Send the latest.log file to specified email address"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)

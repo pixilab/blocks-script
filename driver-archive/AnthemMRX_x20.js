@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -383,49 +385,49 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             return !this.busyHoldoff && _super.prototype.okToSendCommand.call(this);
         };
         __decorate([
-            Metadata_1.property('Front panel brightness: 0=off, 1=low, 2=medium, 3=high'),
-            Metadata_1.min(0),
-            Metadata_1.max(3),
+            (0, Metadata_1.property)('Front panel brightness: 0=off, 1=low, 2=medium, 3=high'),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(3),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], AnthemMRX_x20.prototype, "frontPanelBrightness", null);
         __decorate([
-            Metadata_1.property('Info'),
+            (0, Metadata_1.property)('Info'),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], AnthemMRX_x20.prototype, "info", null);
         __decorate([
-            Metadata_1.property("Mute"),
+            (0, Metadata_1.property)("Mute"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], AnthemMRX_x20.prototype, "mute", null);
         __decorate([
-            Metadata_1.property('Power All Zones on/off'),
+            (0, Metadata_1.property)('Power All Zones on/off'),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], AnthemMRX_x20.prototype, "powerAll", null);
         __decorate([
-            Metadata_1.property("Standby IP Control. This must be enabled for the power-on command to operate via IP. Note that anabling this disables ECO mode."),
+            (0, Metadata_1.property)("Standby IP Control. This must be enabled for the power-on command to operate via IP. Note that anabling this disables ECO mode."),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], AnthemMRX_x20.prototype, "standbyIPControl", null);
         __decorate([
-            Metadata_1.property("Volume, Main Zone"),
-            Metadata_1.min(VOL_MIN),
-            Metadata_1.max(VOL_MAX),
+            (0, Metadata_1.property)("Volume, Main Zone"),
+            (0, Metadata_1.min)(VOL_MIN),
+            (0, Metadata_1.max)(VOL_MAX),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], AnthemMRX_x20.prototype, "volume", null);
         __decorate([
-            Metadata_1.callable('Display Message'),
-            __param(0, Metadata_1.parameter('message')),
-            __param(1, Metadata_1.parameter('row 0-1', true)),
+            (0, Metadata_1.callable)('Display Message'),
+            __param(0, (0, Metadata_1.parameter)('message')),
+            __param(1, (0, Metadata_1.parameter)('row 0-1', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number]),
             __metadata("design:returntype", void 0)
         ], AnthemMRX_x20.prototype, "displayMessage", null);
         AnthemMRX_x20 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 14999 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 14999 }),
             __metadata("design:paramtypes", [Object])
         ], AnthemMRX_x20);
         return AnthemMRX_x20;

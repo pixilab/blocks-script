@@ -34,11 +34,11 @@ Structure the json data in the config file as in the following example:
 			"addr": [1, 2, 102]
 		},
 	]
-}	
-Where "analog" and "digital" sets the datatype. 
+}
+Where "analog" and "digital" sets the datatype.
 "analog" represent KNX datatype 5.001 = 8-bit unsigned value, like dim value (0..100%), blinds position (0..100%)
 "digital represent KNX datatype 1.001 = boolean, like switching, move up/down, step
-The callable enforceProp will send all the currently stored values in Blocks to the KNX groups. 
+The callable enforceProp will send all the currently stored values in Blocks to the KNX groups.
  */
 
 import {callable, parameter, driver, property} from "system_lib/Metadata";
@@ -329,10 +329,10 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 */
 	private gotConnectionResponse(packet: number[]) {
 		debugLog("gotConnectionResponse");
-		this.verifyState(State.CONNECTING);
 		const error = packet[7];
 		if (error)
 			throw "Connetion response error " + error;
+		this.verifyState(State.CONNECTING);
 		this.channelId = packet[6];
 		this.sendConnectionStateRequest();
 	}
@@ -344,19 +344,19 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 
 	private gotConnectionStateResponse(packet: number[]) {
 		debugLog("gotConnectionStateResponse");
-		this.verifyState(State.CONNECTIONSTATE_REQUESTED);
 		const error = packet[7];
 		if (error)
 			throw "Connetion state response error " + error;
+		this.verifyState(State.CONNECTIONSTATE_REQUESTED);
 		this.setState(State.CONNECTED_IDLE);
 	}
 
 	private gotTunnelResponse(packet: number[]) {
 		debugLog("gotTunnelResponse");
-		this.verifyState(State.TUNNELING);
 		const error = packet[9];
 		if (error)
 			throw "Tunnel response error " + error;
+		this.verifyState(State.TUNNELING);
 		const seqId = packet[8];
 		const queue = this.cmdQueue;
 		if (queue.length && queue[0].seqId === seqId) {

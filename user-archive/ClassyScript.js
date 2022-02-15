@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -84,20 +86,20 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             return a + b;
         };
         __decorate([
-            Metadata_1.property("Useful textual description"),
+            (0, Metadata_1.property)("Useful textual description"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], ClassyScript.prototype, "connected", null);
         __decorate([
-            Metadata_1.property("A numeric value"),
-            Metadata_1.min(0),
-            Metadata_1.max(25),
+            (0, Metadata_1.property)("A numeric value"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(25),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], ClassyScript.prototype, "level", null);
         __decorate([
-            Metadata_1.callable("Something to help the user"),
-            __param(0, Metadata_1.parameter("Textual description shown in UI")),
+            (0, Metadata_1.callable)("Something to help the user"),
+            __param(0, (0, Metadata_1.parameter)("Textual description shown in UI")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Boolean]),
             __metadata("design:returntype", String)

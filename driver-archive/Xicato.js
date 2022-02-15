@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -484,96 +486,96 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         ;
         var Xicato_1;
         __decorate([
-            Metadata_1.property('Connected successfully to device', true),
+            (0, Metadata_1.property)('Connected successfully to device', true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], Xicato.prototype, "connected", null);
         __decorate([
-            Metadata_1.property('Current bearer token issued by gateway'),
+            (0, Metadata_1.property)('Current bearer token issued by gateway'),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], Xicato.prototype, "token", null);
         __decorate([
-            Metadata_1.callable('set intensity'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('device id')),
-            __param(2, Metadata_1.parameter('target intensity, in percent (0 or between 0.1 and 100.0)')),
-            __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
+            (0, Metadata_1.callable)('set intensity'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('device id')),
+            __param(2, (0, Metadata_1.parameter)('target intensity, in percent (0 or between 0.1 and 100.0)')),
+            __param(3, (0, Metadata_1.parameter)('fade time, in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", void 0)
         ], Xicato.prototype, "deviceSetIntensity", null);
         __decorate([
-            Metadata_1.callable('set intensity'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('group id')),
-            __param(2, Metadata_1.parameter('target intensity, in percent (0 or between 0.1 and 100.0)')),
-            __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
+            (0, Metadata_1.callable)('set intensity'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('group id')),
+            __param(2, (0, Metadata_1.parameter)('target intensity, in percent (0 or between 0.1 and 100.0)')),
+            __param(3, (0, Metadata_1.parameter)('fade time, in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", void 0)
         ], Xicato.prototype, "groupSetIntensity", null);
         __decorate([
-            Metadata_1.callable('recall scene'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('device id')),
-            __param(2, Metadata_1.parameter('target scene number (an integer)')),
-            __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
+            (0, Metadata_1.callable)('recall scene'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('device id')),
+            __param(2, (0, Metadata_1.parameter)('target scene number (an integer)')),
+            __param(3, (0, Metadata_1.parameter)('fade time, in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", Promise)
         ], Xicato.prototype, "deviceRecallScene", null);
         __decorate([
-            Metadata_1.callable('recall scene'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('group id')),
-            __param(2, Metadata_1.parameter('target scene number (an integer)')),
-            __param(3, Metadata_1.parameter('fade time, in milliseconds', true)),
+            (0, Metadata_1.callable)('recall scene'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('group id')),
+            __param(2, (0, Metadata_1.parameter)('target scene number (an integer)')),
+            __param(3, (0, Metadata_1.parameter)('fade time, in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number]),
             __metadata("design:returntype", Promise)
         ], Xicato.prototype, "groupRecallScene", null);
         __decorate([
-            Metadata_1.callable('add device to group'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
-            __param(2, Metadata_1.parameter('group number (an integer)')),
+            (0, Metadata_1.callable)('add device to group'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('target device ID (cannot be a group or a sensor)')),
+            __param(2, (0, Metadata_1.parameter)('group number (an integer)')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
             __metadata("design:returntype", Promise)
         ], Xicato.prototype, "groupAddDevice", null);
         __decorate([
-            Metadata_1.callable('remove device from group'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
-            __param(2, Metadata_1.parameter('group number (an integer)')),
+            (0, Metadata_1.callable)('remove device from group'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('target device ID (cannot be a group or a sensor)')),
+            __param(2, (0, Metadata_1.parameter)('group number (an integer)')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
             __metadata("design:returntype", Promise)
         ], Xicato.prototype, "groupRemoveDevice", null);
         __decorate([
-            Metadata_1.callable('set scene for a device'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
-            __param(2, Metadata_1.parameter('target scene number (an integer)')),
-            __param(3, Metadata_1.parameter('target intensity, in percent (0 or between 0.1 and 100.0)')),
-            __param(4, Metadata_1.parameter('fade time in milliseconds', true)),
-            __param(5, Metadata_1.parameter('delay in milliseconds', true)),
+            (0, Metadata_1.callable)('set scene for a device'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('target device ID (cannot be a group or a sensor)')),
+            __param(2, (0, Metadata_1.parameter)('target scene number (an integer)')),
+            __param(3, (0, Metadata_1.parameter)('target intensity, in percent (0 or between 0.1 and 100.0)')),
+            __param(4, (0, Metadata_1.parameter)('fade time in milliseconds', true)),
+            __param(5, (0, Metadata_1.parameter)('delay in milliseconds', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number, Number, Number, Number]),
             __metadata("design:returntype", Promise)
         ], Xicato.prototype, "deviceSetScene", null);
         __decorate([
-            Metadata_1.callable('remove scene from device'),
-            __param(0, Metadata_1.parameter('network name')),
-            __param(1, Metadata_1.parameter('target device ID (cannot be a group or a sensor)')),
-            __param(2, Metadata_1.parameter('target scene number (an integer)')),
+            (0, Metadata_1.callable)('remove scene from device'),
+            __param(0, (0, Metadata_1.parameter)('network name')),
+            __param(1, (0, Metadata_1.parameter)('target device ID (cannot be a group or a sensor)')),
+            __param(2, (0, Metadata_1.parameter)('target scene number (an integer)')),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Number, Number]),
             __metadata("design:returntype", Promise)
         ], Xicato.prototype, "deviceRemoveScene", null);
         Xicato = Xicato_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 8000 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 8000 }),
             __metadata("design:paramtypes", [Object])
         ], Xicato);
         return Xicato;

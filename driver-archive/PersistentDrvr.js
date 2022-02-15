@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -59,12 +61,12 @@ define(["require", "exports", "system/SimpleFile", "system_lib/Driver", "system_
             configurable: true
         });
         __decorate([
-            Metadata_1.property("Persisted property"),
+            (0, Metadata_1.property)("Persisted property"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], PersistentDrvr.prototype, "stringo", null);
         PersistentDrvr = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 1025 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 1025 }),
             __metadata("design:paramtypes", [Object])
         ], PersistentDrvr);
         return PersistentDrvr;

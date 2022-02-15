@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -60,12 +62,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
         };
         __decorate([
-            Metadata_1.property("Last scanned value, or empty string", true),
+            (0, Metadata_1.property)("Last scanned value, or empty string", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], NetRFID.prototype, "scanned", null);
         NetRFID = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 50000 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 50000 }),
             __metadata("design:paramtypes", [Object])
         ], NetRFID);
         return NetRFID;

@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -74,8 +76,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     newSource = value === '' ? null : value;
                 if (currentSource !== newSource) {
                     currentSource = newSource;
-                    console.log("Setting single source to " + currentSource);
-                    _this.mMyConnection.doCommand("matrix set " + currentSource + " " + _this.mDeviceName);
+                    console.log("Setting single source to ".concat(currentSource));
+                    _this.mMyConnection.doCommand("matrix set ".concat(currentSource, " ").concat(_this.mDeviceName));
                 }
                 return currentSource;
             });
@@ -83,7 +85,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         Wyrestorm.prototype.setLayout = function (layoutName) {
             this.mCurrentLayout = this.mMultiviewConfig.layouts[layoutName];
             if (!this.mCurrentLayout) {
-                console.error("No layout with name \"" + layoutName + "\" configured.");
+                console.error("No layout with name \"".concat(layoutName, "\" configured."));
                 return;
             }
             for (var i in this.mCurrentLayout.tiles) {
@@ -102,12 +104,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         Wyrestorm.prototype.applyLayout = function () {
             this.mApplyTilesDebounce = undefined;
             if (this.mCurrentLayout) {
-                var command = "mview set " + this.mDeviceName + " " + this.mCurrentLayout.style;
+                var command = "mview set ".concat(this.mDeviceName, " ").concat(this.mCurrentLayout.style);
                 var tiles = this.tiles;
                 for (var tileIx in this.mCurrentLayout.tiles) {
                     var tile = tiles[tileIx];
                     var tileConfig = this.mCurrentLayout.tiles[tileIx];
-                    command += " " + tile.source + ":" + tileConfig.x + "_" + tileConfig.y + "_" + tileConfig.width + "_" + tileConfig.height + ":" + tileConfig.scale;
+                    command += " ".concat(tile.source, ":").concat(tileConfig.x, "_").concat(tileConfig.y, "_").concat(tileConfig.width, "_").concat(tileConfig.height, ":").concat(tileConfig.scale);
                 }
                 this.mMyConnection.doCommand(command);
             }
@@ -115,7 +117,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 console.error('No layout has been specified, do that before trying to set sources on tiles.');
         };
         Wyrestorm.prototype.getConfigFileName = function () {
-            return "Wyrestorm." + this.mDeviceName + ".json";
+            return "Wyrestorm.".concat(this.mDeviceName, ".json");
         };
         Wyrestorm.getConnection = function (socket) {
             var ip = socket.address;
@@ -149,7 +151,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         var Wyrestorm_1;
         Wyrestorm = Wyrestorm_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 23 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 23 }),
             __metadata("design:paramtypes", [Object])
         ], Wyrestorm);
         return Wyrestorm;
@@ -182,7 +184,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             configurable: true
         });
         __decorate([
-            Metadata_1.property('Source for tile'),
+            (0, Metadata_1.property)('Source for tile'),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], Tile.prototype, "source", null);

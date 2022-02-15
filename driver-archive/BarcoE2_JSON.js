@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -69,25 +71,25 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return this.socket.sendText(cmdJson);
         };
         __decorate([
-            Metadata_1.callable("Load a preset into Live or Preview"),
-            __param(0, Metadata_1.parameter("Preset number")),
-            __param(1, Metadata_1.parameter("Load into Preview", true)),
+            (0, Metadata_1.callable)("Load a preset into Live or Preview"),
+            __param(0, (0, Metadata_1.parameter)("Preset number")),
+            __param(1, (0, Metadata_1.parameter)("Load into Preview", true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Boolean]),
             __metadata("design:returntype", void 0)
         ], BarcoE2_JSON.prototype, "activatePreset", null);
         __decorate([
-            Metadata_1.property("Current preview preset"),
+            (0, Metadata_1.property)("Current preview preset"),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], BarcoE2_JSON.prototype, "preview", null);
         __decorate([
-            Metadata_1.property("Current live preset"),
+            (0, Metadata_1.property)("Current live preset"),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], BarcoE2_JSON.prototype, "live", null);
         BarcoE2_JSON = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 9999 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 9999 }),
             __metadata("design:paramtypes", [Object])
         ], BarcoE2_JSON);
         return BarcoE2_JSON;

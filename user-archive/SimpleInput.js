@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -60,7 +62,7 @@ define(["require", "exports", "system/SimpleServer", "system_lib/Script", "syste
             configurable: true
         });
         __decorate([
-            Metadata_1.property("The most recent command", true),
+            (0, Metadata_1.property)("The most recent command", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], SimpleInput.prototype, "command", null);

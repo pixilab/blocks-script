@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -39,7 +41,7 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"],
         var Pharos_1;
         Pharos.kNumScenes = 25;
         Pharos = Pharos_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 3000 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 3000 }),
             __metadata("design:paramtypes", [Object])
         ], Pharos);
         return Pharos;
@@ -63,7 +65,7 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"],
             configurable: true
         });
         __decorate([
-            Metadata_1.property("Scene being on (1) or off (0)"),
+            (0, Metadata_1.property)("Scene being on (1) or off (0)"),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Scene.prototype, "state", null);

@@ -2,7 +2,7 @@
 	external control systems (Crestron, AMX, etc) where a plain TCP connection is the preferred
 	means of communication. It provides direct access to all properties in Blocks using the same
 	property paths as used inside Blocks itself (e.g., in a button binding). Properties can be
-	set or subscribed to, so youäll be notified when the property's value changes.
+	set or subscribed to, so you'll be notified when the property's value changes.
 
 	To use, simply connect to port 3041 on your Blocks server and send a command. Tty it out
 	using a telnet client like this:
