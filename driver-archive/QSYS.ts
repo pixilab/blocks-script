@@ -4,7 +4,8 @@
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import * as Meta from "system_lib/Metadata";
-const split:any = require("lib/split-string");
+import {State} from "lib/split-string";
+const split = require("lib/split-string");
 
 /**
  This driver talks to a QSC Q-Sys core via TCP using the Q-SYS External Control
@@ -42,6 +43,11 @@ interface Prop {
 	propertyName: string;
 	mapping: Mapping;
 	value: number;
+}
+
+/* Hack for bracket access to @Meta.properties without TypeScript errors */
+export interface QSYS extends Driver<NetworkTCP> {
+	[key: string]: any;
 }
 
 @Meta.driver('NetworkTCP', { port: 1702 })
@@ -315,8 +321,8 @@ export class QSYS extends Driver<NetworkTCP> {
 	 intact, unless the quote is escaped with \.
 	 Then strip unescaped quotes from the resulting pieces.
 	 */
-	private parseReply(reply: string) : string {
-		let keep = (value, state) => {
+	private parseReply(reply: string) : string[] {
+		let keep = (value: string, state: State) => {
 			return value !== '\\' && (value !== '"' || state.prev() === '\\');
 		};
 		return split(reply, { quotes: ['"'], separator: ' ', keep: keep });
