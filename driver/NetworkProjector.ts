@@ -234,7 +234,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected attemptConnect() {
 		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-			this.infoMsg("attemptConnect");
+			// this.infoMsg("attemptConnect");
 			this.socket.connect().then(
 				() => this.justConnected(),
 				error => this.connectStateChanged()

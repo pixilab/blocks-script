@@ -209,7 +209,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             debugLog("gotConnectionResponse");
             var error = packet[7];
             if (error)
-                throw "Connetion response error " + error;
+                throw "Connection response error " + error;
             this.verifyState(1);
             this.channelId = packet[6];
             this.sendConnectionStateRequest();
@@ -222,7 +222,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             debugLog("gotConnectionStateResponse");
             var error = packet[7];
             if (error)
-                throw "Connetion state response error " + error;
+                throw "Connection state response error " + error;
             this.verifyState(2);
             this.setState(3);
         };

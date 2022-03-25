@@ -331,7 +331,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 		debugLog("gotConnectionResponse");
 		const error = packet[7];
 		if (error)
-			throw "Connetion response error " + error;
+			throw "Connection response error " + error;
 		this.verifyState(State.CONNECTING);
 		this.channelId = packet[6];
 		this.sendConnectionStateRequest();
@@ -346,7 +346,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 		debugLog("gotConnectionStateResponse");
 		const error = packet[7];
 		if (error)
-			throw "Connetion state response error " + error;
+			throw "Connection state response error " + error;
 		this.verifyState(State.CONNECTIONSTATE_REQUESTED);
 		this.setState(State.CONNECTED_IDLE);
 	}
