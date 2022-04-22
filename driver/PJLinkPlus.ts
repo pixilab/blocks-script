@@ -291,8 +291,11 @@ export class PJLinkPlus extends NetworkProjector {
     }
 	protected poll() {
 		if (!this.socket.connected && !this.connecting && !this.connectDly) {
-			this.connectionAttemptCount++;
-			this.infoMsg('connection attempt #' + this.connectionAttemptCount);
+			const logMsg = 'connection attempt #' + this.connectionAttemptCount;
+			if (this.connectionAttemptCount++)	// Log all but 1st message as debug
+				this.debugLog(logMsg);			// to reduce log noise.
+			else
+				this.infoMsg(logMsg);
 			this.attemptConnect();
 		}
 		const pollDelay = Math.min((18 + this.connectionAttemptCount * 2), MAX_ATTEMPT_CONNECT_DELAY);

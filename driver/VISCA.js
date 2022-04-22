@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -250,19 +252,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 console.warn("Spurious error from camera", error);
         };
         __decorate([
-            Metadata_1.property("Set once camera considered ready to be controlled", true),
+            (0, Metadata_1.property)("Set once camera considered ready to be controlled", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], VISCA.prototype, "ready", null);
         __decorate([
             Meta.callable("Recall memory preset"),
-            __param(0, Metadata_1.parameter("Preset to recall; 0...254")),
+            __param(0, (0, Metadata_1.parameter)("Preset to recall; 0...254")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
         ], VISCA.prototype, "recallPreset", null);
         VISCA = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 1259 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 1259 }),
             __metadata("design:paramtypes", [Object])
         ], VISCA);
         return VISCA;

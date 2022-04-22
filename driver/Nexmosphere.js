@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -133,19 +135,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         var Nexmosphere_1;
         __decorate([
-            Metadata_1.callable("Send raw string data to the Nexmosphere controller"),
+            (0, Metadata_1.callable)("Send raw string data to the Nexmosphere controller"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], Nexmosphere.prototype, "send", null);
         __decorate([
-            Metadata_1.callable("Re-initialize driver, after changing device configuration"),
+            (0, Metadata_1.callable)("Re-initialize driver, after changing device configuration"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", void 0)
         ], Nexmosphere.prototype, "reInitialize", null);
         Nexmosphere = Nexmosphere_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 4001 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             __metadata("design:paramtypes", [Object])
         ], Nexmosphere);
         return Nexmosphere;

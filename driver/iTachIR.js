@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -58,21 +60,21 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             configurable: true
         });
         __decorate([
-            Metadata_1.callable("Send a single key-press"),
-            __param(0, Metadata_1.parameter("Key to send")),
+            (0, Metadata_1.callable)("Send a single key-press"),
+            __param(0, (0, Metadata_1.parameter)("Key to send")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], iTachIR.prototype, "sendKey", null);
         __decorate([
-            Metadata_1.property("TV channel number"),
-            Metadata_1.min(1),
-            Metadata_1.max(99),
+            (0, Metadata_1.property)("TV channel number"),
+            (0, Metadata_1.min)(1),
+            (0, Metadata_1.max)(99),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], iTachIR.prototype, "channel", null);
         iTachIR = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 4998 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 4998 }),
             __metadata("design:paramtypes", [Object])
         ], iTachIR);
         return iTachIR;
