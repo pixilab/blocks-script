@@ -22,48 +22,36 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], function (require, exports, Script_1, Metadata_1) {
+define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", "../system/SimpleHTTP", "../system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1, SimpleHTTP_1, Meta) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.WallClock = void 0;
-    var WallClock = (function (_super) {
-        __extends(WallClock, _super);
-        function WallClock(env) {
-            var _this = _super.call(this, env) || this;
-            _this.mClockTime = "0:00";
-            wait(100).then(function () { return _this.updateClock(); });
+    exports.Control4HTTP = void 0;
+    var Control4HTTP = (function (_super) {
+        __extends(Control4HTTP, _super);
+        function Control4HTTP(socket) {
+            var _this = _super.call(this, socket) || this;
+            _this.socket = socket;
+            _this.mOrigin = "http://".concat(socket.address);
+            if (socket.port !== 80)
+                _this.mOrigin = _this.mOrigin + ':' + socket.port;
             return _this;
         }
-        Object.defineProperty(WallClock.prototype, "currentTime", {
-            get: function () {
-                return this.mClockTime;
-            },
-            set: function (t) {
-                this.mClockTime = t;
-            },
-            enumerable: false,
-            configurable: true
-        });
-        WallClock.prototype.updateClock = function () {
-            var _this = this;
-            var time = new Date();
-            var hour = time.getHours().toString();
-            var min = time.getMinutes();
-            this.currentTime = hour + ':' + padTwoDigits(min);
-            wait(20 * 1000).then(function () { return _this.updateClock(); });
+        Control4HTTP.prototype.ping = function (path) {
+            return SimpleHTTP_1.SimpleHTTP
+                .newRequest("".concat(this.mOrigin, "/").concat(path))
+                .get();
         };
         __decorate([
-            (0, Metadata_1.property)("Time of day, as H:MM", true),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], WallClock.prototype, "currentTime", null);
-        return WallClock;
-    }(Script_1.Script));
-    exports.WallClock = WallClock;
-    function padTwoDigits(val) {
-        var result = val.toString();
-        if (result.length < 2)
-            result = '0' + result;
-        return result;
-    }
+            (0, Metadata_1.callable)("Ping specified path with a GET request"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String]),
+            __metadata("design:returntype", void 0)
+        ], Control4HTTP.prototype, "ping", null);
+        Control4HTTP = __decorate([
+            Meta.driver('NetworkTCP', { port: 51048 }),
+            __metadata("design:paramtypes", [Object])
+        ], Control4HTTP);
+        return Control4HTTP;
+    }(Driver_1.Driver));
+    exports.Control4HTTP = Control4HTTP;
 });

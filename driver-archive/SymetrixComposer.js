@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -53,7 +55,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                             settings.current = val;
                             settings.wanted = undefined;
                             settings.forceUpdate = false;
-                            _this.tell("CSQ " + key + " " + settings.current);
+                            _this.tell("CSQ ".concat(key, " ").concat(settings.current));
                         }
                     }
                     return settings.current ? settings.current : (settings.wanted ? settings.wanted : 0);
@@ -133,10 +135,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.socket.sendText(data);
         };
         SymetrixComposer.prototype.getPropNameForKey = function (key) {
-            return "Controller " + key;
+            return "Controller ".concat(key);
         };
         SymetrixComposer = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 48631 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 48631 }),
             __metadata("design:paramtypes", [Object])
         ], SymetrixComposer);
         return SymetrixComposer;

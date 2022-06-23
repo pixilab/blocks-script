@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -164,7 +166,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NetworkProjector.prototype.attemptConnect = function () {
             var _this = this;
             if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-                this.infoMsg("attemptConnect");
                 this.socket.connect().then(function () { return _this.justConnected(); }, function (error) { return _this.connectStateChanged(); });
                 this.connecting = true;
             }
@@ -267,19 +268,19 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             delete this.currResolver;
         };
         __decorate([
-            Metadata_1.property("Power on/off"),
+            (0, Metadata_1.property)("Power on/off"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetworkProjector.prototype, "power", null);
         __decorate([
-            Metadata_1.callable("Send raw command string to device"),
-            __param(0, Metadata_1.parameter("What to send")),
+            (0, Metadata_1.callable)("Send raw command string to device"),
+            __param(0, (0, Metadata_1.parameter)("What to send")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", Promise)
         ], NetworkProjector.prototype, "sendText", null);
         __decorate([
-            Metadata_1.property("True if projector is online", true),
+            (0, Metadata_1.property)("True if projector is online", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetworkProjector.prototype, "connected", null);
@@ -383,7 +384,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NumState.prototype.get = function () {
             var result = _super.prototype.get.call(this);
             if (typeof result !== 'number' || isNaN(result)) {
-                console.error("Value invalid for", this.baseCmd, result);
+                console.error("Invalid value for", this.propName, result);
                 result = this.min || 0;
             }
             return result;

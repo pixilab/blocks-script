@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -154,78 +156,78 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             configurable: true
         });
         __decorate([
-            Metadata_1.callable("Send a single SET command"),
-            __param(0, Metadata_1.parameter("Target function")),
-            __param(1, Metadata_1.parameter("Value")),
+            (0, Metadata_1.callable)("Send a single SET command"),
+            __param(0, (0, Metadata_1.parameter)("Target function")),
+            __param(1, (0, Metadata_1.parameter)("Value")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Object]),
             __metadata("design:returntype", void 0)
         ], Xilica.prototype, "sendSetCommand", null);
         __decorate([
-            Metadata_1.callable("Send a command"),
-            __param(0, Metadata_1.parameter("Command to send")),
+            (0, Metadata_1.callable)("Send a command"),
+            __param(0, (0, Metadata_1.parameter)("Command to send")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], Xilica.prototype, "sendText", null);
         __decorate([
-            Metadata_1.property("Channel 1 gain"),
-            Metadata_1.min(-100),
-            Metadata_1.max(15),
+            (0, Metadata_1.property)("Channel 1 gain"),
+            (0, Metadata_1.min)(-100),
+            (0, Metadata_1.max)(15),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "gain1", null);
         __decorate([
-            Metadata_1.property("Channel 1 input"),
-            Metadata_1.min(0),
-            Metadata_1.max(4),
+            (0, Metadata_1.property)("Channel 1 input"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(4),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "input1", null);
         __decorate([
-            Metadata_1.property("Channel 2 gain"),
-            Metadata_1.min(-100),
-            Metadata_1.max(15),
+            (0, Metadata_1.property)("Channel 2 gain"),
+            (0, Metadata_1.min)(-100),
+            (0, Metadata_1.max)(15),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "gain2", null);
         __decorate([
-            Metadata_1.property("Channel 2 input"),
-            Metadata_1.min(0),
-            Metadata_1.max(4),
+            (0, Metadata_1.property)("Channel 2 input"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(4),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "input2", null);
         __decorate([
-            Metadata_1.property("Channel 3 gain"),
-            Metadata_1.min(-100),
-            Metadata_1.max(15),
+            (0, Metadata_1.property)("Channel 3 gain"),
+            (0, Metadata_1.min)(-100),
+            (0, Metadata_1.max)(15),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "gain3", null);
         __decorate([
-            Metadata_1.property("Channel 3 input"),
-            Metadata_1.min(0),
-            Metadata_1.max(4),
+            (0, Metadata_1.property)("Channel 3 input"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(4),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "input3", null);
         __decorate([
-            Metadata_1.property("Channel 4 gain"),
-            Metadata_1.min(-100),
-            Metadata_1.max(15),
+            (0, Metadata_1.property)("Channel 4 gain"),
+            (0, Metadata_1.min)(-100),
+            (0, Metadata_1.max)(15),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "gain4", null);
         __decorate([
-            Metadata_1.property("Channel 4 input"),
-            Metadata_1.min(0),
-            Metadata_1.max(4),
+            (0, Metadata_1.property)("Channel 4 input"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(4),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Xilica.prototype, "input4", null);
         Xilica = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 10007 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 10007 }),
             __metadata("design:paramtypes", [Object])
         ], Xilica);
         return Xilica;

@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -122,21 +124,21 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
             }
         };
         __decorate([
-            Metadata_1.callable("Send a command"),
-            __param(0, Metadata_1.parameter("Command to send")),
+            (0, Metadata_1.callable)("Send a command"),
+            __param(0, (0, Metadata_1.parameter)("Command to send")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], YamahaQL1.prototype, "sendText", null);
         __decorate([
-            Metadata_1.property("Current scene number"),
-            Metadata_1.min(0),
-            Metadata_1.max(300),
+            (0, Metadata_1.property)("Current scene number"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(300),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], YamahaQL1.prototype, "current_scene", null);
         YamahaQL1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 49280 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 49280 }),
             __metadata("design:paramtypes", [Object])
         ], YamahaQL1);
         return YamahaQL1;
@@ -220,19 +222,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
             configurable: true
         });
         __decorate([
-            Metadata_1.property("Label"),
+            (0, Metadata_1.property)("Label"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], Fader.prototype, "label", null);
         __decorate([
-            Metadata_1.property("Fader level in dB"),
-            Metadata_1.min(-327.68),
-            Metadata_1.max(10),
+            (0, Metadata_1.property)("Fader level in dB"),
+            (0, Metadata_1.min)(-327.68),
+            (0, Metadata_1.max)(10),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], Fader.prototype, "level", null);
         __decorate([
-            Metadata_1.property("On"),
+            (0, Metadata_1.property)("On"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], Fader.prototype, "on", null);

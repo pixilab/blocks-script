@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -32,7 +34,7 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
             _this.mConnected = false;
             _this.outputs = [];
             console.info("Netio PowerBOX instantiated");
-            SimpleHTTP_1.SimpleHTTP.newRequest("http://" + socket.address + "/netio.json").get().then(function (result) {
+            SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(socket.address, "/netio.json")).get().then(function (result) {
                 _this.connected = true;
                 var jsonObj = JSON.parse(result.data);
                 _this.outputs = jsonObj.Outputs;
@@ -58,15 +60,15 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
         });
         NetioPowerBox.prototype.createOutlets = function (outletNumber) {
             var _this = this;
-            this.property("Power outlet " + outletNumber, { type: 'Boolean', description: 'Power on outlet ' + outletNumber }, function (val) {
+            this.property("Power outlet ".concat(outletNumber), { type: 'Boolean', description: 'Power on outlet ' + outletNumber }, function (val) {
                 if (val !== undefined) {
                     var theOutlet1 = _this.outputs.filter(function (x) { return x.ID == 1; })[0];
                     theOutlet1.State = val ? 1 : 0;
-                    SimpleHTTP_1.SimpleHTTP.newRequest("http://" + _this.socket.address + "/netio.json").post("{ \"Outputs\":[ { \"ID\":\"" + outletNumber + "\", \"Action\":\"" + (val ? 1 : 0) + "\" } ] }", 'application/json').then(function (result) {
+                    SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(_this.socket.address, "/netio.json")).post("{ \"Outputs\":[ { \"ID\":\"".concat(outletNumber, "\", \"Action\":\"").concat(val ? 1 : 0, "\" } ] }"), 'application/json').then(function (result) {
                         _this.connected = true;
                         var jsonObj = JSON.parse(result.data);
                         _this.outputs = jsonObj.Outputs;
-                        _this.changed("Power outlet " + outletNumber);
+                        _this.changed("Power outlet ".concat(outletNumber));
                     }).catch(function (error) { return _this.requestFailed(error); });
                 }
                 var state = _this.outputs.filter(function (x) { return x.ID == outletNumber; })[0];
@@ -76,12 +78,12 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
             });
         };
         __decorate([
-            Metadata_1.property("Verified connection with the Netio PowerBOX", true),
+            (0, Metadata_1.property)("Verified connection with the Netio PowerBOX", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetioPowerBox.prototype, "connected", null);
         NetioPowerBox = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 80 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 80 }),
             __metadata("design:paramtypes", [Object])
         ], NetioPowerBox);
         return NetioPowerBox;

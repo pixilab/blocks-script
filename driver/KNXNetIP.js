@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -205,10 +207,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
         };
         KNXNetIP.prototype.gotConnectionResponse = function (packet) {
             debugLog("gotConnectionResponse");
-            this.verifyState(1);
             var error = packet[7];
             if (error)
-                throw "Connetion response error " + error;
+                throw "Connection response error " + error;
+            this.verifyState(1);
             this.channelId = packet[6];
             this.sendConnectionStateRequest();
         };
@@ -218,18 +220,18 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
         };
         KNXNetIP.prototype.gotConnectionStateResponse = function (packet) {
             debugLog("gotConnectionStateResponse");
-            this.verifyState(2);
             var error = packet[7];
             if (error)
-                throw "Connetion state response error " + error;
+                throw "Connection state response error " + error;
+            this.verifyState(2);
             this.setState(3);
         };
         KNXNetIP.prototype.gotTunnelResponse = function (packet) {
             debugLog("gotTunnelResponse");
-            this.verifyState(4);
             var error = packet[9];
             if (error)
                 throw "Tunnel response error " + error;
+            this.verifyState(4);
             var seqId = packet[8];
             var queue = this.cmdQueue;
             if (queue.length && queue[0].seqId === seqId) {
@@ -371,31 +373,31 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             this.socket.sendBytes(setLength(tunAck));
         };
         __decorate([
-            Metadata_1.property("Connection established", true),
+            (0, Metadata_1.property)("Connection established", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], KNXNetIP.prototype, "connected", null);
         __decorate([
-            Metadata_1.callable("Send on/off command specified addr1/addr2/addr3"),
+            (0, Metadata_1.callable)("Send on/off command specified addr1/addr2/addr3"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Number, Number, Boolean]),
             __metadata("design:returntype", void 0)
         ], KNXNetIP.prototype, "setOnOff", null);
         __decorate([
-            Metadata_1.callable("Recall scene for addr1/addr2/addr3"),
-            __param(3, Metadata_1.parameter("Scene 0…63 to recall (may be off-by-1)")),
+            (0, Metadata_1.callable)("Recall scene for addr1/addr2/addr3"),
+            __param(3, (0, Metadata_1.parameter)("Scene 0…63 to recall (may be off-by-1)")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Number, Number, Number]),
             __metadata("design:returntype", void 0)
         ], KNXNetIP.prototype, "setScene", null);
         __decorate([
-            Metadata_1.callable("Send all my dynamic property values"),
+            (0, Metadata_1.callable)("Send all my dynamic property values"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", void 0)
         ], KNXNetIP.prototype, "enforceProps", null);
         KNXNetIP = __decorate([
-            Metadata_1.driver('NetworkUDP', { port: 3671, rcvPort: 32331 }),
+            (0, Metadata_1.driver)('NetworkUDP', { port: 3671, rcvPort: 32331 }),
             __metadata("design:paramtypes", [Object])
         ], KNXNetIP);
         return KNXNetIP;

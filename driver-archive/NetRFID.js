@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -31,7 +33,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.socket = socket;
             socket.autoConnect();
             socket.subscribe('textReceived', function (sender, message) {
-                return _this.scanned = message.text;
+                var scanned = message.text;
+                if (scanned.indexOf('v') === 0)
+                    scanned = scanned.substring(4);
+                _this.scanned = scanned;
             });
             return _this;
         }
@@ -50,7 +55,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         NetRFID.prototype.startResetTimeout = function () {
             var _this = this;
             this.stopResetTimer();
-            this.mResetValuePromise = wait(1000);
+            this.mResetValuePromise = wait(500);
             this.mResetValuePromise.then(function () { return _this.scanned = ""; });
         };
         NetRFID.prototype.stopResetTimer = function () {
@@ -60,12 +65,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
         };
         __decorate([
-            Metadata_1.property("Last scanned value, or empty string", true),
+            (0, Metadata_1.property)("Last scanned value, or empty string", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], NetRFID.prototype, "scanned", null);
         NetRFID = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 50000 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 50000 }),
             __metadata("design:paramtypes", [Object])
         ], NetRFID);
         return NetRFID;

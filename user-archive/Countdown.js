@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -128,27 +130,27 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             this.manageTicking();
         };
         __decorate([
-            Metadata_1.property("Number of minutes remaining (always 2 digits)"),
+            (0, Metadata_1.property)("Number of minutes remaining (always 2 digits)"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], Countdown.prototype, "minutes", null);
         __decorate([
-            Metadata_1.property("Number of seconds remaining (always 2 digits)"),
+            (0, Metadata_1.property)("Number of seconds remaining (always 2 digits)"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [])
         ], Countdown.prototype, "seconds", null);
         __decorate([
-            Metadata_1.property("True when the timer is at time zero"),
+            (0, Metadata_1.property)("True when the timer is at time zero"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], Countdown.prototype, "zero", null);
         __decorate([
-            Metadata_1.property("Countdown is running (true) or paused (false)"),
+            (0, Metadata_1.property)("Countdown is running (true) or paused (false)"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], Countdown.prototype, "running", null);
         __decorate([
-            Metadata_1.callable("Start countdown from specified time"),
+            (0, Metadata_1.callable)("Start countdown from specified time"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Number]),
             __metadata("design:returntype", void 0)

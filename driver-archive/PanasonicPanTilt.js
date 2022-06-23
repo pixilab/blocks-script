@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -104,7 +106,7 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
         ], PanasonicPanTilt.prototype, "power", null);
         __decorate([
             Meta.callable("Recall memory preset"),
-            __param(0, Metadata_1.parameter("Preset to recall; 1...100")),
+            __param(0, (0, Metadata_1.parameter)("Preset to recall; 1...100")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)

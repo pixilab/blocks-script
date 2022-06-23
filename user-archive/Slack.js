@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -52,8 +54,8 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         Slack.CONFIG_FILE_NAME = "Slack.config.json";
         Slack.SLACK_MSG_URL = "https://hooks.slack.com/services/";
         __decorate([
-            Metadata_1.callable("Send message to Slack"),
-            __param(0, Metadata_1.parameter("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
+            (0, Metadata_1.callable)("Send message to Slack"),
+            __param(0, (0, Metadata_1.parameter)("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", Promise)

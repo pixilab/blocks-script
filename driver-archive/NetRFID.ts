@@ -16,9 +16,13 @@ export class NetRFID extends Driver<NetworkTCP> {
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
 		socket.autoConnect();
-		socket.subscribe('textReceived', (sender, message) =>
-			this.scanned = message.text
-		);
+		socket.subscribe('textReceived', (sender, message) => {
+			var scanned = message.text;
+			// Scanner sends "v1.0" when connects, which then becomes part of 1st message - strip off
+			if (scanned.indexOf('v') === 0)
+				scanned = scanned.substring(4);
+			this.scanned = scanned;
+		});
 	}
 
 	@property("Last scanned value, or empty string", true)
@@ -37,7 +41,7 @@ export class NetRFID extends Driver<NetworkTCP> {
 	 */
 	private startResetTimeout(): void {
 		this.stopResetTimer();
-		this.mResetValuePromise = wait(1000);
+		this.mResetValuePromise = wait(500);
 		this.mResetValuePromise.then(() => this.scanned = "");
 	}
 

@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -81,26 +83,26 @@ define(["require", "exports", "../system_lib/Script", "../system_lib/Metadata"],
             });
         };
         __decorate([
-            Metadata_1.property("Alarm time, hours"),
-            Metadata_1.min(0),
-            Metadata_1.max(23),
+            (0, Metadata_1.property)("Alarm time, hours"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(23),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], AlarmClock.prototype, "hour", null);
         __decorate([
-            Metadata_1.property("Alarm time, minutes"),
-            Metadata_1.min(0),
-            Metadata_1.max(59),
+            (0, Metadata_1.property)("Alarm time, minutes"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(59),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], AlarmClock.prototype, "minute", null);
         __decorate([
-            Metadata_1.property("Alarm ringing", true),
+            (0, Metadata_1.property)("Alarm ringing", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], AlarmClock.prototype, "alarm", null);
         __decorate([
-            Metadata_1.resource(),
+            (0, Metadata_1.resource)(),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Object]),
             __metadata("design:returntype", void 0)

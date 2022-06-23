@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -99,19 +101,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             }
         };
         __decorate([
-            Metadata_1.property("Display power"),
+            (0, Metadata_1.property)("Display power"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], ThreeM_Touch.prototype, "power", null);
         __decorate([
-            Metadata_1.property("Display brightness"),
-            Metadata_1.min(0),
-            Metadata_1.max(80),
+            (0, Metadata_1.property)("Display brightness"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(80),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], ThreeM_Touch.prototype, "brightness", null);
         ThreeM_Touch = ThreeM_Touch_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 4001 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             __metadata("design:paramtypes", [Object])
         ], ThreeM_Touch);
         return ThreeM_Touch;

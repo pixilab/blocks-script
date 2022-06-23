@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -76,19 +78,19 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
             configurable: true
         });
         __decorate([
-            Metadata_1.callable("Reload data from file, updating lines' content and length"),
+            (0, Metadata_1.callable)("Reload data from file, updating lines' content and length"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", void 0)
         ], TextList.prototype, "reloadFile", null);
         __decorate([
-            Metadata_1.callable("Re-arrange the order of active text lines"),
+            (0, Metadata_1.callable)("Re-arrange the order of active text lines"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", void 0)
         ], TextList.prototype, "randomize", null);
         __decorate([
-            Metadata_1.property("Number of items currently available", true),
+            (0, Metadata_1.property)("Number of items currently available", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], TextList.prototype, "lineCount", null);
@@ -111,7 +113,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
             configurable: true
         });
         __decorate([
-            Metadata_1.property("The string I represent"),
+            (0, Metadata_1.property)("The string I represent"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], IndexedPropItem.prototype, "value", null);

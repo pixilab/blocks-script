@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -266,14 +268,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.receivedData = undefined;
         };
         __decorate([
-            Metadata_1.property("The target ID (rarely used over network)"),
-            Metadata_1.min(0),
-            Metadata_1.max(254),
+            (0, Metadata_1.property)("The target ID (rarely used over network)"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(254),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SamsungMDC.prototype, "id", null);
         SamsungMDC = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 1515 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 1515 }),
             __metadata("design:paramtypes", [Object])
         ], SamsungMDC);
         return SamsungMDC;

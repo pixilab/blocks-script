@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -78,17 +80,17 @@ define(["require", "exports", "../system/SimpleProcess", "../system/Spot", "../s
         };
         WakeOnLan.wakeonlanPath = '/usr/local/bin/wakeonlan';
         __decorate([
-            Metadata_1.callable('Wake up Display Spot'),
-            __param(0, Metadata_1.parameter('Full dot-separated path to a Display Spot')),
-            __param(1, Metadata_1.parameter('Destination IP (e.g., subnet-specific broadcast address)', true)),
+            (0, Metadata_1.callable)('Wake up Display Spot'),
+            __param(0, (0, Metadata_1.parameter)('Full dot-separated path to a Display Spot')),
+            __param(1, (0, Metadata_1.parameter)('Destination IP (e.g., subnet-specific broadcast address)', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", void 0)
         ], WakeOnLan.prototype, "wakeSpot", null);
         __decorate([
-            Metadata_1.callable('Wake up device at specified MAC address'),
-            __param(0, Metadata_1.parameter('MAC address of device')),
-            __param(1, Metadata_1.parameter('Destination IP (e.g., subnet-specific broadcast address)', true)),
+            (0, Metadata_1.callable)('Wake up device at specified MAC address'),
+            __param(0, (0, Metadata_1.parameter)('MAC address of device')),
+            __param(1, (0, Metadata_1.parameter)('Destination IP (e.g., subnet-specific broadcast address)', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", void 0)

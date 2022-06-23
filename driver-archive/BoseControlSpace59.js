@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -141,25 +143,25 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             }
         };
         __decorate([
-            Metadata_1.property("Standby power mode"),
+            (0, Metadata_1.property)("Standby power mode"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], BoseControlSpace59.prototype, "standBy", null);
         __decorate([
-            Metadata_1.property("Recall Parameter Set"),
-            Metadata_1.min(0),
-            Metadata_1.max(255),
+            (0, Metadata_1.property)("Recall Parameter Set"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(255),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], BoseControlSpace59.prototype, "parameterSet", null);
         __decorate([
-            Metadata_1.callable("Send raw command string, automatically terminated by CR"),
+            (0, Metadata_1.callable)("Send raw command string, automatically terminated by CR"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], BoseControlSpace59.prototype, "sendString", null);
         BoseControlSpace59 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 10055 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 10055 }),
             __metadata("design:paramtypes", [Object])
         ], BoseControlSpace59);
         return BoseControlSpace59;

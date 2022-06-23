@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -61,18 +63,18 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             configurable: true
         });
         __decorate([
-            Metadata_1.callable("Send the text to the destination IP address and UDP port"),
+            (0, Metadata_1.callable)("Send the text to the destination IP address and UDP port"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", void 0)
         ], UDP_Input.prototype, "sendText", null);
         __decorate([
-            Metadata_1.property("The most recent command", true),
+            (0, Metadata_1.property)("The most recent command", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], UDP_Input.prototype, "command", null);
         UDP_Input = __decorate([
-            Metadata_1.driver('NetworkUDP', { port: 4444 }),
+            (0, Metadata_1.driver)('NetworkUDP', { port: 4444 }),
             __metadata("design:paramtypes", [Object])
         ], UDP_Input);
         return UDP_Input;

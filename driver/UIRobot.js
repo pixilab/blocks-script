@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -23,12 +25,14 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
 };
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
@@ -140,7 +144,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 params = args.split('|');
             params.unshift(exePath);
             params.unshift(workingDirectory);
-            return this.sendCommand.apply(this, __spreadArrays(['Launch'], params));
+            return this.sendCommand.apply(this, __spreadArray(['Launch'], params, false));
         };
         Object.defineProperty(UIRobot.prototype, "program", {
             get: function () {
@@ -155,9 +159,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     var newProgram = this.parseProgramParams(programParams);
                     if (newProgram) {
                         this.mProgramParams = programParams;
-                        this.sendCommand.apply(this, __spreadArrays(['Launch',
+                        this.sendCommand.apply(this, __spreadArray(['Launch',
                             newProgram.workingDir,
-                            newProgram.program], newProgram.arguments));
+                            newProgram.program], newProgram.arguments, false));
                     }
                     else {
                         this.mProgramParams = '';
@@ -232,47 +236,47 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         UIRobot.kWoLRetryInterval = 1000 * 20;
         UIRobot.kWoLRetryMaxAttempts = 10;
         __decorate([
-            Metadata_1.property("Power computer on/off"),
+            (0, Metadata_1.property)("Power computer on/off"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], UIRobot.prototype, "power", null);
         __decorate([
-            Metadata_1.property("Left mouse button down"),
+            (0, Metadata_1.property)("Left mouse button down"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], UIRobot.prototype, "leftDown", null);
         __decorate([
-            Metadata_1.property("Right mouse button down"),
+            (0, Metadata_1.property)("Right mouse button down"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], UIRobot.prototype, "rightDown", null);
         __decorate([
-            Metadata_1.callable("Move mouse by specified distance"),
+            (0, Metadata_1.callable)("Move mouse by specified distance"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Number]),
             __metadata("design:returntype", void 0)
         ], UIRobot.prototype, "moveMouse", null);
         __decorate([
-            Metadata_1.callable("Transitory command to run"),
-            __param(0, Metadata_1.parameter("Path to executable command to run")),
-            __param(1, Metadata_1.parameter("Working directory to be applied")),
-            __param(2, Metadata_1.parameter("Additional arguments, separated by vertical bar", true)),
+            (0, Metadata_1.callable)("Transitory command to run"),
+            __param(0, (0, Metadata_1.parameter)("Path to executable command to run")),
+            __param(1, (0, Metadata_1.parameter)("Working directory to be applied")),
+            __param(2, (0, Metadata_1.parameter)("Additional arguments, separated by vertical bar", true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String, String]),
             __metadata("design:returntype", void 0)
         ], UIRobot.prototype, "transitoryCommand", null);
         __decorate([
-            Metadata_1.property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS"),
+            (0, Metadata_1.property)("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], UIRobot.prototype, "program", null);
         __decorate([
-            Metadata_1.property("Send key strokes, modifiers before key"),
+            (0, Metadata_1.property)("Send key strokes, modifiers before key"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], UIRobot.prototype, "keyDown", null);
         UIRobot = UIRobot_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 3047 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 3047 }),
             __metadata("design:paramtypes", [Object, Number])
         ], UIRobot);
         return UIRobot;

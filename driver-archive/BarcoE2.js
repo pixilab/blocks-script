@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -51,22 +53,22 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             configurable: true
         });
         BarcoE2.prototype.send = function (preset) {
-            return this.socket.sendText("PRESET -a " + preset);
+            return this.socket.sendText("PRESET -a ".concat(preset));
         };
         __decorate([
-            Metadata_1.callable("Load a preset into Program or Preview"),
-            __param(0, Metadata_1.parameter("Preset number")),
+            (0, Metadata_1.callable)("Load a preset into Program or Preview"),
+            __param(0, (0, Metadata_1.parameter)("Preset number")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
         ], BarcoE2.prototype, "activatePreset", null);
         __decorate([
-            Metadata_1.property("Current live preset"),
+            (0, Metadata_1.property)("Current live preset"),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], BarcoE2.prototype, "live", null);
         BarcoE2 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 9878 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 9878 }),
             __metadata("design:paramtypes", [Object])
         ], BarcoE2);
         return BarcoE2;
