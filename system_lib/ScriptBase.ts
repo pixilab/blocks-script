@@ -123,20 +123,45 @@ type IndexedAny<T> = { [index:number]: T; readonly length: number };
 /**
  * An array-like type holding "indexed items".
  */
-export interface IndexedProperty<T> {
-
-	[index:number] : T;	// Read-only array-like with T
-
-	/**
-	 * Add an item to my list. Items can not be removed, and will be published
-	 * with an index range corresponding to the number of elements.
-	 */
-	push(item: T): void
+export interface IndexedProperty<T> extends IndexedAny<T> {
+	[index:number] : T;	// Read-only "array-like", holding objects of type T
 
 	/**
 	 * Number of items in me.
 	 */
 	length: number;
+
+	/**
+	 * Append item to the end of the list.
+	 */
+	push(item: T): void
+
+	/**
+	 * Insert item at offs position in the list.
+	 */
+	insert(offs: number, item:T): void
+
+	/**
+	 * Remove deleteCount items starting from offs, where deleteCount
+	 * must be a positive integer
+	 */
+	remove(offs: number, deleteCount: number): void
+
+	/**
+	 * Sort items in me in place, based on what the function returns.
+	 * A return value > 0 sorts rhs before lhs.
+	 * A return value < 0 sorts lhs before rhs.
+	 * A return value === 0 keeps the original order of lhs and rhs.
+	 */
+	sort(compareFn: (lhs: T, rhs: T) => number): void;
+}
+
+/**
+ * Base class for persistent records used to, e.g., track visitor journey, collecting
+ * data along the way.
+ */
+export abstract class RecordBase {
+	readonly $puid: number;		// Persistent, system-unique identifier for this Record
 }
 
 /*	Common environment used by user scripts as well as device drivers
@@ -147,6 +172,7 @@ export interface ScriptBaseEnv extends ChangeNotifier  {
 	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 	changed(prop: string): void; // Named child property has changed
 	property(name: string, options: SGOptions, gsFunc: SetterGetter<any>): void;
-	indexedProperty<T>(name: string, elemType: Ctor<T>): T[];
+	indexedProperty<T>(name: string, elemType: Ctor<T>): IndexedProperty<T>;
 	reInitialize(): void;
 }
+

@@ -24,7 +24,7 @@ export var Network: { [deviceName: string]:
  *	A TCP network port.
  */
 export interface NetworkTCP extends NetworkBase {
-	isOfTypeName(typeName: string): NetworkTCP|null;	// Check subtype by name
+	isOfTypeName(typeName: 'NetworkTCP'): NetworkTCP|null;	// Check subtype by name
 
 	readonly connected: boolean;		// True if I'm currently connected
 
@@ -121,7 +121,7 @@ interface NetworkTCPDriverMetaData {
  *	A UDP network port.
  */
 export interface NetworkUDP extends NetworkBase {
-	isOfTypeName(typeName: string): NetworkUDP|null;	// Check subtype by name
+	isOfTypeName(typeName: 'NetworkUDP'): NetworkUDP|null;	// Check subtype by name
 
 	readonly listenerPort: number;	// UDP listener port number, if any, else 0
 

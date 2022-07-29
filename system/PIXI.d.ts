@@ -123,7 +123,8 @@ declare function require(name: string): any;
 declare class TimeFlow  {
 	readonly currentTime: number;	// Time now, extrapolated from most recent data
 	readonly position: number;		// Time position most recently reported, in mS
-	readonly rate: number;			// Time flow rate, in seconds per second (0 is stopped)
+	readonly rateUnknown?: boolean;	// The rate field is unknown/undefined
+	readonly rate: number;			// Time rate, unless rateUnknown. Seconds per second (0 is stopped)
 	readonly end:number;			// End time, if known, else 0
 	readonly dead: boolean;			// TimeFlow is invalid - do not use any of its values
 
@@ -157,3 +158,6 @@ declare class TimeFlow  {
 	 */
 	static stringToMillis(str: string, format?: string): number
 }
+
+// General-purpose "custructor" function type
+interface Ctor<T> { new(... args: any[]): T ;}

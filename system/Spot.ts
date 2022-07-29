@@ -5,6 +5,9 @@
 
 /// <reference path = 'PIXI.d.ts' />
 
+
+import {RecordBase} from "../system_lib/ScriptBase";
+
 /**
  * Access a SpotGroupItem under its assigned name.
  * Use dot notation to access nested spots inside groups.
@@ -58,111 +61,16 @@ export interface BaseSpot {
 	unsubscribe(event: string, listener: Function): void;
 }
 
-export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
-	isOfTypeName(typeName: "DisplaySpot"): DisplaySpot|null;
-
-	/**
-	 True if the spot is connected.
-	 */
-	readonly connected: boolean;
-
-	/**
-	 * Dot-separated IP address of display spot, if connected, else null.
-	 */
-	readonly address: string;
-
+interface ControllableSpot extends BaseSpot {
 	/**
 	 * Identification, based on MAC address, serial number, given ID, or similar
 	 * system-unique value.
 	 */
 	readonly identity: string;
 
-	/**
-	 * Get any geolocation associated with spot, or null if none.
-	 */
-	readonly geoZone: GeoZone|null;
+	readonly parameter: { [id: string]: any; }	// Spot parameters, if any, keyed by name
 
-	/**
-	 * Load a Block with priority. Returns a promise that's fulfilled once
-	 * the block is loaded, or rejected if the loading fails. Block name
-	 * is in "group/leaf" form. Setting to null or empty string reverts to
-	 * the normal block.
-	 */
-	loadPriorityBlock(name: string): Promise<any>;
-
-	/**
-	 * Reload the current block. Occasionally useful after making server-side changes to
-	 * a block programmatically, or to reload a WebBlock that changed for other reasons.
-	 * Optionally, reload the entire web page (essentially performing a browser "reset").
-	 */
-	reload(reloadBrowser?:boolean): void;
-
-	/**
-	 * Turn power on/off, if possible. Returns most recently set power state.
-	 * NOTE: Prior to Blocks 5.5, this returned the current power state, which
-	 * would lag the wanted power state during power-up.
-	 *
-	 * Alternatively, call wakeUp below from a task, to turn power on and wait
-	 * for spot to connect before proceeding (possibly consolidated inside an
-	 * await statement, to wait for more than one starting in parallell).
-	 */
-	power: boolean;
-
-	/**
-	 * Power up the display spot. Promise resolved once spot has connected.
-	 */
-	wakeUp(timeoutSeconds?: number): Promise<any>;
-
-	/**
-	 * Current time position (e.g., in video), in seconds. Write to position the video.
-	 * Reading is supported only when spot has an active Synchronizer block which provides
-	 * this information (else returns NaN).
-	 */
-	time: number;
-
-	/**
-	 Ask display to reboot/reload. Not supported by all displays.
-	 */
-	reboot(): void;
-
-	/**
-	 * Locate time position in video/audio
-	 */
-	seek(timeInSeconds: number):void;
-
-	/**
-	 * Ask Spot to select an alternative picture source, by name. Supported inputs vary
-	 * with spot models, but typically look like, "DVI", "HDMI" or "HDMI1" (if has more
-	 * than one input of same type). Specify empty string to revert to the default Spot
-	 * image source (i.e., its "browser").
-	 */
-	pictureSource: string;
-
-	/**
-	 Spot is playing (true) or paused (false).
-	 */
-	playing: boolean;
-
-	/**
-	 Spot is actively viewed
-	 */
-	active: boolean;
-
-	/**
-	 Controls or returns audio volume, if possible, as 0...1.
-	 */
-	volume: number;
-
-	/**
-	 * Apply custom CSS classes to root display element ("theDisplay").
-	 * Multiple classes separated by space.
-	 */
-	customClasses: string;
-
-	/**
-	 * Most recently scanned value, when using keyboard-emulating scanner.
-	 */
-	readonly scannerInput: string;
+	location: string;	// Current location Spot path, from Locator used on Spot, if any
 
 	/**
 	 Ask Spot to reveal the specified child block, in the current root block.
@@ -203,20 +111,32 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	): Promise<any>;
 
 	/**
+	 * Load a Block with priority. Returns a promise that's fulfilled once
+	 * the block is loaded, or rejected if the loading fails. Block name
+	 * is in "group/leaf" form. Setting to null or empty string reverts to
+	 * the normal block.
+	 */
+	loadPriorityBlock(name: string): Promise<any>;
+
+	/**
+	 * Locate time position in video/audio. If argument is a number, it is interpreted as seconds
+	 * (which may have fractions). If it is a stinrg, it is expected to be in the format
+	 * "HH:MM.SS.fff".
+	 */
+	seek(time: number|string):void;
+
+	/**
+	 * Apply custom CSS classes to root display element ("theDisplay").
+	 * Multiple classes separated by space.
+	 */
+	customClasses: string;
+
+	/**
 	 * Force set of local tags to only those specified (comma separated). Does not
-	 * alter any tags specified in the Display Spot's configuration. If ofSet specified,
+	 * alter any tags specified in the Spot's configuration. If ofSet specified,
 	 * then alter only tags within ofSet, leaving others alone.
 	 */
 	forceTags(tags: string, ofSet?: string): void;
-
-	/**
-	 * Ask spot to scroll horizontally and/or vertically, to the specified position.
-	 * This assumes the existence of Scroller(s) on the client side, to do the actual
-	 * scrolling. The position is specified as a normalized value 0...1, where 0
-	 * is no scrolling, and 1 is the maximum amount of scrolling. If "seconds" is
-	 * specified, then scroll gradually over that time.
-	 */
-	scrollTo(x: number|undefined, y?:number, seconds?: number): void;
 
 	/**
 	 * Tell any active Locator on this Spot to locate the location ID
@@ -235,10 +155,103 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	locateSpot(location: string, isSpotPath?: boolean): void;
 
 	/**
+	 * Most recently scanned value, when using keyboard-emulating or QR code
+	 * scanner.
+	 */
+	readonly scannerInput: string;
+
+	/**
+	 * Ask spot to scroll horizontally and/or vertically, to the specified position.
+	 * This assumes the existence of Scroller(s) on the client side, to do the actual
+	 * scrolling. The position is specified as a normalized value 0...1, where 0
+	 * is no scrolling, and 1 is the maximum amount of scrolling. If "seconds" is
+	 * specified, then scroll gradually over that time.
+	 */
+	scrollTo(x: number|undefined, y?:number, seconds?: number): void;
+}
+
+export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable {
+	isOfTypeName(typeName: "DisplaySpot"): DisplaySpot|null;
+
+	/**
+	 True if the spot is connected.
+	 */
+	readonly connected: boolean;
+
+	/**
+	 * Dot-separated IP address of display spot, if connected, else null.
+	 */
+	readonly address: string;
+
+	/**
+	 * Get any geolocation associated with spot, or null if none.
+	 */
+	readonly geoZone: GeoZone|null;
+
+
+	/**
+	 * Reload the current block. Occasionally useful after making server-side changes to
+	 * a block programmatically, or to reload a WebBlock that changed for other reasons.
+	 * Optionally, reload the entire web page (essentially performing a browser "reset").
+	 */
+	reload(reloadBrowser?:boolean): void;
+
+	/**
+	 * Turn power on/off, if possible. Returns most recently set power state.
+	 * NOTE: Prior to Blocks 5.5, this returned the current power state, which
+	 * would lag the wanted power state during power-up.
+	 *
+	 * Alternatively, call wakeUp below from a task, to turn power on and wait
+	 * for spot to connect before proceeding (possibly consolidated inside an
+	 * await statement, to wait for more than one starting in parallell).
+	 */
+	power: boolean;
+
+	/**
+	 * Power up the display spot. Promise resolved once spot has connected.
+	 */
+	wakeUp(timeoutSeconds?: number): Promise<any>;
+
+	/**
+	 * Current time position (e.g., in video), in seconds. Write to position the video.
+	 * Reading is supported only when spot has an active Synchronizer block which provides
+	 * this information (else returns NaN).
+	 */
+	time: number;
+
+	/**
+	 Ask display to reboot/reload. Not supported by all displays.
+	 */
+	reboot(): void;
+
+	/**
+	 * Ask Spot to select an alternative picture source, by name. Supported inputs vary
+	 * with spot models, but typically look like, "DVI", "HDMI" or "HDMI1" (if has more
+	 * than one input of same type). Specify empty string to revert to the default Spot
+	 * image source (i.e., its "browser").
+	 */
+	pictureSource: string;
+
+	/**
+	 Spot is playing (true) or paused (false).
+	 */
+	playing: boolean;
+
+	/**
+	 Spot is actively viewed
+	 */
+	active: boolean;
+
+	/**
+	 Controls or returns audio volume, if possible, as 0...1.
+	 */
+	volume: number;
+
+	/**
 	 * Event fired when interesting connection state event occurs.
 	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
-		type:
+		readonly type:
 			'Connection'|		// Connection state changed (check with isConnected)
 			'ConnectionFailed'	// Connection attempt failed
 	})=>void): void;
@@ -247,12 +260,12 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	 *	Event fired when various spot state changes occur.
 	 */
 	subscribe(event: "spot", listener: (sender: DisplaySpot, message:{
-		type:
+		readonly type:
 			'DefaultBlock'|		// Default block changed
 			'PriorityBlock'|	// Priority block changed
 			'PlayingBlock'|		// Actually playing block changed
 			'InputSource'|		// Input source selection changed
-			'Volume'|			// Audio volume changed
+			'Volume'|			// Audio volume changed (from Blocks)
 			'Active'|			// Actively viewed state changed
 			'Playing'			// Playing/paused state changed
 	})=>void): void;
@@ -261,39 +274,117 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
 	 *	Event fired when user navigates manually to a block path
 	 */
 	subscribe(event: 'navigation', listener: (sender: DisplaySpot, message: {
-		targetPath: string,	// Requested path navigated to
-		foundPath: string	// Resulting absolute (//-style) and canonized path
+		readonly targetPath: string,	// Requested path navigated to
+		readonly foundPath: string		// Resulting absolute (//-style) and canonized path
 	})=>void): void;
 
 	/**
 	 *	Event fired when keyboard faux-GPIO (numeric key 0...9) changes state.
 	 */
 	subscribe(event: 'keyPress', listener: (sender: DisplaySpot, message: {
-		input: number,		// Input that changed; 0...9
-		active: boolean		// Input is active (pressed)
+		readonly input: number,		// Input that changed; 0...9
+		readonly active: boolean	// Input is active (pressed)
 	})=>void): void;
 
 	/**
 	 *	Event fired when on RFID/QR scanner input (keyboard text entry).
 	 */
 	subscribe(event: 'scannerInput', listener: (sender: DisplaySpot, message: {
-		code: string,		// Scanned code, or empty string at end of scan
+		readonly code: string,		// Scanned code, or empty string at end of scan
 	})=>void): void;
 
-	// Object is being shut down
+	/**
+	 *	Event fired when Locator changes location of spot.
+	 */
+	subscribe(event: 'location', listener: (sender:DisplaySpot, message: {
+		readonly location: string	// New location, as Spot path, or empty string if left location
+	})=>void): void;
+
+	/**
+	 *	Event fired when image is received from Camera block on Spot.
+	 */
+	subscribe(event: 'image', listener: (sender: DisplaySpot, message: {
+		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
+		readonly cameraName: string	// Assigned name to Camera block
+	})=>void): void;
+
+
+	// Visitor disconnected and must no longer be used
 	subscribe(event: 'finish', listener: (sender: DisplaySpot)=>void): void;
 }
 
-// Spot type named "Visitor Spot" in Blocks UI
+/*	Spot type named "Visitor Spot" in Blocks UI. This corresponds to
+	the URL used to connect many separate browsers (e.g., mobile
+	phones). These may be either anonymous (in which case you can't
+	interact with tmem individually from the server) or they may
+	each have their own individual identity, depending on how the
+	MobileSpot is configured. If it's configured to identify
+	individual visitors, then use the 'visitor' event to learn
+	when such individuals connect.
+ */
 export interface MobileSpot extends SpotGroupItem, BaseSpot {
 	isOfTypeName(typeName: "MobileSpot"): MobileSpot | null;
+	readonly individual: boolean;	// Supports individual visitor identity
 
-	subscribe(event: "spot", listener: (sender: MobileSpot, message:{
-		type:
+	subscribe(event: 'spot', listener: (sender: MobileSpot, message:{
+		readonly type:
 			'DefaultBlock'|		// Default block changed (may be schedule)
 			'PriorityBlock'|	// Priority block changed (may be schedule)
 			'PlayingBlock'		// Actually playing block changed (always media)
 	})=>void): void;
+
+	/**
+	 * Event fired when an individual visitor joins in or disconnects. For the
+	 * Disconnect case, you must immediately sever all ties to that Visitor,
+	 * and should not attempt to use it in any way.
+	 */
+	subscribe<RecordType extends RecordBase>(event: 'visitor', listener: (sender: MobileSpot, message:{
+		readonly type:
+			'Connected'|		// Visitor connected
+			'Disconnected',		// Visitor disconnected (also indicated by Visitor's 'finish' event)
+		readonly visitor: Visitor<RecordType>	// The visitor this event pertains to
+	})=>void): void;
+}
+
+/**
+ * A MobileSpot individual Visitor and any associated Record (if any).
+ */
+export interface Visitor<RecordType extends RecordBase> extends ControllableSpot {
+
+	readonly record: RecordType | null;		// Associated data record, if any
+
+	// Let's see if those are really needed - remove also in VisitorSF if not
+	// readonly recordType: Ctor<any>;				// Type of associated Record
+	// readonly secondaryIdField: string | null;	// Secondary Mobile phone ID field name, if any
+
+	/**
+	 *	Event fired when various spot state changes occur.
+	 */
+	subscribe(event: "spot", listener: (sender: Visitor<RecordType>, message:{
+		readonly type:
+			'DefaultBlock'|		// Default block changed
+			'PriorityBlock'|	// Priority block changed
+			'PlayingBlock'		// Actually playing block changed
+	})=>void): void;
+
+	/**
+	 *	Event fired when Locator changes location of spot.
+	 */
+	subscribe(event: 'location', listener: (sender: Visitor<RecordType>, message: {
+		readonly location: string	// New location, as Spot path, or empty string if left location
+	})=>void): void;
+
+	/**
+	 *	Event fired when image is received from Camera block on Spot.
+	 */
+	subscribe(event: 'image', listener: (sender: Visitor<RecordType>, message: {
+		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
+		readonly cameraName: string	// Assigned name to Camera block
+	})=>void): void;
+
+
+	// Visitor disconnected and must no longer be used
+	subscribe(event: 'finish', listener: (sender: Visitor<RecordType>)=>void): void;
 }
 
 // Spot type named "Location" in Blocks UI

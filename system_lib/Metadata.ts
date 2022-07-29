@@ -12,7 +12,18 @@ declare global {
 			(target: Function): void;
 			(target: Object, targetKey: string | symbol): void;
 		};
+		callableParameter(cpd: ICallableParamDescr): any;
+		record(description: string): any;
+		spotParameter(): {
+			(target: Object, targetKey: string | symbol): void;
+		};
 	}
+}
+
+// What's passed to $metaSupport$.callableParameter above
+interface ICallableParamDescr {
+	descr: string;
+	opt: boolean;
 }
 
 /**
@@ -34,6 +45,11 @@ export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP', typeSpecificMe
 	return function(target: any): void {
 		return Reflect.defineMetadata("pixi:driver", info, target);
 	}
+}
+
+// Implements the @record decorator, marking a class as a data store DTO
+export function record(description?: string) {
+	return $metaSupport$.record(description);
 }
 
 /**
@@ -62,7 +78,7 @@ export function roleRequired(role: RoleRequired) {
  the property's value.
  */
 export function property(description?: string, readOnly?: boolean) {
-	return $metaSupport$.property(description, readOnly); // Impl moved into $core
+	return $metaSupport$.property(description, readOnly); // Impl in $core
 }
 
 /**
@@ -70,7 +86,7 @@ export function property(description?: string, readOnly?: boolean) {
  with optional description.
  */
 export function callable(description?: string) {
-	return $metaSupport$.callable(description); // Impl moved into $core
+	return $metaSupport$.callable(description); // Impl in $core
 }
 
 /**
@@ -79,30 +95,36 @@ export function callable(description?: string) {
  '?' after the param name in the param list to also inform the compiler).
  */
 export function parameter(description?: string, optional?: boolean) {
-	return function(clsFunc: Object, propertyKey: string, paramIndex: number) {
-		propertyKey = propertyKey + ':' + paramIndex;
-		var data = {
-			descr: description || "",
-			opt: optional || false
-		};
-		// Note that "data" here used to be JUST the description string in Blocks < 1.1b16
-		return Reflect.defineMetadata("pixi:param", data, clsFunc, propertyKey);
-	}
+	return $metaSupport$.callableParameter({
+		descr: description || "",
+		opt: optional || false
+	}); // Impl in $core
 }
 
-interface Ctor<T> { new(... args: any[]): T ;}
 
 /**
- * Decorator for a feed item data field. Applied to an instance variable, which must
- * be of primitive type (i.e., string, number or boolean). Field values are read-only.
+ * Decorator for a feed or data-set field. Applied to an instance variable, which must
+ * be of primitive type (i.e., string, number or boolean). Field values are exposed as
+ * read-only properties.
  */
 export function field(description?: string) {
-	return $metaSupport$.fieldMetadata({description: description} );
+	return $metaSupport$.fieldMetadata({description: description});
+}
+
+
+/**
+ * Mark a field in specified Record as a Spot Parameter, making its value readable and
+ * writable .
+ */
+export function spotParameter() {
+	return $metaSupport$.spotParameter();
 }
 
 /**
- * Decorator for (presumably unique) Feed item ID field, if any. Applied to an
- * instance variable typically of string or number type. Read-only by definition.
+ * Decorator for item ID field, if any. For feed script, only a single ID field
+ * may be specified. A Record may use multiple ID fields, where each one can
+ * be used to look up the Record instance. Typically of string or number type.
+ * Read-only by definition (since it's used as lookup key).
  */
 export function id(description?: string) {
 	return $metaSupport$.fieldMetadata( {description: description, id: true} );
