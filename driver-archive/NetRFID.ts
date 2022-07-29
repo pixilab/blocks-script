@@ -17,12 +17,24 @@ export class NetRFID extends Driver<NetworkTCP> {
 		super(socket);
 		socket.autoConnect();
 		socket.subscribe('textReceived', (sender, message) => {
-			var scanned = message.text;
+			let scanned = message.text;
 			// Scanner sends "v1.0" when connects, which then becomes part of 1st message - strip off
 			if (scanned.indexOf('v') === 0)
 				scanned = scanned.substring(4);
-			this.scanned = scanned;
+			// Scanner wraps code inside STX ETX characters. Remove those, leaving only the string there
+			this.scanned = NetRFID.removeControls(scanned);
 		});
+	}
+
+	static removeControls(scanned: string) {
+		let result = '';
+		const len = scanned.length;
+		for (let ix = 0; ix < len; ++ix) {
+			if (scanned.charCodeAt(ix) > 0x20)
+				result += scanned.charAt(ix);
+			// else skip non-printable characters
+		}
+		return result;
 	}
 
 	@property("Last scanned value, or empty string", true)

@@ -193,7 +193,10 @@ export class UIRobot extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 * Sends keys in the format of MODIFIER1+MODIFIER2+KEY
+	 * Press a key (with optional modifiers) in the format of
+	 *
+	 * 		MODIFIER1+MODIFIER2+KEY
+	 *
 	 * Possible modifiers are:
 	 * 	shift
 	 * 	meta
@@ -205,10 +208,11 @@ export class UIRobot extends Driver<NetworkTCP> {
 	 * 	 - a digit
 	 * 	 - a VK_XXX "virtual key code" from the list found here:
 	 * 	 	https://docs.oracle.com/javase/7/docs/api/java/awt/event/KeyEvent.html
-	 * The keys sent are only remembered a short while and then reset, this is because
-	 * we'd like some feedback when pusing a button on the panel.
+	 *
+	 * The property value is only held for about 0.2 seconds, and is then reset. This provides
+	 * some feedback when controlled using, e.g., a button on a panel.
 	 */
-	@property("Send key strokes, modifiers before key")
+	@property("Press a key, modifiers (alt, shift, etc) before key")
 	public set keyDown(keys: string) {
 		this.mCurrentKeys = keys;
 
