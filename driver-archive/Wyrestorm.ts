@@ -33,6 +33,7 @@ export class Wyrestorm extends Driver<NetworkTCP> {
 	private mMultiviewConfig: IMultiViewConfig // Configuration for a multiview decoder
 	private mCurrentLayout: ILayout; // The currently selected layout if multiview
 	private mApplyTilesDebounce: CancelablePromise<void>; // Applying the tile layout when resolving
+	private mDevicePower: boolean = false; // Power state on the device attached to HDMI
 
 	/**
 	 * Properties for each tile on a multiview decoder.
@@ -79,6 +80,19 @@ export class Wyrestorm extends Driver<NetworkTCP> {
 		socket.subscribe('finish', () => {
 			Wyrestorm.removeConnection(this.mMyConnection);
 		});
+	}
+	
+	@property("Send HDMI-CEC command to power on/off the device")
+	public set power(value: boolean) {
+		this.mDevicePower = value;
+		let pw = "off";
+		if (value) {
+			pw = "on";
+		}
+		this.mMyConnection.doCommand(`config set device sinkpower ${ pw } ${ this.mDeviceName }`);
+	}
+	public get power(): boolean {
+		return this.mDevicePower;
 	}
 
 	/**
