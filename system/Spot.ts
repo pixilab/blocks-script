@@ -347,15 +347,19 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 }
 
 /**
- * A MobileSpot individual Visitor and any associated Record (if any).
+ * A MobileSpot's individual Visitor and any associated data record. A data record
+ * will always be provided if the mobile phone is the primary means of identification. If
+ * the mobile phone is secondary (e.g., when using RFID tag as primary means of
+ * identification), my identity can be used as a secondary identification field in
+ * RecordType, with the name of this field specified in the Visitor Spot's configuration.
+ * It's then your responsibility to assign the visitor's identity (a string) to that
+ * field in the data record. Once done, the data record will subsequently be looked up
+ * and provided automatically.
  */
 export interface Visitor<RecordType extends RecordBase> extends ControllableSpot {
 
+	readonly identity: string;		// Persistent, system-unique visitor (e.g. mobile phone) identifier
 	readonly record: RecordType | null;		// Associated data record, if any
-
-	// Let's see if those are really needed - remove also in VisitorSF if not
-	// readonly recordType: Ctor<any>;				// Type of associated Record
-	// readonly secondaryIdField: string | null;	// Secondary Mobile phone ID field name, if any
 
 	/**
 	 *	Event fired when various spot state changes occur.

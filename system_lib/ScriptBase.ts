@@ -158,7 +158,8 @@ export interface IndexedProperty<T> extends IndexedAny<T> {
 
 /**
  * Base class for persistent records used to, e.g., track visitor journey, collecting
- * data along the way.
+ * data along the way. Use decorators such as @field() @id() and @spotParameter() to
+ * mark your custom fields added to your own subclass being used in your script.
  */
 export abstract class RecordBase {
 	readonly $puid: number;		// Persistent, system-unique identifier for this Record
