@@ -64,10 +64,12 @@ export class AnthemMRX_x20 extends NetworkProjector {
 	private _powerAll: boolean;
 	private _powZone2: BoolState;
 	private _powZone3: BoolState;
+	private powerZone2: boolean;
+	private powerZone3: boolean;
 	private _sip: BoolState;
 	private _vol: SignedNumberState;
 
-	private staticInfo: {};
+	private readonly staticInfo: Dictionary<string>;
 
 	private getToKnowRunning: boolean;
 
@@ -125,8 +127,10 @@ export class AnthemMRX_x20 extends NetworkProjector {
 	@property('Power All Zones on/off')
 	public set powerAll(on: boolean) {
 		this.power = on;
-		if (this._powZone2) this['powerZone2'] = on;
-		if (this._powZone3) this['powerZone3'] = on;
+		if (this._powZone2)
+			this['powerZone2'] = on;
+		if (this._powZone3)
+			this['powerZone3'] = on;
 		this._powerAll = on;
 	}
 	public get powerAll(): boolean {
@@ -145,7 +149,7 @@ export class AnthemMRX_x20 extends NetworkProjector {
 
 	private createDynamicPowerProperty (zone: number) : void {
 		if (LOG_DEBUG) console.log('trying to create dynamic power property for zone ' + zone);
-		const state: BoolState = this['_powZone' + zone];
+		const state: BoolState = (<any>this)['_powZone' + zone];
 		this.property<boolean>('powerZone' + zone, { type: Boolean, description: 'Power Zone ' + zone + ' on/off)'}, setValue => {
 			if (setValue !== undefined) {
 				if (state?.set(setValue)) this.sendCorrection();
@@ -179,7 +183,7 @@ export class AnthemMRX_x20 extends NetworkProjector {
 
 	private createDynamicVolumeProperty (zone: number) : void {
         if (LOG_DEBUG) console.log('trying  to create dynamic volume property for zone ' + zone);
-        const state: SignedNumberState = this['_volZone' + zone];
+        const state: SignedNumberState = (<any>this)['_volZone' + zone];
 		this.property<number>('volumeZone' + zone, { type: Number, min: VOL_MIN, max: VOL_MAX, description: 'Volume Zone ' + zone + ')'}, setValue => {
 			if (setValue !== undefined) {
 				if (state?.set(setValue)) this.sendCorrection();
@@ -256,7 +260,7 @@ export class AnthemMRX_x20 extends NetworkProjector {
 					const newPower = value == '1';
 					if (zoneID == 1) this._power.updateCurrent(newPower);
 					else if (value !== '?') {
-						let state: BoolState = this['_powZone' + zoneID];
+						let state: BoolState = (<any>this)['_powZone' + zoneID];
 						if (!state) state = this.setupStates(zoneID).pow;
 						state.updateCurrent(newPower);
 					}
@@ -268,7 +272,7 @@ export class AnthemMRX_x20 extends NetworkProjector {
 					const newVolume = parseInt(value);
 					if (zoneID == 1) this._vol.updateCurrent(newVolume);
 					else if (value !== '?') {
-						let state: SignedNumberState = this['_volZone' + zoneID];
+						let state: SignedNumberState = (<any>this)['_volZone' + zoneID];
 						if (!state) state = this.setupStates(zoneID).vol;
 						state.updateCurrent(newVolume);
 					}
@@ -304,13 +308,13 @@ export class AnthemMRX_x20 extends NetworkProjector {
 		};
 	}
 	private setupPowerState(zone: number): BoolState {
-		const state = this['_powZone' + zone] = new BoolState('Z' + zone + CMD_POW, 'powerZone' + zone);
+		const state = (<any>this)['_powZone' + zone] = new BoolState('Z' + zone + CMD_POW, 'powerZone' + zone);
 		this.addState(state);
 		this.createDynamicPowerProperty(zone);
 		return state;
 	}
 	private setupVolumeState(zone: number, initialVolume?: number): SignedNumberState {
-		const state = this['_volZone' + zone] = new SignedNumberState('Z' + zone + CMD_VOL, 'volumeZone' + zone);
+		const state = (<any>this)['_volZone' + zone] = new SignedNumberState('Z' + zone + CMD_VOL, 'volumeZone' + zone);
 		if (initialVolume !== undefined) state.updateCurrent(initialVolume);
 		this.addState(state);
 		this.createDynamicVolumeProperty(zone);
@@ -440,4 +444,9 @@ class SignedNumberState extends State<number> {
 		var result = super.get();
 		return result !== undefined ? result : 0;
 	}
+}
+
+// A simple typed dictionary type, using a string as key
+interface Dictionary<TElem> {
+	[id: string]: TElem;
 }

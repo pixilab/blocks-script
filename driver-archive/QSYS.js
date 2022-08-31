@@ -53,7 +53,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 var control = _a[_i];
                 var prop = {
                     controlName: control.controlName,
-                    propertyName: control.propertyName ? control.propertyName : control.controlName,
+                    propertyName: (control.propertyName ? control.propertyName : control.controlName),
                     mapping: control.mapping ? control.mapping : Mapping.Position,
                     value: 0
                 };
