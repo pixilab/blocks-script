@@ -11,21 +11,6 @@ import {RecordBase, ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
 export class Script extends ScriptBase<ScriptEnv> {
 
 	/**
-	 * Connect to the property at the specified full (dot-separated) path. Pass
-	 * a callback function to be notified when the value of the property changes.
-	 * Returns an object that can be used to read/write the property's value,
-	 * as well as close down the connection to the property once no longer
-	 * needed.
-	 *
-	 * The value associated with the property varies with the type of property.
-	 */
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
-		return changeNotification ?
-			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
-			this.__scriptFacade.getProperty<PropType>(fullPath);
-	}
-
-	/**
 	 * Establish a named channel associated with this script, with optional "data received
 	 * on channel" handler function.
 	 */
@@ -121,7 +106,6 @@ export interface ScriptEnv extends ScriptBaseEnv {
 	establishChannel(name: string):void;
 	establishChannel(name: string, listener: Function): void;
 	sendOnChannel(name: string, data: string):void;
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
 	newRecord<DST extends RecordBase>(type: Ctor<DST>): DST;
 	getRecord<DST extends RecordBase>(type: Ctor<DST>, puid: number): DST;
 	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, key: string|number): DST;

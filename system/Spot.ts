@@ -305,7 +305,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 */
 	subscribe(event: 'image', listener: (sender: DisplaySpot, message: {
 		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
-		readonly cameraName: string	// Assigned name to Camera block
+		readonly rollName: string	// Camera Block's assigned "roll name"
 	})=>void): void;
 
 
@@ -383,7 +383,7 @@ export interface Visitor<RecordType extends RecordBase> extends ControllableSpot
 	 */
 	subscribe(event: 'image', listener: (sender: Visitor<RecordType>, message: {
 		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
-		readonly cameraName: string	// Assigned name to Camera block
+		readonly rollName: string	// Camera Block's assigned "roll name"
 	})=>void): void;
 
 

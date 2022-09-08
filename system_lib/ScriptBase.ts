@@ -3,6 +3,7 @@
  */
 
 import {SetterGetter, SGOptions} from "system/PubSub";
+import {PropertyAccessor} from "./Script";
 
 
 interface Ctor<T> { new(... args: any[]): T ;}
@@ -60,6 +61,22 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	changed(propName: string): void {
 		this.__scriptFacade.changed(propName);
 	}
+
+	/**
+	 * Connect to the property at the specified full (dot-separated) path. Pass
+	 * a callback function to be notified when the value of the property changes.
+	 * Returns an object that can be used to read/write the property's value,
+	 * as well as close down the connection to the property once no longer
+	 * needed.
+	 *
+	 * The value associated with the property varies with the type of property.
+	 */
+	getProperty<PropType>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
+		return changeNotification ?
+			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
+			this.__scriptFacade.getProperty<PropType>(fullPath);
+	}
+
 
 	/**
 	 * Forward any event unsubscription to my associated facade.
@@ -170,6 +187,7 @@ export abstract class RecordBase {
 	DO NOT CALL directly from scripts/drivers!
  */
 export interface ScriptBaseEnv extends ChangeNotifier  {
+	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
 	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 	changed(prop: string): void; // Named child property has changed
 	property(name: string, options: SGOptions, gsFunc: SetterGetter<any>): void;
