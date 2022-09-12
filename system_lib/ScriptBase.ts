@@ -85,6 +85,14 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 		this.__scriptFacade.unsubscribe(event, listener);
 	}
 
+	/**
+	 * Provide a monotonous millisecond current time readout. Unlike the value of Date.now(), which
+	 * may jump when the system clock is adjusted (e.g., due to a daylight savings time switch),
+	 * this monotonous clock increases monotonously, without any discontinuities.
+	 */
+	getMonotonousMillis() {
+		return this.__scriptFacade.getMonotonousMillis();
+	}
 
 	/**
 	 Allows a script/driver to request reinitialization of itself.
@@ -184,7 +192,8 @@ export abstract class RecordBase {
 
 /*	Common environment used by user scripts as well as device drivers
 	These are INTERNAL implementation details, and may change.
-	DO NOT CALL directly from scripts/drivers!
+	DO NOT CALL directly from any scripts/drivers! Always use base class
+	equivalents.
  */
 export interface ScriptBaseEnv extends ChangeNotifier  {
 	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
@@ -193,5 +202,6 @@ export interface ScriptBaseEnv extends ChangeNotifier  {
 	property(name: string, options: SGOptions, gsFunc: SetterGetter<any>): void;
 	indexedProperty<T>(name: string, elemType: Ctor<T>): IndexedProperty<T>;
 	reInitialize(): void;
+	getMonotonousMillis(): number;
 }
 

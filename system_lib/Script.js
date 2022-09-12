@@ -22,11 +22,6 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
         function Script() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
-        Script.prototype.getProperty = function (fullPath, changeNotification) {
-            return changeNotification ?
-                this.__scriptFacade.getProperty(fullPath, changeNotification) :
-                this.__scriptFacade.getProperty(fullPath);
-        };
         Script.prototype.establishChannel = function (leafChannelName, callback) {
             if (callback) {
                 this.__scriptFacade.establishChannel(leafChannelName, function (sender, axon) {

@@ -28,8 +28,16 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.changed = function (propName) {
             this.__scriptFacade.changed(propName);
         };
+        ScriptBase.prototype.getProperty = function (fullPath, changeNotification) {
+            return changeNotification ?
+                this.__scriptFacade.getProperty(fullPath, changeNotification) :
+                this.__scriptFacade.getProperty(fullPath);
+        };
         ScriptBase.prototype.unsubscribe = function (event, listener) {
             this.__scriptFacade.unsubscribe(event, listener);
+        };
+        ScriptBase.prototype.getMonotonousMillis = function () {
+            return this.__scriptFacade.getMonotonousMillis();
         };
         ScriptBase.prototype.reInitialize = function () {
             this.__scriptFacade.reInitialize();
