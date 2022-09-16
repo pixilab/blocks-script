@@ -45,8 +45,8 @@ export class Script extends ScriptBase<ScriptEnv> {
 	 * (TSV) file for later analysis outside Blocks. Do NOT use this record after
 	 * deleting it.
 	 */
-	deleteRecord<DST extends RecordBase>(record: DST, archive: boolean): void {
-		return this.__scriptFacade.deleteRecord(record, archive);
+	deleteRecord<DST extends RecordBase>(record: DST, archive?: boolean, filesToArchive?: string[]): void {
+		return this.__scriptFacade.deleteRecord(record, archive, filesToArchive);
 	}
 
 	/**
@@ -110,6 +110,6 @@ export interface ScriptEnv extends ScriptBaseEnv {
 	getRecord<DST extends RecordBase>(type: Ctor<DST>, puid: number): DST;
 	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, key: string|number): DST;
 	deleteRecords<DST extends RecordBase>(type: Ctor<DST>, archive: boolean): void;
-	deleteRecord<DST extends RecordBase>(record: DST, archive?: boolean): void;
+	deleteRecord<DST extends RecordBase>(record: DST, archive?: boolean, filesToArchive?: string[]): void;
 	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[];
 }
