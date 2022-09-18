@@ -37,8 +37,8 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
         Script.prototype.newRecord = function (type) {
             return this.__scriptFacade.newRecord(type);
         };
-        Script.prototype.deleteRecord = function (record, archive) {
-            return this.__scriptFacade.deleteRecord(record, archive);
+        Script.prototype.deleteRecord = function (record, archive, filesToArchive) {
+            return this.__scriptFacade.deleteRecord(record, archive, filesToArchive);
         };
         Script.prototype.deleteRecords = function (type, archive) {
             return this.__scriptFacade.deleteRecords(type, archive || false);

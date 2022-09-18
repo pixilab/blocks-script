@@ -22,6 +22,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], function (require, exports, Metadata_1, Script_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -36,36 +39,35 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
             _this.momentProps = {};
             for (var _i = 0, _a = SunClock.kPropNames; _i < _a.length; _i++) {
                 var propName = _a[_i];
-                _this.momentProps[propName] = new MomentProp(_this, propName);
+                _this.momentProps[propName] = new SunProp(_this, propName, propName, 0);
             }
-            _this.updateTimes();
+            _this.momentProps['daylight'] = new SunProp(_this, 'daylight', 'sunriseEnd', 0, 'sunsetStart', 0);
+            asap(function () { return _this.forceUpdate(); });
             return _this;
         }
+        SunClock.prototype.defineCustom = function (propName, startMoment, startOffset, endMoment, endOffset) {
+            this.momentProps[propName] = new SunProp(this, propName, startMoment, startOffset || 0, endMoment, endOffset);
+        };
         SunClock.prototype.updateTimes = function () {
             var _this = this;
-            if (this.waiter)
-                this.waiter.cancel();
             var now = new Date();
-            var moments = suncalc.getTimes(now, this.mLat, this.mLong);
-            var nowMillis = now.getTime();
-            var timeTilNextInteresting = SunClock.kDayMillis;
-            for (var _i = 0, _a = SunClock.kPropNames; _i < _a.length; _i++) {
-                var propName = _a[_i];
-                var slotDate = moments[propName];
-                var momentMillis = slotDate.getTime();
-                var timeUntil = momentMillis - nowMillis;
-                var momentProp = this.momentProps[propName];
-                var withinSlot = timeUntil <= 0 && timeUntil > -SunClock.kMinuteMillis;
-                if (momentProp.setState(withinSlot)) {
-                    this.changed(propName);
-                }
-                if (timeUntil > 0)
-                    timeTilNextInteresting = Math.min(timeTilNextInteresting, timeUntil);
-                if (momentProp.getState())
-                    timeTilNextInteresting = Math.min(timeTilNextInteresting, SunClock.kMinuteMillis);
+            var todaysDate = now.getDate();
+            if (this.dateWhenCached !== todaysDate) {
+                this.todaysMoments = suncalc.getTimes(now, this.mLat, this.mLong);
+                ;
+                this.dateWhenCached = todaysDate;
             }
-            timeTilNextInteresting = Math.min(timeTilNextInteresting, SunClock.kHourMillis);
-            this.waiter = wait(timeTilNextInteresting + 200);
+            var moments = this.todaysMoments;
+            var nowMillis = now.getTime();
+            var nextWaitTime = SunClock.kMinuteMillis * 30;
+            for (var propName in this.momentProps) {
+                var nextInteresting = this.momentProps[propName].updateState(nowMillis, moments);
+                var untilNextInteresting = nextInteresting - nowMillis;
+                if (untilNextInteresting < 0)
+                    untilNextInteresting += SunClock.kDayMillis;
+                nextWaitTime = Math.min(nextWaitTime, untilNextInteresting);
+            }
+            this.waiter = wait(nextWaitTime + 200);
             this.waiter.then(function () {
                 _this.waiter = undefined;
                 _this.updateTimes();
@@ -79,7 +81,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
                 var news = this.mLat !== value;
                 this.mLat = value;
                 if (news)
-                    this.updateTimes();
+                    this.forceUpdate();
             },
             enumerable: false,
             configurable: true
@@ -92,15 +94,32 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
                 var news = this.mLong !== value;
                 this.mLong = value;
                 if (news)
-                    this.updateTimes();
+                    this.forceUpdate();
             },
             enumerable: false,
             configurable: true
         });
-        SunClock.kPropNames = ['sunrise', 'sunset', 'sunsetStart', 'sunriseEnd', 'dawn', 'dusk'];
+        SunClock.prototype.forceUpdate = function () {
+            if (this.waiter)
+                this.waiter.cancel();
+            this.dateWhenCached = undefined;
+            this.updateTimes();
+        };
+        SunClock.kPropNames = ['sunrise', 'sunset'];
         SunClock.kMinuteMillis = 1000 * 60;
         SunClock.kHourMillis = SunClock.kMinuteMillis * 60;
         SunClock.kDayMillis = SunClock.kHourMillis * 24;
+        __decorate([
+            (0, Metadata_1.callable)("Define a custom sub clock property"),
+            __param(0, (0, Metadata_1.parameter)("Name of this custom property")),
+            __param(1, (0, Metadata_1.parameter)("Event name in suncalc library indicating beginning")),
+            __param(2, (0, Metadata_1.parameter)("Time offset added to startMoment time, in minutes", true)),
+            __param(3, (0, Metadata_1.parameter)("Event name in suncalc library indicating end", true)),
+            __param(4, (0, Metadata_1.parameter)("Time offset added to endMoment time, in minutes", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number, String, Number]),
+            __metadata("design:returntype", void 0)
+        ], SunClock.prototype, "defineCustom", null);
         __decorate([
             (0, Metadata_1.property)("World location latitude"),
             __metadata("design:type", Number),
@@ -114,21 +133,46 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
         return SunClock;
     }(Script_1.Script));
     exports.SunClock = SunClock;
-    var MomentProp = (function () {
-        function MomentProp(owner, name) {
+    var SunProp = (function () {
+        function SunProp(owner, propName, startMoment, startOffset, endMoment, endOffset) {
             var _this = this;
-            this.name = name;
-            this.propState = false;
-            owner.property(name, { type: Boolean, readOnly: true }, function () { return _this.propState; });
+            this.owner = owner;
+            this.propName = propName;
+            this.startMoment = startMoment;
+            this.startOffset = startOffset;
+            this.endMoment = endMoment;
+            this.endOffset = endOffset;
+            this.currentlyIn = false;
+            owner.property(propName, { type: Boolean, readOnly: true }, function () { return _this.currentlyIn; });
         }
-        MomentProp.prototype.getState = function () {
-            return this.propState;
+        SunProp.prototype.getState = function () {
+            return this.currentlyIn;
         };
-        MomentProp.prototype.setState = function (state) {
-            var news = state !== this.propState;
-            this.propState = state;
-            return news;
+        SunProp.getTimeFor = function (momentName, moments) {
+            var slot = moments[momentName];
+            if (!slot)
+                throw "Invalid moment name " + momentName;
+            return slot.getTime();
         };
-        return MomentProp;
+        SunProp.prototype.getEndTime = function (moments) {
+            var endMoment = this.endMoment;
+            if (endMoment)
+                return SunProp.getTimeFor(endMoment, moments) + (this.endOffset || 0) * SunClock.kMinuteMillis;
+            return this.getStartTime(moments) + SunClock.kMinuteMillis;
+        };
+        SunProp.prototype.getStartTime = function (moments) {
+            return SunProp.getTimeFor(this.startMoment, moments) + this.startOffset * SunClock.kMinuteMillis;
+        };
+        SunProp.prototype.updateState = function (timeNow, moments) {
+            var startTime = this.getStartTime(moments);
+            var endTime = this.getEndTime(moments);
+            var within = timeNow >= startTime && timeNow < endTime;
+            if (within != this.currentlyIn) {
+                this.currentlyIn = within;
+                this.owner.changed(this.propName);
+            }
+            return within ? endTime : startTime;
+        };
+        return SunProp;
     }());
 });

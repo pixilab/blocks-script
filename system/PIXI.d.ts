@@ -6,11 +6,13 @@
 */
 
 
-/**	Make a promise that will be fulfilled after milliseconds.
+/**	Make a promise that will be fulfilled after milliseconds. If you change your
+	mind and no longer want the promise to fire after the specified time, just
+	call cancel() on the returned CancelablePromise.
  */
 declare function wait(milliseconds: number): CancelablePromise<void>;
 
-/**	Perform callback as soon as possible, but not at the current "event cycle".
+/**	Perform callback as soon as possible, but not during the current "event cycle".
  */
 declare function asap(callback: Function): void;
 

@@ -1,13 +1,13 @@
-/*	A basic "solar event" script, indicating whether we're in a variety of daylight
-	"phases" based on the time of day and a specified latitude/longitude.
+/*	Provides properties corresponding to "astronomical events", such as sunrise and sunset.
 
-	IMPORTANT: THis script depends on lib/suncalc. If you enable this script, remember
-	to also enable the suncalc library script by moving it from lib_archive to lib.
+	IMPORTANT: This script depends on lib/suncalc. Make sure suncalc.js is installed in
+	the lib directory (it can be found in lib-archive if not already installed, so then
+	just move it to lib).
 
- 	Copyright (c) 2022 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ * Copyright (c) 2022 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {property} from "system_lib/Metadata"
+import {callable, parameter, property} from "system_lib/Metadata"
 import {Script, ScriptEnv} from "system_lib/Script";
 import * as SunCalc from "suncalc";
 
@@ -17,62 +17,84 @@ export class SunClock extends Script {
 	private mLat = 58.41086;	// Linkoping - set latitude & longiture properties to change
 	private mLong = 15.62157;
 
-	private readonly momentProps: Dictionary<MomentProp> = {}; // Dynamic properties, keyed by property name
+	private readonly momentProps: Dictionary<SunProp> = {}; // Dynamic properties, keyed by property name
 	private waiter: CancelablePromise<any>;	// Delay until next update
 
-	// Names of dynamic properties. These MUST match fields in SunCalc.GetTimesResult
-	private static readonly kPropNames = ['sunrise', 'sunset', 'sunsetStart', 'sunriseEnd', 'dawn', 'dusk'];
+	private todaysMoments: SunCalc.GetTimesResult;
+	private dateWhenCached: number;
 
-	// SOme other useful constants
-	private static readonly kMinuteMillis = 1000 * 60;
-	private static readonly kHourMillis = SunClock.kMinuteMillis * 60;
-	private static readonly kDayMillis = SunClock.kHourMillis * 24;
+	// Names of default properties. These MUST match fields in SunCalc.GetTimesResult
+	private static readonly kPropNames = ['sunrise', 'sunset'];
+
+	// Some other useful constants
+	static readonly kMinuteMillis = 1000 * 60;
+	static readonly kHourMillis = SunClock.kMinuteMillis * 60;
+	static readonly kDayMillis = SunClock.kHourMillis * 24;
 
 	public constructor(env: ScriptEnv) {
 		super(env);
-		// Establish my sun-position-based properties
+		// Establish some default "momentary" properties
 		for (var propName of SunClock.kPropNames)
-			this.momentProps[propName] = new MomentProp(this, propName);
+			this.momentProps[propName] = new SunProp(this, propName, propName, 0);
+		// And one extensive one
+		this.momentProps['daylight'] = new SunProp(
+			this, 'daylight',
+			'sunriseEnd', 0,
+			'sunsetStart', 0
+		);
 
-		this.updateTimes();
+		asap(() =>this.forceUpdate());	// Get us going once constructor is done
+	}
+
+	@callable("Define a custom sub clock property")
+	defineCustom(
+		@parameter("Name of this custom property") propName: string,
+		@parameter("Event name in suncalc library indicating beginning") startMoment: string,
+		@parameter("Time offset added to startMoment time, in minutes", true) startOffset: number,
+		@parameter("Event name in suncalc library indicating end", true) endMoment?: string,
+		@parameter("Time offset added to endMoment time, in minutes", true) endOffset?: number
+	) {
+		this.momentProps[propName] = new SunProp(
+			this, propName,
+			startMoment, startOffset || 0,
+			endMoment, endOffset
+		);
 	}
 
 	/**
-	 * Read interesting moments, update state of sun-position-based properties,
+	 * Read interesting moments, update state of my SunProps,
 	 * then wait for next interesting moment, rinse and repeat.
 	 */
 	private updateTimes() {
-		if (this.waiter)	// Cancel any non-terminated wait, since we'll set up a new one
-			this.waiter.cancel();
-
 		const now = new Date();
-		const moments = suncalc.getTimes(now, this.mLat, this.mLong);
-		const nowMillis = now.getTime();
-		var timeTilNextInteresting = SunClock.kDayMillis;
-		for (var propName of SunClock.kPropNames) {
-			const slotDate = ((moments as any)[propName] as Date);
-			const momentMillis = slotDate.getTime();
-			const timeUntil = momentMillis - nowMillis;
-			const momentProp = this.momentProps[propName];
-			const withinSlot = timeUntil <= 0 && timeUntil > -SunClock.kMinuteMillis;
-			if (momentProp.setState(withinSlot)) {
-				this.changed(propName);
-				// console.log("Flipped", propName, "inside", withinSlot);
-			}
-			if (timeUntil > 0)	// In the future - wait for that if nothing else
-				timeTilNextInteresting = Math.min(timeTilNextInteresting, timeUntil);
-			if (momentProp.getState()) // Is within slot - check again after a minute
-				timeTilNextInteresting = Math.min(timeTilNextInteresting, SunClock.kMinuteMillis);
-		}
-		// Wait at most an hour between checks
-		timeTilNextInteresting = Math.min(timeTilNextInteresting, SunClock.kHourMillis);
 
-		// Wait a tad more than timeTilNextInteresting to land firmly within interesting slot
-		// console.log("Millis until next interesting", timeTilNextInteresting);
-		this.waiter = wait(timeTilNextInteresting + 200);
+		// Update and cache todaysMoments only when date changed
+		const todaysDate = now.getDate();
+		if (this.dateWhenCached !== todaysDate) {
+			this.todaysMoments = suncalc.getTimes(now, this.mLat, this.mLong);;
+			this.dateWhenCached = todaysDate
+		}
+		const moments = this.todaysMoments;
+
+		const nowMillis = now.getTime();
+		// Limit time between checks to not miss DST switches and such
+		let nextWaitTime = SunClock.kMinuteMillis * 30;
+
+		for (var propName in this.momentProps) {
+			let nextInteresting = this.momentProps[propName].updateState(nowMillis, moments);
+			let untilNextInteresting = nextInteresting - nowMillis;
+			if (untilNextInteresting < 0) // Push negative times to next day
+				untilNextInteresting += SunClock.kDayMillis;
+			nextWaitTime = Math.min(nextWaitTime, untilNextInteresting);
+		}
+
+		// console.log("Minutes until next interesting", nextWaitTime / SunClock.kMinuteMillis);
+
+		// Wait a tad more than timeTilNextInteresting to land firmly within slot
+		this.waiter = wait(nextWaitTime + 200);
 		this.waiter.then(() => {
 			this.waiter = undefined;
-			this.updateTimes();
+			this.updateTimes();		// Next update cycle
 		});
 	}
 
@@ -84,7 +106,7 @@ export class SunClock extends Script {
 		const news = this.mLat !== value;
 		this.mLat = value;
 		if (news)
-			this.updateTimes();
+			this.forceUpdate();
 	}
 
 	@property("World location longitude")
@@ -95,31 +117,89 @@ export class SunClock extends Script {
 		const news = this.mLong !== value;
 		this.mLong = value;
 		if (news)
-			this.updateTimes();
+			this.forceUpdate();
+	}
+
+	/**
+	 * Something "drastic" happened, requiring that we dump any cached data and update
+	 * things from scratch.
+	 */
+	private forceUpdate() {
+		if (this.waiter) // Cancel any pending wait - updateTimes starts one anew
+			this.waiter.cancel();
+		this.dateWhenCached = undefined;
+		this.updateTimes();
 	}
 }
 
-class MomentProp {
-	private propState = false;
-	constructor(owner: SunClock, readonly name: string) {
+/**
+ * Manages one of my properties, whether built-in or custom.
+ */
+class SunProp {
+	private currentlyIn = false;	// True if considered "within" this props time range
+
+	constructor(
+		readonly owner: SunClock,
+		readonly propName: string,
+		readonly startMoment: string,
+		readonly startOffset: number,		// Minutes
+		readonly endMoment?: string,		// Else ends 1 minute after start
+		readonly endOffset?: number			// Minutes
+	) {
 		owner.property(
-			name,
+			propName,
 			{type: Boolean, readOnly: true},
-			() => this.propState
+			() => this.currentlyIn
 		);
 	}
 
 	getState() {
-		return this.propState;
+		return this.currentlyIn;
 	}
 
 	/**
-	 * Update the state of this property, returning true if that constituted a change.
+	 * Get the time, in milliseconds of momentName today from moments.
 	 */
-	setState(state: boolean) {
-		const news = state !== this.propState;
-		this.propState = state;
-		return news;
+	private static getTimeFor(momentName: string, moments: SunCalc.GetTimesResult) {
+		const slot = ((moments as any)[momentName] as Date);
+		if (!slot)
+			throw "Invalid moment name " + momentName;
+		return slot.getTime();
+	}
+
+	/**
+	 * Get the end time today of this prop, which is either an explicit, named end moment
+	 * (with possible offset) or one minute after the starting moment (again with possible
+	 * offset).
+	 */
+	private getEndTime(moments: SunCalc.GetTimesResult) {
+		const endMoment = this.endMoment;
+		if (endMoment) // Explicit end moment
+			return SunProp.getTimeFor(endMoment, moments) + (this.endOffset || 0) * SunClock.kMinuteMillis;
+		// Default to time one minute past start moment
+		return this.getStartTime(moments) + SunClock.kMinuteMillis;
+	}
+
+	private getStartTime(moments: SunCalc.GetTimesResult) {
+		return SunProp.getTimeFor(this.startMoment, moments) + this.startOffset * SunClock.kMinuteMillis;
+	}
+
+	/**
+	 * Update the state of this property, returning the "next interesting time"
+	 * for this property - i.e., when it will flip next.
+	 */
+	updateState(timeNow: number, moments: SunCalc.GetTimesResult): number {
+		const startTime = this.getStartTime(moments);
+		const endTime = this.getEndTime(moments);
+		const within = timeNow >= startTime && timeNow < endTime;
+
+		if (within != this.currentlyIn) {	// This is news
+			this.currentlyIn = within;
+			this.owner.changed(this.propName);
+		}
+
+		// Return next transition time
+		return within ? endTime :startTime;
 	}
 }
 
