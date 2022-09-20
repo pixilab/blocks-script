@@ -21,7 +21,7 @@ export class SunClock extends Script {
 	private waiter: CancelablePromise<any>;	// Delay until next update
 
 	private todaysMoments: SunCalc.GetTimesResult;
-	private dateWhenCached: number;
+	private utcDateWhenCached: number;
 
 	// Names of default properties. These MUST match fields in SunCalc.GetTimesResult
 	private static readonly kPropNames = ['sunrise', 'sunset'];
@@ -69,10 +69,10 @@ export class SunClock extends Script {
 		const now = new Date();
 
 		// Update and cache todaysMoments only when date changed
-		const todaysDate = now.getDate();
-		if (this.dateWhenCached !== todaysDate) {
-			this.todaysMoments = suncalc.getTimes(now, this.mLat, this.mLong);;
-			this.dateWhenCached = todaysDate
+		const todaysUTCDate = now.getUTCDate();
+		if (this.utcDateWhenCached !== todaysUTCDate) {
+			this.todaysMoments = suncalc.getTimes(now, this.mLat, this.mLong);
+			this.utcDateWhenCached = todaysUTCDate;
 		}
 		const moments = this.todaysMoments;
 
@@ -90,7 +90,7 @@ export class SunClock extends Script {
 
 		// console.log("Minutes until next interesting", nextWaitTime / SunClock.kMinuteMillis);
 
-		// Wait a tad more than timeTilNextInteresting to land firmly within slot
+		// Wait a tad more than nextWaitTime to land firmly within slot
 		this.waiter = wait(nextWaitTime + 200);
 		this.waiter.then(() => {
 			this.waiter = undefined;
@@ -127,7 +127,7 @@ export class SunClock extends Script {
 	private forceUpdate() {
 		if (this.waiter) // Cancel any pending wait - updateTimes starts one anew
 			this.waiter.cancel();
-		this.dateWhenCached = undefined;
+		this.utcDateWhenCached = undefined;
 		this.updateTimes();
 	}
 }

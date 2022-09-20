@@ -51,11 +51,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
         SunClock.prototype.updateTimes = function () {
             var _this = this;
             var now = new Date();
-            var todaysDate = now.getDate();
-            if (this.dateWhenCached !== todaysDate) {
+            var todaysUTCDate = now.getUTCDate();
+            if (this.utcDateWhenCached !== todaysUTCDate) {
                 this.todaysMoments = suncalc.getTimes(now, this.mLat, this.mLong);
-                ;
-                this.dateWhenCached = todaysDate;
+                this.utcDateWhenCached = todaysUTCDate;
             }
             var moments = this.todaysMoments;
             var nowMillis = now.getTime();
@@ -102,7 +101,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
         SunClock.prototype.forceUpdate = function () {
             if (this.waiter)
                 this.waiter.cancel();
-            this.dateWhenCached = undefined;
+            this.utcDateWhenCached = undefined;
             this.updateTimes();
         };
         SunClock.kPropNames = ['sunrise', 'sunset'];
