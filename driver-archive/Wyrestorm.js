@@ -31,6 +31,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         function Wyrestorm(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.mDevicePower = false;
             _this.mDeviceName = socket.name;
             if (!Wyrestorm_1.connections)
                 Wyrestorm_1.connections = {};
@@ -51,6 +52,21 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         Wyrestorm_1 = Wyrestorm;
+        Object.defineProperty(Wyrestorm.prototype, "power", {
+            get: function () {
+                return this.mDevicePower;
+            },
+            set: function (value) {
+                this.mDevicePower = value;
+                var pw = "off";
+                if (value) {
+                    pw = "on";
+                }
+                this.mMyConnection.doCommand("config set device sinkpower ".concat(pw, " ").concat(this.mDeviceName));
+            },
+            enumerable: false,
+            configurable: true
+        });
         Wyrestorm.prototype.setupMultiView = function (config) {
             var _this = this;
             this.mMultiviewConfig = config;
@@ -150,6 +166,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             });
         };
         var Wyrestorm_1;
+        __decorate([
+            (0, Metadata_1.property)("Send HDMI-CEC command to power on/off the device"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], Wyrestorm.prototype, "power", null);
         Wyrestorm = Wyrestorm_1 = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 23 }),
             __metadata("design:paramtypes", [Object])

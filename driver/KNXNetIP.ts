@@ -136,14 +136,6 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			if (!this.socket.listenerPort)
 				throw "Listening port not specified (e.g, 32331)"
 
-			// Stop any cyclic activity if socket discarded (e.g., driver disabled)
-			socket.subscribe('finish', () => {
-				if (this.timer) {
-					this.timer.cancel();
-					this.timer = undefined;
-				}
-			});
-
 			socket.subscribe('bytesReceived', (sender, message) => {
 				debugLog("bytesReceived", message.rawData.length);
 				try {
@@ -154,13 +146,18 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 					// Reset state after "too many errors"
 					if (++this.errCount > 5) {
 						this.errCount = 0;
-						this.setState(State.DISCONNECTED);
-						this.checkStateSoon();
+						this.sendDisconnectRequest();
 					}
 				}
 			});
 
 			this.checkStateSoon(5);
+
+			// Script shut down - cancel timer callbacks
+			this.subscribe('finish', () => {
+				debugLog("finish");
+				this.cancelTimer();
+			});
 		}
 	}
 
@@ -210,38 +207,45 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * Hook up a timer to check my state and move me forward "soon" (in mS).
 	 */
 	private checkStateSoon(howSoon = 5000) {
-		if (this.timer)
-			this.timer.cancel();	// Kill any pre-existing timeout
+		this.cancelTimer();	// Kill any pre-existing timeout
+		if (this.socket.enabled) {	// Don't hook up timer if communication is disabled
+			this.timer = wait(howSoon);
+			this.timer.then(() => {
+				this.timer = undefined;	// Now taken
+				switch (this.state) {
+				case State.DISCONNECTED:
+					if (this.socket.enabled) {
+						this.sendConnectRequest();
+						this.setState(State.CONNECTING);
+						this.checkStateSoon();	// Make sure I succeed reasonably soon
+					}
+					break;
+				case State.TUNNELING:		// Presumably failed doing state's work fast enough
+				case State.CONNECTIONSTATE_REQUESTED:
+					console.error("Response too slow in state " + this.state);
+					this.resetConnection();
+					break;
+				case State.CONNECTING:
+					if (!this.connTimeoutWarned) {
+						console.warn("CONNECTING timeout");
+						this.connTimeoutWarned = true;	// Do not nag in log
+					}
+					this.resetConnection();
+					break;
+				case State.CONNECTED_IDLE:	// Keep connection alive by sending conn state requests every now and then
+					this.sendConnectionStateRequest();
+					this.connTimeoutWarned = false;
+					break;
+				}
+			});
+		}
+	}
 
-		this.timer = wait(howSoon);
-		this.timer.then(() => {
-			this.timer = undefined;	// Now taken
-			switch (this.state) {
-			case State.DISCONNECTED:
-				if (this.socket.enabled) {
-					this.sendConnectRequest();
-					this.setState(State.CONNECTING);
-					this.checkStateSoon();	// Make sure I succeed reasonably soon
-				}
-				break;
-			case State.TUNNELING:		// Presumably failed doing state's work fast enough
-			case State.CONNECTIONSTATE_REQUESTED:
-				console.error("Response too slow in state " + this.state);
-				this.resetConnection();
-				break;
-			case State.CONNECTING:
-				if (!this.connTimeoutWarned) {
-					console.warn("CONNECTING timeout");
-					this.connTimeoutWarned = true;	// Do not nag in log
-				}
-				this.resetConnection();
-				break;
-			case State.CONNECTED_IDLE:	// Keep connection alive by sending conn state requests every now and then
-				this.sendConnectionStateRequest();
-				this.connTimeoutWarned = false;
-				break;
-			}
-		});
+	private cancelTimer() {
+		if (this.timer) {
+			this.timer.cancel();	// Kill any pre-existing timeout
+			this.timer = undefined;
+		}
 	}
 
 	/**
@@ -264,7 +268,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			if (this.cmdQueue.length)	// Got data to send
 				this.sendQueuedCommand();	// Do so and set checkStateSoon for that command
 			else
-				this.checkStateSoon(6000); // To send connection state request regularly
+				this.checkStateSoon(30000); // To send connection state request regularly
 		}
 	}
 
@@ -414,6 +418,30 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 		this.socket.sendBytes(setLength(connStateReq));
 		this.setState(State.CONNECTIONSTATE_REQUESTED);
 		this.checkStateSoon();
+	}
+
+	/**
+	 * Send a DISCONNECT_REQUEST.
+	 */
+	private sendDisconnectRequest() {
+		if (this.channelId) {	// Only if have a channel to disconnect from
+			const listenerPort = this.socket.listenerPort;
+			debugLog("sendDisconnectRequest");
+			const disconnReq = [
+				0x06, 0x10,
+				Command.DISCONNECT_REQUEST >> 8, Command.DISCONNECT_REQUEST & 0xff,
+				0x00, 0x10,	// Total length
+
+				this.channelId, 0x00,	// Connection HPAI
+				0x08,	// HPAI length
+				0x01,	// Host Protocol Code 0x01 -> IPV4_UDP, 0x02 -> IPV6_TCP */
+				0, 0, 0, 0,	// Response IP address (any)
+				listenerPort >> 8, listenerPort & 0xff
+			];
+			this.socket.sendBytes(setLength(disconnReq));
+			this.setState(State.DISCONNECTED);
+			this.checkStateSoon();
+		}
 	}
 
 	/**
