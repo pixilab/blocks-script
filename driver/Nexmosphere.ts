@@ -84,7 +84,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 			this.pollIndex = 0;
 			pollAgain = true;
 		}
-		if (pollAgain)
+		if (pollAgain && this.socket.connected)
 			wait(this.pollIndex > 1 ? 150 : 600).then(() => this.pollNext());
 	}
 

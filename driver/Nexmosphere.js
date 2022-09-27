@@ -84,7 +84,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.pollIndex = 0;
                 pollAgain = true;
             }
-            if (pollAgain)
+            if (pollAgain && this.socket.connected)
                 wait(this.pollIndex > 1 ? 150 : 600).then(function () { return _this.pollNext(); });
         };
         Nexmosphere.prototype.queryPortConfig = function (portNumber) {
