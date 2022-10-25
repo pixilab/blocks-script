@@ -119,7 +119,7 @@ interface ControllableSpot extends BaseSpot {
 	loadPriorityBlock(name: string): Promise<any>;
 
 	/**
-	 * Locate time position in video/audio. If argument is a number, it is interpreted as seconds
+	 * Seek to time position in video/audio. If argument is a number, it is interpreted as seconds
 	 * (which may have fractions). If it is a stinrg, it is expected to be in the format
 	 * "HH:MM.SS.fff".
 	 */
@@ -144,10 +144,9 @@ interface ControllableSpot extends BaseSpot {
 	 * function as manually entering the specified Location ID on
 	 * the numeric keypad of the Locator (if isSpotPath is falsey).
 	 * If isSpotPath is true, then location specifies the full
-	 * path to the Spot (dot separated if inside a Spot group)
-	 * to locate to, bypassing the Location-ID-to-Spot lookup
-	 * step. This is useful if you already know the name of the
-	 * spot.
+	 * path to the Spot (dot separated if inside Spot group(s))
+	 * to locate, bypassing the Location-ID-to-Spot lookup step.
+	 * This is useful if you already know the path to the spot.
 	 *
 	 * To end any current location, pass empty string
 	 * as location.

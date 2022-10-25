@@ -60,7 +60,7 @@ interface DriverInfo {
 	paramTypes: string[];
 }
 
-// List of valid role identifiers
+// Set of valid role identifiers
 type RoleRequired = 'Admin'|'Manager'|'Creator'|'Editor'|'Contributor'|'Staff'|'Spot';
 
 /**
@@ -114,7 +114,11 @@ export function field(description?: string) {
 
 /**
  * Mark a field in specified Record as a Spot Parameter, making its value readable and
- * writable .
+ * writable also as such.
+ *
+ * IMPORTANT: You must also add a parameter with the same name in the Spot's settings
+ * for this to work. Merely marking it with @spotParameter() in the record definition
+ * is not sufficient.
  */
 export function spotParameter() {
 	return $metaSupport$.spotParameter();
@@ -154,29 +158,54 @@ export function max(max:number) {
     };
 }
 
+// Set of valid @resource HTTP methods
+type ResourceVerb = 'GET'|'POST';
+
+
 /**
- Decorate a method as accessible from a web client as a POST request under
+Decorate a public script method with @resource() to make it callable using a
+HTTP GET or POST request under a path that looks like this:
 
- 	/rest/script/invoke/<user-script-name>/<method-name>
+	/rest/script/invoke/<user-script-name>/<method-name>
 
- with a JSON body payload deserialized and passed to the method as an object.
- The method must be declared as accepting an object even if you don't need
- any data (i.e., pass null). An object or string returned from the method
- will be serialized as JSON data and returned to the web client. Alternatively,
- you may return a promise eventually resolving with the result value.
+For a POST request, a JSON body payload is expected. This will be parsed into
+a Javscript object and passed as the method's first parameter. A GET request
+carries no data beyond what's in the URL.
 
- The roleRequired parameter, if specified, limits who can call the resource from the
- outside, and accepts the same values as the roleRequired decorator. Unless already
- authenticated by other means, call authenticated resources with a slightly different
- URL:
+The method to which this decorator is applied must take an object as its
+first parameter. This applies even if no data is actually passed to the
+method (as in the case of a GET request).
+
+The method may optionally accept a second parameter, which then receives the
+trailing part of the URL (everything following <method-name>/), including any
+query parameters. This is particularly useful for GET requests, where no
+message body is included. Example:
+
+	/rest/script/invoke/<user-script-name>/<method-name>/more-stuff?a=1&b=2
+
+For this example, the second parameter to the method will receive the string
+"more-stuff?a=1&b=2"
+
+An object or string returned from the method will be serialized as JSON data
+and returned to the caller. Alternatively, you may return a promise that will
+eventually be rejected or resolved with the result.
+
+The roleRequired parameter, if specified, limits who can call the resource from the
+outside, and accepts the same values as the roleRequired decorator. Unless already
+authenticated by other means, you must call such resources with a slightly
+different URL, provoking authentication if not already done:
 
  	/rest/script/invoke-auth/<user-script-name>/<method-name>
 
  */
-export function resource(roleRequired?: RoleRequired) {
-	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
+export function resource(
+	roleRequired?: RoleRequired, // Authentication role required to call, or undefined
+	verb?: ResourceVerb			// HTTP verb used in the request. Default is POST.
+) {
+	return function(target: any, propertyKey: string) {
 		const info = {	// Information provided about this resource
-			auth: roleRequired || ""
+			auth: roleRequired || '',
+			verb: verb || 'POST'
 		};
 		return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
 	}

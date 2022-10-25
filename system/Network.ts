@@ -135,12 +135,14 @@ export interface NetworkUDP extends NetworkBase {
 
 	// Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
 	subscribe(event: 'textReceived', listener: (sender: NetworkUDP, message:{
-		text:string				// The text string that was received
+		text:string,			// The text string that was received
+		sender: string			// Address of peer data was received from
 	})=>void): void;
 
 	// Receive "raw" data containing the entire UDP packet.
 	subscribe(event: 'bytesReceived', listener: (sender: NetworkUDP, message:{
-		rawData:number[]				// The raw data that was received
+		rawData:number[],		// The raw data that was received
+		sender: string			// Address of peer data was received from
 	})=>void): void;
 
 	// Object is being shut down
