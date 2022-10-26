@@ -273,7 +273,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 *	Event fired when user navigates manually to a block path
 	 */
 	subscribe(event: 'navigation', listener: (sender: DisplaySpot, message: {
-		readonly targetPath: string,	// Requested path navigated to
+		readonly targetPath: string,	// Path navigated to
 		readonly foundPath: string		// Resulting absolute (//-style) and canonized path
 	})=>void): void;
 
@@ -383,6 +383,14 @@ export interface Visitor<RecordType extends RecordBase> extends ControllableSpot
 	subscribe(event: 'image', listener: (sender: Visitor<RecordType>, message: {
 		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
 		readonly rollName: string	// Camera Block's assigned "roll name"
+	})=>void): void;
+
+	/**
+	 *	Event fired when user navigates manually to a block path
+	 */
+	subscribe(event: 'navigation', listener: (sender: Visitor<RecordType>, message: {
+		readonly targetPath: string,	// Path navigated to
+		readonly foundPath: string		// Resulting absolute (//-style) and canonized path
 	})=>void): void;
 
 
