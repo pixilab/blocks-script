@@ -188,7 +188,7 @@ export interface IndexedProperty<T> extends IndexedAny<T> {
  */
 export abstract class RecordBase {
 	readonly $puid: number;		// Persistent, system-unique identifier for this Record
-	readonly $hasUserData: boolean; // Record has received data (else entirely blank)
+	readonly $hasUserData: boolean; // Record has received data (else entirely unused)
 }
 
 /*	Common environment used by user scripts as well as device drivers
