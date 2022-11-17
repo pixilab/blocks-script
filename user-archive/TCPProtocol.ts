@@ -4,7 +4,7 @@
 	property paths as used inside Blocks itself (e.g., in a button binding). Properties can be
 	set or subscribed to, so you'll be notified when the property's value changes.
 
-	To use, simply connect to port 3041 on your Blocks server and send a command. Tty it out
+	To use, simply connect to port 3041 on your Blocks server and send a command. Try it out
 	using a telnet client like this:
 
 		telnet 10.1.0.10 3041
@@ -13,13 +13,17 @@
 	Commands are specified using JSON syntax. To set a value of a property, type the
 	following into your telnet session:
 
-	{ "type": "prop", "path": "Artnet.aurora.Red.value", "value": 0.2}
+	{ "type": "set", "path": "Artnet.aurora.Red.value", "value": 0.2}
 
-	Valid message types are "prop", "sub" (for subscription) and "unsub" (to end a
-	subscription). Multiple commands can be sent together by wrapping them in a JSON
+	To add a value to a property (pass a negative value to subtract):
+
+	{ "type": "add", "path": "Artnet.aurora.Red.value", "value": 0.2}
+
+	Valid message types are "set", "add" "subscribe" (for subscription) and "unsubscribe" (to
+	end a subscription). Multiple commands can be sent together by wrapping them in a JSON
 	array. For example, to subscribe to two properties, do this:
 
-[{ "type": "sub", "path": "Artnet.aurora.Red.value"},{ "type": "sub", "path": "Artnet.aurora.Green.value"}]
+	[{ "type": "subscribe", "path": "Artnet.aurora.Red.value"},{ "type": "subscribe", "path": "Artnet.aurora.Green.value"}]
 
 	The entire command must be entered as a single string, with a newline ONLY at the end. Do not
 	put newlines inside the string. The maximum length of such a string is 4096 characters. Split
@@ -61,13 +65,13 @@ interface BaseMessage {
 }
 
 /**
- * Message used to set a property. Also used for data sent back to
- * property subscriber.
+ * Message used to set or add a property. Also used for data sent back to
+ * property subscriber (with a 'prop' type.
  */
 interface PropertyMessage extends BaseMessage {
-	type: 'prop';
+	type: 'set' | 'add' | 'prop';
 	path: string;	// Dot-separated property path
-	value: any;		// Value matching property type
+	value: any;		// Value appropriate for property type
 }
 
 /**
@@ -77,7 +81,7 @@ interface PropertyMessage extends BaseMessage {
  * sent as a list, even if there's only a single property to advertize.
  */
 interface SubscribeUnsubscribeMessage extends BaseMessage {
-	type: 'sub' | 'unsub';
+	type: 'subscribe' | 'unsubscribe';
 	path: string;	// Dot-separated property path
 }
 
@@ -228,6 +232,8 @@ class Client {
 			this.connection.disconnect();
 		if (this.pendingSend)
 			this.pendingSend.cancel();
+		for (const key in this.openProps)	// Terminate all open subscriptions
+			this.openProps[key].close();
 		this.owner.lostClient(this);
 	}
 
@@ -253,13 +259,19 @@ class Client {
 	 */
 	private handleCommand(msg: BaseMessage) {
 		switch (msg.type) {
-		case 'prop':
-			this.handleSetProp(<PropertyMessage>msg);
+		case 'set':
+		case 'prop':	// For backward compatibility
+			this.handleSet(<PropertyMessage>msg);
 			break;
-		case 'sub':
+		case 'add':	// For backward compatibility
+			this.handleAdd(<PropertyMessage>msg);
+			break;
+		case 'subscribe':
+		case 'sub':	// For backward compatibility
 			this.handleSubscribe(<SubscribeUnsubscribeMessage>msg);
 			break;
-		case 'unsub':
+		case 'unsubscribe':
+		case 'unsub': // For backward compatibility
 			this.handleUnsubscribe(<SubscribeUnsubscribeMessage>msg);
 			break;
 		default:
@@ -271,10 +283,38 @@ class Client {
 	/**
 	 * Set property to specified value.
 	 */
-	private handleSetProp(cmd: PropertyMessage) {
+	private handleSet(cmd: PropertyMessage) {
 		if (this.owner.pathApprover.isApprovedPath(cmd.path))
 			this.getProp(cmd.path).value = cmd.value;
 		else
+			console.warn("Permission denied for path", cmd.path);
+	}
+
+	/**
+	 * Add value property. Pass a negative value to subtract. For String property
+	 * this performs concatenation. Not supported for boolean property type.
+	 */
+	private handleAdd(cmd: PropertyMessage) {
+		if (this.owner.pathApprover.isApprovedPath(cmd.path)) {
+			const accessor = this.getProp(cmd.path);
+			if (accessor.available) {
+				const typeName = typeof accessor.value;
+				const addValueType = typeof cmd.value;
+				if (addValueType === typeName) {
+					switch (typeName) {
+					case "number":
+					case "string":
+						accessor.value += cmd.value;
+						break;
+					default:
+						console.warn("Unsupported type for 'add'", typeName, "for path", cmd.path);
+						break;
+					}
+				} else
+					console.warn("Incompatible value type",  addValueType, "for path", cmd.path);
+			} else
+				console.warn("Can't add to unavailable property", cmd.path);
+		} else
 			console.warn("Permission denied for path", cmd.path);
 	}
 
