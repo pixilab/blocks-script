@@ -76,6 +76,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.mPower = power;
                     this.cancelWoLRetry();
                     if (power) {
+                        if (this.program === UIRobot_1.kPowerDownProgram)
+                            this.program = '';
                         this.woLRetryAttempts = 0;
                         this.tryWakeUp();
                     }
@@ -271,7 +273,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [String])
         ], UIRobot.prototype, "program", null);
         __decorate([
-            (0, Metadata_1.property)("Press a key, modifiers (alt, shift, etc) before key"),
+            (0, Metadata_1.property)("Send key strokes, modifiers before key"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], UIRobot.prototype, "keyDown", null);
