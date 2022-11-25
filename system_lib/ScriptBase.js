@@ -7,7 +7,6 @@ define(["require", "exports"], function (require, exports) {
             this.__scriptFacade = scriptFacade;
         }
         ScriptBase.prototype.property = function (name, options, gsFunc) {
-            this.__scriptFacade.property(name, options, gsFunc);
             var propDescriptor = {
                 get: function () {
                     return gsFunc();
@@ -21,6 +20,7 @@ define(["require", "exports"], function (require, exports) {
                 };
             }
             Object.defineProperty(this, name, propDescriptor);
+            return this.__scriptFacade.property(name, options, gsFunc);
         };
         ScriptBase.prototype.indexedProperty = function (name, itemType) {
             return this.__scriptFacade.indexedProperty(name, itemType);

@@ -8,6 +8,8 @@ import {PropertyAccessor} from "./Script";
 
 interface Ctor<T> { new(... args: any[]): T ;}
 
+export type PrimitiveValue = number | string | boolean;
+
 /**
  * Common stuff shared between user scripts and drivers.
  */
@@ -20,11 +22,10 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 
 	/** Expose a named property of type T with specified options and getter/setter function.
 	 */
-	property<T>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): void {
-		this.__scriptFacade.property(name, options, gsFunc);
+	property<T extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): PropertyValue<T> {
 
 		// Make assignment work also for direct JS use
-		const propDescriptor: PropertyDescriptor & ThisType<any> = {
+		const propDescriptor: TypedPropertyDescriptor<T> & ThisType<any> = {
 			get: function () {	// Always define getter
 				return gsFunc();
 			}
@@ -38,6 +39,7 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 		}
 		// defineProperty on 'this', not on prototype, as gsFunc is instance-specific
 		Object.defineProperty(this, name, propDescriptor);
+		return this.__scriptFacade.property(name, options, gsFunc);
 	}
 
 	/**
@@ -71,12 +73,11 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	 *
 	 * The value associated with the property varies with the type of property.
 	 */
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
+	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
 		return changeNotification ?
 			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
 			this.__scriptFacade.getProperty<PropType>(fullPath);
 	}
-
 
 	/**
 	 * Forward any event unsubscription to my associated facade.
@@ -130,9 +131,17 @@ interface ChangeNotifier {
 	changed(propName: string): void;
 }
 
+// An array-like type having "index signature" and a length property
+type IndexedAny<T> = { [index:number]: T; readonly length: number };
+
 /**
  * Base your IndexedProperty elements on this class to support "changed" notifications, like
- * in the top level script/driver object.
+ * in the top level script/driver object. Not required if the indexed elements are
+ * immutable (can not change while being used). If data can change, then use this as
+ * the base class of your IndexedProperty elements, and call this.changed("fieldname")
+ * from within the element when it's data is known to have changed, where fieldname is
+ * the name of the field in the element. All fields in IndexedProperty elements must be
+ * of primitive type (i.e., string, boolean or number).
  */
 export class AggregateElem implements ChangeNotifier {
 	private readonly __scriptFacade: ChangeNotifier;	// Internal use only!
@@ -141,9 +150,6 @@ export class AggregateElem implements ChangeNotifier {
 		this.__scriptFacade.changed(propName);
 	}
 }
-
-// An array-like type having "index signature" and a length property
-type IndexedAny<T> = { [index:number]: T; readonly length: number };
 
 /**
  * An array-like type holding "indexed items".
@@ -182,6 +188,13 @@ export interface IndexedProperty<T> extends IndexedAny<T> {
 }
 
 /**
+ * A plain, typed, primitive property value accessor.
+ */
+export interface PropertyValue<PropType extends PrimitiveValue> {
+	value: PropType;	// Current value (read only if property is read only)
+}
+
+/**
  * Base class for persistent records used to, e.g., track visitor journey, collecting
  * data along the way. Use decorators such as @field() @id() and @spotParameter() to
  * mark your custom fields added to your own subclass being used in your script.
@@ -197,10 +210,10 @@ export abstract class RecordBase {
 	equivalents.
  */
 export interface ScriptBaseEnv extends ChangeNotifier  {
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
+	property<PropType extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<any>): PropertyValue<PropType>;
+	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
 	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 	changed(prop: string): void; // Named child property has changed
-	property(name: string, options: SGOptions, gsFunc: SetterGetter<any>): void;
 	indexedProperty<T>(name: string, elemType: Ctor<T>): IndexedProperty<T>;
 	reInitialize(): void;
 	getMonotonousMillis(): number;
