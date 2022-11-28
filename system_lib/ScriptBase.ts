@@ -155,6 +155,8 @@ export class AggregateElem implements ChangeNotifier {
  * An array-like type holding "indexed items".
  */
 export interface IndexedProperty<T> extends IndexedAny<T> {
+	readonly name: string;	// Name given to this indexed property
+
 	[index:number] : T;	// Read-only "array-like", holding objects of type T
 
 	/**
