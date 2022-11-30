@@ -1,10 +1,13 @@
+/*	A basic HelvarNet driver mainly for recalling DALI scenes and the possibility to
+	control devices individually or multiple devices comma separated. Used in Hultsfreds bibliotek.
+
+	Created by: Jonas Hjalmarsson, 2019, https://jonashjalmarsson.se
+ */
+
 import { NetworkTCP } from "system/Network";
 import { Driver } from "system_lib/Driver";
 import { callable, property, driver, parameter } from "system_lib/Metadata";
 
-/**	A very basic HelvarNet driver mainly for recalling DALI scenes
-	and possibly controlling some other misc functions.
-*/
 @driver('NetworkTCP', { port: 50000 })
 export class HelvarNet extends Driver<NetworkTCP> {
 
