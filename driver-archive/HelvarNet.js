@@ -61,14 +61,29 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.sendCmd(cmd);
         };
         HelvarNet.prototype.levelToDevice = function (level, address, fadeTime) {
+            var addressArray = address.split(",");
             var levelStr = Math.round(level * 100).toString();
-            var cmd = "V:1,C:14,L:" + levelStr + ",@" + address + fadeParam(fadeTime);
-            this.sendCmd(cmd);
+            var t = this;
+            addressArray.forEach(function (item) {
+                item = item.trim();
+                console.log("item ", item);
+                if (item) {
+                    var cmd = "V:1,C:14,L:" + levelStr + ",@" + item + fadeParam(fadeTime);
+                    t.sendCmd(cmd);
+                }
+            });
         };
         HelvarNet.prototype.levelToGroup = function (level, address, fadeTime) {
+            var addressArray = address.split(",");
             var levelStr = Math.round(level * 100).toString();
-            var cmd = "V:1,C:13,L:" + levelStr + ",G:" + address + fadeParam(fadeTime);
-            this.sendCmd(cmd);
+            var t = this;
+            addressArray.forEach(function (item) {
+                item = item.trim();
+                if (item) {
+                    var cmd = "V:1,C:13,L:" + levelStr + ",G:" + item + fadeParam(fadeTime);
+                    t.sendCmd(cmd);
+                }
+            });
         };
         HelvarNet.prototype.sendCmd = function (cmd) {
             cmd = '>' + cmd + '#';
@@ -103,18 +118,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:returntype", void 0)
         ], HelvarNet.prototype, "sceneRelAdjust", null);
         __decorate([
-            (0, Metadata_1.callable)("Apply brightness level to a single device"),
+            (0, Metadata_1.property)("Apply brightness level to a single device or devices"),
+            (0, Metadata_1.callable)("Apply brightness level to a single device or devices"),
             __param(0, (0, Metadata_1.parameter)("Brightness, 0..1")),
-            __param(1, (0, Metadata_1.parameter)("Target device, as '1.2.3.4'")),
+            __param(1, (0, Metadata_1.parameter)("Target device or devices, as '1.2.3.4,1.2.3.5,...'")),
             __param(2, (0, Metadata_1.parameter)("Transition time, in seconds", true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, String, Number]),
             __metadata("design:returntype", void 0)
         ], HelvarNet.prototype, "levelToDevice", null);
         __decorate([
-            (0, Metadata_1.callable)("Apply brightness level to a group of devices"),
+            (0, Metadata_1.property)("Apply brightness level to one or more groups of devices"),
+            (0, Metadata_1.callable)("Apply brightness level to one or more groups of devices"),
             __param(0, (0, Metadata_1.parameter)("Brightness, 0..1")),
-            __param(1, (0, Metadata_1.parameter)("Target group, as '1234'")),
+            __param(1, (0, Metadata_1.parameter)("Target group or groups, as '1234,1234,...'")),
             __param(2, (0, Metadata_1.parameter)("Transition time, in seconds", true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, String, Number]),
