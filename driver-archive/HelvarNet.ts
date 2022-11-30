@@ -1,10 +1,13 @@
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, parameter} from "system_lib/Metadata";
+/*	A basic HelvarNet driver mainly for recalling DALI scenes and the possibility to
+	control devices individually or multiple devices comma separated. Used in Hultsfreds bibliotek.
 
-/**	A very basic HelvarNet driver mainly for recalling DALI scenes
-	and possibly controlling some other misc functions.
-*/
+	Created by: Jonas Hjalmarsson, 2019, https://jonashjalmarsson.se
+ */
+
+import { NetworkTCP } from "system/Network";
+import { Driver } from "system_lib/Driver";
+import { callable, property, driver, parameter } from "system_lib/Metadata";
+
 @driver('NetworkTCP', { port: 50000 })
 export class HelvarNet extends Driver<NetworkTCP> {
 
@@ -55,30 +58,47 @@ export class HelvarNet extends Driver<NetworkTCP> {
 		this.sendCmd(cmd);
 	}
 
-	@callable("Apply brightness level to a single device")
+	@property("Apply brightness level to a single device or devices")
+	@callable("Apply brightness level to a single device or devices")
 	public levelToDevice(
 		@parameter("Brightness, 0..1") level: number,
-		@parameter("Target device, as '1.2.3.4'") address: string,
+		@parameter("Target device or devices, as '1.2.3.4,1.2.3.5,...'") address: string,
 		@parameter("Transition time, in seconds", true) fadeTime?: number
 
 	) {
+		const addressArray = address.split(",");
 		const levelStr = Math.round(level * 100).toString();
-		const cmd = "V:1,C:14,L:" + levelStr + ",@" + address + fadeParam(fadeTime);
-		this.sendCmd(cmd);
+		const t = this;
+		addressArray.forEach(function (item) {
+			item = item.trim();
+			console.log("item ", item);
+			if (item) {
+				const cmd = "V:1,C:14,L:" + levelStr + ",@" + item + fadeParam(fadeTime);
+				t.sendCmd(cmd);
+			}
+		})
 	}
-	
-	@callable("Apply brightness level to a group of devices")
+
+	@property("Apply brightness level to one or more groups of devices")
+	@callable("Apply brightness level to one or more groups of devices")
 	public levelToGroup(
 		@parameter("Brightness, 0..1") level: number,
-		@parameter("Target group, as '1234'") address: string,
+		@parameter("Target group or groups, as '1234,1234,...'") address: string,
 		@parameter("Transition time, in seconds", true) fadeTime?: number
 
 	) {
+		const addressArray = address.split(",");
 		const levelStr = Math.round(level * 100).toString();
-		const cmd = "V:1,C:13,L:" + levelStr + ",G:" + address + fadeParam(fadeTime);
-		this.sendCmd(cmd);
+		const t = this;
+		addressArray.forEach(function (item) {
+			item = item.trim();
+			if (item) {
+				const cmd = "V:1,C:13,L:" + levelStr + ",G:" + item + fadeParam(fadeTime);
+				t.sendCmd(cmd);
+			}
+		})
 	}
-	
+
 	/**
 	 * Frame the command with leading > and trailing #.
 	 */
