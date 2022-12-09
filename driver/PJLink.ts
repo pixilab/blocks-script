@@ -39,7 +39,10 @@ export class PJLink extends NetworkProjector {
 		if (this.okToSendCommand()) {	// Don't interfere with command already in flight
 			this.request('POWR').then(
 				reply => {
-					const on = (parseInt(reply) & 1) != 0;
+					const value = parseInt(reply);
+					if (typeof value !== 'number')
+						throw "Invalid POWR query response " + reply;
+					const on = (value & 1) != 0;
 					if (!this.inCmdHoldoff())
 						this._power.updateCurrent(on);
 					if (on && this.okToSendCommand()) // Attempt input too on case never done
@@ -107,8 +110,11 @@ export class PJLink extends NetworkProjector {
 	private getInputState(ignoreError?: boolean) {
 		this.request('INPT').then(
 			reply => {
+				const value = parseInt(reply);
+				if (typeof value !== 'number')
+					throw "Invalid INPT query response " + reply;
 				if (!this.inCmdHoldoff())
-					this._input.updateCurrent(parseInt(reply));
+					this._input.updateCurrent(value);
 				this.connected = true;
 				this.sendCorrection();
 			},
@@ -122,7 +128,6 @@ export class PJLink extends NetworkProjector {
 			}
 		);
 	}
-
 
 	protected sendCorrection(): boolean {
 		const didSend = super.sendCorrection();

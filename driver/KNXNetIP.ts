@@ -3,11 +3,48 @@
 	Loosely based on documentation found here: http://www.eb-systeme.de/?page_id=479
 
  	Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+
+Driver user instruction.
+The basic functionality of the driver has three callable, setScene(number 0-63), setOnoff(boolean) and enforceProp that can be run from task.
+It is also possible to setup analog and digital groups via a .json configuration file placed in /script/files/ .
+This file should be named as the device name in tcp devices in Blocks. ie MyKNXDevice.json
+Structure the json data in the config file as in the following example:
+{
+	"analog": [
+		{
+			"name": "Some analog group name here",
+			"description": "Some description here",
+			"addr": [1, 2, 101]
+		},
+    {
+			"name": "Another analog group name here",
+			"description": "Some description here",
+			"addr": [1, 2, 103]
+		}
+	],
+	"digital": [
+		{
+			"name": "Some digital group property name here",
+			"description": "Some description here",
+			"addr": [1, 2, 100]
+		},
+		{
+			"name": "Another digital group property name here",
+			"description": "Some description here",
+			"addr": [1, 2, 102]
+		},
+	]
+}
+Where "analog" and "digital" sets the datatype.
+"analog" represent KNX datatype 5.001 = 8-bit unsigned value, like dim value (0..100%), blinds position (0..100%)
+"digital represent KNX datatype 1.001 = boolean, like switching, move up/down, step
+The callable enforceProp will send all the currently stored values in Blocks to the KNX groups.
  */
 
 import {callable, parameter, driver, property} from "system_lib/Metadata";
 import {Driver} from "system_lib/Driver";
 import {NetworkUDP} from "system/Network";
+import {SimpleFile} from "system/SimpleFile";
 
 const enum State {
 	DISCONNECTED,	// Initial (virgin) state
@@ -49,8 +86,34 @@ interface OnOffCmd extends AddressedCmd {
 	on: boolean;
 }
 
-interface SceneNumberCmd extends AddressedCmd {
-	scene: number;
+interface NumberCmd extends AddressedCmd {
+	num: number;
+}
+
+/**
+ * Definitions for what's in my configuration file.
+ */
+interface IBaseProp {
+	addr: number[];		// KNX bus address to send to (must be 3 values)
+	description?: string;
+}
+interface IAnalog extends IBaseProp {
+	name: string;	// Name property will be published under
+	type?: '5.001';	// KNX value type, to support other flavors (5.001 is default)
+}
+interface IDigital extends IBaseProp {
+	name: string;	// Name property will be published under
+	type?: '1.xxx';	// KNX value type, to support other flavors (1.xxx is default)
+}
+
+/**
+ * Structure of config file, if any. Assumed to be stored under
+ * script/files/KNXNetIP/<device-name>, where <device-name> is the
+ * name of the network device under Manage in Blocks.
+ */
+interface IConfig {
+	analog?: IAnalog[];		// Analog properties
+	digital?: IDigital[];	// On/off properties
 }
 
 @driver('NetworkUDP', { port: 3671, rcvPort:32331 })
@@ -62,29 +125,74 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	private cmdQueue: QueuedCommand[] = [];
 	private timer?: CancelablePromise<void>;	// Set if have pending timer to checkStateSoon
 	private errCount = 0;		// To rereset connection after "too many errors"
+	private dynProps: DynProp[] = [];
+	private connTimeoutWarned = false;	// To not nag on failed connection attempts
 
 	public constructor(private socket: NetworkUDP) {
 		super(socket);
-		if (!this.socket.listenerPort)
-			throw "Listening port not specified (e.g, 32331)"
+		this.loadConfig();
 
-		socket.subscribe('bytesReceived', (sender, message) => {
-			// console.log("bytesReceived", message.rawData.length);
-			try {
-				this.processReply(message.rawData);
-				this.errCount = 0;
-			} catch (error) {
-				console.error(error);
-				// Reset state after "too many errors"
-				if (++this.errCount > 5) {
+		if (socket.enabled) {	// Don't fire up socket listener and state polling unless enabled
+			if (!this.socket.listenerPort)
+				throw "Listening port not specified (e.g, 32331)"
+
+			socket.subscribe('bytesReceived', (sender, message) => {
+				debugLog("bytesReceived", message.rawData.length);
+				try {
+					this.processReply(message.rawData);
 					this.errCount = 0;
-					this.setState(State.DISCONNECTED);
-					this.checkStateSoon();
+				} catch (error) {
+					console.error(error);
+					// Reset state after "too many errors"
+					if (++this.errCount > 5) {
+						this.errCount = 0;
+						this.sendDisconnectRequest();
+					}
 				}
-			}
-		});
+			});
 
-		this.checkStateSoon(5);
+			this.checkStateSoon(5);
+
+			// Script shut down - cancel timer callbacks
+			this.subscribe('finish', () => {
+				debugLog("finish");
+				this.cancelTimer();
+			});
+		}
+	}
+
+	/**
+	 * Load my configuration data, if any, setting up dynamic properties accordingly.
+	 */
+	private loadConfig() {
+		const configFile = 'KNXNetIP/' + this.socket.name + '.json';
+
+		SimpleFile.exists(configFile).then(existence => {
+			if (existence === 1)	// Exists and is a plain file
+				SimpleFile.readJson(configFile).then(data => this.processConfig(data));
+			else
+				console.log('No configuration file "' + configFile + '" - providing only generic functionality');
+		});
+	}
+
+	private processConfig(config: IConfig) {
+		if (config.analog) {
+			for (const analog of config.analog) {	// Define one analog property per entry
+				if (!analog.type || analog.type === "5.001") // Only type we know of for now
+					this.dynProps.push(new AnalogProp(this, analog));
+				else
+					console.warn("Unsupported analog type", analog.type);
+			}
+		}
+		if (config.digital) {
+			for (const digital of config.digital) {	// Define one analog property per entry
+				if (!digital.type || digital.type.charAt(0) === "1") // Only type we know of for now
+					this.dynProps.push(new DigitalProp(this, digital));
+				else
+					console.warn("Unsupported digital type", digital.type);
+			}
+		}
+
 	}
 
 	@property("Connection established", true)
@@ -96,55 +204,76 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	}
 
 	/**
-	 * Hook up a timer to check my state amd move be forward "soon".
+	 * Hook up a timer to check my state and move me forward "soon" (in mS).
 	 */
 	private checkStateSoon(howSoon = 5000) {
-		if (this.timer)
-			this.timer.cancel();	// Kill any pre-existing timeout
+		this.cancelTimer();	// Kill any pre-existing timeout
+		if (this.socket.enabled) {	// Don't hook up timer if communication is disabled
+			this.timer = wait(howSoon);
+			this.timer.then(() => {
+				this.timer = undefined;	// Now taken
+				switch (this.state) {
+				case State.DISCONNECTED:
+					if (this.socket.enabled) {
+						this.sendConnectRequest();
+						this.setState(State.CONNECTING);
+						this.checkStateSoon();	// Make sure I succeed reasonably soon
+					}
+					break;
+				case State.TUNNELING:		// Presumably failed doing state's work fast enough
+				case State.CONNECTIONSTATE_REQUESTED:
+					console.error("Response too slow in state " + this.state);
+					this.resetConnection();
+					break;
+				case State.CONNECTING:
+					if (!this.connTimeoutWarned) {
+						console.warn("CONNECTING timeout");
+						this.connTimeoutWarned = true;	// Do not nag in log
+					}
+					this.resetConnection();
+					break;
+				case State.CONNECTED_IDLE:	// Keep connection alive by sending conn state requests every now and then
+					this.sendConnectionStateRequest();
+					this.connTimeoutWarned = false;
+					break;
+				}
+			});
+		}
+	}
 
-		this.timer = wait(howSoon);
-		this.timer.then(() => {
-			this.timer = undefined;	// Now taken
-			switch (this.state) {
-			case State.DISCONNECTED:
-				this.sendConnectRequest();
-				this.setState(State.CONNECTING);
-				// console.log("CONNECTING");
-				this.checkStateSoon();	// Make sure I success reasonably soon
-				break;
-			case State.TUNNELING:		// Presumably failed doing state work fast enough
-			case State.CONNECTIONSTATE_REQUESTED:
-				console.error("Response too slow in state " + this.state);
-				// Deliberate fallthrough to other slow state that won't log errors
-			case State.CONNECTING:
-				console.warn("CONNECTING timeout");
-				this.setState(State.DISCONNECTED);	// Regress to disconnected state
-				this.checkStateSoon();	// Re-try soon
-				break;
-			case State.CONNECTED_IDLE:	// Keep connection alive by sending conn state requests every now and then
-				this.sendConnectionStateRequest();
-				break;
-			}
-		});
+	private cancelTimer() {
+		if (this.timer) {
+			this.timer.cancel();	// Kill any pre-existing timeout
+			this.timer = undefined;
+		}
+	}
+
+	/**
+	 * Connection considered "failed". Revert to DISCONNECTED and check back soon to attempt
+	 * to re-connect.
+	 */
+	private resetConnection() {
+		this.setState(State.DISCONNECTED);	// Regress to disconnected state
+		this.checkStateSoon();	// Re-try soon
 	}
 
 	/**
 	 * Change my state. Also determines if I'm considered connected.
 	 */
 	private setState(state: State) {
-		// console.log("setState", state);
+		debugLog("setState", state);
 		this.state = state;
 		this.connected = state >= State.CONNECTIONSTATE_REQUESTED && state <= State.TUNNELING;
 		if (state === State.CONNECTED_IDLE) { // In "connected & idle" state
 			if (this.cmdQueue.length)	// Got data to send
 				this.sendQueuedCommand();	// Do so and set checkStateSoon for that command
 			else
-				this.checkStateSoon(6000); // To send connection state request regularly
+				this.checkStateSoon(30000); // To send connection state request regularly
 		}
 	}
 
 	private sendQueuedCommand() {
-		if (this.cmdQueue.length) {
+		if (this.cmdQueue.length && this.connected) {
 			const toSend = this.cmdQueue[0];
 			// Command left in queue until acked
 			toSend.handler(toSend);
@@ -158,16 +287,16 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			throw "Invalid Header";
 		const command = get16bit(reply, 2);
 		const expectedLength = get16bit(reply, 4);
-		// console.log("Length", reply[4], reply[5], expectedLength);
 		if (expectedLength !== reply.length)
 			throw "Invalid reply expectedLength, expected " + expectedLength + ' got ' + reply.length;
-		// console.log("Got command", command);
+		// debugLog("Cmd from gateway", command);
 		switch (command) {
 		case Command.CONNECTION_RESPONSE:
 			this.gotConnectionResponse(reply);
 			break;
 		case Command.CONNECTIONSTATE_RESPONSE:
 			this.gotConnectionStateResponse(reply);
+			this.connTimeoutWarned = false;
 			break;
 		case Command.TUNNEL_RESPONSE:
 			this.gotTunnelResponse(reply);
@@ -179,7 +308,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			this.gotDisconnectRequest(reply);
 			break;
 		default:	// Log and ignore unknown commands for now
-			console.warn("Comand not implemented", command);
+			console.warn("Unknown msg from gateway", command);
 			break;
 		}
 	}
@@ -188,6 +317,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * Peer wants to disconnect from me. Just ack that request and consider me disconnected.
 	 */
 	private gotDisconnectRequest(packet: number[]) {
+		debugLog("gotDisconnectRequest");
 		const reqChannelId = packet[6];
 		if (reqChannelId === this.channelId) 	// Handle only if my current channel ID
 			this.setState(State.DISCONNECTED);
@@ -202,11 +332,11 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * If all is well, bump my state and send a CONNECTIONSTATE_REQUEST.
 	 */
 	private gotConnectionResponse(packet: number[]) {
-		// console.log("gotConnectionResponse");
-		this.verifyState(State.CONNECTING);
+		debugLog("gotConnectionResponse");
 		const error = packet[7];
 		if (error)
-			throw "Connetion response error " + error;
+			throw "Connection response error " + error;
+		this.verifyState(State.CONNECTING);
 		this.channelId = packet[6];
 		this.sendConnectionStateRequest();
 	}
@@ -217,21 +347,22 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	}
 
 	private gotConnectionStateResponse(packet: number[]) {
-		// console.log("gotConnectionStateResponse");
-		this.verifyState(State.CONNECTIONSTATE_REQUESTED);
+		debugLog("gotConnectionStateResponse");
 		const error = packet[7];
 		if (error)
-			throw "Connetion state response error " + error;
+			throw "Connection state response error " + error;
+		this.verifyState(State.CONNECTIONSTATE_REQUESTED);
 		this.setState(State.CONNECTED_IDLE);
 	}
 
 	private gotTunnelResponse(packet: number[]) {
-		this.verifyState(State.TUNNELING);
+		debugLog("gotTunnelResponse");
 		const error = packet[9];
 		if (error)
 			throw "Tunnel response error " + error;
+		this.verifyState(State.TUNNELING);
 		const seqId = packet[8];
-		const queue =this.cmdQueue;
+		const queue = this.cmdQueue;
 		if (queue.length && queue[0].seqId === seqId) {
 			// Ack of most recently sent command - now consider done
 			queue.shift();	// Remove from queue
@@ -244,6 +375,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	 * keep peer happy.
 	 */
 	private gotTunnelRequest(packet: number[]) {
+		debugLog("gotTunnelRequest");
 		this.sendTunnelAck(packet[7], packet[8]);
 	}
 
@@ -289,6 +421,30 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	}
 
 	/**
+	 * Send a DISCONNECT_REQUEST.
+	 */
+	private sendDisconnectRequest() {
+		if (this.channelId) {	// Only if have a channel to disconnect from
+			const listenerPort = this.socket.listenerPort;
+			debugLog("sendDisconnectRequest");
+			const disconnReq = [
+				0x06, 0x10,
+				Command.DISCONNECT_REQUEST >> 8, Command.DISCONNECT_REQUEST & 0xff,
+				0x00, 0x10,	// Total length
+
+				this.channelId, 0x00,	// Connection HPAI
+				0x08,	// HPAI length
+				0x01,	// Host Protocol Code 0x01 -> IPV4_UDP, 0x02 -> IPV6_TCP */
+				0, 0, 0, 0,	// Response IP address (any)
+				listenerPort >> 8, listenerPort & 0xff
+			];
+			this.socket.sendBytes(setLength(disconnReq));
+			this.setState(State.DISCONNECTED);
+			this.checkStateSoon();
+		}
+	}
+
+	/**
 	 * Turn item at address addr1/addr2/addr3 (e.g., 4/0/0) on or off
 	 */
 	@callable("Send on/off command specified addr1/addr2/addr3")
@@ -313,26 +469,42 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 		@parameter("Scene 0…63 to recall (may be off-by-1)") scene: number
 	) {
 		scene = Math.min(Math.max(0, scene), 63);
-		const cmd: SceneNumberCmd = {
-			handler: this.sendSceneNumber.bind(this),
+		const cmd: NumberCmd = {
+			handler: this.sendSingleByteNumber.bind(this),
 			destAddr: calcAddr(addr1, addr2, addr3),
-			scene: scene
+			num: scene
 		};
 		this.queueCmd(cmd);
 	}
 
 	/**
+	 * Enfore all my dynamic property values by sending them anew. This is useful if
+	 * some other external actor have messed with those values, to get them
+	 * back to where I believe they are.
+	 *
+	 * CAUTION: I send ALL values. If there's a very large number of dynamic properties,
+	 * you may need to allow for a larger send queue (see queueCmd below).
+	 */
+	@callable("Send all my dynamic property values")
+	public enforceProps() {
+		if (this.connected) {
+			for (const dynProp of this.dynProps)
+				dynProp.sendWantedValue();
+		}
+	}
+
+	/**
 	 * Enqueue a command to be sent ASAP (awaiting connection, pending acks, etc).
 	 */
-	private queueCmd(cmd: QueuedCommand) {
+	queueCmd(cmd: QueuedCommand) {
 		this.cmdQueue.push(cmd);
-		if (this.cmdQueue.length > 30) {
+		if (this.cmdQueue.length > 50) {
 			console.warn("Excessive command buffering - discarding old");
 			this.cmdQueue.shift();
 		}
 		if (this.state === State.CONNECTED_IDLE)
-			this.sendQueuedCommand();	// Send right away if idle
-		else if (!this.connected && !this.timer) 		// Not even connected or awaiting - get me going
+			this.sendQueuedCommand();	// I'm currently idle, so can send right away
+		else if (!this.connected && !this.timer) 	// Not even connected or awaiting - get me going
 			this.checkStateSoon(2);
 
 		// Else will do so once state changes back to idle
@@ -341,18 +513,10 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	/**
 	 * Turn item at address addr1/addr2/addr3 (e.g., 4/0/0) on or off
 	 */
-	private sendOnOff(cmd: OnOffCmd) {
+	sendOnOff(cmd: OnOffCmd) {
 		cmd.seqId = this.seqCount;
-		const tunReq = [
-			0x06,0x10,
-			Command.TUNNEL_REQUEST >> 8, Command.TUNNEL_REQUEST & 0xff,
-			0x00,0x15,	// Total length
-
-			// Connection Header
-			0x04,		// Structure length
-			this.channelId,
-			this.seqCount,
-			0,			// Reserved
+		this.sendTunReq([
+			0,0,0,0,0,0,0,0,0,0,	// Header backpatched here in sendTunReq
 
 			// cEMI frame
 			0x11, /* message code, 11: Data Service transmitting */
@@ -362,29 +526,20 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			0x00, /* hi-byte source individual address */
 			0x00, /* lo-byte source (replace throw IP-Gateway) */
 			cmd.destAddr >> 8, cmd.destAddr & 0xff,
-			0x01, /* 01 data byte following */
+			0x01, /* number of data bytes following */
 			0x00, /* tpdu */
 			cmd.on ? 0x81 : 0x80 /* 81: switch on, 80: off */
-		];
-		this.socket.sendBytes(setLength(tunReq));
-		this.seqCount = ((this.seqCount + 1) & 0xff);	// Incremented ready for next
+		]);
 	}
 
 	/**
-	 * Recall scene number at address addr1/addr2/addr3
+	 * Set single byte number at address addr1/addr2/addr3, such as a scene number
+	 * or a percentage value.
 	 */
-	private sendSceneNumber(cmd: SceneNumberCmd) {
+	sendSingleByteNumber(cmd: NumberCmd) {
 		cmd.seqId = this.seqCount;
-		const tunReq = [
-			0x06,0x10,
-			Command.TUNNEL_REQUEST >> 8, Command.TUNNEL_REQUEST & 0xff,
-			0x00,0x15,	// Total length
-
-			// Connection Header
-			0x04,		// Structure length
-			this.channelId,
-			this.seqCount,
-			0,			// Reserved
+		this.sendTunReq([
+			0,0,0,0,0,0,0,0,0,0,	// Header backpatched here in sendTunReq
 
 			// cEMI frame
 			0x11, /* message code, 11: Data Service transmitting */
@@ -394,16 +549,31 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			0x00, /* hi-byte source individual address */
 			0x00, /* lo-byte source (replace throw IP-Gateway) */
 			cmd.destAddr >> 8, cmd.destAddr & 0xff,
-			0x02, /* data byte following */
+			0x02, /* number of data bytes following */
 			0x00, /* tpdu */
 			0x80,	// ???
-			cmd.scene
-		];
+			cmd.num
+		]);
+	}
+
+	/**
+	 * Send a "tunnel request", after defining the fixed headers and length fields
+	 */
+	private sendTunReq(tunReq: number[]) {
+		tunReq[0] = 0x06;	// Tunneling header
+		tunReq[1] = 0x10;
+		tunReq[2] = Command.TUNNEL_REQUEST >> 8;
+		tunReq[3] = Command.TUNNEL_REQUEST & 0xff;
+
+		// Connection Header
+		tunReq[6] = 4;		// Structure length
+		tunReq[7] = this.channelId;
+		tunReq[8] = this.seqCount;
+		tunReq[9] = 0;			// Reserved
+
 		this.socket.sendBytes(setLength(tunReq));
 		this.seqCount = ((this.seqCount + 1) & 0xff);	// Incremented ready for next
 	}
-
-
 
 	/* TUNNEL_RESPONSE, sent in response to a TUNNELLING_REQUEST from gateway */
 	private sendTunnelAck(channelId: number, seqCount: number) {
@@ -422,6 +592,103 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 			0x00 /* 00 our error code */
 		];
 		this.socket.sendBytes(setLength(tunAck));
+	}
+}
+
+/**
+ * Dynamic properties that can be enforced through enforceProps.
+ */
+interface DynProp {
+	sendWantedValue(): void;
+}
+
+/**
+ * An analog property, with a normalized value 0...1, sent as a 0...255 value.
+ */
+class AnalogProp implements DynProp {
+	private wantedValue = 0;	// Most recently set value
+	private currValue: number;	// Sent value (may lag if prop changed frequently)
+	private delayedSendTimer: CancelablePromise<void>;
+
+	constructor(private owner: KNXNetIP, private analog: IAnalog) {
+		owner.property<number>(
+			'analog_' + analog.name,
+			{
+				type: "Number",
+				description: analog.description || "An analog channel value (normalized)",
+				min: 0,
+				max: 1
+			},
+			setValue => {	// Function that handles both SETting and GETting a value
+				if (setValue !== undefined) {	// Is SET call
+					setValue = Math.max(0, Math.min(1, setValue)); // Clip to my range
+					this.wantedValue = setValue;
+					if (this.currValue !== setValue) {	// This is news - send it soon
+						if (!this.delayedSendTimer) {
+							// Debounce send requests to not overflow send queue
+							this.delayedSendTimer = wait(150); // An arbitrary time
+							this.delayedSendTimer.then(() => {
+								this.delayedSendTimer = undefined;	// Now taken
+								this.sendWantedValue();
+								this.currValue = this.wantedValue;	// Consider applied now
+							});
+						}
+					}
+				}
+				return this.wantedValue;	// Value from GET (also on SET, which is fine)
+			}
+		)
+	}
+
+	/**
+	 * Send my wanted value to KNX bus.
+	 */
+	sendWantedValue() {
+		const anal = this.analog;
+		const owner = this.owner;
+		const cmd: NumberCmd = {
+			handler: owner.sendSingleByteNumber.bind(owner),
+			destAddr: calcAddr(anal.addr[0], anal.addr[1], anal.addr[2]),
+			num: Math.round(this.wantedValue * 255)
+		};
+		owner.queueCmd(cmd);
+	}
+}
+/**
+ * An analog property, with a normalized value 0...1, sent as a 0...100 percentage.
+ */
+class DigitalProp implements DynProp {
+	private wantedValue = false;	// Most recently set value
+
+	constructor(private owner: KNXNetIP, private digital: IDigital) {
+		owner.property<boolean>(
+			'digital_' + digital.name,
+			{
+				type: "Boolean",
+				description: digital.description || "An digital (on/off) channel value"
+			},
+			setValue => {	// Function that handles both SETting and GETting a value
+				if (setValue !== undefined) {	// Is SET call
+					this.wantedValue = setValue;
+					this.sendWantedValue();
+				}
+				return this.wantedValue;	// Value from GET (also on SET, which is fine)
+			}
+		)
+	}
+
+	/**
+	 * Send my wanted value to KNX bus.
+	 */
+	sendWantedValue() {
+		const ch = this.digital;
+		const owner = this.owner;
+		const cmd: OnOffCmd = {
+			handler: owner.sendOnOff.bind(owner),
+			destAddr: calcAddr(ch.addr[0], ch.addr[1], ch.addr[2]),
+			on: this.wantedValue
+		};
+		owner.queueCmd(cmd);
 	}
 }
 
@@ -445,6 +712,7 @@ function calcAddr(addr1: number, addr2: number, addr3: number) {
 	const length = pkg.length;
 	pkg[4] = length >> 8;
 	pkg[5] = length & 0xff;
+	debugLog("About to send cmd", pkg[2], pkg[3]);
 	return pkg;
 }
 
@@ -455,3 +723,9 @@ function get16bit(rawData: number[], offs: number) {
 	return (rawData[offs] << 8) + rawData[offs+1];
 }
 
+/**
+Internal "verbose" log function, making my logging easy to turn on/off in one place.
+*/
+function debugLog(...args: any[]) {
+	console.debug(args);
+}

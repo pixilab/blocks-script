@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -149,35 +151,35 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
             });
         };
         __decorate([
-            Metadata_1.property("ON state", true),
+            (0, Metadata_1.property)("ON state", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], SettableClock.prototype, "on", null);
         __decorate([
-            Metadata_1.property("Start hour"),
-            Metadata_1.min(0),
-            Metadata_1.max(23),
+            (0, Metadata_1.property)("Start hour"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(23),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SettableClock.prototype, "startHour", null);
         __decorate([
-            Metadata_1.property("Start minute"),
-            Metadata_1.min(0),
-            Metadata_1.max(59),
+            (0, Metadata_1.property)("Start minute"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(59),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SettableClock.prototype, "startMinute", null);
         __decorate([
-            Metadata_1.property("End hour"),
-            Metadata_1.min(0),
-            Metadata_1.max(23),
+            (0, Metadata_1.property)("End hour"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(23),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SettableClock.prototype, "endHour", null);
         __decorate([
-            Metadata_1.property("End minute"),
-            Metadata_1.min(0),
-            Metadata_1.max(59),
+            (0, Metadata_1.property)("End minute"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(59),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SettableClock.prototype, "endMinute", null);

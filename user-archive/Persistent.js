@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -28,7 +30,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile"], functio
                     console.error("Failed parsing JSON data from file", Persistent.kFileName, parseError);
                 }
             }).catch(function (error) {
-                console.error("Failed reading file; use initial sample data", Persistent.kFileName, error);
+                console.error("Failed reading file; using default sample data", Persistent.kFileName, error);
                 _this.data = {
                     "aNumber": 12,
                     "aString": "Billy",
@@ -66,7 +68,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile"], functio
             if (!this.mPersistor) {
                 this.mPersistor = wait(200);
                 this.mPersistor.then(function () {
-                    delete _this.mPersistor;
+                    _this.mPersistor = undefined;
                     var jsonData = JSON.stringify(_this.data, null, 2);
                     SimpleFile_1.SimpleFile.write(Persistent.kFileName, jsonData);
                 });

@@ -1,46 +1,58 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ScriptBase = void 0;
+    exports.AggregateElem = exports.ScriptBase = void 0;
     var ScriptBase = (function () {
         function ScriptBase(scriptFacade) {
             this.__scriptFacade = scriptFacade;
         }
         ScriptBase.prototype.property = function (name, options, gsFunc) {
             this.__scriptFacade.property(name, options, gsFunc);
-            if (options && options.readOnly) {
-                Object.defineProperty(this, name, {
-                    get: function () {
-                        return gsFunc();
-                    }
-                });
+            var propDescriptor = {
+                get: function () {
+                    return gsFunc();
+                }
+            };
+            if (!options || !options.readOnly) {
+                propDescriptor.set = function (value) {
+                    var oldValue = gsFunc();
+                    if (oldValue !== gsFunc(value))
+                        this.__scriptFacade.changed(name);
+                };
             }
-            else {
-                Object.defineProperty(this, name, {
-                    get: function () {
-                        return gsFunc();
-                    },
-                    set: function (value) {
-                        var oldValue = gsFunc();
-                        if (oldValue !== gsFunc(value))
-                            this.__scriptFacade.firePropChanged(name);
-                    }
-                });
-            }
+            Object.defineProperty(this, name, propDescriptor);
         };
-        ScriptBase.prototype.changed = function (prop) {
-            this.__scriptFacade.changed(prop);
+        ScriptBase.prototype.indexedProperty = function (name, itemType) {
+            return this.__scriptFacade.indexedProperty(name, itemType);
         };
-        ScriptBase.prototype.makeJSArray = function (arr) {
-            if (Array.isArray(arr))
-                return arr;
-            var arrayLike = arr;
-            var result = [];
-            for (var i = 0; i < arrayLike.length; ++i)
-                result.push(arrayLike[i]);
-            return result;
+        ScriptBase.prototype.changed = function (propName) {
+            this.__scriptFacade.changed(propName);
+        };
+        ScriptBase.prototype.unsubscribe = function (event, listener) {
+            this.__scriptFacade.unsubscribe(event, listener);
+        };
+        ScriptBase.prototype.reInitialize = function () {
+            this.__scriptFacade.reInitialize();
+        };
+        ScriptBase.prototype.makeJSArray = function (arrayLike) {
+            if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
+                return arrayLike;
+            var realArray = [];
+            var length = arrayLike.length;
+            for (var i = 0; i < length; ++i)
+                realArray.push(arrayLike[i]);
+            return realArray;
         };
         return ScriptBase;
     }());
     exports.ScriptBase = ScriptBase;
+    var AggregateElem = (function () {
+        function AggregateElem() {
+        }
+        AggregateElem.prototype.changed = function (propName) {
+            this.__scriptFacade.changed(propName);
+        };
+        return AggregateElem;
+    }());
+    exports.AggregateElem = AggregateElem;
 });

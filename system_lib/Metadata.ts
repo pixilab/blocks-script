@@ -3,18 +3,30 @@
  * Created 2017 by Mike Fahl.
  */
 
+
+declare global {
+	var $metaSupport$: {
+		property(description ?: string, readOnly ?: boolean): any;
+		callable(description ?: string): any;
+		fieldMetadata(metadataValue: any): {
+			(target: Function): void;
+			(target: Object, targetKey: string | symbol): void;
+		};
+	}
+}
+
 /**
- Annotation defining a class acting as a device driver. This class must have a constructor
+ Decorator defining a class acting as a device driver. This class must have a constructor
  that takes the baseDriverType of low-level driver to attach to. The driverMeta passed in
  is an object with keys/values that vary with the type of driver attached (see
  NetworkTCPDriverMetaData and NetworkUDPDriverMetaData in Network.ts for those driver
  types).
 
  Note to self: I must pass in baseDriverType as a string, since those are typically
- defined as interfaces (they're implemented in Java), so I can't get the param type
- using design:paramtypes, as that will just say 'Object' for an interface.
+ defined as interfaces (implemented in Java-land). So I can't get the param type
+ using design:paramtypes since that then just says 'Object'.
  */
-export function driver(baseDriverType: string, typeSpecificMeta: any) {
+export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP', typeSpecificMeta: any) {
 	const info: DriverInfo = {
 		paramTypes: [baseDriverType],
 		info: typeSpecificMeta
@@ -32,81 +44,37 @@ interface DriverInfo {
 	paramTypes: string[];
 }
 
+// List of valid role identifiers
+type RoleRequired = 'Admin'|'Manager'|'Creator'|'Editor'|'Contributor'|'Staff'|'Spot';
+
 /**
  * Annotation for user script class, specifying role required to set properties exposed
- * by script, where role is one of the following: "Admin", "Manager", "Creator", "Editor",
- * "Contributor", "Staff" or "Spot".
+ * by the script.
  */
-export function roleRequired(role: string) {
+export function roleRequired(role: RoleRequired) {
 	return function(target: any): void {
 		return Reflect.defineMetadata("pixi:roleRequired", role, target);
 	}
 }
 
 /**
- Annotation defining a property, for use on set or get pseudo-method defining the property.
- In addition to adding "pixi:property" metadata to the property, it also hooks up change
- notofication qualified by the name of the property when its value changes through the
- "set" pseudo-method. If there are pixi:min or pixi:max constraints applied to the
- property, I will clip any value set to these extremes.
+ Decorator declaring a property, for use on set or get function exposing
+ the property's value.
  */
 export function property(description?: string, readOnly?: boolean) {
-
-	return function(target: any, propName: string, prop: TypedPropertyDescriptor<any>) {
-		const origSetter = prop.set;
-
-		let constrMin: number;	// Constraint value(s), if any
-		let constrMax: number;
-		let constr: boolean;	// Set once any constraints have been obtained
-
-		if (!prop.enumerable && prop.configurable) {
-			prop.enumerable = true;	// Must be to pick scan prop after typescript 3.8
-			Object.defineProperty(target, propName, prop); // Replaces previous definition
-		}
-
-		if (origSetter) {
-			prop.set = function (newValue) {
-				const oldValue = prop.get.call(this);
-				if (typeof newValue === 'number') {	// Apply any constraints to numeric value
-					if (!constr) {	// Constraints need to be obtained (only done 1st time)
-						constrMin = Reflect.getMetadata("pixi:min", target, propName);
-						constrMax = Reflect.getMetadata("pixi:max", target, propName);
-						constr = true;	// Now loaded
-					}
-					if (constrMin !== undefined)
-						newValue = Math.max(newValue, constrMin);
-					if (constrMax !== undefined)
-						newValue = Math.min(newValue, constrMax);
-				}
-				origSetter.call(this, newValue);
-				newValue = prop.get.call(this);
-				if (oldValue !== newValue)
-					this.__scriptFacade.firePropChanged(propName);
-			};
-		}
-		Reflect.defineMetadata('pixi:property', description || "", target, propName);
-		if (readOnly) // Explicit read-only (may still have a setter for "internal" use)
-			Reflect.defineMetadata('pixi:readOnly', true, target, propName);
-		return prop;
-	}
+	return $metaSupport$.property(description, readOnly); // Impl moved into $core
 }
 
 /**
- Annotation declaring a Task-callable method, with optional description.
+ Decorator declaring a Task-callable method on a driver or user script,
+ with optional description.
  */
 export function callable(description?: string) {
-	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
-		const func: Function = target[propertyKey];
-		const info = {	// Information provided about this callable
-			descr: description || "",
-			args: getArgs(func)
-		};
-		return Reflect.defineMetadata("pixi:callable", info, target, propertyKey);
-	}
+	return $metaSupport$.callable(description); // Impl moved into $core
 }
 
 /**
- Optional function parameter annotation, providing a textual description of the parameter.
+ Optional callable method parameter decorator, providing a textual description of the parameter.
  Also allows trailing parameters to be marked as optional (typically used with
  '?' after the param name in the param list to also inform the compiler).
  */
@@ -122,24 +90,50 @@ export function parameter(description?: string, optional?: boolean) {
 	}
 }
 
+interface Ctor<T> { new(... args: any[]): T ;}
+
 /**
- Annotation defining a numeric value constraint, mainly for use on numeric properties (although
+ * Decorator for a feed item data field. Applied to an instance variable, which must
+ * be of primitive type (i.e., string, number or boolean). Field values are read-only.
+ */
+export function field(description?: string) {
+	return $metaSupport$.fieldMetadata({description: description} );
+}
+
+/**
+ * Decorator for (presumably unique) Feed item ID field, if any. Applied to an
+ * instance variable typically of string or number type. Read-only by definition.
+ */
+export function id(description?: string) {
+	return $metaSupport$.fieldMetadata( {description: description, id: true} );
+}
+
+/**
+ * Decorator specifying a list of feed item child elements of type T.
+ * Apply to an instance variable of array type.
+ */
+export function list<T extends Object>(ofType: Ctor<T>, description?: string) {
+	return $metaSupport$.fieldMetadata({description: description, list: ofType} );
+}
+
+/**
+ Decorator defining a numeric value constraint, mainly for use on numeric properties and fields (although
  it could conceivably also be used on strings to define a min/max length, or similar).
  */
 export function min(min:number) {
-    return function (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
+    return function (target: any, propertyKey: string) {
 		Reflect.defineMetadata("pixi:min", min, target, propertyKey);
     };
 }
 
 export function max(max:number) {
-    return function (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
+    return function (target: any, propertyKey: string) {
 		Reflect.defineMetadata("pixi:max", max, target, propertyKey);
     };
 }
 
 /**
- Annotation declaring a method as accessible from a web client as a POST request under
+ Decorate a method as accessible from a web client as a POST request under
 
  	/rest/script/invoke/<user-script-name>/<method-name>
 
@@ -150,9 +144,14 @@ export function max(max:number) {
  you may return a promise eventually resolving with the result value.
 
  The roleRequired parameter, if specified, limits who can call the resource from the
- outside, and accepts the same values as the roleRequired annotation.
+ outside, and accepts the same values as the roleRequired decorator. Unless already
+ authenticated by other means, call authenticated resources with a slightly different
+ URL:
+
+ 	/rest/script/invoke-auth/<user-script-name>/<method-name>
+
  */
-export function resource(roleRequired?: string) {
+export function resource(roleRequired?: RoleRequired) {
 	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
 		const info = {	// Information provided about this resource
 			auth: roleRequired || ""
@@ -161,22 +160,3 @@ export function resource(roleRequired?: string) {
 	}
 }
 
-
-/*	Get the formal parameter names of func as an array.
- */
-function getArgs(func: Function): string[] {
-	// First match everything inside the function argument parens.
-	const args = func.toString().match(funcArgsRegEx)[1];
-
-	// Split the arguments string into an array comma delimited.
-	return args.split(',')
-	.map(arg => // Skip inline comments and trim whitespace
-		arg.replace(parNameRegEx, '').trim()
-	).filter(arg => 	// Ensure no undefined values are added
-		arg
-	);
-}
-
-// Regexes used by getArgs above
-const funcArgsRegEx = /function\s.*?\(([^)]*)\)/;
-const parNameRegEx = /\/\*.*\*\//;

@@ -4,11 +4,21 @@
  */
 
 import {ScriptBaseEnv} from "system_lib/ScriptBase";
+import {Driver} from "../system_lib/Driver";
 
 /**
- * Access Network subsystem known by system by its device (socket) name.
+ * Access Network subsystem by system by its assigned name. Note that the object
+ * returned varies based on whether there's a driver assigned or not. If no driver
+ * is assigned, the raw NetworkTCP or NetworkUDP object is returned. If a driver
+ * has been assigned, then the driver is returned. The driver exposes its own
+ * methods and properties, thus hiding the standard methods and properties
+ * of the underlying NetworkTCP or NetworkUDP object, unless it choses to re-
+ * expose those explicitly.
  */
-export var Network: { [deviceName: string]: NetworkTCP|NetworkUDP; };
+export var Network: { [deviceName: string]:
+	NetworkTCP | NetworkUDP |		// Applies when no driver is assigned
+	Driver<NetworkTCP|NetworkUDP>;	// Driver subclass (when driver is assigned)
+};
 
 /**
  *	A TCP network port.
@@ -16,9 +26,7 @@ export var Network: { [deviceName: string]: NetworkTCP|NetworkUDP; };
 export interface NetworkTCP extends NetworkBase {
 	isOfTypeName(typeName: string): NetworkTCP|null;	// Check subtype by name
 
-	connected: boolean;		// True if I'm currently connected (read-only)
-	fullName: string;		// Full, unique name (read-only)
-	name: string;			// Leaf network port name (read only)
+	readonly connected: boolean;		// True if I'm currently connected
 
 	/**
 	 * Specify end-of-data framing for textReceived. If not set, this defaults to any of CR/LF,
@@ -115,7 +123,7 @@ interface NetworkTCPDriverMetaData {
 export interface NetworkUDP extends NetworkBase {
 	isOfTypeName(typeName: string): NetworkUDP|null;	// Check subtype by name
 
-	listenerPort: number;	// UDP listener port number, if any, else 0 (read only)
+	readonly listenerPort: number;	// UDP listener port number, if any, else 0
 
 	// Text to send (append \r or other framing before calling, if needed)
 	sendText(text:string): void;
@@ -160,7 +168,9 @@ interface NetworkBase extends ScriptBaseEnv {
 	name: string;			// Leaf name of this network device
 	fullName: string;		// Full name, including enclosing containers
 	enabled: boolean;		// True if I'm enabled (else won't send data)
-	address: string;		// Target IP address (e.g., "10.0.2.45")
+	address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
+	options: string;		// Any "Custom Options" assigned to the Network Device
+	addressString: string;	// IP address exactly as set on the Network Device page.
 	port: number;			// Port number sending data to
 
 	/**

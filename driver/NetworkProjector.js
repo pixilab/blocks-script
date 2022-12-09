@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -34,8 +36,13 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.socket = socket;
             _this.propList = [];
             socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection')
+                if (message.type === 'Connection') {
+                    if (_this.socket.connected)
+                        _this.infoMsg("connected");
+                    else
+                        _this.warnMsg("connection dropped");
                     _this.connectStateChanged();
+                }
             });
             socket.subscribe('textReceived', function (sender, msg) {
                 return _this.textReceived(msg.text);
@@ -81,11 +88,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         });
         NetworkProjector.prototype.discard = function () {
             this.discarded = true;
-            if (this.poller)
+            if (this.poller) {
                 this.poller.cancel();
-            if (this.correctionRetry)
+                this.poller = undefined;
+            }
+            if (this.correctionRetry) {
                 this.correctionRetry.cancel();
-            delete this.poller;
+                this.correctionRetry = undefined;
+            }
         };
         NetworkProjector.prototype.errorMsg = function () {
             var messages = [];
@@ -102,6 +112,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             }
             messages.unshift(this.socket.fullName);
             console.warn(messages);
+        };
+        NetworkProjector.prototype.infoMsg = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            messages.unshift(this.socket.fullName);
+            console.info(messages);
         };
         NetworkProjector.prototype.reqToSend = function () {
             for (var _i = 0, _a = this.propList; _i < _a.length; _i++) {
@@ -181,18 +199,20 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.poll = function () {
             var _this = this;
-            this.poller = wait(21333);
-            this.poller.then(function () {
-                var continuePolling = true;
-                if (!_this.socket.connected) {
-                    if (!_this.connecting && !_this.connectDly)
-                        _this.attemptConnect();
-                }
-                else
-                    continuePolling = _this.pollStatus();
-                if (continuePolling && !_this.discarded)
-                    _this.poll();
-            });
+            if (this.socket.enabled) {
+                this.poller = wait(21333);
+                this.poller.then(function () {
+                    var continuePolling = true;
+                    if (!_this.socket.connected) {
+                        if (!_this.connecting && !_this.connectDly)
+                            _this.attemptConnect();
+                    }
+                    else
+                        continuePolling = _this.pollStatus();
+                    if (continuePolling && !_this.discarded)
+                        _this.poll();
+                });
+            }
         };
         NetworkProjector.prototype.pollStatus = function () {
             return false;
@@ -248,19 +268,19 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             delete this.currResolver;
         };
         __decorate([
-            Metadata_1.property("Power on/off"),
+            (0, Metadata_1.property)("Power on/off"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetworkProjector.prototype, "power", null);
         __decorate([
-            Metadata_1.callable("Send raw command string to device"),
-            __param(0, Metadata_1.parameter("What to send")),
+            (0, Metadata_1.callable)("Send raw command string to device"),
+            __param(0, (0, Metadata_1.parameter)("What to send")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", Promise)
         ], NetworkProjector.prototype, "sendText", null);
         __decorate([
-            Metadata_1.property("True if projector is online", true),
+            (0, Metadata_1.property)("True if projector is online", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetworkProjector.prototype, "connected", null);
@@ -343,7 +363,18 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NumState.prototype.correct = function (drvr) {
             return this.correct2(drvr, this.wanted.toString());
         };
+        NumState.prototype.updateCurrent = function (newState) {
+            if (!isNaN(newState))
+                _super.prototype.updateCurrent.call(this, newState);
+        };
+        NumState.prototype.needsCorrection = function () {
+            return !isNaN(this.wanted) && _super.prototype.needsCorrection.call(this);
+        };
         NumState.prototype.set = function (v) {
+            if (!(typeof v === 'number') || isNaN(v)) {
+                console.error("Value not numeric", this.baseCmd, v);
+                return false;
+            }
             if (v < this.min || v > this.max) {
                 console.error("Value out of range for", this.baseCmd, v);
                 return false;
@@ -352,8 +383,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NumState.prototype.get = function () {
             var result = _super.prototype.get.call(this);
-            if (typeof result !== 'number') {
-                console.error("Value invalid for", this.baseCmd, result);
+            if (typeof result !== 'number' || isNaN(result)) {
+                console.error("Invalid value for", this.propName, result);
                 result = this.min || 0;
             }
             return result;

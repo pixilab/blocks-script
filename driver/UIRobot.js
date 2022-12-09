@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -20,12 +22,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
 };
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
@@ -38,6 +45,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.socket = socket;
             _this.mLeftDown = false;
             _this.mRightDown = false;
+            _this.mPower = false;
             _this.mProgramParams = '';
             _this.mCurrentKeys = '';
             if (bufferSize)
@@ -54,25 +62,55 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         UIRobot_1 = UIRobot;
         UIRobot.prototype.onConnectStateChanged = function (connected) {
-            if (!connected)
+            if (connected)
+                this.power = true;
+            else
                 this.mProgramParams = '';
-            this.changed("power");
         };
         Object.defineProperty(UIRobot.prototype, "power", {
             get: function () {
-                return this.socket.connected && this.program !== UIRobot_1.kPowerDownProgram;
+                return this.mPower;
             },
             set: function (power) {
-                if (power) {
-                    if (!this.socket.connected)
-                        this.socket.wakeOnLAN();
+                if (this.mPower !== power) {
+                    this.mPower = power;
+                    this.cancelWoLRetry();
+                    if (power) {
+                        if (this.program === UIRobot_1.kPowerDownProgram)
+                            this.program = '';
+                        this.woLRetryAttempts = 0;
+                        this.tryWakeUp();
+                    }
+                    else
+                        this.program = UIRobot_1.kPowerDownProgram;
                 }
-                else
-                    this.program = UIRobot_1.kPowerDownProgram;
             },
             enumerable: false,
             configurable: true
         });
+        UIRobot.prototype.tryWakeUp = function () {
+            var _this = this;
+            if (!this.socket.connected) {
+                if (this.woLRetryAttempts < UIRobot_1.kWoLRetryMaxAttempts) {
+                    this.socket.wakeOnLAN();
+                    this.woLRetryPromise = wait(UIRobot_1.kWoLRetryInterval);
+                    this.woLRetryPromise.then(function () { return _this.tryWakeUp(); });
+                    this.woLRetryAttempts += 1;
+                }
+                else {
+                    this.woLRetryPromise = undefined;
+                    this.power = false;
+                }
+            }
+            else
+                this.woLRetryPromise = undefined;
+        };
+        UIRobot.prototype.cancelWoLRetry = function () {
+            if (this.woLRetryPromise) {
+                this.woLRetryPromise.cancel();
+                this.woLRetryPromise = undefined;
+            }
+        };
         Object.defineProperty(UIRobot.prototype, "leftDown", {
             get: function () {
                 return this.mLeftDown;
@@ -102,24 +140,34 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         UIRobot.prototype.moveMouse = function (x, y) {
             this.sendCommand('MouseMove', x, y);
         };
+        UIRobot.prototype.transitoryCommand = function (exePath, workingDirectory, args) {
+            var params = [];
+            if (args)
+                params = args.split('|');
+            params.unshift(exePath);
+            params.unshift(workingDirectory);
+            return this.sendCommand.apply(this, __spreadArray(['Launch'], params, false));
+        };
         Object.defineProperty(UIRobot.prototype, "program", {
             get: function () {
                 return this.mProgramParams;
             },
             set: function (programParams) {
-                var runningProgram = this.parseProgramParams(this.mProgramParams);
-                if (runningProgram) {
-                    this.sendCommand('Terminate', runningProgram.program);
-                }
-                var newProgram = this.parseProgramParams(programParams);
-                if (newProgram) {
-                    this.mProgramParams = programParams;
-                    this.sendCommand.apply(this, __spreadArrays(['Launch',
-                        newProgram.workingDir,
-                        newProgram.program], newProgram.arguments));
-                }
-                else {
-                    this.mProgramParams = '';
+                if (this.mProgramParams !== programParams) {
+                    var runningProgram = this.parseProgramParams(this.mProgramParams);
+                    if (runningProgram) {
+                        this.sendCommand('Terminate', runningProgram.program);
+                    }
+                    var newProgram = this.parseProgramParams(programParams);
+                    if (newProgram) {
+                        this.mProgramParams = programParams;
+                        this.sendCommand.apply(this, __spreadArray(['Launch',
+                            newProgram.workingDir,
+                            newProgram.program], newProgram.arguments, false));
+                    }
+                    else {
+                        this.mProgramParams = '';
+                    }
                 }
             },
             enumerable: false,
@@ -169,7 +217,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 args[_i - 1] = arguments[_i];
             }
             command += ' ' + args.join(' ');
-            console.log("-------------command", command);
             return this.socket.sendText(command);
         };
         UIRobot.prototype.parseProgramParams = function (programParams) {
@@ -188,39 +235,50 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         var UIRobot_1;
         UIRobot.kPowerDownProgram = "C:/Windows/System32/shutdown.exe||/s /f /t 0";
+        UIRobot.kWoLRetryInterval = 1000 * 20;
+        UIRobot.kWoLRetryMaxAttempts = 10;
         __decorate([
-            Metadata_1.property("Power computer on/off"),
+            (0, Metadata_1.property)("Power computer on/off"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], UIRobot.prototype, "power", null);
         __decorate([
-            Metadata_1.property("Left mouse button down"),
+            (0, Metadata_1.property)("Left mouse button down"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], UIRobot.prototype, "leftDown", null);
         __decorate([
-            Metadata_1.property("Right mouse button down"),
+            (0, Metadata_1.property)("Right mouse button down"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], UIRobot.prototype, "rightDown", null);
         __decorate([
-            Metadata_1.callable("Move mouse by specified distance"),
+            (0, Metadata_1.callable)("Move mouse by specified distance"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number, Number]),
             __metadata("design:returntype", void 0)
         ], UIRobot.prototype, "moveMouse", null);
         __decorate([
-            Metadata_1.property("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS"),
+            (0, Metadata_1.callable)("Transitory command to run"),
+            __param(0, (0, Metadata_1.parameter)("Path to executable command to run")),
+            __param(1, (0, Metadata_1.parameter)("Working directory to be applied")),
+            __param(2, (0, Metadata_1.parameter)("Additional arguments, separated by vertical bar", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, String]),
+            __metadata("design:returntype", void 0)
+        ], UIRobot.prototype, "transitoryCommand", null);
+        __decorate([
+            (0, Metadata_1.property)("The program to start, will end any previously running program. Format is EXE_PATH|WORKING_DIR|...ARGS"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], UIRobot.prototype, "program", null);
         __decorate([
-            Metadata_1.property("Send key strokes, modifiers before key"),
+            (0, Metadata_1.property)("Send key strokes, modifiers before key"),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], UIRobot.prototype, "keyDown", null);
         UIRobot = UIRobot_1 = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 3047 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 3047 }),
             __metadata("design:paramtypes", [Object, Number])
         ], UIRobot);
         return UIRobot;

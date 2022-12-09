@@ -11,7 +11,7 @@ import {callable, driver, max, min, parameter, property} from "system_lib/Metada
 */
 @driver('NetworkTCP', { port: 4998 })
 export class iTachIR extends Driver<NetworkTCP> {
-	private currChannel: number;
+	private currChannel: number = 0;	// Out-of-range, but well defined, value
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);

@@ -323,6 +323,15 @@ export class ArtnetGnS extends Script {
     ) {
         this.getScene(sceneName, true).addExecute(realmName, groupName, taskName, delay);
     }
+    @callable('add call scene to scene')
+    public sceneAddCallScene (
+        @parameter('scene name') sceneName: string,
+        @parameter('scene name to call') sceneNameToCall: string,
+        @parameter('timefactor') timefactor: number,
+        @parameter('delay in seconds', true) delay?: number
+    ) {
+        this.getScene(sceneName, true).addCallScene(sceneNameToCall, timefactor, delay);
+    }
     @callable('add fade to label to scene')
     public sceneAddChannelsFadeToLabel (
         @parameter('scene name') sceneName: string,
@@ -352,6 +361,23 @@ export class ArtnetGnS extends Script {
         scene.call(timefactor, seekTo, force);
         return undefined;
     }
+
+    public static sceneCall(
+        sceneName: string,
+        timefactor?: number,
+        seekTo?: number,
+        force?: boolean
+    ): Promise<void> {
+    	const scene = ArtnetGnS.getScene(sceneName, false);
+        if (timefactor) {
+            if (timefactor <= 0.0) return;
+            timefactor = 1.0 / timefactor;
+        }
+        // return scene ? scene.call(timefactor, seekTo, force) : undefined;
+        scene.call(timefactor, seekTo, force);
+        return undefined;
+    }
+
     @callable('cancel scene')
     public sceneCancel(
         @parameter('scene name') sceneName: string
@@ -643,6 +669,12 @@ export class ArtnetGnS extends Script {
         }
         return ArtnetGnS.scenes[sceneName];
     }
+    private static getScene(sceneName: string, createIfMissing: boolean): ArtnetScene|undefined {
+        if (!ArtnetGnS.scenes[sceneName] && createIfMissing) {
+            ArtnetGnS.scenes[sceneName] = new ArtnetScene();
+        }
+        return ArtnetGnS.scenes[sceneName];
+    }
 
     private getStringArray(list: string): string[] {
         var result: string[] = [];
@@ -834,6 +866,11 @@ class ArtnetScene {
     public addExecute(realm: string, group: string, task: string, delay?: number)
     {
         this.sceneItems.push(new ArtnetSceneExecute(realm, group, task, 0, delay));
+        this.applyChanges();
+    }
+    public addCallScene(sceneName: string, timefactor: number, delay?: number)
+    {
+        this.sceneItems.push(new ArtnetSceneCallScene(sceneName, timefactor, 0, delay));
         this.applyChanges();
     }
     private applyChanges() {
@@ -1042,7 +1079,20 @@ class ArtnetSceneExecute extends ArtnetSceneItem {
         }
     }
 }
-
+class ArtnetSceneCallScene extends ArtnetSceneItem {
+    private readonly sceneName: string;
+    private readonly timefactor: number;
+    public constructor(sceneName: string, timefactor: number, duration?: number, delay?: number) {
+        super(duration, delay);
+        this.sceneName = sceneName;
+        this.timefactor = timefactor;
+    }
+    public call (factor? : number) {
+        if (factor > 0.9 && factor < 1.1) {
+            ArtnetGnS.sceneCall(this.sceneName, this.timefactor);
+        }
+    }
+}
 
 interface Dictionary<Group> {
     [id: string]: Group;

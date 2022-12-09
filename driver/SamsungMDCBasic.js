@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -102,33 +104,33 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.socket.sendBytes(cmd);
         };
         __decorate([
-            Metadata_1.property("The target ID"),
-            Metadata_1.min(0),
-            Metadata_1.max(254),
+            (0, Metadata_1.property)("Target display ID (must match dispplay's setting)"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(254),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SamsungMDCBasic.prototype, "id", null);
         __decorate([
-            Metadata_1.property("Power on/off"),
+            (0, Metadata_1.property)("Power on/off"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], SamsungMDCBasic.prototype, "power", null);
         __decorate([
-            Metadata_1.property("Volume level, normalized 0...1"),
-            Metadata_1.min(0),
-            Metadata_1.max(1),
+            (0, Metadata_1.property)("Volume level, normalized 0...1"),
+            (0, Metadata_1.min)(0),
+            (0, Metadata_1.max)(1),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SamsungMDCBasic.prototype, "volume", null);
         __decorate([
-            Metadata_1.property("Input (source) number. HDMI1=0x21. HDMI2=0x22"),
-            Metadata_1.min(0x14),
-            Metadata_1.max(0x40),
+            (0, Metadata_1.property)("Input (source) number; HDMI1=33, HDMI2=34, URL=99"),
+            (0, Metadata_1.min)(4),
+            (0, Metadata_1.max)(99),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], SamsungMDCBasic.prototype, "input", null);
         SamsungMDCBasic = __decorate([
-            Metadata_1.driver('NetworkTCP', { port: 1515 }),
+            (0, Metadata_1.driver)('NetworkTCP', { port: 1515 }),
             __metadata("design:paramtypes", [Object])
         ], SamsungMDCBasic);
         return SamsungMDCBasic;

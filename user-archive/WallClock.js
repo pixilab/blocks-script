@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -29,7 +31,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         function WallClock(env) {
             var _this = _super.call(this, env) || this;
             _this.mClockTime = "0:00";
-            _this.updateClock();
+            wait(100).then(function () { return _this.updateClock(); });
             return _this;
         }
         Object.defineProperty(WallClock.prototype, "currentTime", {
@@ -51,7 +53,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             wait(20 * 1000).then(function () { return _this.updateClock(); });
         };
         __decorate([
-            Metadata_1.property("Time of day, as H:MM", true),
+            (0, Metadata_1.property)("Time of day, as H:MM", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], WallClock.prototype, "currentTime", null);

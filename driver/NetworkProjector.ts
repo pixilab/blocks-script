@@ -39,15 +39,20 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		super(socket);
 		this.propList = [];
 		socket.subscribe('connect', (sender, message)=> {
-			if (message.type === 'Connection')
-				this.connectStateChanged()
+			if (message.type === 'Connection') {
+				if (this.socket.connected)
+					this.infoMsg("connected");
+				else
+					this.warnMsg("connection dropped");
+				this.connectStateChanged();
+			}
 		});
 		socket.subscribe('textReceived', (sender, msg)=>
 			this.textReceived(msg.text)
 		);
 
 		socket.subscribe('finish', (sender)=>
-			this.discard()
+			this.discard()	// Shut me down if socket is discarded (e.g., was disabled)
 		);
 	}
 
@@ -129,11 +134,14 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 
 	protected discard() {
 		this.discarded = true;
-		if (this.poller)
+		if (this.poller) {
 			this.poller.cancel();
-		if (this.correctionRetry)
+			this.poller = undefined;
+		}
+		if (this.correctionRetry) {
 			this.correctionRetry.cancel();
-		delete this.poller;
+			this.correctionRetry = undefined;
+		}
 	}
 
 	/**
@@ -150,6 +158,14 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected warnMsg(...messages: string[]) {
 		messages.unshift(this.socket.fullName);
 		console.warn(messages);
+	}
+
+	/**
+	 Log an info message, incriminating my network connection's name
+	 */
+	protected infoMsg(...messages: any[]) {
+		messages.unshift(this.socket.fullName);
+		console.info(messages);
 	}
 
 	/*	Get first state that wants to send a request, else undefined.
@@ -218,7 +234,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected attemptConnect() {
 		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-			// console.info("attemptConnect");
+			// this.infoMsg("attemptConnect");
 			this.socket.connect().then(
 				() => this.justConnected(),
 				error => this.connectStateChanged()
@@ -239,7 +255,6 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected connectStateChanged() {
 		this.connecting = false;
-		// console.info("connectStateChanged", this.socket.connected);
 		if (!this.socket.connected) {
 			this.connected = false;	// Tell clients connection dropped
 			if (this.correctionRetry)
@@ -279,17 +294,19 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 of sync if status changed behind our back.
 	 */
 	protected poll() {
-		this.poller = wait(21333);
-		this.poller.then(()=> {
-			var continuePolling = true;
-			if (!this.socket.connected) {
-				if (!this.connecting && !this.connectDly)
-					this.attemptConnect();	// Status retrieved once connected
-			} else  // I'm connected - move ahead to poll for current status
-				continuePolling = this.pollStatus();
-			if (continuePolling && !this.discarded)	// Keep polling
-				this.poll();
-		})
+		if (this.socket.enabled) {	// Only if we're enabled
+			this.poller = wait(21333);
+			this.poller.then(() => {
+				var continuePolling = true;
+				if (!this.socket.connected) {
+					if (!this.connecting && !this.connectDly)
+						this.attemptConnect();	// Status retrieved once connected
+				} else  // I'm connected - move ahead to poll for current status
+					continuePolling = this.pollStatus();
+				if (continuePolling && !this.discarded)	// Keep polling
+					this.poll();
+			});
+		}
 	}
 
 	/**
@@ -394,7 +411,7 @@ export abstract class State<T> {
 
 	constructor(
 		protected baseCmd: string, 	// Base part of command to send
-		private propName: string, 	// Name of associated property
+		protected propName: string, 	// Name of associated property
 		private correctionApprover?: ()=>boolean // If specified, do NOT attempt to correct if returns false
 	) {}
 
@@ -447,7 +464,7 @@ export abstract class State<T> {
 				this.notifyListeners();
 				// console.info("updateCurrent wag dog", this.baseCmd, newState);
 			} else if (this.wanted === undefined)
-				this.notifyListeners(); // Had nop wanted state - notify for current
+				this.notifyListeners(); // Had no wanted state - notify for current
 		}
 	}
 
@@ -511,14 +528,30 @@ export class NumState extends State<number> {
 		super(baseCmd, propName, correctionApprover);
 	}
 
+
 	correct(drvr: NetworkProjector): Promise<string> {
 		return this.correct2(drvr, this.wanted.toString());
+	}
+
+	// Avoid getting NaN into my state
+	updateCurrent(newState: number) {
+		if (!isNaN(newState))
+			super.updateCurrent(newState);
+	}
+
+	// Ignore NaN wanted state for correction
+	needsCorrection(): boolean {
+		return !isNaN(this.wanted) && super.needsCorrection();
 	}
 
 	/**
 	 Override to validate in range.
 	 */
 	set(v: number): boolean {
+		if (!(typeof v === 'number') || isNaN(v)) {
+			console.error("Value not numeric", this.baseCmd, v);
+			return false;
+		}
 		if (v < this.min || v > this.max) {
 			console.error("Value out of range for", this.baseCmd, v);
 			return false;
@@ -526,12 +559,11 @@ export class NumState extends State<number> {
 		return super.set(v);
 	}
 
-
 	get(): number {
 		var result = super.get();
-		// Better return min/0 than undefined or some invalid type of data
-		if (typeof result !== 'number') {
-			console.error("Value invalid for", this.baseCmd, result);
+		// Better return min/0 than undefined, NaN or some invalid type of data
+		if (typeof result !== 'number' || isNaN(result)) {
+			console.error("Invalid value for", this.propName, result);
 			result = this.min || 0;
 		}
 		return result;

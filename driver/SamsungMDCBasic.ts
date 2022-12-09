@@ -14,7 +14,7 @@ export class SamsungMDCBasic extends Driver<NetworkTCP> {
 
 	private mId: number = 0;
 
-	// Arbitrary initial value - we really have no idea
+	// A wild stab at device's initial values (we really have no idea)
 	private mPower: boolean = false;
 	private mInput: number = 0x14;
 	private mVolume: number = 0.5;
@@ -25,7 +25,7 @@ export class SamsungMDCBasic extends Driver<NetworkTCP> {
 		socket.autoConnect(true);
 	}
 
-	@property("The target ID")
+	@property("Target display ID (must match dispplay's setting)")
 	@min(0) @max(254)
 	public set id(
 		id: number
@@ -62,8 +62,8 @@ export class SamsungMDCBasic extends Driver<NetworkTCP> {
 		return this.mVolume;
 	}
 
-	@property("Input (source) number. HDMI1=0x21. HDMI2=0x22")
-	@min(0x14) @max(0x40) // Somewhat arbitrary constraints
+	@property("Input (source) number; HDMI1=33, HDMI2=34, URL=99")
+	@min(4) @max(99)	// Constraints based on MDC spec 2015
 	public set input(
 		input: number
 	) {
@@ -87,9 +87,9 @@ export class SamsungMDCBasic extends Driver<NetworkTCP> {
 			cmd.push(paramByte);
 		} else
 			cmd.push(0);	// No param
-		var checksum = 0;
+		let checksum = 0;
 		const count = cmd.length;
-		for (var ix = 1; ix < count; ++ix)
+		for (let ix = 1; ix < count; ++ix)
 			checksum += cmd[ix];
 		cmd.push(checksum & 0xff);
 		this.socket.sendBytes(cmd);

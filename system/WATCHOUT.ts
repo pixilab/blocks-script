@@ -41,21 +41,25 @@ export interface WATCHOUTCluster extends Timeline {
 	disconnect(): void;
 	isConnected(): boolean;
 
+	// Shut down cluster - promise resolved once all members shut down
 	sleep(): Promise<any>;
-	wakeUp(timeoutMilliseconds?: number): Promise<any>;
+
+	// Promise resolved once all members are up
+	wakeUp(timeoutSeconds?: number): Promise<any>;
 
 	load(showName: string): Promise<any>;
 	isReady(): boolean;
 	isShowLoaded(): boolean;
 	getShowName(): string;
 
-	play(auxTimelineName?:string): void;	// Main timeline if no auxTimelineName
+	// Main timeline used if no auxTimelineName specified in following calls
+	play(auxTimelineName?:string): void;
 	pause(auxTimelineName?:string): void;
 	stop(auxTimelineName?:string): void;
-
-	reset(): void;
 	gotoTime(time:number, auxTimelineName?:string): void; // Time in mS
 	gotoControlCue(cueName:string, reverseOnly: boolean, auxTimelineName?:string): void;
+
+	reset(): void;
 
 	setLayerConditions(layerCond:number): void;
 	getLayerConditions(): number;

@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -59,15 +61,15 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         Flock.CONFIG_FILE_NAME = "Flock.config.json";
         Flock.FLOCK_MSG_URL = "https://api.flock.com/hooks/sendMessage/";
         __decorate([
-            Metadata_1.callable("Send message to Flock"),
-            __param(0, Metadata_1.parameter("Message content")),
+            (0, Metadata_1.callable)("Send message to Flock"),
+            __param(0, (0, Metadata_1.parameter)("Message content")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", Promise)
         ], Flock.prototype, "sendMessage", null);
         __decorate([
-            Metadata_1.callable("Send rich text message to Flock"),
-            __param(0, Metadata_1.parameter("Rich text version (using FlockML. Supports e.g. <a>, <em>, <i>, <strong>, <b>, <u>, <br>)")),
+            (0, Metadata_1.callable)("Send rich text message to Flock"),
+            __param(0, (0, Metadata_1.parameter)("Rich text version (using FlockML. Supports e.g. <a>, <em>, <i>, <strong>, <b>, <u>, <br>)")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", Promise)

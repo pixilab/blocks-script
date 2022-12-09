@@ -2,10 +2,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -64,8 +66,8 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         Pushover.CONFIG_FILE_NAME = "Pushover.config.json";
         Pushover.MSG_URL = "https://api.pushover.net/1/messages.json";
         __decorate([
-            Metadata_1.callable("Send a message"),
-            __param(0, Metadata_1.parameter("Message content")),
+            (0, Metadata_1.callable)("Send a message"),
+            __param(0, (0, Metadata_1.parameter)("Message content")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
             __metadata("design:returntype", Promise)

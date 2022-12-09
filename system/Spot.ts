@@ -9,18 +9,17 @@
  * Access a SpotGroupItem under its assigned name.
  * Use dot notation to access nested spots inside groups.
  */
-export var Spot: {
-	[name: string]: SpotGroupItem;
-};
+export var Spot: SpotGroup;
 
 /**
  Items that can live in the root Spot object
  */
-interface SpotGroupItem {
+export interface SpotGroupItem {
 	isOfTypeName(typeName: string): SpotGroupItem|null;
 }
 
 export interface SpotGroup extends SpotGroupItem {
+	isOfTypeName(typeName: "SpotGroup"): SpotGroup|null;	// Check subtype by type name
 	[name: string]: SpotGroupItem|any;
 }
 
@@ -28,8 +27,8 @@ export interface SpotGroup extends SpotGroupItem {
  * Basic Spot properties available for most spot types.
  */
 export interface BaseSpot {
-	fullName: string;		// Full path name (read-only)
-	name: string;			// Leaf spot name (read only)
+	readonly fullName: string;		// Full path name
+	readonly name: string;			// Leaf spot name
 
 	/**
 	 Default block name as "group/leaf", or empty string
@@ -59,18 +58,29 @@ export interface BaseSpot {
 	unsubscribe(event: string, listener: Function): void;
 }
 
-export interface DisplaySpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): DisplaySpot|null;	// Check subtype by name ("DisplaySpot")
+export interface DisplaySpot extends SpotGroupItem, BaseSpot, GeoZonable {
+	isOfTypeName(typeName: "DisplaySpot"): DisplaySpot|null;
 
 	/**
-	 True if the spot is connected. Read only.
+	 True if the spot is connected.
 	 */
-	connected: boolean;
+	readonly connected: boolean;
 
 	/**
-	 * Dot-separated IP address of display spot, if connected, else null. Read only.
+	 * Dot-separated IP address of display spot, if connected, else null.
 	 */
-	address: string;
+	readonly address: string;
+
+	/**
+	 * Identification, based on MAC address, serial number, given ID, or similar
+	 * system-unique value.
+	 */
+	readonly identity: string;
+
+	/**
+	 * Get any geolocation associated with spot, or null if none.
+	 */
+	readonly geoZone: GeoZone|null;
 
 	/**
 	 * Load a Block with priority. Returns a promise that's fulfilled once
@@ -83,13 +93,25 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	/**
 	 * Reload the current block. Occasionally useful after making server-side changes to
 	 * a block programmatically, or to reload a WebBlock that changed for other reasons.
+	 * Optionally, reload the entire web page (essentially performing a browser "reset").
 	 */
-	reload(): void;
+	reload(reloadBrowser?:boolean): void;
 
 	/**
-	 * Turn power on/off, if possible.
+	 * Turn power on/off, if possible. Returns most recently set power state.
+	 * NOTE: Prior to Blocks 5.5, this returned the current power state, which
+	 * would lag the wanted power state during power-up.
+	 *
+	 * Alternatively, call wakeUp below from a task, to turn power on and wait
+	 * for spot to connect before proceeding (possibly consolidated inside an
+	 * await statement, to wait for more than one starting in parallell).
 	 */
 	power: boolean;
+
+	/**
+	 * Power up the display spot. Promise resolved once spot has connected.
+	 */
+	wakeUp(timeoutSeconds?: number): Promise<any>;
 
 	/**
 	 * Current time position (e.g., in video), in seconds. Write to position the video.
@@ -127,7 +149,7 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	active: boolean;
 
 	/**
-	 Control audio volume, if possible, as 0...1.
+	 Controls or returns audio volume, if possible, as 0...1.
 	 */
 	volume: number;
 
@@ -136,6 +158,11 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 * Multiple classes separated by space.
 	 */
 	customClasses: string;
+
+	/**
+	 * Most recently scanned value, when using keyboard-emulating scanner.
+	 */
+	readonly scannerInput: string;
 
 	/**
 	 Ask Spot to reveal the specified child block, in the current root block.
@@ -168,11 +195,12 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	/**
 	 * Same as gotoBlock, but returns a promise that will be rejected with
 	 * an error message if the specified block can't be found.
-	 *
-	 * This function used to be called tryGotoPage, which is still available
-	 * for backward compatibility.
 	 */
-	tryGotoBlock(path: string): Promise<any>;
+	tryGotoBlock(
+		path: string,			// Child block path to
+		play?:boolean, 			// Once found, tell the child to play or pause
+		seekToSeconds?: number // Once found, tell the child to seek to time pos
+	): Promise<any>;
 
 	/**
 	 * Force set of local tags to only those specified (comma separated). Does not
@@ -185,9 +213,10 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 	 * Ask spot to scroll horizontally and/or vertically, to the specified position.
 	 * This assumes the existence of Scroller(s) on the client side, to do the actual
 	 * scrolling. The position is specified as a normalized value 0...1, where 0
-	 * is no scrolling, and 1 is the maximum amount of scrolling.
+	 * is no scrolling, and 1 is the maximum amount of scrolling. If "seconds" is
+	 * specified, then scroll gradually over that time.
 	 */
-	scrollTo(x: number|undefined, y?:number): void;
+	scrollTo(x: number|undefined, y?:number, seconds?: number): void;
 
 	/**
 	 * Tell any active Locator on this Spot to locate the location ID
@@ -257,7 +286,7 @@ export interface DisplaySpot extends SpotGroupItem, BaseSpot {
 
 // Spot type named "Visitor Spot" in Blocks UI
 export interface MobileSpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): MobileSpot | null;	// Check subtype by name ("MobileSpot")
+	isOfTypeName(typeName: "MobileSpot"): MobileSpot | null;
 
 	subscribe(event: "spot", listener: (sender: MobileSpot, message:{
 		type:
@@ -268,8 +297,8 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 }
 
 // Spot type named "Location" in Blocks UI
-export interface VirtualSpot extends SpotGroupItem, BaseSpot {
-	isOfTypeName(typeName: string): VirtualSpot | null;	// Check subtype by name ("VirtualSpot")
+export interface VirtualSpot extends SpotGroupItem, BaseSpot, GeoZonable  {
+	isOfTypeName(typeName: "VirtualSpot"): VirtualSpot | null;
 
 	subscribe(event: "spot", listener: (sender: VirtualSpot, message:{
 		type:
@@ -278,5 +307,25 @@ export interface VirtualSpot extends SpotGroupItem, BaseSpot {
 			'PlayingBlock' |	// Actually playing block changed (always media)
 			'Active'			// Spot activated by accessing its Location ID
 	})=>void): void;
+
+	/**
+	 * Get any geolocation assoctaed with spot, or null if none.
+	 */
+	getGeoZone(): GeoZone|null;
 }
 
+export interface GeoZonable {
+	/**
+	 * Get any geolocation assoctaed with spot, or null if none.
+	 */
+	getGeoZone(): GeoZone|null;
+}
+
+/**
+ * Optonal GeoZone information that may be available on DisplaySpot and VirtualSpot.
+ */
+export interface GeoZone {
+	readonly latitude: number;
+	readonly longitude: number;
+	readonly radius: number;	// In meters
+}
