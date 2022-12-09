@@ -36,10 +36,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 var scanned = message.text;
                 if (scanned.indexOf('v') === 0)
                     scanned = scanned.substring(4);
-                _this.scanned = scanned;
+                _this.scanned = NetRFID_1.removeControls(scanned);
             });
             return _this;
         }
+        NetRFID_1 = NetRFID;
+        NetRFID.removeControls = function (scanned) {
+            var result = '';
+            var len = scanned.length;
+            for (var ix = 0; ix < len; ++ix) {
+                if (scanned.charCodeAt(ix) > 0x20)
+                    result += scanned.charAt(ix);
+            }
+            return result;
+        };
         Object.defineProperty(NetRFID.prototype, "scanned", {
             get: function () {
                 return this.mScanned;
@@ -64,12 +74,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.mResetValuePromise = undefined;
             }
         };
+        var NetRFID_1;
         __decorate([
             (0, Metadata_1.property)("Last scanned value, or empty string", true),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], NetRFID.prototype, "scanned", null);
-        NetRFID = __decorate([
+        NetRFID = NetRFID_1 = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 50000 }),
             __metadata("design:paramtypes", [Object])
         ], NetRFID);

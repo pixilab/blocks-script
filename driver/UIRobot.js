@@ -76,6 +76,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.mPower = power;
                     this.cancelWoLRetry();
                     if (power) {
+                        if (this.program === UIRobot_1.kPowerDownProgram)
+                            this.program = '';
                         this.woLRetryAttempts = 0;
                         this.tryWakeUp();
                     }

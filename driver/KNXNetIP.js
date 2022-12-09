@@ -45,12 +45,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             if (socket.enabled) {
                 if (!_this.socket.listenerPort)
                     throw "Listening port not specified (e.g, 32331)";
-                socket.subscribe('finish', function () {
-                    if (_this.timer) {
-                        _this.timer.cancel();
-                        _this.timer = undefined;
-                    }
-                });
                 socket.subscribe('bytesReceived', function (sender, message) {
                     debugLog("bytesReceived", message.rawData.length);
                     try {
@@ -61,12 +55,15 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                         console.error(error);
                         if (++_this.errCount > 5) {
                             _this.errCount = 0;
-                            _this.setState(0);
-                            _this.checkStateSoon();
+                            _this.sendDisconnectRequest();
                         }
                     }
                 });
                 _this.checkStateSoon(5);
+                _this.subscribe('finish', function () {
+                    debugLog("finish");
+                    _this.cancelTimer();
+                });
             }
             return _this;
         }
@@ -113,37 +110,44 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
         KNXNetIP.prototype.checkStateSoon = function (howSoon) {
             var _this = this;
             if (howSoon === void 0) { howSoon = 5000; }
-            if (this.timer)
+            this.cancelTimer();
+            if (this.socket.enabled) {
+                this.timer = wait(howSoon);
+                this.timer.then(function () {
+                    _this.timer = undefined;
+                    switch (_this.state) {
+                        case 0:
+                            if (_this.socket.enabled) {
+                                _this.sendConnectRequest();
+                                _this.setState(1);
+                                _this.checkStateSoon();
+                            }
+                            break;
+                        case 4:
+                        case 2:
+                            console.error("Response too slow in state " + _this.state);
+                            _this.resetConnection();
+                            break;
+                        case 1:
+                            if (!_this.connTimeoutWarned) {
+                                console.warn("CONNECTING timeout");
+                                _this.connTimeoutWarned = true;
+                            }
+                            _this.resetConnection();
+                            break;
+                        case 3:
+                            _this.sendConnectionStateRequest();
+                            _this.connTimeoutWarned = false;
+                            break;
+                    }
+                });
+            }
+        };
+        KNXNetIP.prototype.cancelTimer = function () {
+            if (this.timer) {
                 this.timer.cancel();
-            this.timer = wait(howSoon);
-            this.timer.then(function () {
-                _this.timer = undefined;
-                switch (_this.state) {
-                    case 0:
-                        if (_this.socket.enabled) {
-                            _this.sendConnectRequest();
-                            _this.setState(1);
-                            _this.checkStateSoon();
-                        }
-                        break;
-                    case 4:
-                    case 2:
-                        console.error("Response too slow in state " + _this.state);
-                        _this.resetConnection();
-                        break;
-                    case 1:
-                        if (!_this.connTimeoutWarned) {
-                            console.warn("CONNECTING timeout");
-                            _this.connTimeoutWarned = true;
-                        }
-                        _this.resetConnection();
-                        break;
-                    case 3:
-                        _this.sendConnectionStateRequest();
-                        _this.connTimeoutWarned = false;
-                        break;
-                }
-            });
+                this.timer = undefined;
+            }
         };
         KNXNetIP.prototype.resetConnection = function () {
             this.setState(0);
@@ -157,7 +161,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
                 if (this.cmdQueue.length)
                     this.sendQueuedCommand();
                 else
-                    this.checkStateSoon(6000);
+                    this.checkStateSoon(30000);
             }
         };
         KNXNetIP.prototype.sendQueuedCommand = function () {
@@ -276,6 +280,25 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
             this.socket.sendBytes(setLength(connStateReq));
             this.setState(2);
             this.checkStateSoon();
+        };
+        KNXNetIP.prototype.sendDisconnectRequest = function () {
+            if (this.channelId) {
+                var listenerPort = this.socket.listenerPort;
+                debugLog("sendDisconnectRequest");
+                var disconnReq = [
+                    0x06, 0x10,
+                    521 >> 8, 521 & 0xff,
+                    0x00, 0x10,
+                    this.channelId, 0x00,
+                    0x08,
+                    0x01,
+                    0, 0, 0, 0,
+                    listenerPort >> 8, listenerPort & 0xff
+                ];
+                this.socket.sendBytes(setLength(disconnReq));
+                this.setState(0);
+                this.checkStateSoon();
+            }
         };
         KNXNetIP.prototype.setOnOff = function (addr1, addr2, addr3, on) {
             var cmd = {

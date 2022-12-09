@@ -125,6 +125,8 @@ define(["require", "exports", "system_lib/Script", "system/SimpleServer", "syste
                 this.connection.disconnect();
             if (this.pendingSend)
                 this.pendingSend.cancel();
+            for (var key in this.openProps)
+                this.openProps[key].close();
             this.owner.lostClient(this);
         };
         Client.prototype.handleMessage = function (rawMessage) {
@@ -144,12 +146,18 @@ define(["require", "exports", "system_lib/Script", "system/SimpleServer", "syste
         };
         Client.prototype.handleCommand = function (msg) {
             switch (msg.type) {
+                case 'set':
                 case 'prop':
-                    this.handleSetProp(msg);
+                    this.handleSet(msg);
                     break;
+                case 'add':
+                    this.handleAdd(msg);
+                    break;
+                case 'subscribe':
                 case 'sub':
                     this.handleSubscribe(msg);
                     break;
+                case 'unsubscribe':
                 case 'unsub':
                     this.handleUnsubscribe(msg);
                     break;
@@ -158,9 +166,35 @@ define(["require", "exports", "system_lib/Script", "system/SimpleServer", "syste
                     break;
             }
         };
-        Client.prototype.handleSetProp = function (cmd) {
+        Client.prototype.handleSet = function (cmd) {
             if (this.owner.pathApprover.isApprovedPath(cmd.path))
                 this.getProp(cmd.path).value = cmd.value;
+            else
+                console.warn("Permission denied for path", cmd.path);
+        };
+        Client.prototype.handleAdd = function (cmd) {
+            if (this.owner.pathApprover.isApprovedPath(cmd.path)) {
+                var accessor = this.getProp(cmd.path);
+                if (accessor.available) {
+                    var typeName = typeof accessor.value;
+                    var addValueType = typeof cmd.value;
+                    if (addValueType === typeName) {
+                        switch (typeName) {
+                            case "number":
+                            case "string":
+                                accessor.value += cmd.value;
+                                break;
+                            default:
+                                console.warn("Unsupported type for 'add'", typeName, "for path", cmd.path);
+                                break;
+                        }
+                    }
+                    else
+                        console.warn("Incompatible value type", addValueType, "for path", cmd.path);
+                }
+                else
+                    console.warn("Can't add to unavailable property", cmd.path);
+            }
             else
                 console.warn("Permission denied for path", cmd.path);
         };

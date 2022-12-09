@@ -70,6 +70,8 @@ export class UIRobot extends Driver<NetworkTCP> {
 			this.mPower = power;		// Consider state change taken
 			this.cancelWoLRetry();		// Only one pending at a time
 			if (power) {				// Turn power on
+				if (this.program === UIRobot.kPowerDownProgram)
+					this.program = ''; // No longer considered "current program"
 				this.woLRetryAttempts = 0;
 				this.tryWakeUp();
 			} else // Turn power OFF using designated command
