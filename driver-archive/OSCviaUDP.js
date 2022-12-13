@@ -133,7 +133,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Metadata", "../
             }
         };
         OSCviaUDP.prototype.addFloat = function (value, valueString, tagsAndBytes) {
-            var abs = Math.abs(value);
             if (valueString.length <= 7) {
                 tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT32;
                 this.addRange(tagsAndBytes['bytes'], this.getFloat32Bytes(value));
@@ -145,7 +144,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Metadata", "../
         };
         OSCviaUDP.prototype.addString = function (value, tagsAndBytes) {
             tagsAndBytes['tags'] += OSC_TYPE_TAG_OSC_STRING;
-            this.addRange(tagsAndBytes['bytes'], this.toOSCStringBytes(value));
+            this.addRange(tagsAndBytes.bytes, this.toOSCStringBytes(value));
         };
         OSCviaUDP.prototype.toOSCStringBytes = function (str) {
             var bytes = this.toBytesString(str);

@@ -37,9 +37,11 @@ interface Control {
 	mapping?: Mapping;
 }
 
+type PropName = 'nameWithSpace' | 'masterGain' | 'rawProp';
+
 interface Prop {
 	controlName: string;
-	propertyName: string;
+	propertyName: PropName;
 	mapping: Mapping;
 	value: number;
 }
@@ -116,7 +118,7 @@ export class QSYS extends Driver<NetworkTCP> {
 		for (const control of this.controls) {
 			let prop: Prop = {
 				controlName: control.controlName,
-				propertyName: control.propertyName ? control.propertyName : control.controlName,
+				propertyName: <PropName>(control.propertyName ? control.propertyName : control.controlName),
 				mapping: control.mapping ? control.mapping : Mapping.Position,
 				value: 0
 			}
@@ -316,7 +318,7 @@ export class QSYS extends Driver<NetworkTCP> {
 	 Then strip unescaped quotes from the resulting pieces.
 	 */
 	private parseReply(reply: string) : string {
-		let keep = (value, state) => {
+		let keep = (value: string, state: any) => {
 			return value !== '\\' && (value !== '"' || state.prev() === '\\');
 		};
 		return split(reply, { quotes: ['"'], separator: ' ', keep: keep });
@@ -337,7 +339,7 @@ export class QSYS extends Driver<NetworkTCP> {
 				}
 				const value = prop.mapping == Mapping.Value ? pieces[3] : pieces[4];
 				this.asFeedback = true;
-				this[prop.propertyName] = parseFloat(value);
+				(<any>this)[prop.propertyName] = parseFloat(value);
 				this.asFeedback = false;
 			} else if (cmd === "cmv" || cmd === "cmvv" || cmd === "cvv") {
 				// Not handled yet

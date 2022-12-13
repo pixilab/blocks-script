@@ -12,7 +12,18 @@ declare global {
 			(target: Function): void;
 			(target: Object, targetKey: string | symbol): void;
 		};
+		callableParameter(cpd: ICallableParamDescr): any;
+		record(description: string): any;
+		spotParameter(): {
+			(target: Object, targetKey: string | symbol): void;
+		};
 	}
+}
+
+// What's passed to $metaSupport$.callableParameter above
+interface ICallableParamDescr {
+	descr: string;
+	opt: boolean;
 }
 
 /**
@@ -36,6 +47,11 @@ export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP', typeSpecificMe
 	}
 }
 
+// Implements the @record decorator, marking a class as a data store DTO
+export function record(description?: string) {
+	return $metaSupport$.record(description);
+}
+
 /**
  What I attach to my pixi:driver metadata key.
  */
@@ -44,7 +60,7 @@ interface DriverInfo {
 	paramTypes: string[];
 }
 
-// List of valid role identifiers
+// Set of valid role identifiers
 type RoleRequired = 'Admin'|'Manager'|'Creator'|'Editor'|'Contributor'|'Staff'|'Spot';
 
 /**
@@ -62,7 +78,7 @@ export function roleRequired(role: RoleRequired) {
  the property's value.
  */
 export function property(description?: string, readOnly?: boolean) {
-	return $metaSupport$.property(description, readOnly); // Impl moved into $core
+	return $metaSupport$.property(description, readOnly); // Impl in $core
 }
 
 /**
@@ -70,7 +86,7 @@ export function property(description?: string, readOnly?: boolean) {
  with optional description.
  */
 export function callable(description?: string) {
-	return $metaSupport$.callable(description); // Impl moved into $core
+	return $metaSupport$.callable(description); // Impl in $core
 }
 
 /**
@@ -79,30 +95,40 @@ export function callable(description?: string) {
  '?' after the param name in the param list to also inform the compiler).
  */
 export function parameter(description?: string, optional?: boolean) {
-	return function(clsFunc: Object, propertyKey: string, paramIndex: number) {
-		propertyKey = propertyKey + ':' + paramIndex;
-		var data = {
-			descr: description || "",
-			opt: optional || false
-		};
-		// Note that "data" here used to be JUST the description string in Blocks < 1.1b16
-		return Reflect.defineMetadata("pixi:param", data, clsFunc, propertyKey);
-	}
+	return $metaSupport$.callableParameter({
+		descr: description || "",
+		opt: optional || false
+	}); // Impl in $core
 }
 
-interface Ctor<T> { new(... args: any[]): T ;}
 
 /**
- * Decorator for a feed item data field. Applied to an instance variable, which must
- * be of primitive type (i.e., string, number or boolean). Field values are read-only.
+ * Decorator for a feed or data-set field. Applied to an instance variable, which must
+ * be of primitive type (i.e., string, number or boolean). Field values are exposed as
+ * read-only properties.
  */
 export function field(description?: string) {
-	return $metaSupport$.fieldMetadata({description: description} );
+	return $metaSupport$.fieldMetadata({description: description});
+}
+
+
+/**
+ * Mark a field in specified Record as a Spot Parameter, making its value readable and
+ * writable also as such.
+ *
+ * IMPORTANT: You must also add a parameter with the same name in the Spot's settings
+ * for this to work. Merely marking it with @spotParameter() in the record definition
+ * is not sufficient.
+ */
+export function spotParameter() {
+	return $metaSupport$.spotParameter();
 }
 
 /**
- * Decorator for (presumably unique) Feed item ID field, if any. Applied to an
- * instance variable typically of string or number type. Read-only by definition.
+ * Decorator for item ID field, if any. For feed script, only a single ID field
+ * may be specified. A Record may use multiple ID fields, where each one can
+ * be used to look up the Record instance. Typically of string or number type.
+ * Read-only by definition (since it's used as lookup key).
  */
 export function id(description?: string) {
 	return $metaSupport$.fieldMetadata( {description: description, id: true} );
@@ -132,29 +158,54 @@ export function max(max:number) {
     };
 }
 
+// Set of valid @resource HTTP methods
+type ResourceVerb = 'GET'|'POST';
+
+
 /**
- Decorate a method as accessible from a web client as a POST request under
+Decorate a public script method with @resource() to make it callable using a
+HTTP GET or POST request under a path that looks like this:
 
- 	/rest/script/invoke/<user-script-name>/<method-name>
+	/rest/script/invoke/<user-script-name>/<method-name>
 
- with a JSON body payload deserialized and passed to the method as an object.
- The method must be declared as accepting an object even if you don't need
- any data (i.e., pass null). An object or string returned from the method
- will be serialized as JSON data and returned to the web client. Alternatively,
- you may return a promise eventually resolving with the result value.
+For a POST request, a JSON body payload is expected. This will be parsed into
+a Javscript object and passed as the method's first parameter. A GET request
+carries no data beyond what's in the URL.
 
- The roleRequired parameter, if specified, limits who can call the resource from the
- outside, and accepts the same values as the roleRequired decorator. Unless already
- authenticated by other means, call authenticated resources with a slightly different
- URL:
+The method to which this decorator is applied must take an object as its
+first parameter. This applies even if no data is actually passed to the
+method (as in the case of a GET request).
+
+The method may optionally accept a second parameter, which then receives the
+trailing part of the URL (everything following <method-name>/), including any
+query parameters. This is particularly useful for GET requests, where no
+message body is included. Example:
+
+	/rest/script/invoke/<user-script-name>/<method-name>/more-stuff?a=1&b=2
+
+For this example, the second parameter to the method will receive the string
+"more-stuff?a=1&b=2"
+
+An object or string returned from the method will be serialized as JSON data
+and returned to the caller. Alternatively, you may return a promise that will
+eventually be rejected or resolved with the result.
+
+The roleRequired parameter, if specified, limits who can call the resource from the
+outside, and accepts the same values as the roleRequired decorator. Unless already
+authenticated by other means, you must call such resources with a slightly
+different URL, provoking authentication if not already done:
 
  	/rest/script/invoke-auth/<user-script-name>/<method-name>
 
  */
-export function resource(roleRequired?: RoleRequired) {
-	return function(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
+export function resource(
+	roleRequired?: RoleRequired, // Authentication role required to call, or undefined
+	verb?: ResourceVerb			// HTTP verb used in the request. Default is POST.
+) {
+	return function(target: any, propertyKey: string) {
 		const info = {	// Information provided about this resource
-			auth: roleRequired || ""
+			auth: roleRequired || '',
+			verb: verb || 'POST'
 		};
 		return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
 	}

@@ -1,7 +1,7 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.resource = exports.max = exports.min = exports.list = exports.id = exports.field = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.driver = void 0;
+    exports.resource = exports.max = exports.min = exports.list = exports.id = exports.spotParameter = exports.field = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.record = exports.driver = void 0;
     function driver(baseDriverType, typeSpecificMeta) {
         var info = {
             paramTypes: [baseDriverType],
@@ -12,6 +12,10 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.driver = driver;
+    function record(description) {
+        return $metaSupport$.record(description);
+    }
+    exports.record = record;
     function roleRequired(role) {
         return function (target) {
             return Reflect.defineMetadata("pixi:roleRequired", role, target);
@@ -27,20 +31,20 @@ define(["require", "exports"], function (require, exports) {
     }
     exports.callable = callable;
     function parameter(description, optional) {
-        return function (clsFunc, propertyKey, paramIndex) {
-            propertyKey = propertyKey + ':' + paramIndex;
-            var data = {
-                descr: description || "",
-                opt: optional || false
-            };
-            return Reflect.defineMetadata("pixi:param", data, clsFunc, propertyKey);
-        };
+        return $metaSupport$.callableParameter({
+            descr: description || "",
+            opt: optional || false
+        });
     }
     exports.parameter = parameter;
     function field(description) {
         return $metaSupport$.fieldMetadata({ description: description });
     }
     exports.field = field;
+    function spotParameter() {
+        return $metaSupport$.spotParameter();
+    }
+    exports.spotParameter = spotParameter;
     function id(description) {
         return $metaSupport$.fieldMetadata({ description: description, id: true });
     }
@@ -61,10 +65,11 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.max = max;
-    function resource(roleRequired) {
-        return function (target, propertyKey, descriptor) {
+    function resource(roleRequired, verb) {
+        return function (target, propertyKey) {
             var info = {
-                auth: roleRequired || ""
+                auth: roleRequired || '',
+                verb: verb || 'POST'
             };
             return Reflect.defineMetadata("pixi:resource", info, target, propertyKey);
         };

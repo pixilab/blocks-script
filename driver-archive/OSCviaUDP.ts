@@ -36,7 +36,10 @@ import * as Meta from "system_lib/Metadata";
 import { property } from "system_lib/Metadata";
 import { NetworkDriver } from "../system_lib/NetworkDriver";
 
-
+interface TnB {
+	tags: string;
+	bytes: number[];
+}
 
 @Meta.driver('NetworkUDP', { port: 8000 })
 export class OSCviaUDP extends NetworkDriver {
@@ -72,7 +75,7 @@ export class OSCviaUDP extends NetworkDriver {
         @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)
         valueList?: string,
     ) {
-        var tagsAndBytes: {} =
+        var tagsAndBytes: TnB =
         {
             tags: ',',
             bytes: []
@@ -94,7 +97,7 @@ export class OSCviaUDP extends NetworkDriver {
         this.socket.sendBytes(bytes);
     }
 
-    private parseValueList(valueList: string, tagsAndBytes: {}) {
+    private parseValueList(valueList: string, tagsAndBytes: TnB) {
         var valueListParts = split(valueList, { separator: ',', quotes: true, brackets: { '[': ']' } });
         for (var i = 0; i < valueListParts.length; i++) {
             var valueString: string = valueListParts[i].trim();
@@ -137,14 +140,14 @@ export class OSCviaUDP extends NetworkDriver {
 
     public addBoolean(
         value: boolean,
-        tagsAndBytes: {}
+        tagsAndBytes: TnB
     ) {
         tagsAndBytes['tags'] += value ? OSC_TYPE_TAG_BOOLEAN_TRUE : OSC_TYPE_TAG_BOOLEAN_FALSE;
     }
 
     public addInteger(
         value: number,
-        tagsAndBytes: {}
+        tagsAndBytes: TnB
     ) {
         if (value >= MIN_INT32 &&
             value <= MAX_INT32) {
@@ -164,11 +167,9 @@ export class OSCviaUDP extends NetworkDriver {
     public addFloat(
         value: number,
         valueString: string,
-        tagsAndBytes: {}
+        tagsAndBytes: TnB
     ) {
-        var abs: number = Math.abs(value);
-        if (//abs > MIN_ABS_FLOAT32 &&
-            valueString.length <= 7) {
+        if (valueString.length <= 7) {
             tagsAndBytes['tags'] += OSC_TYPE_TAG_FLOAT32;
             this.addRange(tagsAndBytes['bytes'], this.getFloat32Bytes(value));
         }
@@ -180,10 +181,10 @@ export class OSCviaUDP extends NetworkDriver {
 
     public addString(
         value: string,
-        tagsAndBytes: {}
+        tagsAndBytes: TnB
     ) {
         tagsAndBytes['tags'] += OSC_TYPE_TAG_OSC_STRING;
-        this.addRange(tagsAndBytes['bytes'], this.toOSCStringBytes(value));
+        this.addRange(tagsAndBytes.bytes, this.toOSCStringBytes(value));
     }
 
     private toOSCStringBytes(str: string, ): number[] {

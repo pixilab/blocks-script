@@ -4,13 +4,25 @@
  	Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-export var Realm: { [realmName: string]: {	// Realms, by name
-	group: {[groupName: string]: {			// Task groups, by name
-		[taskName: string]: {				// Tasks in group, by name
-			running: boolean;				// True if the task is running
+
+export var Realm: {
+	[realmName: string]: {	// Realms, by name
+		group: {
+			[realmName: string]: TaskGroup	// Groups, by name
+		};
+
+		variable: {
+			[variableName: string]: {	// Realm variables, by name
+				value: number|string|boolean;		// Variable's value
+			}
 		}
-	}};
-	variable: {[variableName: string]: {	// Realm variables, by name
-		value: number|string|boolean;		// Variable's value
-	}}
-}};
+	}
+};
+
+interface TaskGroup {
+	[taskName: string]: Task;
+}
+
+interface Task {
+	running: boolean;	// True if the task is running
+}

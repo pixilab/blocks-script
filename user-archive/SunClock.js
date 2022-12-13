@@ -46,7 +46,17 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
             return _this;
         }
         SunClock.prototype.defineCustom = function (propName, startMoment, startOffset, endMoment, endOffset) {
-            this.momentProps[propName] = new SunProp(this, propName, startMoment, startOffset || 0, endMoment, endOffset);
+            var existingProp = this.momentProps[propName];
+            if (existingProp) {
+                existingProp.startMoment = startMoment;
+                existingProp.startOffset = startOffset;
+                existingProp.endMoment = endMoment;
+                existingProp.endOffset = endOffset;
+            }
+            else {
+                this.momentProps[propName] = new SunProp(this, propName, startMoment, startOffset || 0, endMoment, endOffset);
+            }
+            this.forceUpdateSoon();
         };
         SunClock.prototype.updateTimes = function () {
             var _this = this;
@@ -80,7 +90,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
                 var news = this.mLat !== value;
                 this.mLat = value;
                 if (news)
-                    this.forceUpdate();
+                    this.forceUpdateSoon();
             },
             enumerable: false,
             configurable: true
@@ -93,7 +103,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
                 var news = this.mLong !== value;
                 this.mLong = value;
                 if (news)
-                    this.forceUpdate();
+                    this.forceUpdateSoon();
             },
             enumerable: false,
             configurable: true
@@ -101,8 +111,19 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
         SunClock.prototype.forceUpdate = function () {
             if (this.waiter)
                 this.waiter.cancel();
+            if (this.forceUpdateTimer) {
+                this.forceUpdateTimer.cancel();
+                this.forceUpdateTimer = undefined;
+            }
             this.utcDateWhenCached = undefined;
             this.updateTimes();
+        };
+        SunClock.prototype.forceUpdateSoon = function () {
+            var _this = this;
+            if (this.forceUpdateTimer)
+                this.forceUpdateTimer.cancel();
+            this.forceUpdateTimer = wait(50);
+            this.forceUpdateTimer.then(function () { return _this.forceUpdate(); });
         };
         SunClock.kPropNames = ['sunrise', 'sunset'];
         SunClock.kMinuteMillis = 1000 * 60;
