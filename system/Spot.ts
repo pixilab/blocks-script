@@ -51,6 +51,9 @@ export interface BaseSpot {
 	 */
 	playingBlock: string;	// Read-only
 
+	// Spot disconnected and must no longer be used
+	subscribe(event: 'finish', listener: (sender: BaseSpot)=>void): void;
+
 	/*	Explicitly end subscription from listener function to event,
 		where both the listener and the event name must be identical to
 		those passed into subscribe. Beware if you're using a lambda
@@ -308,7 +311,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	})=>void): void;
 
 
-	// Visitor disconnected and must no longer be used
+	// Spot disconnected and must no longer be used
 	subscribe(event: 'finish', listener: (sender: DisplaySpot)=>void): void;
 }
 
@@ -343,6 +346,21 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 			'Disconnected',		// Visitor disconnected (also indicated by Visitor's 'finish' event)
 		readonly visitor: Visitor<RecordType>	// The visitor this event pertains to
 	})=>void): void;
+
+	/**
+	 *	Event fired when image is received from Camera block on Spot. If you're using
+	 *	individual visitors	(as reported through the 'visitor' event above), then
+	 *	the	Visitor object will receive the 'image' event first, and then the
+	 *	enclosing MobileSpot will receive it. In general, you should handle this
+	 *	event EITHER at the Visitor level OR the MobileSpot - not both.
+	 */
+	subscribe(event: 'image', listener: (sender: MobileSpot, message: {
+		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
+		readonly rollName: string	// Camera Block's assigned "roll name"
+	})=>void): void;
+
+	// Spot disconnected and must no longer be used
+	subscribe(event: 'finish', listener: (sender: MobileSpot)=>void): void;
 }
 
 /**
@@ -414,6 +432,9 @@ export interface VirtualSpot extends SpotGroupItem, BaseSpot, GeoZonable  {
 	 * Get any geolocation assoctaed with spot, or null if none.
 	 */
 	getGeoZone(): GeoZone|null;
+
+	// Spot disconnected and must no longer be used
+	subscribe(event: 'finish', listener: (sender: VirtualSpot)=>void): void;
 }
 
 export interface GeoZonable {

@@ -85,11 +85,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 pollAgain = true;
             }
             if (pollAgain && this.socket.connected)
-                wait(this.pollIndex > 1 ? 150 : 600).then(function () { return _this.pollNext(); });
+                wait(500).then(function () { return _this.pollNext(); });
         };
         Nexmosphere.prototype.queryPortConfig = function (portNumber) {
             var sensorMessage = (("000" + portNumber).slice(-3));
-            this.send("D" + sensorMessage + "B[TYPE]");
+            sensorMessage = "D" + sensorMessage + "B[TYPE]";
+            log("QQuery", sensorMessage);
+            this.send(sensorMessage);
         };
         Nexmosphere.prototype.send = function (rawData) {
             this.socket.sendText(rawData, "\r\n");
@@ -116,6 +118,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     console.warn("Message from unexpected port", portNumber);
             }
             else if ((parseResult = kProductCodeParser.exec(msg))) {
+                log("QReply", msg);
                 var modelInfo = {
                     modelCode: parseResult[2].trim()
                 };
@@ -220,6 +223,124 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         return RfidInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(RfidInterface, "XRDR1");
+    var NfcInterface = (function (_super) {
+        __extends(NfcInterface, _super);
+        function NfcInterface(driver, index) {
+            var _this = _super.call(this, driver, index) || this;
+            _this.nfcTagInfo = {
+                tagUID: "",
+                isPlaced: false,
+                tagNumber: 0,
+                tagLabel: ""
+            };
+            _this.lastTagEvent = "";
+            _this.uidPropName = _this.getNamePrefix() + "_nfcTagUid";
+            _this.driver.property(_this.uidPropName, {
+                type: String,
+                description: "Last recieved NFC tag UID",
+                readOnly: true
+            }, function (setValue) {
+                return _this.nfcTagInfo.tagUID;
+            });
+            _this.noPropName = _this.getNamePrefix() + "_nfcTagNo";
+            _this.driver.property(_this.noPropName, {
+                type: Number,
+                description: "NFC tag number",
+                readOnly: true
+            }, function (setValue) {
+                return _this.nfcTagInfo.tagNumber;
+            });
+            _this.labelPropName = _this.getNamePrefix() + "_nfcLbl";
+            _this.driver.property(_this.labelPropName, {
+                type: String,
+                description: "NFC tag label 1",
+                readOnly: true
+            }, function (setValue) {
+                return _this.nfcTagInfo.tagLabel;
+            });
+            _this.placedPropName = _this.getNamePrefix() + "_nfcTagIsPlaced";
+            _this.driver.property(_this.placedPropName, {
+                type: Boolean,
+                description: "NFC tag is placed",
+                readOnly: true
+            }, function (setValue) {
+                return _this.nfcTagInfo.isPlaced;
+            });
+            _this.sendDeviceDefaultSetting();
+            return _this;
+        }
+        NfcInterface.prototype.sendDeviceDefaultSetting = function () {
+            var myIfaceNo = (("000" + (this.index + 1)).slice(-3));
+            var defaultSetting = "X" + myIfaceNo + "S[10:6]";
+            this.driver.send(defaultSetting);
+        };
+        NfcInterface.prototype.receiveData = function (data) {
+            var splitData = data.split(":");
+            var newTagData = splitData[1];
+            var newTagEvent = splitData[0];
+            if (this.lastTagEvent === "TD=UID" && newTagEvent === "TR=UID") {
+                this.sendDeviceDefaultSetting();
+            }
+            this.lastTagEvent = newTagEvent;
+            switch (newTagEvent) {
+                case "TD=UID":
+                    this.nfcTagInfo.isPlaced = true;
+                    this.nfcTagInfo.tagUID = newTagData;
+                    break;
+                case "TD=TNR":
+                    this.nfcTagInfo.tagNumber = parseInt(newTagData);
+                    break;
+                case "TD=LB1":
+                    this.nfcTagInfo.tagLabel = newTagData;
+                    this.driver.changed(this.uidPropName);
+                    this.driver.changed(this.labelPropName);
+                    this.driver.changed(this.noPropName);
+                    this.driver.changed(this.placedPropName);
+                    break;
+                case "TR=LB1":
+                    this.nfcTagInfo.isPlaced = false;
+                    this.driver.changed(this.placedPropName);
+                    break;
+                case "TR=UID":
+                case "TR=TNR":
+                    break;
+                default:
+                    console.log("Unrecognised data recieved at " + this.getNamePrefix() + ": " + newTagEvent);
+                    break;
+            }
+        };
+        return NfcInterface;
+    }(BaseInterface));
+    Nexmosphere.registerInterface(NfcInterface, "XRDW2");
+    var XWaveLedInterface = (function (_super) {
+        __extends(XWaveLedInterface, _super);
+        function XWaveLedInterface(driver, index) {
+            var _this = _super.call(this, driver, index) || this;
+            _this.propName = _this.getNamePrefix() + "_X-Wave_Command";
+            _this.driver.property(_this.propName, {
+                type: String,
+                description: "Command",
+                readOnly: false
+            }, function (setValue) {
+                if (setValue !== undefined) {
+                    _this.propValue = setValue;
+                    _this.sendData(_this.propValue);
+                }
+                return _this.propValue;
+            });
+            return _this;
+        }
+        XWaveLedInterface.prototype.receiveData = function (data) {
+            console.log("Unexpected data recieved on " + this.getNamePrefix() + " " + data);
+        };
+        XWaveLedInterface.prototype.sendData = function (data) {
+            var myIfaceNo = (("000" + (this.index + 1)).slice(-3));
+            var message = "X" + myIfaceNo + "B[" + data + "]";
+            this.driver.send(message);
+        };
+        return XWaveLedInterface;
+    }(BaseInterface));
+    Nexmosphere.registerInterface(XWaveLedInterface, "XWC56", "XWL56");
     var ProximityInterface = (function (_super) {
         __extends(ProximityInterface, _super);
         function ProximityInterface(driver, index) {
@@ -241,14 +362,75 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         return ProximityInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(ProximityInterface, "XY116", "XY146", "XY176");
+    var TimeOfFlightInterface = (function (_super) {
+        __extends(TimeOfFlightInterface, _super);
+        function TimeOfFlightInterface(driver, index) {
+            var _this = _super.call(this, driver, index) || this;
+            _this.zonePropName = _this.getNamePrefix() + "_time_of_flightproximity";
+            _this.buttonPropName = _this.getNamePrefix() + "_air_button";
+            _this.zonePropValue = 8;
+            _this.btnPropValue = false;
+            _this.driver.property(_this.zonePropName, {
+                type: Number,
+                description: "Proximity zone",
+                readOnly: true
+            }, function (setValue) {
+                return _this.zonePropValue;
+            });
+            _this.driver.property(_this.buttonPropName, {
+                type: Boolean,
+                description: "Air Button",
+                readOnly: true
+            }, function (setValue) {
+                return _this.btnPropValue;
+            });
+            return _this;
+        }
+        TimeOfFlightInterface.prototype.receiveData = function (data) {
+            var splitData = data.split("=");
+            var sensorValue = splitData[1];
+            switch (sensorValue) {
+                case "AB":
+                    this.btnPropValue = true;
+                    this.driver.changed(this.buttonPropName);
+                    break;
+                case "XX":
+                    if (this.btnPropValue) {
+                        this.btnPropValue = false;
+                        this.driver.changed(this.buttonPropName);
+                    }
+                    this.zonePropValue = 8;
+                    this.driver.changed(this.zonePropName);
+                    break;
+                case "01":
+                case "02":
+                case "03":
+                case "04":
+                case "05":
+                case "06":
+                case "07":
+                    this.zonePropValue = parseInt(sensorValue);
+                    this.driver.changed(this.zonePropName);
+                    if (this.btnPropValue) {
+                        this.btnPropValue = false;
+                        this.driver.changed(this.buttonPropName);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        };
+        return TimeOfFlightInterface;
+    }(BaseInterface));
+    Nexmosphere.registerInterface(TimeOfFlightInterface, "XY241");
     var AirGestureInterface = (function (_super) {
         __extends(AirGestureInterface, _super);
         function AirGestureInterface(driver, index) {
             var _this = _super.call(this, driver, index) || this;
-            _this.propName = _this.getNamePrefix() + "_touch";
+            _this.propName = _this.getNamePrefix() + "_gesture";
             _this.driver.property(_this.propName, {
                 type: String,
-                description: "Touch detected",
+                description: "Gesture detected",
                 readOnly: true
             }, function () { return _this.propValue; });
             return _this;
@@ -261,15 +443,32 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(BaseInterface));
     Nexmosphere.registerInterface(AirGestureInterface, "XTEF650", "XTEF30", "XTEF630", "XTEF680");
     var Button = (function () {
-        function Button(name, driver) {
+        function Button(name, owner, ix, driver) {
             var _this = this;
             this.name = name;
+            this.owner = owner;
             this.driver = driver;
+            this.ledPropname = name + "_led_cmd";
+            this.ledData = 0;
+            this.state = false;
             driver.property(this.name, {
                 type: Boolean,
                 description: this.name + " is pressed",
                 readOnly: true
             }, function () { return _this.state; });
+            driver.property(this.ledPropname, {
+                type: Number,
+                description: "0=off, 1=fast, 2=slow or 3=on",
+                readOnly: false,
+                min: 0,
+                max: 3
+            }, function (setValue) {
+                if (setValue !== undefined) {
+                    _this.ledData = setValue & 3;
+                    _this.owner.ledStatusChanged();
+                }
+                return _this.ledData;
+            });
         }
         Button.prototype.setState = function (state) {
             var oldState = this.state;
@@ -285,7 +484,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var _this = _super.call(this, driver, index) || this;
             _this.buttons = [];
             for (var ix = 0; ix < 4; ++ix) {
-                _this.buttons.push(new Button(_this.getNamePrefix() + "_btn_" + (ix + 1), _this.driver));
+                _this.buttons.push(new Button(_this.getNamePrefix() + "_btn_" + (ix + 1), _this, ix, driver));
             }
             return _this;
         }
@@ -297,9 +496,23 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 this.buttons[ix].setState(isPressed);
             }
         };
+        QuadButtonInterface.prototype.ledStatusChanged = function () {
+            var toSend = 0;
+            var buttons = this.buttons;
+            for (var ix = 0; ix < buttons.length; ++ix) {
+                toSend |= buttons[ix].ledData << ix * 2;
+            }
+            this.sendCmd(toSend.toString());
+        };
+        QuadButtonInterface.prototype.sendCmd = function (data) {
+            var myIfaceNo = (("000" + (this.index + 1)).slice(-3));
+            var command = "X" + myIfaceNo + "A[" + data + "]";
+            this.driver.send(command);
+            console.log(command);
+        };
         return QuadButtonInterface;
     }(BaseInterface));
-    Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N");
+    Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6", "XT4FW6");
     var MotionInterface = (function (_super) {
         __extends(MotionInterface, _super);
         function MotionInterface(driver, index) {
@@ -367,4 +580,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         return GenderInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
+    var DEBUG = false;
+    function log() {
+        var messages = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            messages[_i] = arguments[_i];
+        }
+        if (DEBUG)
+            console.info(messages);
+    }
 });

@@ -80,7 +80,25 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	}
 
 	/**
-	 * Forward any event unsubscription to my associated facade.
+	 * Disconnect specified listener function from specified event. Often,
+	 * you don't need to unsubscribe explicitly, since subscriptions will
+	 * auto-terminate when the object providing the subscription dies.
+	 * But in some cases, you may want to unsubscribe explicitly, for
+	 * instance when the subscribed-to information isn't needed any more,
+	 * or if the subscribing object dies before the suscbribed-to object
+	 * (which could otherwise cause callbacks into zombie objects and
+	 * memory leaks).
+	 *
+	 * IMPORTANT: You MUST pass the VERY SAME function to unsibscribe
+	 * as you passed to subscribe. Thus, when first subscribing, you may want
+	 * to store that listener function in an instance variable, allowing you
+	 * to subsequently unsubscribe from it through here. If this function
+	 * needs to be a member function, use the "bind" function method to
+	 * obtain a function bound to the proper this. Then use the result from
+	 * bind in both the subscribe and unsignscribe calls, thus making
+	 * sure they're referencing the very same function.
+	 *
+	 * https://javascript.info/bind
 	 */
 	unsubscribe(event: string, listener: Function): void {
 		this.__scriptFacade.unsubscribe(event, listener);
