@@ -3,27 +3,12 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
+import {PrimitiveValue, PropertyValue, RecordBase, ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
 
 /**
  Ultimate base class for all TypeScript based user scripts.
  */
 export class Script extends ScriptBase<ScriptEnv> {
-
-	/**
-	 * Connect to the property at the specified full (dot-separated) path. Pass
-	 * a callback function to be notified when the value of the property changes.
-	 * Returns an object that can be used to read/write the property's value,
-	 * as well as close down the connection to the property once no longer
-	 * needed.
-	 *
-	 * The value associated with the property varies with the type of property.
-	 */
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
-		return changeNotification ?
-			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
-			this.__scriptFacade.getProperty<PropType>(fullPath);
-	}
 
 	/**
 	 * Establish a named channel associated with this script, with optional "data received
@@ -44,6 +29,58 @@ export class Script extends ScriptBase<ScriptEnv> {
 	sendOnChannel(leafChannelName: string, data: string) {
 		this.__scriptFacade.sendOnChannel(leafChannelName, data);
 	}
+
+	/**
+	 * Instantiate a new Record of specified type, assiging it a persistent system-unique
+	 * ID, accessible as $puid field value.
+	 *
+	 * NOTE: This function is only available if Visitor Tracking is licensed.
+	 */
+	newRecord<DST extends RecordBase>(type: Ctor<DST>): DST {
+		return this.__scriptFacade.newRecord(type);
+	}
+
+	/**
+	 * Delete specified record, either deleting it permanently or archiving its log
+	 * (TSV) file for later analysis outside Blocks. Do NOT use this record after
+	 * deleting it.
+	 */
+	deleteRecord<DST extends RecordBase>(record: DST, archive?: boolean, filesToArchive?: string[]): void {
+		return this.__scriptFacade.deleteRecord(record, archive, filesToArchive);
+	}
+
+	/**
+	 * Delete ALL instances of specified type, optionally archiving their
+	 * collected data.
+	 */
+	deleteRecords<DST extends RecordBase>(type: Ctor<DST>, archive?: boolean) {
+		return this.__scriptFacade.deleteRecords(type, archive || false);
+	}
+
+	/**
+	 Get Record of specified type keyed by puid.
+	 Returns null if no data found for puid.
+	 */
+	getRecord<DST extends RecordBase>(type: Ctor<DST>, puid: number): DST|null {
+		return this.__scriptFacade.getRecord(type, puid);
+	}
+
+	/**
+	 * Get Record based on secondary key fieldValue in id field fieldName.
+	 * Returns null if not found.
+	 */
+	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, fieldValue: string|number): DST|null {
+		return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue);
+	}
+
+	/**
+	 * Get ALL live puids ofType. Occasionally useful if you want to do some processing
+	 * of all records, such as before calling deleteRecords, to update or move or clean up any
+	 * associated data or files.
+	 */
+	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[] {
+		return this.__scriptFacade.getAllPuids(ofType);
+	}
 }
 
 /**
@@ -53,7 +90,7 @@ export class Script extends ScriptBase<ScriptEnv> {
  * this property, call close() to terminate the connection. No further change
  * notification callbacks will be received after calling close().
  */
-export interface PropertyAccessor<PropType> {
+export interface PropertyAccessor<PropType extends PrimitiveValue> extends PropertyValue<PropType> {
 	value: PropType;	// Current property value (read only if property is read only)
 	readonly available: boolean;	// Property has been attached and is now live
 	close(): void;	// Close down this accessor - can no longer be used
@@ -69,5 +106,10 @@ export interface ScriptEnv extends ScriptBaseEnv {
 	establishChannel(name: string):void;
 	establishChannel(name: string, listener: Function): void;
 	sendOnChannel(name: string, data: string):void;
-	getProperty<PropType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
+	newRecord<DST extends RecordBase>(type: Ctor<DST>): DST;
+	getRecord<DST extends RecordBase>(type: Ctor<DST>, puid: number): DST;
+	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, key: string|number): DST;
+	deleteRecords<DST extends RecordBase>(type: Ctor<DST>, archive: boolean): void;
+	deleteRecord<DST extends RecordBase>(record: DST, archive?: boolean, filesToArchive?: string[]): void;
+	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[];
 }

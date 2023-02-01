@@ -22,11 +22,6 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
         function Script() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
-        Script.prototype.getProperty = function (fullPath, changeNotification) {
-            return changeNotification ?
-                this.__scriptFacade.getProperty(fullPath, changeNotification) :
-                this.__scriptFacade.getProperty(fullPath);
-        };
         Script.prototype.establishChannel = function (leafChannelName, callback) {
             if (callback) {
                 this.__scriptFacade.establishChannel(leafChannelName, function (sender, axon) {
@@ -38,6 +33,24 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
         };
         Script.prototype.sendOnChannel = function (leafChannelName, data) {
             this.__scriptFacade.sendOnChannel(leafChannelName, data);
+        };
+        Script.prototype.newRecord = function (type) {
+            return this.__scriptFacade.newRecord(type);
+        };
+        Script.prototype.deleteRecord = function (record, archive, filesToArchive) {
+            return this.__scriptFacade.deleteRecord(record, archive, filesToArchive);
+        };
+        Script.prototype.deleteRecords = function (type, archive) {
+            return this.__scriptFacade.deleteRecords(type, archive || false);
+        };
+        Script.prototype.getRecord = function (type, puid) {
+            return this.__scriptFacade.getRecord(type, puid);
+        };
+        Script.prototype.getRecordSec = function (type, fieldName, fieldValue) {
+            return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue);
+        };
+        Script.prototype.getAllPuids = function (ofType) {
+            return this.__scriptFacade.getAllPuids(ofType);
         };
         return Script;
     }(ScriptBase_1.ScriptBase));

@@ -24,7 +24,7 @@ export var Network: { [deviceName: string]:
  *	A TCP network port.
  */
 export interface NetworkTCP extends NetworkBase {
-	isOfTypeName(typeName: string): NetworkTCP|null;	// Check subtype by name
+	isOfTypeName(typeName: 'NetworkTCP'): NetworkTCP|null;	// Check subtype by name
 
 	readonly connected: boolean;		// True if I'm currently connected
 
@@ -121,7 +121,7 @@ interface NetworkTCPDriverMetaData {
  *	A UDP network port.
  */
 export interface NetworkUDP extends NetworkBase {
-	isOfTypeName(typeName: string): NetworkUDP|null;	// Check subtype by name
+	isOfTypeName(typeName: 'NetworkUDP'): NetworkUDP|null;	// Check subtype by name
 
 	readonly listenerPort: number;	// UDP listener port number, if any, else 0
 
@@ -135,12 +135,14 @@ export interface NetworkUDP extends NetworkBase {
 
 	// Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
 	subscribe(event: 'textReceived', listener: (sender: NetworkUDP, message:{
-		text:string				// The text string that was received
+		text:string,			// The text string that was received
+		sender: string			// Address of peer data was received from
 	})=>void): void;
 
 	// Receive "raw" data containing the entire UDP packet.
 	subscribe(event: 'bytesReceived', listener: (sender: NetworkUDP, message:{
-		rawData:number[]				// The raw data that was received
+		rawData:number[],		// The raw data that was received
+		sender: string			// Address of peer data was received from
 	})=>void): void;
 
 	// Object is being shut down

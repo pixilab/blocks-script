@@ -20,8 +20,10 @@ export class SunClock extends Script {
 	private readonly momentProps: Dictionary<SunProp> = {}; // Dynamic properties, keyed by property name
 	private waiter: CancelablePromise<any>;	// Delay until next update
 
-	private todaysMoments: SunCalc.GetTimesResult;
-	private utcDateWhenCached: number;
+	private todaysMoments: SunCalc.GetTimesResult; // Update once per date
+	private utcDateWhenCached: number;		// When todaysMoments were last fetched
+
+	private forceUpdateTimer: CancelablePromise<any>;	// To defer forced updates somewhat
 
 	// Names of default properties. These MUST match fields in SunCalc.GetTimesResult
 	private static readonly kPropNames = ['sunrise', 'sunset'];
@@ -54,11 +56,20 @@ export class SunClock extends Script {
 		@parameter("Event name in suncalc library indicating end", true) endMoment?: string,
 		@parameter("Time offset added to endMoment time, in minutes", true) endOffset?: number
 	) {
-		this.momentProps[propName] = new SunProp(
-			this, propName,
-			startMoment, startOffset || 0,
-			endMoment, endOffset
-		);
+		var existingProp = this.momentProps[propName];
+		if (existingProp) {	// Update already existing prop's state
+			existingProp.startMoment = startMoment;
+			existingProp.startOffset = startOffset;
+			existingProp.endMoment = endMoment;
+			existingProp.endOffset = endOffset;
+		} else {
+			this.momentProps[propName] = new SunProp(
+				this, propName,
+				startMoment, startOffset || 0,
+				endMoment, endOffset
+			);
+		}
+		this.forceUpdateSoon();
 	}
 
 	/**
@@ -106,7 +117,7 @@ export class SunClock extends Script {
 		const news = this.mLat !== value;
 		this.mLat = value;
 		if (news)
-			this.forceUpdate();
+			this.forceUpdateSoon();
 	}
 
 	@property("World location longitude")
@@ -117,7 +128,7 @@ export class SunClock extends Script {
 		const news = this.mLong !== value;
 		this.mLong = value;
 		if (news)
-			this.forceUpdate();
+			this.forceUpdateSoon();
 	}
 
 	/**
@@ -127,8 +138,24 @@ export class SunClock extends Script {
 	private forceUpdate() {
 		if (this.waiter) // Cancel any pending wait - updateTimes starts one anew
 			this.waiter.cancel();
+		if (this.forceUpdateTimer) {
+			// Cancel any deferred update - since it's been done now
+			this.forceUpdateTimer.cancel();
+			this.forceUpdateTimer = undefined;
+		}
+
 		this.utcDateWhenCached = undefined;
 		this.updateTimes();
+	}
+
+	/**
+	 * Do a forceUpdate soonish. Deferred to collapse multiple mutations to one update.
+	 */
+	private forceUpdateSoon() {
+		if (this.forceUpdateTimer)
+			this.forceUpdateTimer.cancel();
+		this.forceUpdateTimer = wait(50);
+		this.forceUpdateTimer.then(() => this.forceUpdate());
 	}
 }
 
@@ -141,10 +168,10 @@ class SunProp {
 	constructor(
 		readonly owner: SunClock,
 		readonly propName: string,
-		readonly startMoment: string,
-		readonly startOffset: number,		// Minutes
-		readonly endMoment?: string,		// Else ends 1 minute after start
-		readonly endOffset?: number			// Minutes
+		public startMoment: string,
+		public startOffset: number,		// Minutes
+		public endMoment?: string,		// Else ends 1 minute after start
+		public endOffset?: number		// Minutes
 	) {
 		owner.property(
 			propName,

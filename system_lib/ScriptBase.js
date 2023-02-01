@@ -1,13 +1,12 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.AggregateElem = exports.ScriptBase = void 0;
+    exports.RecordBase = exports.AggregateElem = exports.ScriptBase = void 0;
     var ScriptBase = (function () {
         function ScriptBase(scriptFacade) {
             this.__scriptFacade = scriptFacade;
         }
         ScriptBase.prototype.property = function (name, options, gsFunc) {
-            this.__scriptFacade.property(name, options, gsFunc);
             var propDescriptor = {
                 get: function () {
                     return gsFunc();
@@ -21,6 +20,7 @@ define(["require", "exports"], function (require, exports) {
                 };
             }
             Object.defineProperty(this, name, propDescriptor);
+            return this.__scriptFacade.property(name, options, gsFunc);
         };
         ScriptBase.prototype.indexedProperty = function (name, itemType) {
             return this.__scriptFacade.indexedProperty(name, itemType);
@@ -28,8 +28,16 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.changed = function (propName) {
             this.__scriptFacade.changed(propName);
         };
+        ScriptBase.prototype.getProperty = function (fullPath, changeNotification) {
+            return changeNotification ?
+                this.__scriptFacade.getProperty(fullPath, changeNotification) :
+                this.__scriptFacade.getProperty(fullPath);
+        };
         ScriptBase.prototype.unsubscribe = function (event, listener) {
             this.__scriptFacade.unsubscribe(event, listener);
+        };
+        ScriptBase.prototype.getMonotonousMillis = function () {
+            return this.__scriptFacade.getMonotonousMillis();
         };
         ScriptBase.prototype.reInitialize = function () {
             this.__scriptFacade.reInitialize();
@@ -55,4 +63,10 @@ define(["require", "exports"], function (require, exports) {
         return AggregateElem;
     }());
     exports.AggregateElem = AggregateElem;
+    var RecordBase = (function () {
+        function RecordBase() {
+        }
+        return RecordBase;
+    }());
+    exports.RecordBase = RecordBase;
 });

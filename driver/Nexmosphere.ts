@@ -6,8 +6,9 @@
 
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {callable, driver} from "system_lib/Metadata";
+import {callable, driver, min} from "system_lib/Metadata";
 import {PrimTypeSpecifier} from "../system/PubSub";
+import {PrimitiveValue} from "../system_lib/ScriptBase";
 
 const kRfidPacketParser = /^XR\[P(.)(\d+)]$/; //parse RFID tag detection from XR-DR01 Rfid element
 const kPortPacketParser = /^X(\d+)(A|B)\[(.+)]$/; //parse interfaceNumber and attached Data
@@ -85,7 +86,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 			pollAgain = true;
 		}
 		if (pollAgain && this.socket.connected)
-			wait(this.pollIndex > 1 ? 150 : 600).then(() => this.pollNext());
+			wait(500).then(() => this.pollNext());
 	}
 
 	/**
@@ -93,11 +94,13 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	 */
 	private queryPortConfig(portNumber: number,) {
 		var sensorMessage: string = (("000" + portNumber).slice(-3)); // Pad index with leading zeroes
-		this.send("D" + sensorMessage + "B[TYPE]");
+		sensorMessage = "D" + sensorMessage + "B[TYPE]";
+		log("QQuery", sensorMessage);
+		this.send(sensorMessage);
 	}
 
 	/**
-	 * Send rew messages to the Nexmosphere controller
+	 * Send raw messages to the Nexmosphere controller
 	 */
 	@callable("Send raw string data to the Nexmosphere controller")
 	send(rawData: string) {
@@ -114,7 +117,8 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	 * Look for the messages we care about and act on those.
 	 */
 	private handleMessage(msg: string) {
-		// console.debug("handleMessage", msg);
+		//console.log("handleMessage", msg);
+
 		var parseResult = kRfidPacketParser.exec(msg);
 		if (parseResult) {
 			// Just store first part until the port packet arrives
@@ -123,7 +127,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 				tagNumber: parseInt(parseResult[2])
 			};
 		} else if ((parseResult = kPortPacketParser.exec(msg))) {
-			// Incoming data from a sensor?
+			// Incoming data from a sensor
 			const portNumber = parseInt(parseResult[1]); //get the recieving interface
 			const dataRecieved = parseResult[3]; //get input data as string
 			const index = portNumber - 1;
@@ -133,7 +137,8 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 			else
 				console.warn("Message from unexpected port", portNumber);
 		} else if ((parseResult = kProductCodeParser.exec(msg))) {
-			// Reply from the interface scan?
+			// Reply from the interface scan
+			log("QReply", msg);
 			const modelInfo: ModelInfo = {
 				modelCode: parseResult[2].trim()  // Remove any trailing whitespace in the product code.
 			}
@@ -158,8 +163,6 @@ export class Nexmosphere extends Driver<NetworkTCP> {
  * Model a single base element.
  */
 abstract class BaseInterface {
-
-
 	protected constructor(
 		protected readonly driver: Nexmosphere,
 		protected readonly index: number
@@ -260,7 +263,182 @@ class RfidInterface extends BaseInterface {
 }
 Nexmosphere.registerInterface(RfidInterface, "XRDR1");
 
+/**
+ * NFC detector.
+ */
+class NfcInterface extends BaseInterface {
 
+	private readonly uidPropName: string;
+	private readonly placedPropName: string;
+	private readonly noPropName: string;
+	private readonly labelPropName: string;
+	private readonly writeLabelPropName: string;
+	private readonly writeNoPropName: string;
+	private nfcTagInfo: NfcTagInfo = {
+		tagUID: "",
+		isPlaced: false,
+		tagNumber: 0,
+		tagLabel: ""
+	}
+	private lastTagEvent: string = "";
+
+	constructor(driver: Nexmosphere, index: number) {
+		super(driver, index);
+		this.uidPropName = this.getNamePrefix() + "_nfcTagUid";
+		this.driver.property<string>(
+			this.uidPropName,
+			{
+				type: String,
+				description: "Last recieved NFC tag UID",
+				readOnly: true
+			},
+			setValue => {
+				return this.nfcTagInfo.tagUID;
+			}
+		);
+
+		this.noPropName = this.getNamePrefix() + "_nfcTagNo";
+		this.driver.property<number>(
+			this.noPropName,
+			{
+				type: Number,
+				description: "NFC tag number",
+				readOnly: true
+			},
+			setValue => {
+				return this.nfcTagInfo.tagNumber;
+			}
+		);
+
+		this.labelPropName = this.getNamePrefix() + "_nfcLbl";
+		this.driver.property<string>(
+			this.labelPropName,
+			{
+				type: String,
+				description: "NFC tag label 1",
+				readOnly: true
+			},
+			setValue => {
+				return this.nfcTagInfo.tagLabel;
+			}
+		);
+
+		this.placedPropName = this.getNamePrefix() + "_nfcTagIsPlaced";
+		this.driver.property<boolean>(
+			this.placedPropName,
+			{
+				type: Boolean,
+				description: "NFC tag is placed",
+				readOnly: true
+			},
+			setValue => {
+				return this.nfcTagInfo.isPlaced;
+			}
+		);
+		this.sendDeviceDefaultSetting();
+
+	}
+
+
+	/* Set the wanted mode of the NFC driver */
+	sendDeviceDefaultSetting() {
+
+			let myIfaceNo = (("000" + (this.index+1)).slice(-3));  // Pad index with leading zeroes
+			let defaultSetting = "X" + myIfaceNo + "S[10:6]"; //i.e X001S[10:6] returns UID, TNR and LB1 at every new scan.
+			this.driver.send(defaultSetting);
+			//console.log("NFC default setting sent");
+	}
+	receiveData(data: string) {
+
+		let splitData = data.split(":");
+		const newTagData = splitData[1];
+		const newTagEvent = splitData[0];
+
+		//Reset the defultDevice setting if lost i.e from restarting the controller.
+		if (this.lastTagEvent === "TD=UID" && newTagEvent === "TR=UID") {
+			this.sendDeviceDefaultSetting();
+		}
+
+		this.lastTagEvent = newTagEvent;
+
+		switch (newTagEvent) {
+			case "TD=UID":
+				this.nfcTagInfo.isPlaced = true;
+				this.nfcTagInfo.tagUID = newTagData;
+				break;
+
+			case "TD=TNR":
+				this.nfcTagInfo.tagNumber = parseInt(newTagData);
+				break;
+
+			case "TD=LB1":
+				this.nfcTagInfo.tagLabel = newTagData;
+				//We wait til last expected information packet to arrive before we fire changed.
+				this.driver.changed(this.uidPropName)
+				this.driver.changed(this.labelPropName)
+				this.driver.changed(this.noPropName)
+				this.driver.changed(this.placedPropName)
+				break;
+
+			case "TR=LB1":
+				this.nfcTagInfo.isPlaced = false
+				this.driver.changed(this.placedPropName)
+				break;
+			case "TR=UID":
+			case "TR=TNR":
+					//ignore
+				break;
+			default:
+				console.log("Unrecognised data recieved at " + this.getNamePrefix() + ": " + newTagEvent);
+				break;
+		}
+	}
+}
+Nexmosphere.registerInterface(NfcInterface, "XRDW2");
+
+/* XWaveLed*/
+
+class XWaveLedInterface extends BaseInterface {
+	private readonly propName: string;
+	private propValue: string;
+
+	constructor(driver: Nexmosphere, index: number) {
+		super(driver, index);
+		this.propName = this.getNamePrefix() + "_X-Wave_Command";
+		this.driver.property<string>(
+			this.propName,
+			{
+				type: String,
+				description: "Command",
+				readOnly: false
+			},
+			setValue => {
+				if (setValue !== undefined) {
+					this.propValue = setValue;
+					this.sendData(this.propValue)
+				}
+				return this.propValue;
+			}
+		);
+
+	}
+	receiveData(data: string) {
+		console.log("Unexpected data recieved on " + this.getNamePrefix() + " " + data);
+	}
+
+	sendData(data:string) {
+
+		let myIfaceNo = (("000" + (this.index+1)).slice(-3));
+		let message = "X" + myIfaceNo + "B[" + data +"]";
+		this.driver.send(message);
+
+	}
+}
+Nexmosphere.registerInterface(XWaveLedInterface, "XWC56", "XWL56");
+
+/**
+* Proximity sensors
+*/
 class ProximityInterface extends BaseInterface {
 	private readonly propName: string;
 	private propValue: number;
@@ -287,7 +465,84 @@ class ProximityInterface extends BaseInterface {
 	}
 }
 Nexmosphere.registerInterface(ProximityInterface, "XY116", "XY146", "XY176");
+/**
+* Proximity sensors Time of Flight versions
+*/
+class TimeOfFlightInterface extends BaseInterface {
+	private readonly zonePropName: string;
+	private readonly buttonPropName: string;
+	private zonePropValue: number;
+	private btnPropValue: boolean;
 
+	constructor(driver: Nexmosphere, index: number) {
+		super(driver, index);
+		this.zonePropName = this.getNamePrefix() + "_time_of_flightproximity";
+		this.buttonPropName = this.getNamePrefix() + "_air_button";
+		this.zonePropValue = 8;
+		this.btnPropValue = false;
+		this.driver.property<number>(
+			this.zonePropName,
+			{
+				type: Number,
+				description: "Proximity zone",
+				readOnly: true
+			},
+			setValue => {
+				return this.zonePropValue;
+			}
+		);
+		this.driver.property<boolean>(
+			this.buttonPropName,
+			{
+				type: Boolean,
+				description: "Air Button",
+				readOnly: true
+			},
+			setValue => {
+				return this.btnPropValue;
+			}
+		);
+	}
+
+	receiveData(data: string) {
+		const splitData = data.split("=");
+		const sensorValue = splitData[1];
+
+		switch (sensorValue) {
+			case "AB":
+				this.btnPropValue = true;
+				this.driver.changed(this.buttonPropName);
+				break;
+			case "XX":
+				if (this.btnPropValue){
+					this.btnPropValue = false;
+					this.driver.changed(this.buttonPropName);
+				}
+				this.zonePropValue = 8; //We define indefinite as zone 8
+				this.driver.changed(this.zonePropName);
+				break;
+			case "01":
+			case "02":
+			case "03":
+			case "04":
+			case "05":
+			case "06":
+			case "07":
+				this.zonePropValue = parseInt(sensorValue);
+				this.driver.changed(this.zonePropName);
+				if (this.btnPropValue){
+					this.btnPropValue = false;
+					this.driver.changed(this.buttonPropName);
+				}
+				break;
+
+
+			default:
+				break;
+		}
+	}
+}
+Nexmosphere.registerInterface(TimeOfFlightInterface, "XY241");
 
 /**
  *Modle a Gesture detector interface.
@@ -298,12 +553,12 @@ class AirGestureInterface extends BaseInterface {
 
 	constructor(driver: Nexmosphere, index: number) {
 		super(driver, index);
-		this.propName = this.getNamePrefix() + "_touch";
+		this.propName = this.getNamePrefix() + "_gesture";
 		this.driver.property<string>(
 			this.propName,
 			{
 				type: String,
-				description: "Touch detected",
+				description: "Gesture detected",
 				readOnly: true
 			},
 			() => this.propValue
@@ -323,8 +578,15 @@ Nexmosphere.registerInterface(AirGestureInterface, "XTEF650", "XTEF30", "XTEF630
  */
 class Button {
 	private state: boolean;
+	public ledData:number;
+	private ledPropname:string;
 
-	constructor(private readonly name: string, private driver: Driver<NetworkTCP>) {
+	constructor(private readonly name: string, private owner: QuadButtonInterface, ix: number, private driver: Nexmosphere) {
+
+		this.ledPropname = name + "_led_cmd";
+		this.ledData = 0
+		this.state = false
+
 		driver.property<boolean>(
 			this.name,
 			{
@@ -333,6 +595,23 @@ class Button {
 				readOnly: true
 			},
 			() => this.state
+		);
+		driver.property<number>(
+			this.ledPropname,
+			{
+				type: Number,
+				description: "0=off, 1=fast, 2=slow or 3=on",
+				readOnly: false,
+				min: 0,
+				max: 3
+			},
+			setValue => {
+				if (setValue !== undefined) {
+					this.ledData = setValue & 3;
+					this.owner.ledStatusChanged();
+				}
+				return this.ledData;
+			}
 		);
 	}
 
@@ -343,6 +622,9 @@ class Button {
 			this.driver.changed(this.name);
 	}
 }
+
+
+
 
 /**
  *Modle a Quad Button detector interface.
@@ -355,7 +637,7 @@ class QuadButtonInterface extends BaseInterface {
 		super(driver, index);
 		this.buttons = [];
 		for (var ix = 0; ix < 4; ++ix) {
-			this.buttons.push(new Button(this.getNamePrefix() + "_btn_" + (ix + 1), this.driver));
+			this.buttons.push(new Button(this.getNamePrefix() + "_btn_" + (ix + 1), this, ix, driver));
 			// console.log("For buttons_" + (ix + 1));
 		}
 	}
@@ -368,8 +650,24 @@ class QuadButtonInterface extends BaseInterface {
 			this.buttons[ix].setState(isPressed);
 		}
 	}
+
+	ledStatusChanged(){
+		var toSend = 0;
+		const buttons = this.buttons;
+		for (let ix = 0; ix < buttons.length; ++ix) {
+			toSend |= buttons[ix].ledData << ix*2;
+		}
+		this.sendCmd(toSend.toString());
+	}
+	sendCmd(data:string) {
+
+		let myIfaceNo = (("000" + (this.index+1)).slice(-3));
+		let command = "X" + myIfaceNo + "A[" + data +"]";
+		this.driver.send(command);
+		console.log(command);
+	}
 }
-Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N");
+Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6");
 
 
 /**
@@ -406,7 +704,7 @@ Nexmosphere.registerInterface(MotionInterface, "XY320");
  * PropType, and with a separate setValue method (since value from the outside
  * is read-only).
  */
-class GenderSubProperty<PropType> {
+class GenderSubProperty<PropType extends PrimitiveValue> {
 	private value: PropType;
 
 	constructor(
@@ -439,7 +737,7 @@ class GenderSubProperty<PropType> {
 	}
 }
 
-/**
+/*
  *	Gender detector interface, indicating gender, age, gaze and some other tidbits about a person
  *	in front of the sensor (e.g., a camera).
  */
@@ -529,7 +827,24 @@ interface TagInfo {
 	isPlaced: boolean;
 }
 
+interface NfcTagInfo {
+	tagUID: string;
+	isPlaced: boolean;
+	tagNumber: number;
+	tagLabel: string;
+}
+
 interface ModelInfo {
 	modelCode: string;
 	serialNo?: string;
+}
+
+/**
+ Log messages, allowing my logging to be easily disabled in one place.
+ */
+ const DEBUG = false;	// Controls verbose logging
+ function log(...messages: any[]) {
+	if (DEBUG)
+		// Set to false to disable my logging
+		console.info(messages);
 }

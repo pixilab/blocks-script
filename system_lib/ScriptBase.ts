@@ -3,9 +3,12 @@
  */
 
 import {SetterGetter, SGOptions} from "system/PubSub";
+import {PropertyAccessor} from "./Script";
 
 
 interface Ctor<T> { new(... args: any[]): T ;}
+
+export type PrimitiveValue = number | string | boolean;
 
 /**
  * Common stuff shared between user scripts and drivers.
@@ -19,11 +22,10 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 
 	/** Expose a named property of type T with specified options and getter/setter function.
 	 */
-	property<T>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): void {
-		this.__scriptFacade.property(name, options, gsFunc);
+	property<T extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): PropertyValue<T> {
 
 		// Make assignment work also for direct JS use
-		const propDescriptor: PropertyDescriptor & ThisType<any> = {
+		const propDescriptor: TypedPropertyDescriptor<T> & ThisType<any> = {
 			get: function () {	// Always define getter
 				return gsFunc();
 			}
@@ -37,6 +39,7 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 		}
 		// defineProperty on 'this', not on prototype, as gsFunc is instance-specific
 		Object.defineProperty(this, name, propDescriptor);
+		return this.__scriptFacade.property(name, options, gsFunc);
 	}
 
 	/**
@@ -62,12 +65,53 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	}
 
 	/**
-	 * Forward any event unsubscription to my associated facade.
+	 * Connect to the property at the specified full (dot-separated) path. Pass
+	 * a callback function to be notified when the value of the property changes.
+	 * Returns an object that can be used to read/write the property's value,
+	 * as well as close down the connection to the property once no longer
+	 * needed.
+	 *
+	 * The value associated with the property varies with the type of property.
+	 */
+	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
+		return changeNotification ?
+			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
+			this.__scriptFacade.getProperty<PropType>(fullPath);
+	}
+
+	/**
+	 * Disconnect specified listener function from specified event. Often,
+	 * you don't need to unsubscribe explicitly, since subscriptions will
+	 * auto-terminate when the object providing the subscription dies.
+	 * But in some cases, you may want to unsubscribe explicitly, for
+	 * instance when the subscribed-to information isn't needed any more,
+	 * or if the subscribing object dies before the suscbribed-to object
+	 * (which could otherwise cause callbacks into zombie objects and
+	 * memory leaks).
+	 *
+	 * IMPORTANT: You MUST pass the VERY SAME function to unsibscribe
+	 * as you passed to subscribe. Thus, when first subscribing, you may want
+	 * to store that listener function in an instance variable, allowing you
+	 * to subsequently unsubscribe from it through here. If this function
+	 * needs to be a member function, use the "bind" function method to
+	 * obtain a function bound to the proper this. Then use the result from
+	 * bind in both the subscribe and unsignscribe calls, thus making
+	 * sure they're referencing the very same function.
+	 *
+	 * https://javascript.info/bind
 	 */
 	unsubscribe(event: string, listener: Function): void {
 		this.__scriptFacade.unsubscribe(event, listener);
 	}
 
+	/**
+	 * Provide a monotonous millisecond current time readout. Unlike the value of Date.now(), which
+	 * may jump when the system clock is adjusted (e.g., due to a daylight savings time switch),
+	 * this monotonous clock increases monotonously, without any discontinuities.
+	 */
+	getMonotonousMillis() {
+		return this.__scriptFacade.getMonotonousMillis();
+	}
 
 	/**
 	 Allows a script/driver to request reinitialization of itself.
@@ -105,9 +149,17 @@ interface ChangeNotifier {
 	changed(propName: string): void;
 }
 
+// An array-like type having "index signature" and a length property
+type IndexedAny<T> = { [index:number]: T; readonly length: number };
+
 /**
  * Base your IndexedProperty elements on this class to support "changed" notifications, like
- * in the top level script/driver object.
+ * in the top level script/driver object. Not required if the indexed elements are
+ * immutable (can not change while being used). If data can change, then use this as
+ * the base class of your IndexedProperty elements, and call this.changed("fieldname")
+ * from within the element when it's data is known to have changed, where fieldname is
+ * the name of the field in the element. All fields in IndexedProperty elements must be
+ * of primitive type (i.e., string, boolean or number).
  */
 export class AggregateElem implements ChangeNotifier {
 	private readonly __scriptFacade: ChangeNotifier;	// Internal use only!
@@ -117,36 +169,73 @@ export class AggregateElem implements ChangeNotifier {
 	}
 }
 
-// An array-like type having "index signature" and a length property
-type IndexedAny<T> = { [index:number]: T; readonly length: number };
-
 /**
  * An array-like type holding "indexed items".
  */
-export interface IndexedProperty<T> {
+export interface IndexedProperty<T> extends IndexedAny<T> {
+	readonly name: string;	// Name given to this indexed property
 
-	[index:number] : T;	// Read-only array-like with T
-
-	/**
-	 * Add an item to my list. Items can not be removed, and will be published
-	 * with an index range corresponding to the number of elements.
-	 */
-	push(item: T): void
+	[index:number] : T;	// Read-only "array-like", holding objects of type T
 
 	/**
 	 * Number of items in me.
 	 */
 	length: number;
+
+	/**
+	 * Append item to the end of the list.
+	 */
+	push(item: T): void
+
+	/**
+	 * Insert item at offs position in the list.
+	 */
+	insert(offs: number, item:T): void
+
+	/**
+	 * Remove deleteCount items starting from offs, where deleteCount
+	 * must be a positive integer
+	 */
+	remove(offs: number, deleteCount: number): void
+
+	/**
+	 * Sort items in me in place, based on what the function returns.
+	 * A return value > 0 sorts rhs before lhs.
+	 * A return value < 0 sorts lhs before rhs.
+	 * A return value === 0 keeps the original order of lhs and rhs.
+	 */
+	sort(compareFn: (lhs: T, rhs: T) => number): void;
+}
+
+/**
+ * A plain, typed, primitive property value accessor.
+ */
+export interface PropertyValue<PropType extends PrimitiveValue> {
+	value: PropType;	// Current value (read only if property is read only)
+}
+
+/**
+ * Base class for persistent records used to, e.g., track visitor journey, collecting
+ * data along the way. Use decorators such as @field() @id() and @spotParameter() to
+ * mark your custom fields added to your own subclass being used in your script.
+ */
+export abstract class RecordBase {
+	readonly $puid: number;		// Persistent, system-unique identifier for this Record
+	readonly $hasUserData: boolean; // Record has received data (else entirely unused)
 }
 
 /*	Common environment used by user scripts as well as device drivers
 	These are INTERNAL implementation details, and may change.
-	DO NOT CALL directly from scripts/drivers!
+	DO NOT CALL directly from any scripts/drivers! Always use base class
+	equivalents.
  */
 export interface ScriptBaseEnv extends ChangeNotifier  {
+	property<PropType extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<any>): PropertyValue<PropType>;
+	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
 	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 	changed(prop: string): void; // Named child property has changed
-	property(name: string, options: SGOptions, gsFunc: SetterGetter<any>): void;
-	indexedProperty<T>(name: string, elemType: Ctor<T>): T[];
+	indexedProperty<T>(name: string, elemType: Ctor<T>): IndexedProperty<T>;
 	reInitialize(): void;
+	getMonotonousMillis(): number;
 }
+

@@ -1,7 +1,10 @@
 /*	A script that listens for a string arriving on a TCP port, exposing that string as a single property.
 	The value of that property can ne used, e.g., to trigger a task.
 
- * Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+	CAUTION: Since this exposes a SINGLE property, briefly holding the last message received,
+ 	this will not work reliably if data is sent rapidly, or simultaneously from multiple clients.
+
+ 	Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 import {SimpleServer} from "system/SimpleServer";
