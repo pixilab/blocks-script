@@ -8,17 +8,17 @@
 
 import {BaseSpot, Spot, Visitor} from "../system/Spot";
 import {PropertyAccessor, Script} from "../system_lib/Script";
-import {PrimitiveValue} from "../system_lib/ScriptBase";
+import {PrimitiveValue, RecordBase} from "../system_lib/ScriptBase";
 
 const DEBUG = false;	// Controls verbose logging
 
-// What I expect from the data record (should extend class RecordBase from ScriptBase)
-export interface VisitorRecordBase {
+// What I expect from the data record
+export interface VisitorRecordBase extends RecordBase {
 	readonly $puid: number;		// Persistent, system-unique identifier for this Record
 	readonly $hasUserData: boolean; // Record has received data (else entirely unused)
 
 	name?: string; 				// Name of visitor, if available
-	currentStation: string;		// Spot path to currently visited station, if any
+	currentStation?: string;	// Spot path to currently visited station, if any
 }
 
 // A simple typed dictionary type, always using string as key
