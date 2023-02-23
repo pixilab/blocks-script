@@ -17,6 +17,7 @@ export interface Timeline {
 	connected: boolean;		// Read only (indicates data is now available/relevant)
 	playing: boolean;		// Timeline is playing
 	timePosition: number;	// Timeline time position, in mS
+	time: TimeFlow;			// Time position, et al, as TimeFlow as well
 
 	subscribe(event: "connect", listener: (sender: Timeline, message:{
 		type:

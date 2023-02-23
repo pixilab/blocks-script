@@ -74,9 +74,9 @@ export class Script extends ScriptBase<ScriptEnv> {
 	}
 
 	/**
-	 * Get ALL live puids ofType. Occasionally useful if you want to do some processing
-	 * of all records, such as before calling deleteRecords, to update or move or clean up any
-	 * associated data or files.
+	 * Get a list PUIDs of all live records ofType. Occasionally useful if you want to do some processing
+	 * of all such records, such as before calling deleteRecords, to update or move or clean up any
+	 * associated data or files, or to do some aggregation of data across records
 	 */
 	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[] {
 		return this.__scriptFacade.getAllPuids(ofType);
