@@ -328,6 +328,19 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 	isOfTypeName(typeName: "MobileSpot"): MobileSpot | null;
 	readonly individual: boolean;	// Supports individual visitor identity
 
+	/**
+	 * Get a currently connected Visitor from its identifier, or null if
+	 * no such Visitor available now.
+	 */
+	getVisitor<RecordType extends RecordBase>(identity: string): Visitor<RecordType>|null;
+
+	/**
+	 * Get a list of IDs to all currently connected visitors. Occasionally useful to perform
+	 * some action across all visitors, then typically in conjunction with getVisitor(id) above
+	 * to obtain each individual visitor..
+	 */
+	getAllVisitorIds(): string[];
+
 	subscribe(event: 'spot', listener: (sender: MobileSpot, message:{
 		readonly type:
 			'DefaultBlock'|		// Default block changed (may be schedule)
