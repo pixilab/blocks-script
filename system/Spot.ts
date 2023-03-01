@@ -341,11 +341,21 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 	 */
 	getAllVisitorIds(): string[];
 
+	/**
+	 Decode a hashed visitor phone ID, as presented by the QR Code block set to
+	 "Visitor Spot Identity" mode, to the corresponding PUID number.
+	 Returns 0 if hashedIdentity is invalid.
+	 */
+	hashedIdentityToPuid(hashedIdentity: string): number;
+
+	/**
+	 * Events fired due to block changes.
+	 */
 	subscribe(event: 'spot', listener: (sender: MobileSpot, message:{
 		readonly type:
 			'DefaultBlock'|		// Default block changed (may be schedule)
 			'PriorityBlock'|	// Priority block changed (may be schedule)
-			'PlayingBlock'		// Actually playing block changed (always media)
+			'PlayingBlock'		// Actually playing block changed
 	})=>void): void;
 
 	/**
@@ -437,7 +447,7 @@ export interface VirtualSpot extends SpotGroupItem, BaseSpot, GeoZonable  {
 		type:
 			'DefaultBlock'|		// Default block changed (may be schedule)
 			'PriorityBlock'|	// Priority block changed (may be schedule)
-			'PlayingBlock' |	// Actually playing block changed (always media)
+			'PlayingBlock' |	// Actually playing block changed
 			'Active'			// Spot activated by accessing its Location ID
 	})=>void): void;
 
