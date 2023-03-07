@@ -100,6 +100,7 @@ export interface PropertyAccessor<PropType extends PrimitiveValue> extends Prope
 export interface ScriptEnv extends ScriptBaseEnv {
 	// Script is being shut down
 	subscribe(event: 'finish', listener: ()=>void): void;
+	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 
 	// 	Following are INTERNAL implementation details, and may change.
 	// 	DO NOT CALL directly from scripts/drivers!

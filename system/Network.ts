@@ -23,7 +23,7 @@ export var Network: { [deviceName: string]:
 /**
  *	A TCP network port.
  */
-export interface NetworkTCP extends NetworkBase {
+export interface NetworkTCP extends NetworkIPBase {
 	isOfTypeName(typeName: 'NetworkTCP'): NetworkTCP|null;	// Check subtype by name
 
 	readonly connected: boolean;		// True if I'm currently connected
@@ -101,7 +101,7 @@ export interface NetworkTCP extends NetworkBase {
 	 * dropped.
 	 */
 	subscribe(event: 'connect', listener: (sender: NetworkTCP, message: {
-		type: 'Connection' |		// Connection state changed (check with isConnected)
+		type: 'Connection' |		// Connection state changed (check connected)
 			'ConnectionFailed'	// Connection attempt failed
 	}) => void): void;
 
@@ -120,7 +120,7 @@ interface NetworkTCPDriverMetaData {
 /**
  *	A UDP network port.
  */
-export interface NetworkUDP extends NetworkBase {
+export interface NetworkUDP extends NetworkIPBase {
 	isOfTypeName(typeName: 'NetworkUDP'): NetworkUDP|null;	// Check subtype by name
 
 	readonly listenerPort: number;	// UDP listener port number, if any, else 0
@@ -150,6 +150,54 @@ export interface NetworkUDP extends NetworkBase {
 }
 
 /**
+ * An broker connection corresponding to a single MQTT Network Device.
+ * Requires an MQTT broker connection, which can be defined in Blocks'
+ * configuration file.
+ *
+ * A base topic path is defined in the Network Device settings for
+ * this device. You then provide a subTopic when calling functions,
+ * which is appended to the base topic (separated by a forward slash).
+ */
+export interface MQTT extends NetworkBase {
+	isOfTypeName(typeName: 'MQTT'): MQTT|null;	// Checks type by name
+
+	readonly connected: boolean;		// True if I'm currently connected
+	readonly address: string			// Device-specific part of topic
+
+	isOfTypeName(typeName: string): any|null;
+
+	/*	Send text string to broker on specified sub-topic.
+	*/
+	sendText(text: string, subTopic: string): void;
+
+	/*	Subscribe to topic text from specified subTopic, interpreted as ASCII/UTF-8.
+		Specified subTopic may include MQTT wildcards.
+	 */
+	subscribeTopic(subTopic: string, listener: (sender: MQTT, message:{
+		text:string,			// The text string that was received
+		fullTopic: string,		// FULL topic path data was received from
+		subTopic: string		// Subscribed-to subTopic
+	})=>void): void;
+
+	/*	Terminate topic subscription from specified subTopic. You must pass
+		the same listener function as used in the matching subscribe call.
+	 */
+	unsubscribeTopic(subTopic: string, listener: Function): void;
+
+	/**
+	 * Notification when broker connection fails or its state changes.
+	 */
+	subscribe(event: 'connect', listener: (sender: MQTT, message: {
+		type:
+			'ConnectionFailed' | // Connection attempt failed
+			'Connection';		// Connection state changed (check connected)
+	}) => void): void;
+
+	// Object is being shut down
+	subscribe(event: 'finish', listener: (sender: MQTT)=>void): void;
+}
+
+/**
  * Metadata provided in the typeSpecificMeta parameter for the @driver decorator
  * for baseDriverType 'NetworkUDP'.
  */
@@ -159,20 +207,29 @@ interface NetworkUDPDriverMetaData {
 }
 
 /**
- * Base interface declaring some common functionality used by both UDP and TCP
- * network ports.
+ * Base interface declaring some common functionality used network devices.
  */
 interface NetworkBase extends ScriptBaseEnv {
 	// Check subtype by name (e.g., "NetworkUDP")
 	isOfTypeName(typeName: string): NetworkBase|null;
 
-	// Read-only properties:
-	name: string;			// Leaf name of this network device
-	fullName: string;		// Full name, including enclosing containers
-	enabled: boolean;		// True if I'm enabled (else won't send data)
+	readonly name: string;			// Leaf name of this network device
+	readonly fullName: string;		// Full name, including enclosing containers
+	readonly enabled: boolean;		// True if I'm enabled (else won't send data)
+	readonly address: string;		// Resolved or initial address
+	readonly options: string;		// Any "Custom Options" assigned to the Network Device
+	readonly addressString: string;	// IP address exactly as set on the Network Device page.
+
+	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
+}
+
+/**
+ * Base interface declaring some common functionality used by both UDP and TCP
+ * network ports.
+ */
+interface NetworkIPBase extends NetworkBase {
+
 	address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
-	options: string;		// Any "Custom Options" assigned to the Network Device
-	addressString: string;	// IP address exactly as set on the Network Device page.
 	port: number;			// Port number sending data to
 
 	/**

@@ -9,9 +9,9 @@ import * as Meta from "system_lib/Metadata";
 /**
  Ultimate base class for all script-based drivers.
  */
-export class Driver<facadeType extends DriverFacade> extends ScriptBase<DriverFacade> {
+export class Driver<FacadeType extends DriverFacade> extends ScriptBase<FacadeType> {
 
-	constructor(scriptFacade: DriverFacade) {
+	constructor(scriptFacade: FacadeType) {
 		super(scriptFacade);
 		if (scriptFacade.isOfTypeName("NetworkTCP")) {
 			// Re-emit message associated with basic "connected" state
@@ -45,4 +45,5 @@ interface DriverFacade extends ScriptBaseEnv {
 	// Check subtype by name, returning the implementing object (if any)
 	isOfTypeName(typeName: string): any|null;
 	subscribe(name: string, listener: Function): void;
+	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 }

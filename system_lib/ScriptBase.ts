@@ -232,8 +232,8 @@ export abstract class RecordBase {
 export interface ScriptBaseEnv extends ChangeNotifier  {
 	property<PropType extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<any>): PropertyValue<PropType>;
 	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
-	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
-	changed(prop: string): void; // Named child property has changed
+	unsubscribe(event: string, listener: Function): void;
+	changed(prop: string): void;
 	indexedProperty<T>(name: string, elemType: Ctor<T>): IndexedProperty<T>;
 	reInitialize(): void;
 	getMonotonousMillis(): number;

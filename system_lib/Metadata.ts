@@ -37,7 +37,7 @@ interface ICallableParamDescr {
  defined as interfaces (implemented in Java-land). So I can't get the param type
  using design:paramtypes since that then just says 'Object'.
  */
-export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP', typeSpecificMeta: any) {
+export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP'|'MQTT', typeSpecificMeta?: any) {
 	const info: DriverInfo = {
 		paramTypes: [baseDriverType],
 		info: typeSpecificMeta
