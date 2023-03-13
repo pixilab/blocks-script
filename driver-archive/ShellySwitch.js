@@ -25,7 +25,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ShellySwitch = void 0;
+    exports.InputBase = exports.RelayBase = exports.ShellySwitch = void 0;
     var ShellySwitch = (function (_super) {
         __extends(ShellySwitch, _super);
         function ShellySwitch(mqtt) {
@@ -33,25 +33,27 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.mqtt = mqtt;
             _this.mConnected = false;
             _this.mOnline = false;
-            var kRelayCount = 1;
-            var kInputCount = 1;
-            var mMaxRelaySwitchCount = 4;
-            if (mqtt.options) {
-                var options = JSON.parse(mqtt.options);
-                kRelayCount = Math.max(1, Math.min(mMaxRelaySwitchCount, options.relays || 1));
-                kInputCount = Math.max(1, Math.min(mMaxRelaySwitchCount, options.inputs || 1));
-            }
-            _this.relay = _this.indexedProperty("relay", Relay);
-            for (var rix = 0; rix < kRelayCount; ++rix)
-                _this.relay.push(new Relay(_this, rix));
-            _this.input = _this.indexedProperty("input", Input);
-            for (var six = 0; six < kInputCount; ++six)
-                _this.input.push(new Input(_this, six));
-            mqtt.subscribeTopic("online", function (sender, message) {
-                _this.setOnline(message.text === 'true');
-            });
             return _this;
         }
+        ShellySwitch.prototype.initialize = function () {
+            var _this = this;
+            var mMaxRelaySwitchCount = 4;
+            var relayCount = 1;
+            var inputCount = 1;
+            var rawOptions = this.mqtt.options;
+            if (rawOptions) {
+                var options = JSON.parse(rawOptions);
+                relayCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.relays || 0));
+                inputCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.inputs || 0));
+            }
+            for (var rix = 0; rix < relayCount; ++rix)
+                this.relay.push(this.makeRelay(rix));
+            for (var six = 0; six < inputCount; ++six)
+                this.input.push(this.makeInput(six));
+            this.mqtt.subscribeTopic("online", function (sender, message) {
+                _this.setOnline(message.text === 'true');
+            });
+        };
         Object.defineProperty(ShellySwitch.prototype, "connected", {
             get: function () {
                 return this.mConnected;
@@ -76,34 +78,34 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], ShellySwitch.prototype, "connected", null);
-        ShellySwitch = __decorate([
-            (0, Metadata_1.driver)('MQTT'),
-            __metadata("design:paramtypes", [Object])
-        ], ShellySwitch);
         return ShellySwitch;
     }(Driver_1.Driver));
     exports.ShellySwitch = ShellySwitch;
-    var Relay = (function () {
-        function Relay(owner, index) {
-            var _this = this;
+    var RelayBase = (function () {
+        function RelayBase(owner, index) {
             this.owner = owner;
+            this.index = index;
             this.mEnergized = false;
             this.inFeedback = false;
-            owner.mqtt.subscribeTopic("relay/" + index, function (sender, message) {
-                owner.setOnline(true);
+        }
+        RelayBase.prototype.init = function () {
+            var _this = this;
+            this.owner.mqtt.subscribeTopic(this.feedbackTopic(), function (sender, message) {
+                _this.owner.setOnline(true);
+                var newState = _this.parseFeedback(message.text);
                 _this.inFeedback = true;
-                _this.energize = message.text === 'on';
+                _this.on = newState;
                 _this.inFeedback = false;
             });
-        }
-        Object.defineProperty(Relay.prototype, "energize", {
+        };
+        Object.defineProperty(RelayBase.prototype, "on", {
             get: function () {
                 return this.mEnergized;
             },
             set: function (value) {
                 this.mEnergized = value;
                 if (!this.inFeedback)
-                    this.owner.mqtt.sendText(value ? "on" : "off", "relay/0/command");
+                    this.sendCommand(value);
             },
             enumerable: false,
             configurable: true
@@ -112,19 +114,24 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             (0, Metadata_1.property)("True if output relay is energized"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
-        ], Relay.prototype, "energize", null);
-        return Relay;
+        ], RelayBase.prototype, "on", null);
+        return RelayBase;
     }());
-    var Input = (function () {
-        function Input(owner, index) {
-            var _this = this;
+    exports.RelayBase = RelayBase;
+    var InputBase = (function () {
+        function InputBase(owner, index) {
+            this.owner = owner;
+            this.index = index;
             this.mActive = false;
-            owner.mqtt.subscribeTopic("input/" + index, function (sender, message) {
-                owner.setOnline(true);
-                _this.active = message.text === '1';
-            });
         }
-        Object.defineProperty(Input.prototype, "active", {
+        InputBase.prototype.init = function () {
+            var _this = this;
+            this.owner.mqtt.subscribeTopic(this.feedbackTopic(), function (sender, message) {
+                _this.owner.setOnline(true);
+                _this.active = _this.parseFeedback(message.text);
+            });
+        };
+        Object.defineProperty(InputBase.prototype, "active", {
             get: function () {
                 return this.mActive;
             },
@@ -138,7 +145,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             (0, Metadata_1.property)("True if input switch is closed", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
-        ], Input.prototype, "active", null);
-        return Input;
+        ], InputBase.prototype, "active", null);
+        return InputBase;
     }());
+    exports.InputBase = InputBase;
 });

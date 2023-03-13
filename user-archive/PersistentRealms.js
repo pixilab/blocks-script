@@ -73,9 +73,19 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
         function PersistentRealms(env) {
             return _super.call(this, env) || this;
         }
-        PersistentRealms.prototype.save = function (saveName) {
+        PersistentRealms.prototype.save = function (saveName, realmsToSave) {
             if (!saveName)
                 saveName = DEFAULT_SAVE_NAME;
+            if (typeof realmsToSave == "string")
+                realmsToSave = [realmsToSave];
+            var realmsSet = null;
+            if (realmsToSave) {
+                realmsSet = {};
+                for (var _i = 0, realmsToSave_1 = realmsToSave; _i < realmsToSave_1.length; _i++) {
+                    var realmName = realmsToSave_1[_i];
+                    realmsSet[realmName] = true;
+                }
+            }
             return this.processRealms(saveName, this.saveRealm);
         };
         PersistentRealms.prototype.load = function (saveName) {
@@ -83,7 +93,7 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
                 saveName = DEFAULT_SAVE_NAME;
             return this.processRealms(saveName, this.loadRealm);
         };
-        PersistentRealms.prototype.processRealms = function (saveName, action) {
+        PersistentRealms.prototype.processRealms = function (saveName, action, desiredSet) {
             return __awaiter(this, void 0, void 0, function () {
                 var basePath, _a, _b, _i, realmName, path, realm;
                 return __generator(this, function (_c) {
@@ -98,6 +108,7 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
                         case 1:
                             if (!(_i < _a.length)) return [3, 4];
                             realmName = _a[_i];
+                            if (!(!desiredSet || desiredSet[realmName])) return [3, 3];
                             path = "".concat(basePath).concat(realmName);
                             realm = Realm_1.Realm[realmName];
                             return [4, action(path, realm)];
@@ -153,8 +164,9 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
         __decorate([
             (0, Metadata_1.callable)('save all Realm variables'),
             __param(0, (0, Metadata_1.parameter)("save name (defaults to \"".concat(DEFAULT_SAVE_NAME, "\")"), true)),
+            __param(1, (0, Metadata_1.parameter)("Realms to save, as an array of realm names (defualts to all)", true)),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
+            __metadata("design:paramtypes", [String, Object]),
             __metadata("design:returntype", Promise)
         ], PersistentRealms.prototype, "save", null);
         __decorate([

@@ -27,11 +27,24 @@ export class PersistentRealms extends Script {
 
 	@callable('save all Realm variables')
 	public save(
-		@parameter(`save name (defaults to "${DEFAULT_SAVE_NAME}")`, true) saveName?: string
+		@parameter(`save name (defaults to "${DEFAULT_SAVE_NAME}")`, true)
+		saveName?: string,
+		@parameter("Realms to save, as an array of realm names (defualts to all)", true)
+		realmsToSave?: string|string[]
 	): Promise<void> {
 		if (!saveName) saveName = DEFAULT_SAVE_NAME;
+		if (typeof realmsToSave == "string")
+			realmsToSave = [realmsToSave];	// Turn into array of names
+		// Then turn into a Set of names (actually a Dictionary of true values)
+		let realmsSet: Dictionary<true> = null;
+		if (realmsToSave) {
+			realmsSet = {};
+			for (let realmName of realmsToSave)
+				realmsSet[realmName] = true;
+		}
 		return this.processRealms(saveName, this.saveRealm);
 	}
+
 	@callable('load all Realm variables')
 	public load(
 		@parameter(`save name (defaults to "${DEFAULT_SAVE_NAME}")`, true) saveName?: string
@@ -40,14 +53,18 @@ export class PersistentRealms extends Script {
 		return this.processRealms(saveName, this.loadRealm);
 	}
 
-
-
-	private async processRealms(saveName: string, action: (path: string, realm: IRealm) => Promise<void>): Promise<void> {
+	private async processRealms(
+		saveName: string,
+		action: (path: string, realm: IRealm) => Promise<void>,
+		desiredSet?: Dictionary<true>
+	): Promise<void> {
 		const basePath = `${BASE_SAVE_PATH}${saveName}/`;
 		for (let realmName in Realm) {
-			const path = `${basePath}${realmName}`;
-			const realm: IRealm = Realm[realmName];
-			await action(path, realm);
+			if (!desiredSet || desiredSet[realmName]) {
+				const path = `${basePath}${realmName}`;
+				const realm: IRealm = Realm[realmName];
+				await action(path, realm);
+			}
 		}
 	}
 	private async saveRealm(path: string, realm: IRealm): Promise<void> {
@@ -76,6 +93,6 @@ interface IRealm {
 		value: number|string|boolean;		// Variable's value
 	}}
 }
-interface Dictionary<Group> {
-    [id: string]: Group;
+interface Dictionary<ElemType> {
+    [id: string]: ElemType;
 }

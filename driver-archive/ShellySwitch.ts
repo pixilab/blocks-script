@@ -1,12 +1,7 @@
-/*	Blocks MQTT driver for the Shelly range of switches:
-	https://www.shelly.cloud/en-se/products/switching-and-triggering
-	The default configuration is to manage a single relay and input. Other configurations can be specified
-	using the Custom Options field in the device's settings, in JSON notation, like this:
+/*	Base class for Shelly switch device, implementing common stuff across Gen 1 and Gen 2
+	Relay/Input devices.
 
-	{ "inputs": 1,
-	  "relays": 3 }
-
-	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 import {MQTT, NetworkTCP} from "system/Network";
@@ -22,35 +17,43 @@ interface CustomOptions {
 	relays?: number;
 }
 
-@driver('MQTT')
-export class ShellySwitch extends Driver<MQTT> {
+interface IShellySwitch {
+	mqtt: MQTT;
+	setOnline(online: boolean): void;
+
+}
+
+export abstract class ShellySwitch<Relay extends RelayBase, Input extends InputBase> extends Driver<MQTT> {
 	private mConnected = false;
 	private mOnline = false;
 
-	relay: IndexedProperty<Relay>;	// Treat those as indexed to manage multi-relay Shellys
-	input: IndexedProperty<Input>;	// Treat those as indexed to manage multi-relay Shellys
+	protected abstract relay: IndexedProperty<Relay>;
+	protected abstract input: IndexedProperty<Input>;
 
-	public constructor(public mqtt: MQTT) {
+	protected constructor(public mqtt: MQTT) {
 		super(mqtt);
-		let kRelayCount = 1;	// Number of output relays to manage
-		let kInputCount = 1;	// Number of input switches we expect
+	}
+
+	protected initialize() {
 		const mMaxRelaySwitchCount = 4;	// Largest number of inputs or relays expected
 
-		if (mqtt.options) {
-			let options = JSON.parse(mqtt.options) as CustomOptions;
-			kRelayCount = Math.max(1, Math.min(mMaxRelaySwitchCount, options.relays || 1))
-			kInputCount = Math.max(1, Math.min(mMaxRelaySwitchCount, options.inputs || 1))
+		// Determine how many relays and inptus to expose
+		let relayCount = 1;	// Number of output relays to manage
+		let inputCount = 1;	// Number of input switches we expect
+		const rawOptions = this.mqtt.options;
+		if (rawOptions) {	// Override defaults from above using options JSON data
+			let options = JSON.parse(rawOptions) as CustomOptions;
+			relayCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.relays || 0))
+			inputCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.inputs || 0))
 		}
 
-		this.relay = this.indexedProperty("relay", Relay);
-		for (let rix = 0; rix < kRelayCount; ++rix)
-			this.relay.push(new Relay(this, rix));
+		// Configure the specified number of relays and inputs
+		for (let rix = 0; rix < relayCount; ++rix)
+			this.relay.push(this.makeRelay(rix));
+		for (let six = 0; six < inputCount; ++six)
+			this.input.push(this.makeInput(six));
 
-		this.input = this.indexedProperty("input", Input);
-		for (let six = 0; six < kInputCount; ++six)
-			this.input.push(new Input(this, six));
-
-		mqtt.subscribeTopic("online", (sender, message) => {
+		this.mqtt.subscribeTopic("online", (sender, message) => {
 			// console.log("MQTT got online event", message.fullTopic, message.text);
 			this.setOnline(message.text === 'true');
 		});
@@ -79,41 +82,66 @@ export class ShellySwitch extends Driver<MQTT> {
 	private updateConnected() {
 		this.connected = this.mOnline && this.mqtt.connected;
 	}
+
+	protected abstract makeRelay(ix: number): Relay;
+	protected abstract makeInput(ix: number): Input;
 }
 
-class Relay {
+export abstract class RelayBase {
 	private mEnergized = false;
 	private inFeedback = false;	// Set to supress sending of data when setter called only for feedback purpose
 
-	constructor(private owner: ShellySwitch, index: number) {
-		owner.mqtt.subscribeTopic("relay/" + index, (sender, message) => {
+	constructor(protected owner: IShellySwitch, protected index: number) {
+	}
+
+	/*	Concrete class must call this init method (can't call from base ctor above since
+		abstract methods then aren't available
+	 */
+	protected init() {
+		this.owner.mqtt.subscribeTopic(this.feedbackTopic(), (sender, message) => {
 			// console.log("MQTT got event", message.fullTopic, message.text);
-			owner.setOnline(true);	// Implicitly makes me considered online, since I got some data
+			this.owner.setOnline(true);	// Implicitly makes me considered online, since I got some data
+			const newState = this.parseFeedback(message.text);
 			this.inFeedback = true;
-			this.energize = message.text === 'on';
+			this.on = newState;
 			this.inFeedback = false;
 		});
 	}
 
 	@property("True if output relay is energized")
-	get energize(): boolean {
+	get on(): boolean {
 		return this.mEnergized;
 	}
-	set energize(value: boolean) {
+	set on(value: boolean) {
 		this.mEnergized = value;
 		if (!this.inFeedback)
-			this.owner.mqtt.sendText(value ? "on" : "off", "relay/0/command");
+			this.sendCommand(value);
 	}
+
+	// Send message to topic causing the relay to be energized
+	protected abstract sendCommand(energize: boolean): void;
+
+	// Provide the topic to subscribe to for relay feedback
+	protected abstract feedbackTopic(): string;
+
+	// Parse feedback, returning the indicated status as true if relay is energized
+	protected abstract parseFeedback(feedback: string): boolean;
 }
 
-class Input {
+export abstract class InputBase {
 	private mActive = false;
 
-	constructor(owner: ShellySwitch, index: number) {
-		owner.mqtt.subscribeTopic("input/" + index, (sender, message) => {
+	constructor(protected owner: IShellySwitch, protected index: number) {
+	}
+
+	/*	Concrete class must call this init method (can't call from base ctor above since
+		abstract methods then aren't available
+	 */
+	protected init() {
+		this.owner.mqtt.subscribeTopic(this.feedbackTopic(), (sender, message) => {
 			// console.log("MQTT got input", message.fullTopic, message.text);
-			owner.setOnline(true);	// Implicitly makes me considered online, since I got some data
-			this.active = message.text === '1';
+			this.owner.setOnline(true);	// Implicitly makes me considered online, since I got some data
+			this.active = this.parseFeedback(message.text);
 		});
 	}
 
@@ -124,4 +152,10 @@ class Input {
 	set active(value: boolean) {
 		this.mActive = value;
 	}
+
+	// Provide the topic to subscribe to for input status
+	protected abstract feedbackTopic(): string;
+
+	// Parse feedback, returning the indicated status as true if input switch is closed
+	protected abstract parseFeedback(feedback: string): boolean;
 }
