@@ -3,13 +3,7 @@ define(["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resource = exports.max = exports.min = exports.list = exports.id = exports.spotParameter = exports.field = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.record = exports.driver = void 0;
     function driver(baseDriverType, typeSpecificMeta) {
-        var info = {
-            paramTypes: [baseDriverType],
-            info: typeSpecificMeta
-        };
-        return function (target) {
-            return Reflect.defineMetadata("pixi:driver", info, target);
-        };
+        return $metaSupport$.driverInfo(baseDriverType, typeSpecificMeta);
     }
     exports.driver = driver;
     function record(description) {

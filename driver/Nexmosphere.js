@@ -32,14 +32,18 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     var kNumInterfaces = 8;
     var Nexmosphere = (function (_super) {
         __extends(Nexmosphere, _super);
-        function Nexmosphere(socket) {
-            var _this = _super.call(this, socket) || this;
-            _this.socket = socket;
+        function Nexmosphere(connection) {
+            var _this = _super.call(this, connection) || this;
+            _this.connection = connection;
             _this.pollIndex = 0;
             _this.awake = false;
             _this.interfaces = [];
-            socket.autoConnect();
-            socket.subscribe('textReceived', function (sender, message) {
+            if (connection.options) {
+                kNumInterfaces = parseInt(connection.options);
+            }
+            log("ifaces", kNumInterfaces, connection.options);
+            connection.autoConnect();
+            connection.subscribe('textReceived', function (sender, message) {
                 if (message.text) {
                     if (_this.awake)
                         _this.handleMessage(message.text);
@@ -49,12 +53,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     }
                 }
             });
-            socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection' && socket.connected) {
+            connection.subscribe('connect', function (sender, message) {
+                if (message.type === 'Connection' && connection.connected) {
+                    log("Connected");
                     if (!_this.pollIndex)
                         _this.pollNext();
                 }
                 else {
+                    log("Disconnected");
                     if (!_this.interfaces.length)
                         _this.pollIndex = 0;
                 }
@@ -75,16 +81,52 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         Nexmosphere.prototype.pollNext = function () {
             var _this = this;
-            ++this.pollIndex;
-            this.queryPortConfig(this.pollIndex);
+            var ix = this.pollIndex + 1 | 0;
+            if (ix % 10 === 9) {
+                var tens = Math.round(ix / 10);
+                if (ix < 200) {
+                    switch (tens) {
+                        case 0:
+                            ix = 111;
+                            break;
+                        case 11:
+                        case 12:
+                        case 13:
+                        case 14:
+                        case 15:
+                            ix += 2;
+                            break;
+                        case 16:
+                            ix = 211;
+                            break;
+                    }
+                }
+                else {
+                    switch (tens % 10) {
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 4:
+                            ix += 2;
+                            break;
+                        case 5:
+                            if (ix >= 959)
+                                throw "Port number is out of range for the device.";
+                            ix += 311 - 259;
+                            break;
+                    }
+                }
+            }
+            this.pollIndex = ix;
+            this.queryPortConfig(ix);
             var pollAgain = false;
-            if (this.pollIndex <= kNumInterfaces)
+            if (this.pollIndex < kNumInterfaces)
                 pollAgain = true;
             else if (!this.interfaces.length) {
                 this.pollIndex = 0;
                 pollAgain = true;
             }
-            if (pollAgain && this.socket.connected)
+            if (pollAgain && this.connection.connected)
                 wait(500).then(function () { return _this.pollNext(); });
         };
         Nexmosphere.prototype.queryPortConfig = function (portNumber) {
@@ -94,12 +136,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.send(sensorMessage);
         };
         Nexmosphere.prototype.send = function (rawData) {
-            this.socket.sendText(rawData, "\r\n");
+            this.connection.sendText(rawData, "\r\n");
         };
         Nexmosphere.prototype.reInitialize = function () {
             _super.prototype.reInitialize.call(this);
         };
         Nexmosphere.prototype.handleMessage = function (msg) {
+            log("Data from device", msg);
             var parseResult = kRfidPacketParser.exec(msg);
             if (parseResult) {
                 this.lastTag = {
@@ -151,6 +194,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], Nexmosphere.prototype, "reInitialize", null);
         Nexmosphere = Nexmosphere_1 = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
+            (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
             __metadata("design:paramtypes", [Object])
         ], Nexmosphere);
         return Nexmosphere;
@@ -275,6 +319,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.driver.send(defaultSetting);
         };
         NfcInterface.prototype.receiveData = function (data) {
+            console.log(data);
             var splitData = data.split(":");
             var newTagData = splitData[1];
             var newTagEvent = splitData[0];
@@ -580,7 +625,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         return GenderInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
-    var DEBUG = false;
+    var DEBUG = true;
     function log() {
         var messages = [];
         for (var _i = 0; _i < arguments.length; _i++) {

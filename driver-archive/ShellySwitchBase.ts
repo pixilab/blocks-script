@@ -1,6 +1,11 @@
 /*	Base class for Shelly switch device, implementing common stuff across Gen 1 and Gen 2
 	Relay/Input devices.
 
+	IMPORTANT: This is NOT a driver. It's only the common stuff used by both the Gen 1 and
+	Gen 2 Shelly drivers. Thus, to use either of those types of Shellt switches, you need both
+	ShellySwitch and the appropriate ShellySwitchGen1 or ShellySwitchGen2 (it's OK to install
+	both those).
+
  	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
@@ -23,7 +28,7 @@ interface IShellySwitch {
 
 }
 
-export abstract class ShellySwitch<Relay extends RelayBase, Input extends InputBase> extends Driver<MQTT> {
+export abstract class ShellySwitchBase<Relay extends RelayBase, Input extends InputBase> extends Driver<MQTT> {
 	private mConnected = false;
 	private mOnline = false;
 

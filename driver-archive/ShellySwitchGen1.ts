@@ -1,7 +1,8 @@
 /*	Blocks MQTT driver for the Shelly range of switches, Gen 1, as documented here:
 	https://shelly-api-docs.shelly.cloud/gen1/#shelly-family-overview
 
-	IMPORTANT: You must configuring the Shelly device as appropriate for your MQTT broker.
+	IMPORTANT: In addition to this driver, you must also install ShellySwitchBase.
+	You must configuring the Shelly device as appropriate for your MQTT broker.
 	MQTT settings are found under Internet & Security / Advanced Developer Settings.
 
 	Note that newer devices may use the "Gen 2" protocol, for which a separate driver is provided.
@@ -18,7 +19,7 @@ import {MQTT, NetworkTCP} from "system/Network";
 import { Driver } from "system_lib/Driver";
 import { driver, property } from "system_lib/Metadata";
 import {IndexedProperty} from "../system_lib/ScriptBase";
-import {InputBase, RelayBase, ShellySwitch} from "./ShellySwitch";
+import {InputBase, RelayBase, ShellySwitchBase} from "./ShellySwitchBase";
 
 /**
  * Custom options accepted from Device settings, in JSON format
@@ -29,7 +30,7 @@ interface CustomOptions {
 }
 
 @driver('MQTT')
-export class ShellySwitchGen1 extends ShellySwitch<Relay, Input> {
+export class ShellySwitchGen1 extends ShellySwitchBase<Relay, Input> {
 
 	protected relay: IndexedProperty<Relay>;
 	protected input: IndexedProperty<Input>;

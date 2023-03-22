@@ -1,19 +1,22 @@
 /*
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2021 by Mattias Andersson.
+ *
+ * Number of "interface channels" in the Nexmosphere controller defaults to 8, but can be overridden in the drivers options by specifiying the
+ * highest expected interface channel number.
  */
 
 
-import {NetworkTCP} from "system/Network";
+import {NetworkTCP, SerialPort} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {callable, driver, min} from "system_lib/Metadata";
+import {callable, driver} from "system_lib/Metadata";
 import {PrimTypeSpecifier} from "../system/PubSub";
 import {PrimitiveValue} from "../system_lib/ScriptBase";
 
 const kRfidPacketParser = /^XR\[P(.)(\d+)]$/; //parse RFID tag detection from XR-DR01 Rfid element
 const kPortPacketParser = /^X(\d+)(A|B)\[(.+)]$/; //parse interfaceNumber and attached Data
 const kProductCodeParser = /D(\d+)B\[\w+\=(.+)]$/; // Controllers response to a product code request (D003B[TYPE]) controller response D001B[TYPE=XRDR1  ]
-const kNumInterfaces = 8; // Number of "interface channels" in the Nexmosphere box
+let kNumInterfaces = 8; // Number of "interface channels" in the Nexmosphere controller.
 
 
 // A simple map-like object type
@@ -22,9 +25,11 @@ interface Dictionary<TElem> { [id: string]: TElem; }
 // A class constructor function
 interface BaseInterfaceCtor<T> { new(driver: Nexmosphere, index: number): T ;}
 
+type ConnType = NetworkTCP | SerialPort;	// I accept either type of backend
 
 @driver('NetworkTCP', {port: 4001})
-export class Nexmosphere extends Driver<NetworkTCP> {
+@driver('SerialPort', {baudRate: 115200})
+export class Nexmosphere extends Driver<ConnType> {
 
 	// Map Nexmosphere model name to its implementation type
 	private static interfaceRegistry: Dictionary<BaseInterfaceCtor<BaseInterface>>;
@@ -33,14 +38,16 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	private readonly interfaces: BaseInterface[]; // Holds the interfaces discovered
 	private pollIndex = 0;		// Most recently polled interface
 	private awake = false;		// Set once we receive first data from device
-
-	public constructor(private socket: NetworkTCP) {
-		super(socket);
+	public constructor(private connection: ConnType) {
+		super(connection);
 		this.interfaces = [];	// Filled by data returned from polling the Nexmosphere
-
-		socket.autoConnect();
+		if (connection.options){
+			kNumInterfaces = parseInt(connection.options)
+		}
+		log("ifaces", kNumInterfaces, connection.options)
+		connection.autoConnect();
 		// Listen for data from the Nexmosphere bus
-		socket.subscribe('textReceived', (sender, message) => {
+		connection.subscribe('textReceived', (sender, message) => {
 			if (message.text) { // Ignore empty message, sometimes caused by separated CR/LF chars
 				if (this.awake)
 					this.handleMessage(message.text);
@@ -53,12 +60,14 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 		});
 
 		// Poll for connected interfaces once connected
-		socket.subscribe('connect', (sender, message) => {
+		connection.subscribe('connect', (sender, message) => {
 			// Initiate polling once connected and only first time (may reconnect several times)
-			if (message.type === 'Connection' && socket.connected) { // Just connected
+			if (message.type === 'Connection' && connection.connected) { // Just connected
+				log("Connected")
 				if (!this.pollIndex)	// Not yet polled for interfaces
 					this.pollNext();	// Get started
 			} else {	// COnnection failed or disconnected
+				log("Disconnected")
 				if (!this.interfaces.length)	// Got NO interfaces - re-start polling on next connect
 					this.pollIndex = 0;
 			}
@@ -76,18 +85,58 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	/*	Poll next port, then next one (if any) with some delay between each.
 	*/
 	private pollNext() {
-		++this.pollIndex;	// Poll next index
-		this.queryPortConfig(this.pollIndex);
+
+		let ix = this.pollIndex + 1 | 0; // |0 forces integer value
+
+		//Jumping to the next expected portrange if using an XM system with shop-bus.
+		if (ix % 10 === 9) {	// Skip all checks unless ix ends in 9 (which seems to be invariant)
+			const tens = Math.round(ix / 10);
+			if (ix < 200) {
+				switch (tens) {
+				case 0:
+					ix = 111;	// Big jump from 9 up to 111
+					break;
+				case 11:		// These ones skip from 119 to 121, etc
+				case 12:
+				case 13:
+				case 14:
+				case 15:
+					ix += 2;
+					break;
+				case 16:
+					ix = 211;
+					break;
+				}
+			} else {	// Deal with 200 and up
+				switch (tens % 10) {	// All the rest are the same based on 2nd index digit
+				case 1:		// Small skip - same as above
+				case 2:
+				case 3:
+				case 4:
+					ix += 2;
+					break;
+				case 5:
+					if (ix >= 959)
+						throw "Port number is out of range for the device."
+					ix += 311 - 259;	// Larger incremental jump, e.g. from 259 to 311
+					break;
+				}
+			}
+		}
+		this.pollIndex = ix;
+
+		this.queryPortConfig(ix);
 		let pollAgain = false;
-		if (this.pollIndex <= kNumInterfaces) // Poll next one soon
+		if (this.pollIndex < kNumInterfaces) // Poll next one soon
 			pollAgain = true;
 		else if (!this.interfaces.length) {	// Restart poll if no fish so far
 			this.pollIndex = 0;
 			pollAgain = true;
 		}
-		if (pollAgain && this.socket.connected)
+		if (pollAgain && this.connection.connected)
 			wait(500).then(() => this.pollNext());
 	}
+
 
 	/**
 	 * Send a query for what's connected to port (1-based)
@@ -104,7 +153,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	 */
 	@callable("Send raw string data to the Nexmosphere controller")
 	send(rawData: string) {
-		this.socket.sendText(rawData, "\r\n");
+		this.connection.sendText(rawData, "\r\n");
 	}
 
 	// Expose reInitialize to tasks to re-build set of dynamic properties
@@ -117,7 +166,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	 * Look for the messages we care about and act on those.
 	 */
 	private handleMessage(msg: string) {
-		//console.log("handleMessage", msg);
+		log("Data from device", msg);
 
 		var parseResult = kRfidPacketParser.exec(msg);
 		if (parseResult) {
@@ -152,7 +201,6 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 				console.warn("Unknown interface model - using generic 'unknown' type", modelInfo.modelCode);
 				this.interfaces[index] = new UnknownInterface(this, index);
 			}
-
 		} else {
 			console.warn("Unknown command received from controller", msg)
 		}
@@ -349,7 +397,7 @@ class NfcInterface extends BaseInterface {
 			//console.log("NFC default setting sent");
 	}
 	receiveData(data: string) {
-
+		console.log(data);
 		let splitData = data.split(":");
 		const newTagData = splitData[1];
 		const newTagEvent = splitData[0];
@@ -842,7 +890,7 @@ interface ModelInfo {
 /**
  Log messages, allowing my logging to be easily disabled in one place.
  */
- const DEBUG = false;	// Controls verbose logging
+ const DEBUG = true;	// Controls verbose logging
  function log(...messages: any[]) {
 	if (DEBUG)
 		// Set to false to disable my logging

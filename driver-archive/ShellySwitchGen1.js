@@ -22,7 +22,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Metadata", "./ShellySwitch"], function (require, exports, Metadata_1, ShellySwitch_1) {
+define(["require", "exports", "system_lib/Metadata", "./ShellySwitchBase"], function (require, exports, Metadata_1, ShellySwitchBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShellySwitchGen1 = void 0;
@@ -47,7 +47,7 @@ define(["require", "exports", "system_lib/Metadata", "./ShellySwitch"], function
             __metadata("design:paramtypes", [Object])
         ], ShellySwitchGen1);
         return ShellySwitchGen1;
-    }(ShellySwitch_1.ShellySwitch));
+    }(ShellySwitchBase_1.ShellySwitchBase));
     exports.ShellySwitchGen1 = ShellySwitchGen1;
     var Relay = (function (_super) {
         __extends(Relay, _super);
@@ -66,7 +66,7 @@ define(["require", "exports", "system_lib/Metadata", "./ShellySwitch"], function
             return feedback === 'on';
         };
         return Relay;
-    }(ShellySwitch_1.RelayBase));
+    }(ShellySwitchBase_1.RelayBase));
     var Input = (function (_super) {
         __extends(Input, _super);
         function Input(owner, index) {
@@ -81,5 +81,5 @@ define(["require", "exports", "system_lib/Metadata", "./ShellySwitch"], function
             return feedback === '1';
         };
         return Input;
-    }(ShellySwitch_1.InputBase));
+    }(ShellySwitchBase_1.InputBase));
 });

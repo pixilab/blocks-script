@@ -21,10 +21,9 @@ export var Network: { [deviceName: string]:
 };
 
 /**
- *	A TCP network port.
+ * A bidirectional "streaming" data connection, such as TCP or Serial data.
  */
-export interface NetworkTCP extends NetworkIPBase {
-	isOfTypeName(typeName: 'NetworkTCP'): NetworkTCP|null;	// Check subtype by name
+interface IStreamConnection {
 
 	readonly connected: boolean;		// True if I'm currently connected
 
@@ -42,7 +41,7 @@ export interface NetworkTCP extends NetworkIPBase {
 	 * Specify the maximum line length that can be received in text mode. The default value
 	 * is 256 bytes. Call this function if you need to accept longer strings. Note that it's
 	 * specified in BYTES, not characters (which may vary when using UTF-8 encoding, but
-	 * is the same as long as the text received is ASCII).
+	 * is the same if the text received is ASCII).
 	 *
 	 * IMPORTANT: To have any effect, call this function BEFORE connect/autoConnect.
 	 */
@@ -53,12 +52,14 @@ export interface NetworkTCP extends NetworkIPBase {
 	 */
 	autoConnect(rawBytesMode?: boolean): void;
 
-	/*	Explicit connection. Returns a "connect finished" promise.
+	/*	Open the data stream. Returns a "connect finished" promise.
 		Optionally set "raw" data mode if not already opened in text mode.
-		Uses the port specified in the UI unless explicitly overridden.
 	 */
-	connect(rawBytesMode?: boolean, port?:number): Promise<any>;
+	connect(rawBytesMode?: boolean): Promise<any>;
 
+	/**
+	 * Close the data stream
+	 */
 	disconnect(): void;			// Disconnect immediately
 
 	/*	Send text with a carriage return appended.
@@ -83,7 +84,7 @@ export interface NetworkTCP extends NetworkIPBase {
 		This default termination may be overridden by calling setReceiveFraming.
 		NOT applicable when connected in rawBytesMode.
 	 */
-	subscribe(event: 'textReceived', listener: (sender: NetworkTCP, message: {
+	subscribe(event: 'textReceived', listener: (emitter: IStreamConnection, message: {
 		text: string			// The text string that was received (excluding line terminator)
 	}) => void): void;
 
@@ -91,7 +92,7 @@ export interface NetworkTCP extends NetworkIPBase {
 		has no "framing" applied, and is just the next batch of bytes in the connection's
 		incoming data stream. Any framing needs to be applied by the receiveing driver/script.
 	 */
-	subscribe(event: 'bytesReceived', listener: (sender: NetworkTCP, message: {
+	subscribe(event: 'bytesReceived', listener: (emitter: IStreamConnection, message: {
 		rawData: number[]		// The raw data that was received
 	}) => void): void;
 
@@ -100,21 +101,82 @@ export interface NetworkTCP extends NetworkIPBase {
 	 * to the promise returned from connect(), and/or to be notified if the connection is
 	 * dropped.
 	 */
-	subscribe(event: 'connect', listener: (sender: NetworkTCP, message: {
+	subscribe(event: 'connect', listener: (emitter: IStreamConnection, message: {
 		type: 'Connection' |		// Connection state changed (check connected)
 			'ConnectionFailed'	// Connection attempt failed
 	}) => void): void;
 
 	// Object is being shut down
-	subscribe(event: 'finish', listener: (sender: NetworkTCP)=>void): void;
+	subscribe(event: 'finish', listener: (emitter: IStreamConnection)=>void): void;
+}
+
+/**
+ *	A TCP network port.
+ */
+export interface NetworkTCP extends IStreamConnection, NetworkIPBase {
+	isOfTypeName(typeName: 'NetworkTCP'): NetworkTCP|null;	// Check subtype by name
+
+	/*	Explicit connection. Returns a "connect finished" promise.
+		Optionally set "raw" data mode if not already opened in text mode.
+		Uses the port specified in the UI unless explicitly overridden.
+	 */
+	connect(rawBytesMode?: boolean, port?:number): Promise<any>;
 }
 
 /**
  * Metadata provided in the typeSpecificMeta parameter for the @driver decorator
- * for baseDriverType 'NetworkTCP'.
+ * for 'NetworkTCP' drivers
  */
 interface NetworkTCPDriverMetaData {
 	port: number;	// Default port, selected automatically when driver is chosen
+}
+
+/**
+	A serial port, typically managed through a USB-to-Serial adaptor
+	connected to a PIXILAB Player.
+
+	Note that connect, disconnect and autoConnect, while available, work a bit
+	differently for serial ports since those don't really have any concept
+ 	of being "connected" (in the sense of a TCP connection).
+	Here, "connect" establishes the connection to the Display Spot
+	providing the actual serial port as well as opens the serial
+	port there with specified settings (baudrate, etc). Whether the actual,
+	serial device is physically connected or working is not knowable at this
+	level (but could be determined by a driver, which then can provide its
+	own "connected" property that takes precedence).
+ */
+export interface SerialPort extends IStreamConnection, NetworkBase {
+	isOfTypeName(typeName: 'SerialPort'): SerialPort|null;	// Check subtype by name
+
+	/*	Request auto-connection behavior (default is OFF for a driver).
+		Optionally set "raw" data mode if not already opened in text mode.
+		Optionally also provide settings, which override any corresponding
+		settings in the @driver decorator.
+	 */
+	autoConnect(rawBytesMode?: boolean, settings?: SerialPortDriverMetaData): void;
+
+	/*	Open the data stream. Returns a "connect finished" promise.
+		Optionally set "raw" data mode if not already opened in text mode.
+		Optionally also provide settings, which override any corresponding
+		settings in the @driver decorator.
+	 */
+	connect(rawBytesMode?: boolean, settings?: SerialPortDriverMetaData): Promise<any>;
+}
+
+/**
+ * Metadata provided in the typeSpecificMeta parameter for the @driver decorator
+ * for 'SerialPort' drivers. May also be provided with the connect or autoConnect
+ * call, which then takes precedence.
+ */
+interface SerialPortDriverMetaData {
+	baudRate?: number;	// Default is 9600
+	dataBits?: number;	// Default is 8
+	stopBits?: number;	// Default is 1
+	parity?: 'none'|'even'|'odd';	// Default is none
+	flowControl?:'none'|'hardware';	// Default is none
+
+	usbVendorId?: number;	// Target specific USB serial port vendor
+	usbProductId?: number;	// target specific USB serial port product
 }
 
 /**
@@ -134,19 +196,19 @@ export interface NetworkUDP extends NetworkIPBase {
 	// // // // Notification subscription management // // // //
 
 	// Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
-	subscribe(event: 'textReceived', listener: (sender: NetworkUDP, message:{
+	subscribe(event: 'textReceived', listener: (emitter: NetworkUDP, message:{
 		text:string,			// The text string that was received
 		sender: string			// Address of peer data was received from
 	})=>void): void;
 
 	// Receive "raw" data containing the entire UDP packet.
-	subscribe(event: 'bytesReceived', listener: (sender: NetworkUDP, message:{
+	subscribe(event: 'bytesReceived', listener: (emitter: NetworkUDP, message:{
 		rawData:number[],		// The raw data that was received
 		sender: string			// Address of peer data was received from
 	})=>void): void;
 
 	// Object is being shut down
-	subscribe(event: 'finish', listener: (sender: NetworkUDP)=>void): void;
+	subscribe(event: 'finish', listener: (emitter: NetworkUDP)=>void): void;
 }
 
 /**
@@ -173,7 +235,7 @@ export interface MQTT extends NetworkBase {
 	/*	Subscribe to topic text from specified subTopic, interpreted as ASCII/UTF-8.
 		Specified subTopic may include MQTT wildcards.
 	 */
-	subscribeTopic(subTopic: string, listener: (sender: MQTT, message:{
+	subscribeTopic(subTopic: string, listener: (emitter: MQTT, message:{
 		text:string,			// The text string that was received
 		fullTopic: string,		// FULL topic path data was received from
 		subTopic: string		// Subscribed-to subTopic
@@ -187,19 +249,19 @@ export interface MQTT extends NetworkBase {
 	/**
 	 * Notification when broker connection fails or its state changes.
 	 */
-	subscribe(event: 'connect', listener: (sender: MQTT, message: {
+	subscribe(event: 'connect', listener: (emitter: MQTT, message: {
 		type:
 			'ConnectionFailed' | // Connection attempt failed
 			'Connection';		// Connection state changed (check connected)
 	}) => void): void;
 
 	// Object is being shut down
-	subscribe(event: 'finish', listener: (sender: MQTT)=>void): void;
+	subscribe(event: 'finish', listener: (emitter: MQTT)=>void): void;
 }
 
 /**
  * Metadata provided in the typeSpecificMeta parameter for the @driver decorator
- * for baseDriverType 'NetworkUDP'.
+ * for 'NetworkUDP' drivers.
  */
 interface NetworkUDPDriverMetaData {
 	port: number;	// Default port, selected automatically when driver is chosen

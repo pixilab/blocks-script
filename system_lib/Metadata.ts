@@ -7,6 +7,7 @@
 declare global {
 	var $metaSupport$: {
 		property(description ?: string, readOnly ?: boolean): any;
+		driverInfo(baseDriverType: string, typeSpecificMeta?: any): any;
 		callable(description ?: string): any;
 		fieldMetadata(metadataValue: any): {
 			(target: Function): void;
@@ -28,23 +29,16 @@ interface ICallableParamDescr {
 
 /**
  Decorator defining a class acting as a device driver. This class must have a constructor
- that takes the baseDriverType of low-level driver to attach to. The driverMeta passed in
+ that takes the baseDriverType of low-level driver to attach to. The typeSpecificMeta passed in
  is an object with keys/values that vary with the type of driver attached (see
- NetworkTCPDriverMetaData and NetworkUDPDriverMetaData in Network.ts for those driver
- types).
-
- Note to self: I must pass in baseDriverType as a string, since those are typically
- defined as interfaces (implemented in Java-land). So I can't get the param type
- using design:paramtypes since that then just says 'Object'.
+ NetworkTCPDriverMetaData, NetworkUDPDriverMetaData and SerialPortDriverMetaData in
+ Network.ts for those driver types).
  */
-export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP'|'MQTT', typeSpecificMeta?: any) {
-	const info: DriverInfo = {
-		paramTypes: [baseDriverType],
-		info: typeSpecificMeta
-	};
-	return function(target: any): void {
-		return Reflect.defineMetadata("pixi:driver", info, target);
-	}
+export function driver(
+	baseDriverType: 'NetworkTCP'|'NetworkUDP'|'MQTT'|'SerialPort',
+	typeSpecificMeta?: any
+) {
+	return $metaSupport$.driverInfo(baseDriverType, typeSpecificMeta);
 }
 
 // Implements the @record decorator, marking a class as a data store DTO
@@ -52,13 +46,6 @@ export function record(description?: string) {
 	return $metaSupport$.record(description);
 }
 
-/**
- What I attach to my pixi:driver metadata key.
- */
-interface DriverInfo {
-	info: any;
-	paramTypes: string[];
-}
 
 // Set of valid role identifiers
 type RoleRequired = 'Admin'|'Manager'|'Creator'|'Editor'|'Contributor'|'Staff'|'Spot';

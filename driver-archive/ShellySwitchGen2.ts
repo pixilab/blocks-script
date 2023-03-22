@@ -1,9 +1,10 @@
 /*	Blocks MQTT driver for the Shelly range of switches, Gen 2, as documented here:
 	https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Mqtt
 
-	IMPORTANT: For inputs and relay status feedback to work, you must enable the
+	IMPORTANT: In addition to this driver, you must also install ShellySwitchBase.
+	For inputs and relay status feedback to work, you must enable the
 	"Generic status update over MQTT" setting under Settings/MQTT for the device,
-	in addition to configuring the device as appropriate for your MQTT broker.
+	and also configure the Shelly as appropriate for your MQTT broker.
 
 	Note that older devices may use the "Gen 1" protocol, for which a separate driver is provided.
 
@@ -20,11 +21,11 @@ import {MQTT, NetworkTCP} from "system/Network";
 import { Driver } from "system_lib/Driver";
 import { driver, property } from "system_lib/Metadata";
 import {IndexedProperty} from "../system_lib/ScriptBase";
-import {InputBase, RelayBase, ShellySwitch} from "./ShellySwitch";
+import {InputBase, RelayBase, ShellySwitchBase} from "./ShellySwitchBase";
 
 
 @driver('MQTT')
-export class ShellySwitchGen2 extends ShellySwitch<Relay, Input> {
+export class ShellySwitchGen2 extends ShellySwitchBase<Relay, Input> {
 
 	protected relay: IndexedProperty<Relay>;
 	protected input: IndexedProperty<Input>;
