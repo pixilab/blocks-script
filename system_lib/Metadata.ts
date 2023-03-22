@@ -5,7 +5,7 @@
 
 
 declare global {
-	var $metaSupport$: {
+	var $metaSupport$: {	// From $core
 		property(description ?: string, readOnly ?: boolean): any;
 		driverInfo(baseDriverType: string, typeSpecificMeta?: any): any;
 		callable(description ?: string): any;
@@ -65,7 +65,7 @@ export function roleRequired(role: RoleRequired) {
  the property's value.
  */
 export function property(description?: string, readOnly?: boolean) {
-	return $metaSupport$.property(description, readOnly); // Impl in $core
+	return $metaSupport$.property(description, readOnly);
 }
 
 /**
@@ -73,7 +73,7 @@ export function property(description?: string, readOnly?: boolean) {
  with optional description.
  */
 export function callable(description?: string) {
-	return $metaSupport$.callable(description); // Impl in $core
+	return $metaSupport$.callable(description);
 }
 
 /**
@@ -85,7 +85,7 @@ export function parameter(description?: string, optional?: boolean) {
 	return $metaSupport$.callableParameter({
 		descr: description || "",
 		opt: optional || false
-	}); // Impl in $core
+	});
 }
 
 
@@ -184,6 +184,7 @@ different URL, provoking authentication if not already done:
 
  	/rest/script/invoke-auth/<user-script-name>/<method-name>
 
+To protect an endpoint with an API key, add the @apiKey decorator.
  */
 export function resource(
 	roleRequired?: RoleRequired, // Authentication role required to call, or undefined
@@ -198,3 +199,16 @@ export function resource(
 	}
 }
 
+/**
+ Decorator specifying an API key to be used for calling a function also decorated
+ with @resource. The mandatory parameter spcifies the name of an apiKey, as defined
+ under apiKeys in Blocks configuration file.
+
+ IMPORTANT: Use and enforce HTTPS for all requests to Blocks to make sure any API keys
+ are not sent as clear text, if sent over an unsecure network.
+ */
+export function apiKey(keyName: string) {
+	return function(target: any, propertyKey: string) {
+		Reflect.defineMetadata("pixi:apiKey", keyName, target, propertyKey);
+	}
+}
