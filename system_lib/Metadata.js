@@ -1,7 +1,7 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.resource = exports.max = exports.min = exports.list = exports.id = exports.spotParameter = exports.field = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.record = exports.driver = void 0;
+    exports.apiKey = exports.resource = exports.max = exports.min = exports.list = exports.id = exports.spotParameter = exports.field = exports.parameter = exports.callable = exports.property = exports.roleRequired = exports.record = exports.driver = void 0;
     function driver(baseDriverType, typeSpecificMeta) {
         return $metaSupport$.driverInfo(baseDriverType, typeSpecificMeta);
     }
@@ -69,4 +69,10 @@ define(["require", "exports"], function (require, exports) {
         };
     }
     exports.resource = resource;
+    function apiKey(keyName) {
+        return function (target, propertyKey) {
+            Reflect.defineMetadata("pixi:apiKey", keyName, target, propertyKey);
+        };
+    }
+    exports.apiKey = apiKey;
 });

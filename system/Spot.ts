@@ -398,8 +398,9 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
  */
 export interface Visitor<RecordType extends RecordBase> extends ControllableSpot {
 
-	readonly identity: string;		// Persistent, system-unique visitor (e.g. mobile phone) identifier
-	readonly record: RecordType | null;		// Associated data record, if any
+	readonly identity: string;			// Persistent, system-unique visitor (e.g. mobile phone) identifier
+	readonly record: RecordType | null;	// Associated data record, if any
+	readonly mobileSpot: MobileSpot;	// Provides access to my originating MobileSpot.
 
 	/**
 	 *	Event fired when various spot state changes occur.

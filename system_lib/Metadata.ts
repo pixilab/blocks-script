@@ -100,12 +100,16 @@ export function field(description?: string) {
 
 
 /**
- * Mark a field in specified Record as a Spot Parameter, making its value readable and
- * writable also as such.
+ * Mark a field in specified Record as a Visitor Spot Parameter, making its value
+ * readable and writable also as such. Note that this functionality applies
+ * only to the Visitor spot (if any) used to interact with the individual visitor.
+ * Specifically, it does NOT make the data available to any Display Spots visited
+ * using a Locator or similar mechanism. Here you must explicitly set the properties
+ * appearing on such a Display Spot by other means.
  *
- * IMPORTANT: You must also add a parameter with the same name in the Spot's settings
- * for this to work. Merely marking it with @spotParameter() in the record definition
- * is not sufficient.
+ * IMPORTANT: You must also add a parameter with the same name in the Block being shown
+ * onthe Visitor Spot or the Visitor Spot's settings. Merely decorating the field with
+ * @spotParameter() in the record definition is not sufficient.
  */
 export function spotParameter() {
 	return $metaSupport$.spotParameter();
@@ -115,7 +119,6 @@ export function spotParameter() {
  * Decorator for item ID field, if any. For feed script, only a single ID field
  * may be specified. A Record may use multiple ID fields, where each one can
  * be used to look up the Record instance. Typically of string or number type.
- * Read-only by definition (since it's used as lookup key).
  */
 export function id(description?: string) {
 	return $metaSupport$.fieldMetadata( {description: description, id: true} );
