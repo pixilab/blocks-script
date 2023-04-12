@@ -30,8 +30,8 @@ export interface SpotGroup extends SpotGroupItem {
  * Basic Spot properties available for most spot types.
  */
 export interface BaseSpot {
-	readonly fullName: string;		// Full path name
 	readonly name: string;			// Leaf spot name
+	readonly fullName: string;		// Full path to this system object
 
 	/**
 	 Default block name as "group/leaf", or empty string

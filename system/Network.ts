@@ -3,8 +3,7 @@
  * Created 2017 by Mike Fahl.
  */
 
-import {ScriptBaseEnv} from "system_lib/ScriptBase";
-import {Driver} from "../system_lib/Driver";
+import {Driver, DriverFacade} from "../system_lib/Driver";
 
 /**
  * Access Network subsystem by system by its assigned name. Note that the object
@@ -17,13 +16,13 @@ import {Driver} from "../system_lib/Driver";
  */
 export var Network: { [deviceName: string]:
 	NetworkTCP | NetworkUDP |		// Applies when no driver is assigned
-	Driver<NetworkTCP|NetworkUDP>;	// Driver subclass (when driver is assigned)
+	Driver<NetworkTCP|NetworkUDP|SerialPort|MQTT>;	// Driver subclass (when driver is assigned)
 };
 
 /**
  * A bidirectional "streaming" data connection, such as TCP or Serial data.
  */
-interface IStreamConnection {
+interface IStreamConnection extends DriverFacade {
 
 	readonly connected: boolean;		// True if I'm currently connected
 
@@ -269,20 +268,16 @@ interface NetworkUDPDriverMetaData {
 }
 
 /**
- * Base interface declaring some common functionality used network devices.
+ * Base interface declaring some common functionality used by network devices.
  */
-interface NetworkBase extends ScriptBaseEnv {
+export interface NetworkBase extends DriverFacade {
 	// Check subtype by name (e.g., "NetworkUDP")
 	isOfTypeName(typeName: string): NetworkBase|null;
 
-	readonly name: string;			// Leaf name of this network device
-	readonly fullName: string;		// Full name, including enclosing containers
 	readonly enabled: boolean;		// True if I'm enabled (else won't send data)
 	readonly address: string;		// Resolved or initial address
 	readonly options: string;		// Any "Custom Options" assigned to the Network Device
 	readonly addressString: string;	// IP address exactly as set on the Network Device page.
-
-	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 }
 
 /**
@@ -291,8 +286,8 @@ interface NetworkBase extends ScriptBaseEnv {
  */
 interface NetworkIPBase extends NetworkBase {
 
-	address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
-	port: number;			// Port number sending data to
+	readonly address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
+	readonly port: number;			// Port number sending data to
 
 	/**
 	 * Send wake-on-LAN message to this device or device with specified MAC address,

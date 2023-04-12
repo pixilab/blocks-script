@@ -30,10 +30,10 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
         __extends(Driver, _super);
         function Driver(scriptFacade) {
             var _this = _super.call(this, scriptFacade) || this;
-            if (scriptFacade.isOfTypeName("NetworkTCP")) {
-                scriptFacade.subscribe('connect', function (sender, message) {
+            if (!scriptFacade.isOfTypeName("NetworkUDP")) {
+                _this.__scriptFacade.subscribe('connect', function (sender, message) {
                     if (message.type === 'Connection')
-                        _this.__scriptFacade.changed('connected');
+                        _this.changed('connected');
                 });
             }
             return _this;
@@ -41,6 +41,28 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
         Object.defineProperty(Driver.prototype, "connected", {
             get: function () {
                 return this.__scriptFacade.connected ? true : false;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(Driver.prototype, "name", {
+            get: function () { return this.__scriptFacade.name; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(Driver.prototype, "fullName", {
+            get: function () { return this.__scriptFacade.fullName; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(Driver.prototype, "driverName", {
+            get: function () { return this.__scriptFacade.driverName; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(Driver.prototype, "deviceType", {
+            get: function () {
+                return this.__scriptFacade.deviceType;
             },
             enumerable: false,
             configurable: true
@@ -53,6 +75,26 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [])
         ], Driver.prototype, "connected", null);
+        __decorate([
+            Meta.property("Leaf name of this object"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], Driver.prototype, "name", null);
+        __decorate([
+            Meta.property("Full, dot-separated path to this object"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], Driver.prototype, "fullName", null);
+        __decorate([
+            Meta.property("Name of associated Device Driver"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], Driver.prototype, "driverName", null);
+        __decorate([
+            Meta.property("Type of low level driver"),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], Driver.prototype, "deviceType", null);
         return Driver;
     }(ScriptBase_1.ScriptBase));
     exports.Driver = Driver;

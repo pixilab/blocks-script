@@ -55,7 +55,7 @@ interface ReqOpts {
 	// Options applicable only for interpreting CSV data.
 	columnSeparator?: string, 	// Separator character; default is ',' other common option is '\t'
 	escapeChar?: string,		// Escape character; default is none
-	quote?: string | false 		// Quote charagter to use, none if false; default is '"'
+	quote?: string | false 		// Quote character to use, none if false; default is '"'
 }
 
 /**
