@@ -8,6 +8,7 @@
  * absolute paths:
  *
  *	/public/*	Specifies a path under public
+ *	/auth/*		Specifies a path under auth (similar to public, but requires login)
  *	/temp/*		Specifies a path under temp
  *
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
