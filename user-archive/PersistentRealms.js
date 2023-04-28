@@ -74,8 +74,6 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
             return _super.call(this, env) || this;
         }
         PersistentRealms.prototype.save = function (saveName, realmsToSave) {
-            if (!saveName)
-                saveName = DEFAULT_SAVE_NAME;
             if (typeof realmsToSave == "string")
                 realmsToSave = [realmsToSave];
             var realmsSet = null;
@@ -86,20 +84,18 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
                     realmsSet[realmName] = true;
                 }
             }
-            return this.processRealms(saveName, this.saveRealm);
+            return PersistentRealms.processRealms(saveName || DEFAULT_SAVE_NAME, PersistentRealms.saveRealm);
         };
         PersistentRealms.prototype.load = function (saveName) {
-            if (!saveName)
-                saveName = DEFAULT_SAVE_NAME;
-            return this.processRealms(saveName, this.loadRealm);
+            return PersistentRealms.processRealms(saveName || DEFAULT_SAVE_NAME, PersistentRealms.loadRealm);
         };
-        PersistentRealms.prototype.processRealms = function (saveName, action, desiredSet) {
+        PersistentRealms.processRealms = function (dirName, action, desiredSet) {
             return __awaiter(this, void 0, void 0, function () {
                 var basePath, _a, _b, _i, realmName, path, realm;
                 return __generator(this, function (_c) {
                     switch (_c.label) {
                         case 0:
-                            basePath = "".concat(BASE_SAVE_PATH).concat(saveName, "/");
+                            basePath = "".concat(BASE_SAVE_PATH).concat(dirName, "/");
                             _a = [];
                             for (_b in Realm_1.Realm)
                                 _a.push(_b);
@@ -123,20 +119,14 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
                 });
             });
         };
-        PersistentRealms.prototype.saveRealm = function (path, realm) {
-            return __awaiter(this, void 0, void 0, function () {
-                var dict, varName, json;
-                return __generator(this, function (_a) {
-                    dict = {};
-                    for (varName in realm.variable) {
-                        dict[varName] = realm.variable[varName].value;
-                    }
-                    json = JSON.stringify(dict);
-                    return [2, SimpleFile_1.SimpleFile.write(path, json)];
-                });
-            });
+        PersistentRealms.saveRealm = function (path, realm) {
+            var dict = {};
+            for (var varName in realm.variable)
+                dict[varName] = realm.variable[varName].value;
+            var json = JSON.stringify(dict);
+            return SimpleFile_1.SimpleFile.write(path, json);
         };
-        PersistentRealms.prototype.loadRealm = function (path, realm) {
+        PersistentRealms.loadRealm = function (path, realm) {
             return __awaiter(this, void 0, void 0, function () {
                 var fileExists, json, dict, varName, value;
                 return __generator(this, function (_a) {
@@ -144,33 +134,32 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
                         case 0: return [4, SimpleFile_1.SimpleFile.exists(path)];
                         case 1:
                             fileExists = _a.sent();
-                            if (!fileExists)
-                                return [2];
+                            if (!fileExists) return [3, 3];
                             return [4, SimpleFile_1.SimpleFile.read(path)];
                         case 2:
                             json = _a.sent();
                             dict = JSON.parse(json);
                             for (varName in realm.variable) {
                                 value = dict[varName];
-                                if (value !== undefined) {
+                                if (value !== undefined)
                                     realm.variable[varName].value = value;
-                                }
                             }
-                            return [2];
+                            _a.label = 3;
+                        case 3: return [2];
                     }
                 });
             });
         };
         __decorate([
             (0, Metadata_1.callable)('save all Realm variables'),
-            __param(0, (0, Metadata_1.parameter)("save name (defaults to \"".concat(DEFAULT_SAVE_NAME, "\")"), true)),
+            __param(0, (0, Metadata_1.parameter)("Directory name to save into (defaults to \"".concat(DEFAULT_SAVE_NAME, "\")"), true)),
             __param(1, (0, Metadata_1.parameter)("Realms to save, as an array of realm names (defualts to all)", true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, Object]),
             __metadata("design:returntype", Promise)
         ], PersistentRealms.prototype, "save", null);
         __decorate([
-            (0, Metadata_1.callable)('load all Realm variables'),
+            (0, Metadata_1.callable)('load all Realm variables saved in specified directory'),
             __param(0, (0, Metadata_1.parameter)("save name (defaults to \"".concat(DEFAULT_SAVE_NAME, "\")"), true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String]),
