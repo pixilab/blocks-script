@@ -12,6 +12,7 @@ import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {driver, max, min, property} from "system_lib/Metadata";
 import {PrimTypeSpecifier} from "../system/PubSub";
+import {PrimitiveValue} from "../system_lib/ScriptBase";
 
 /**
  * Fixed position slots in commands and replies byte arrays accoding to the MDC protocol spec.
@@ -439,7 +440,7 @@ class Command {
  Property state for a single property of type T, with current and wanted values, allowing
  for desired-state-tracking behavior in the driver, rather than command queueing.
  */
-abstract class Prop<T> {
+abstract class Prop<T extends PrimitiveValue> {
 	protected wanted: T;		// Desired (set by user) state, if any
 
 	protected constructor(
