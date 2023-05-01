@@ -84,7 +84,7 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
                     realmsSet[realmName] = true;
                 }
             }
-            return PersistentRealms.processRealms(saveName || DEFAULT_SAVE_NAME, PersistentRealms.saveRealm);
+            return PersistentRealms.processRealms(saveName || DEFAULT_SAVE_NAME, PersistentRealms.saveRealm, realmsSet);
         };
         PersistentRealms.prototype.load = function (saveName) {
             return PersistentRealms.processRealms(saveName || DEFAULT_SAVE_NAME, PersistentRealms.loadRealm);
