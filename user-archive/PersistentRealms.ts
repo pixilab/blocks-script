@@ -41,14 +41,21 @@ export class PersistentRealms extends Script {
 			for (let realmName of realmsToSave)
 				realmsSet[realmName] = true;
 		}
-		return PersistentRealms.processRealms(saveName || DEFAULT_SAVE_NAME, PersistentRealms.saveRealm);
+		return PersistentRealms.processRealms(
+			saveName || DEFAULT_SAVE_NAME,
+			PersistentRealms.saveRealm,
+			realmsSet
+		);
 	}
 
 	@callable('load all Realm variables saved in specified directory')
 	public load(
 		@parameter(`save name (defaults to "${DEFAULT_SAVE_NAME}")`, true) saveName?: string
 	): Promise<void> {
-		return PersistentRealms.processRealms(saveName || DEFAULT_SAVE_NAME, PersistentRealms.loadRealm);
+		return PersistentRealms.processRealms(
+			saveName || DEFAULT_SAVE_NAME,
+			PersistentRealms.loadRealm
+		);
 	}
 
 	/**
