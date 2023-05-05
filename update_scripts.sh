@@ -26,7 +26,7 @@ for dir in "${dirs_to_archive[@]}"; do
   zip -r -q "${zip_file}" "${dir_name}"
 done
 
-git -q clone https://github.com/pixilab/blocks-script.git
+git  clone https://github.com/jerrymattias/blocks-script.git
 
 echo "Merging new files into the script directory"
 cp -r  blocks-script/* .
