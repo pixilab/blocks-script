@@ -19,6 +19,6 @@ cp -r  blocks-script/* .
 echo "Cleaning up"
 rm -r -f blocks-script
 echo "Done. "
-echo "A backupfile was created from the old directory before the merge: "$zip_file"
+echo "A backupfile was created from the old directory before the merge: ${zip_file}"
 
 
