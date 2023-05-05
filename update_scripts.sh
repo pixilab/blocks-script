@@ -11,7 +11,7 @@ zip_file="user_driver_backup_$(date +%Y-%m-%d_%H-%M-%S).zip"
 zip -r -q "${zip_file}" driver driver-archive user user-archive
 
 echo "Getting the latest script-base from Pixilab"
-git clone https://github.com/jerrymattias/blocks-script.git
+git clone https://github.com/pixilab/blocks-script.git
 
 echo "Merging new files into the script directory"
 cp -r  blocks-script/* .
