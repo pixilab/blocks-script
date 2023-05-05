@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+"#!/usr/bin/env bash
 
 # Setup script for updating to the latest script base from github.
 # Script is assumed to run as the user running blocks, normally pixi-server, or blocks.
@@ -18,7 +18,7 @@ cp -r  blocks-script/* .
 
 echo "Cleaning up"
 rm -r -f blocks-script
-echo "Done. 
-echo "A backupfile was created from the old directory before the merge: "$zip_file
+echo "Done. "
+echo "A backupfile was created from the old directory before the merge: "$zip_file"
 
 
