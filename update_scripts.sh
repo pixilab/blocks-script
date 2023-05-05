@@ -1,4 +1,4 @@
-"#!/usr/bin/env bash
+#!/usr/bin/env bash
 
 # Setup script for updating to the latest script base from github.
 # Script is assumed to run as the user running blocks, normally pixi-server, or blocks.
