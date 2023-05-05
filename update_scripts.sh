@@ -11,6 +11,7 @@ dirs_to_archive=(
   "user"
   "user-archive"
 )
+echo "Creating backups of the common user directories in case of overwriting customized files"
 
 # Set the name of the zip file
 zip_file="user_driver_backup_$(date +%Y-%m-%d_%H-%M-%S).zip"
@@ -22,12 +23,14 @@ for dir in "${dirs_to_archive[@]}"; do
   dir_name="$(basename "${dir}")"
 
   # Add the directory to the zip file
-  zip -r "${zip_file}" "${dir_name}"
+  zip -r -q "${zip_file}" "${dir_name}"
 done
 
-git clone https://github.com/pixilab/blocks-script.git
+git -q clone https://github.com/pixilab/blocks-script.git
 
-cp -r blocks-script/* .
+echo "Merging new files into the script directory"
+cp -r  blocks-script/* .
 
+echo "Cleaning up"
 rm -r -f blocks-script
-
+echo "A backupfile was created from the old directory before the merge: "$zip_file
