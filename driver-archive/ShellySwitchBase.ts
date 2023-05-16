@@ -40,16 +40,16 @@ export abstract class ShellySwitchBase<Relay extends RelayBase, Input extends In
 	}
 
 	protected initialize() {
-		const mMaxRelaySwitchCount = 4;	// Largest number of inputs or relays expected
+		const kMaxRelaySwitchCount = 8;	// Largest number of inputs or relays expected
 
-		// Determine how many relays and inptus to expose
-		let relayCount = 1;	// Number of output relays to manage
-		let inputCount = 1;	// Number of input switches we expect
+		// Determine how many relays and inptus to expose, with reasonable default values
+		let relayCount = 4;	// Number of output relays to manage
+		let inputCount = 4;	// Number of input switches we expect
 		const rawOptions = this.mqtt.options;
 		if (rawOptions) {	// Override defaults from above using options JSON data
 			let options = JSON.parse(rawOptions) as CustomOptions;
-			relayCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.relays || 0))
-			inputCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.inputs || 0))
+			relayCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.relays || 0))
+			inputCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.inputs || 0))
 		}
 
 		// Configure the specified number of relays and inputs

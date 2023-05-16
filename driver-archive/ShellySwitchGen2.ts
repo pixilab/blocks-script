@@ -8,11 +8,10 @@
 
 	Note that older devices may use the "Gen 1" protocol, for which a separate driver is provided.
 
-	The default configuration is to manage a single relay and input. Other configurations can be specified
+	The default configuration is to manage four relays and inputs. Other configurations can be specified
 	using the Custom Options field in the device's settings, in JSON notation, like this:
 
-	{ "inputs": 1,
-	  "relays": 3 }
+	{ "inputs": 1, "relays": 3 }
 
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */

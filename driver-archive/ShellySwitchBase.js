@@ -37,14 +37,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         }
         ShellySwitchBase.prototype.initialize = function () {
             var _this = this;
-            var mMaxRelaySwitchCount = 4;
-            var relayCount = 1;
-            var inputCount = 1;
+            var kMaxRelaySwitchCount = 8;
+            var relayCount = 4;
+            var inputCount = 4;
             var rawOptions = this.mqtt.options;
             if (rawOptions) {
                 var options = JSON.parse(rawOptions);
-                relayCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.relays || 0));
-                inputCount = Math.max(0, Math.min(mMaxRelaySwitchCount, options.inputs || 0));
+                relayCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.relays || 0));
+                inputCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.inputs || 0));
             }
             for (var rix = 0; rix < relayCount; ++rix)
                 this.relay.push(this.makeRelay(rix));
