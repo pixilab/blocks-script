@@ -31,7 +31,7 @@ define(["require", "exports", "system_lib/Metadata", "./MqttSwitchBase"], functi
         function ShellySwitchGen1(mqtt) {
             var _this = _super.call(this, mqtt) || this;
             _this.mqtt = mqtt;
-            _this.output = _this.indexedProperty("relay", Output);
+            _this.output = _this.indexedProperty("output", Output);
             _this.input = _this.indexedProperty("input", Input);
             _super.prototype.initialize.call(_this);
             return _this;

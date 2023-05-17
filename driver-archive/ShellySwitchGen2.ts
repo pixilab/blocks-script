@@ -11,7 +11,7 @@
 	The default configuration is to manage four relays and inputs. Other configurations can be specified
 	using the Custom Options field in the device's settings, in JSON notation, like this:
 
-	{ "inputs": 1, "relays": 3 }
+	{ "inputs": 1, "outputs": 3 }
 
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
@@ -31,7 +31,7 @@ export class ShellySwitchGen2 extends MqttSwitchBase<Output, Input> {
 
 	public constructor(public mqtt: MQTT) {
 		super(mqtt);
-		this.output = this.indexedProperty("relay", Output);
+		this.output = this.indexedProperty("output", Output);
 		this.input = this.indexedProperty("input", Input);
 		super.initialize();
 	}
