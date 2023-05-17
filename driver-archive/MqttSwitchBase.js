@@ -25,36 +25,36 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.InputBase = exports.RelayBase = exports.ShellySwitchBase = void 0;
-    var ShellySwitchBase = (function (_super) {
-        __extends(ShellySwitchBase, _super);
-        function ShellySwitchBase(mqtt) {
+    exports.InputBase = exports.OutputBase = exports.MqttSwitchBase = void 0;
+    var MqttSwitchBase = (function (_super) {
+        __extends(MqttSwitchBase, _super);
+        function MqttSwitchBase(mqtt) {
             var _this = _super.call(this, mqtt) || this;
             _this.mqtt = mqtt;
             _this.mConnected = false;
             _this.mOnline = false;
             return _this;
         }
-        ShellySwitchBase.prototype.initialize = function () {
+        MqttSwitchBase.prototype.initialize = function () {
             var _this = this;
-            var kMaxRelaySwitchCount = 8;
-            var relayCount = 4;
+            var kMaxIOCount = 32;
+            var outputCount = 4;
             var inputCount = 4;
             var rawOptions = this.mqtt.options;
             if (rawOptions) {
                 var options = JSON.parse(rawOptions);
-                relayCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.relays || 0));
-                inputCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.inputs || 0));
+                outputCount = Math.max(0, Math.min(kMaxIOCount, options.outputs || 0));
+                inputCount = Math.max(0, Math.min(kMaxIOCount, options.inputs || 0));
             }
-            for (var rix = 0; rix < relayCount; ++rix)
-                this.relay.push(this.makeRelay(rix));
+            for (var rix = 0; rix < outputCount; ++rix)
+                this.output.push(this.makeOutput(rix));
             for (var six = 0; six < inputCount; ++six)
                 this.input.push(this.makeInput(six));
             this.mqtt.subscribeTopic("online", function (sender, message) {
                 _this.setOnline(message.text === 'true');
             });
         };
-        Object.defineProperty(ShellySwitchBase.prototype, "connected", {
+        Object.defineProperty(MqttSwitchBase.prototype, "connected", {
             get: function () {
                 return this.mConnected;
             },
@@ -64,31 +64,31 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: false,
             configurable: true
         });
-        ShellySwitchBase.prototype.setOnline = function (online) {
+        MqttSwitchBase.prototype.setOnline = function (online) {
             if (this.mOnline !== online) {
                 this.mOnline = online;
                 this.updateConnected();
             }
         };
-        ShellySwitchBase.prototype.updateConnected = function () {
+        MqttSwitchBase.prototype.updateConnected = function () {
             this.connected = this.mOnline && this.mqtt.connected;
         };
         __decorate([
             (0, Metadata_1.property)("Connected to broker and device online", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
-        ], ShellySwitchBase.prototype, "connected", null);
-        return ShellySwitchBase;
+        ], MqttSwitchBase.prototype, "connected", null);
+        return MqttSwitchBase;
     }(Driver_1.Driver));
-    exports.ShellySwitchBase = ShellySwitchBase;
-    var RelayBase = (function () {
-        function RelayBase(owner, index) {
+    exports.MqttSwitchBase = MqttSwitchBase;
+    var OutputBase = (function () {
+        function OutputBase(owner, index) {
             this.owner = owner;
             this.index = index;
-            this.mEnergized = false;
+            this.active = false;
             this.inFeedback = false;
         }
-        RelayBase.prototype.init = function () {
+        OutputBase.prototype.init = function () {
             var _this = this;
             this.owner.mqtt.subscribeTopic(this.feedbackTopic(), function (sender, message) {
                 _this.owner.setOnline(true);
@@ -98,12 +98,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 _this.inFeedback = false;
             });
         };
-        Object.defineProperty(RelayBase.prototype, "on", {
+        Object.defineProperty(OutputBase.prototype, "on", {
             get: function () {
-                return this.mEnergized;
+                return this.active;
             },
             set: function (value) {
-                this.mEnergized = value;
+                this.active = value;
                 if (!this.inFeedback)
                     this.sendCommand(value);
             },
@@ -111,13 +111,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             configurable: true
         });
         __decorate([
-            (0, Metadata_1.property)("True if output relay is energized"),
+            (0, Metadata_1.property)("True if output is active"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
-        ], RelayBase.prototype, "on", null);
-        return RelayBase;
+        ], OutputBase.prototype, "on", null);
+        return OutputBase;
     }());
-    exports.RelayBase = RelayBase;
+    exports.OutputBase = OutputBase;
     var InputBase = (function () {
         function InputBase(owner, index) {
             this.owner = owner;

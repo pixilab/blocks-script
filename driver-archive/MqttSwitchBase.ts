@@ -1,10 +1,8 @@
-/*	Base class for Shelly switch device, implementing common stuff across Gen 1 and Gen 2
-	Relay/Input devices.
+/*	Base class for MQTT switch device (i.e., contact closure or digital I/O).
 
-	IMPORTANT: This is NOT a driver. It's only the common stuff used by both the Gen 1 and
-	Gen 2 Shelly drivers. Thus, to use either of those types of Shellt switches, you need both
-	ShellySwitch and the appropriate ShellySwitchGen1 or ShellySwitchGen2 (it's OK to install
-	both those).
+	IMPORTANT: This is NOT a driver. It's only a base class ued by drivers such as Shelly Gen 1 and
+	Gen 2 drivers, and possibly other similar devices. This script file is required if you install any
+	driver that uses it, such as the ShellySwitchGen1, ShellySwitchGen2 or possibly others in the future.
 
  	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
@@ -19,42 +17,44 @@ import {IndexedProperty} from "../system_lib/ScriptBase";
  */
 interface CustomOptions {
 	inputs?: number;
-	relays?: number;
+	outputs?: number;
 }
 
-interface IShellySwitch {
+interface MqttIODevice {
 	mqtt: MQTT;
 	setOnline(online: boolean): void;
-
 }
 
-export abstract class ShellySwitchBase<Relay extends RelayBase, Input extends InputBase> extends Driver<MQTT> {
+export abstract class MqttSwitchBase<Output extends OutputBase, Input extends InputBase> extends Driver<MQTT> {
 	private mConnected = false;
 	private mOnline = false;
 
-	protected abstract relay: IndexedProperty<Relay>;
-	protected abstract input: IndexedProperty<Input>;
+	protected readonly abstract output: IndexedProperty<Output>;	// Outputs (generally a dry contact relay)
+	protected readonly abstract input: IndexedProperty<Input>;
 
 	protected constructor(public mqtt: MQTT) {
 		super(mqtt);
 	}
 
+	/**
+	 * Rest of initialization goes here rather than in ctor, since the derived ctor must
+	 */
 	protected initialize() {
-		const kMaxRelaySwitchCount = 8;	// Largest number of inputs or relays expected
+		const kMaxIOCount = 32;	// Some reasonable upper limit to I/O pins
 
-		// Determine how many relays and inptus to expose, with reasonable default values
-		let relayCount = 4;	// Number of output relays to manage
-		let inputCount = 4;	// Number of input switches we expect
+		// Determine how many outputs and inputs to expose, with reasonable default values
+		let outputCount = 4;	// Number of outputs (relays) to manage
+		let inputCount = 4;	// Number of inputs (switches) we expect
 		const rawOptions = this.mqtt.options;
 		if (rawOptions) {	// Override defaults from above using options JSON data
 			let options = JSON.parse(rawOptions) as CustomOptions;
-			relayCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.relays || 0))
-			inputCount = Math.max(0, Math.min(kMaxRelaySwitchCount, options.inputs || 0))
+			outputCount = Math.max(0, Math.min(kMaxIOCount, options.outputs || 0))
+			inputCount = Math.max(0, Math.min(kMaxIOCount, options.inputs || 0))
 		}
 
-		// Configure the specified number of relays and inputs
-		for (let rix = 0; rix < relayCount; ++rix)
-			this.relay.push(this.makeRelay(rix));
+		// Configure the specified number of outputs and inputs
+		for (let rix = 0; rix < outputCount; ++rix)
+			this.output.push(this.makeOutput(rix));
 		for (let six = 0; six < inputCount; ++six)
 			this.input.push(this.makeInput(six));
 
@@ -88,15 +88,19 @@ export abstract class ShellySwitchBase<Relay extends RelayBase, Input extends In
 		this.connected = this.mOnline && this.mqtt.connected;
 	}
 
-	protected abstract makeRelay(ix: number): Relay;
+	protected abstract makeOutput(ix: number): Output;
 	protected abstract makeInput(ix: number): Input;
 }
 
-export abstract class RelayBase {
-	private mEnergized = false;
-	private inFeedback = false;	// Set to supress sending of data when setter called only for feedback purpose
+export abstract class OutputBase {
+	private active = false;
+	private inFeedback = false; // Supresses sending data when setter called only for feedback
 
-	constructor(protected owner: IShellySwitch, protected index: number) {
+	protected constructor(
+		protected owner: MqttIODevice,
+		protected index: number
+	) {
+		// NOTE: Subclass MUST call init below after calling super constructor
 	}
 
 	/*	Concrete class must call this init method (can't call from base ctor above since
@@ -113,30 +117,30 @@ export abstract class RelayBase {
 		});
 	}
 
-	@property("True if output relay is energized")
+	@property("True if output is active")
 	get on(): boolean {
-		return this.mEnergized;
+		return this.active;
 	}
 	set on(value: boolean) {
-		this.mEnergized = value;
+		this.active = value;
 		if (!this.inFeedback)
 			this.sendCommand(value);
 	}
 
-	// Send message to topic causing the relay to be energized
-	protected abstract sendCommand(energize: boolean): void;
+	// Send message to topic causing the output to activate
+	protected abstract sendCommand(activate: boolean): void;
 
-	// Provide the topic to subscribe to for relay feedback
+	// Provide the topic to subscribe to for output feedback
 	protected abstract feedbackTopic(): string;
 
-	// Parse feedback, returning the indicated status as true if relay is energized
+	// Parse feedback, returning the indicated status as true if output is activated
 	protected abstract parseFeedback(feedback: string): boolean;
 }
 
 export abstract class InputBase {
 	private mActive = false;
 
-	constructor(protected owner: IShellySwitch, protected index: number) {
+	protected constructor(protected owner: MqttIODevice, protected index: number) {
 	}
 
 	/*	Concrete class must call this init method (can't call from base ctor above since

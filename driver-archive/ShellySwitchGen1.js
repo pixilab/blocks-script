@@ -22,7 +22,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Metadata", "./ShellySwitchBase"], function (require, exports, Metadata_1, ShellySwitchBase_1) {
+define(["require", "exports", "system_lib/Metadata", "./MqttSwitchBase"], function (require, exports, Metadata_1, MqttSwitchBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShellySwitchGen1 = void 0;
@@ -31,7 +31,7 @@ define(["require", "exports", "system_lib/Metadata", "./ShellySwitchBase"], func
         function ShellySwitchGen1(mqtt) {
             var _this = _super.call(this, mqtt) || this;
             _this.mqtt = mqtt;
-            _this.relay = _this.indexedProperty("relay", Relay);
+            _this.output = _this.indexedProperty("relay", Output);
             _this.input = _this.indexedProperty("input", Input);
             _super.prototype.initialize.call(_this);
             return _this;
@@ -39,34 +39,34 @@ define(["require", "exports", "system_lib/Metadata", "./ShellySwitchBase"], func
         ShellySwitchGen1.prototype.makeInput = function (ix) {
             return new Input(this, ix);
         };
-        ShellySwitchGen1.prototype.makeRelay = function (ix) {
-            return new Relay(this, ix);
+        ShellySwitchGen1.prototype.makeOutput = function (ix) {
+            return new Output(this, ix);
         };
         ShellySwitchGen1 = __decorate([
             (0, Metadata_1.driver)('MQTT'),
             __metadata("design:paramtypes", [Object])
         ], ShellySwitchGen1);
         return ShellySwitchGen1;
-    }(ShellySwitchBase_1.ShellySwitchBase));
+    }(MqttSwitchBase_1.MqttSwitchBase));
     exports.ShellySwitchGen1 = ShellySwitchGen1;
-    var Relay = (function (_super) {
-        __extends(Relay, _super);
-        function Relay(owner, index) {
+    var Output = (function (_super) {
+        __extends(Output, _super);
+        function Output(owner, index) {
             var _this = _super.call(this, owner, index) || this;
             _this.init();
             return _this;
         }
-        Relay.prototype.sendCommand = function (energize) {
+        Output.prototype.sendCommand = function (energize) {
             this.owner.mqtt.sendText(energize ? "on" : "off", "relay/" + this.index + "/command");
         };
-        Relay.prototype.feedbackTopic = function () {
+        Output.prototype.feedbackTopic = function () {
             return "relay/" + this.index;
         };
-        Relay.prototype.parseFeedback = function (feedback) {
+        Output.prototype.parseFeedback = function (feedback) {
             return feedback === 'on';
         };
-        return Relay;
-    }(ShellySwitchBase_1.RelayBase));
+        return Output;
+    }(MqttSwitchBase_1.OutputBase));
     var Input = (function (_super) {
         __extends(Input, _super);
         function Input(owner, index) {
@@ -81,5 +81,5 @@ define(["require", "exports", "system_lib/Metadata", "./ShellySwitchBase"], func
             return feedback === '1';
         };
         return Input;
-    }(ShellySwitchBase_1.InputBase));
+    }(MqttSwitchBase_1.InputBase));
 });

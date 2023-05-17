@@ -20,18 +20,18 @@ import {MQTT, NetworkTCP} from "system/Network";
 import { Driver } from "system_lib/Driver";
 import { driver, property } from "system_lib/Metadata";
 import {IndexedProperty} from "../system_lib/ScriptBase";
-import {InputBase, RelayBase, ShellySwitchBase} from "./ShellySwitchBase";
+import {InputBase, OutputBase, MqttSwitchBase} from "./MqttSwitchBase";
 
 
 @driver('MQTT')
-export class ShellySwitchGen2 extends ShellySwitchBase<Relay, Input> {
+export class ShellySwitchGen2 extends MqttSwitchBase<Output, Input> {
 
-	protected relay: IndexedProperty<Relay>;
-	protected input: IndexedProperty<Input>;
+	protected readonly output: IndexedProperty<Output>;
+	protected readonly input: IndexedProperty<Input>;
 
 	public constructor(public mqtt: MQTT) {
 		super(mqtt);
-		this.relay = this.indexedProperty("relay", Relay);
+		this.output = this.indexedProperty("relay", Output);
 		this.input = this.indexedProperty("input", Input);
 		super.initialize();
 	}
@@ -40,12 +40,12 @@ export class ShellySwitchGen2 extends ShellySwitchBase<Relay, Input> {
 		return new Input(this, ix);
 	}
 
-	protected makeRelay(ix: number): Relay {
-		return new Relay(this, ix);
+	protected makeOutput(ix: number): Output {
+		return new Output(this, ix);
 	}
 }
 
-class Relay extends RelayBase {
+class Output extends OutputBase {
 	constructor(owner: ShellySwitchGen2, index: number) {
 		super(owner, index);
 		this.init();
