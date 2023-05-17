@@ -6,7 +6,6 @@
   "author": "PIXILAB",
   "license": "Copyright (c) PIXILAB Technologies AB, Sweden. All Rights Reserved.",
   "dependencies": {
-    "reflect-metadata": "^0.1.10",
-    "@types/suncalc": "^1.8.1"
+    "reflect-metadata": "^0.1.10"
   }
 }
