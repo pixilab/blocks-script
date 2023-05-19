@@ -667,7 +667,8 @@ class QuadButtonInterface extends BaseInterface {
 		console.log(command);
 	}
 }
-Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6");
+/// ������� (FF FF FF FF FF FF FF in hex) is how the built-in quad button interface of the XN-165 presents itself.
+Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6", "�������");
 
 
 /**
