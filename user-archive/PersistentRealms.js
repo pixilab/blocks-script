@@ -40,7 +40,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+        while (_) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -91,29 +91,26 @@ define(["require", "exports", "system/Realm", "system_lib/Script", "system_lib/M
         };
         PersistentRealms.processRealms = function (dirName, action, desiredSet) {
             return __awaiter(this, void 0, void 0, function () {
-                var basePath, _a, _b, _c, _i, realmName, path, realm;
-                return __generator(this, function (_d) {
-                    switch (_d.label) {
+                var basePath, _a, _b, _i, realmName, path, realm;
+                return __generator(this, function (_c) {
+                    switch (_c.label) {
                         case 0:
                             basePath = "".concat(BASE_SAVE_PATH).concat(dirName, "/");
-                            _a = Realm_1.Realm;
-                            _b = [];
-                            for (_c in _a)
-                                _b.push(_c);
+                            _a = [];
+                            for (_b in Realm_1.Realm)
+                                _a.push(_b);
                             _i = 0;
-                            _d.label = 1;
+                            _c.label = 1;
                         case 1:
-                            if (!(_i < _b.length)) return [3, 4];
-                            _c = _b[_i];
-                            if (!(_c in _a)) return [3, 3];
-                            realmName = _c;
+                            if (!(_i < _a.length)) return [3, 4];
+                            realmName = _a[_i];
                             if (!(!desiredSet || desiredSet[realmName])) return [3, 3];
                             path = "".concat(basePath).concat(realmName);
                             realm = Realm_1.Realm[realmName];
                             return [4, action(path, realm)];
                         case 2:
-                            _d.sent();
-                            _d.label = 3;
+                            _c.sent();
+                            _c.label = 3;
                         case 3:
                             _i++;
                             return [3, 1];
