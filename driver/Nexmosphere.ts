@@ -667,8 +667,22 @@ class QuadButtonInterface extends BaseInterface {
 		console.log(command);
 	}
 }
-/// ������� (FF FF FF FF FF FF FF in hex) is how the built-in quad button interface of the XN-165 presents itself.
-Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6", "�������");
+Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6"
+	// ,"0xff0xff0xff0xff0xff0xff0xff"
+)
+/*	NOTE: "0xff0xff0xff0xff0xff0xff0xff" is how the built-in quad button interface of the XN-165 presents
+	itself. There was a suggestion to alwayw interpret this as QuadButtonInterface. But since this
+	actually means "unknown device" in general, that was deemed a Bad Idea. If you want to make
+	the built-in quad button interface of the XN-165 behave that way, then uncomment that line above
+	and recompile the driver.
+
+	Nexmosphere have indicated they may provide a better way of determining this in the future.
+
+	Another idea here would be to make this driver configurable using the Custom Options field, where
+	you could then manually specify how each of the ports on the hub is configured, rather than relying
+	on querying the hub for this (which can be somewhat flaky depending on the order things are
+	connected/powered).
+*/
 
 
 /**
