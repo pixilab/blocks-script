@@ -84,9 +84,11 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         BasicConfigurableMQTT.prototype.doSubscribe = function () {
             var _this = this;
             for (var subTopic in this.properties) {
-                this.mqtt.subscribeTopic(subTopic, function (emitter, message) {
-                    return _this.dataFromSubTopic(message.subTopic, message.text);
-                });
+                if (!this.properties[subTopic].settings.writeOnly) {
+                    this.mqtt.subscribeTopic(subTopic, function (emitter, message) {
+                        return _this.dataFromSubTopic(message.subTopic, message.text);
+                    });
+                }
             }
         };
         BasicConfigurableMQTT.prototype.dataFromSubTopic = function (subTopic, value) {

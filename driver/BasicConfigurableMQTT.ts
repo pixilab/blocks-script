@@ -171,9 +171,11 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	 */
 	private doSubscribe() {
 		for (const subTopic in this.properties) {
-			this.mqtt.subscribeTopic(subTopic, (emitter, message) =>
-				this.dataFromSubTopic(message.subTopic, message.text)
-			);
+			if (!this.properties[subTopic].settings.writeOnly) {
+				this.mqtt.subscribeTopic(subTopic, (emitter, message) =>
+					this.dataFromSubTopic(message.subTopic, message.text)
+				);
+			}
 		}
 	}
 
