@@ -1,7 +1,7 @@
 /*	Blocks MQTT driver for the Shelly range of switches, Gen 2, as documented here:
 	https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Mqtt
 
-	IMPORTANT: In addition to this driver, you must also install ShellySwitchBase.
+	IMPORTANT: In addition to this driver, you must also install MqttSwitchBase.
 	For inputs and relay status feedback to work, you must enable the
 	"Generic status update over MQTT" setting under Settings/MQTT for the device,
 	and also configure the Shelly as appropriate for your MQTT broker.

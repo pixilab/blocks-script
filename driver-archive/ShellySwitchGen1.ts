@@ -1,7 +1,7 @@
 /*	Blocks MQTT driver for the Shelly range of switches, Gen 1, as documented here:
 	https://shelly-api-docs.shelly.cloud/gen1/#shelly-family-overview
 
-	IMPORTANT: In addition to this driver, you must also install ShellySwitchBase.
+	IMPORTANT: In addition to this driver, you must also install MqttSwitchBase.
 	You must configuring the Shelly device as appropriate for your MQTT broker.
 	MQTT settings are found under Internet & Security / Advanced Developer Settings.
 
