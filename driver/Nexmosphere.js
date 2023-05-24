@@ -29,17 +29,35 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     var kRfidPacketParser = /^XR\[P(.)(\d+)]$/;
     var kPortPacketParser = /^X(\d+)(A|B)\[(.+)]$/;
     var kProductCodeParser = /D(\d+)B\[\w+\=(.+)]$/;
-    var kNumInterfaces = 8;
     var Nexmosphere = (function (_super) {
         __extends(Nexmosphere, _super);
-        function Nexmosphere(socket) {
-            var _this = _super.call(this, socket) || this;
-            _this.socket = socket;
+        function Nexmosphere(connection) {
+            var _this = _super.call(this, connection) || this;
+            _this.connection = connection;
+            _this.specifiedInterfaces = [];
+            _this.pollEnabled = true;
+            _this.numInterfaces = 8;
             _this.pollIndex = 0;
             _this.awake = false;
             _this.interfaces = [];
-            socket.autoConnect();
-            socket.subscribe('textReceived', function (sender, message) {
+            if (connection.options) {
+                var options = JSON.parse(connection.options);
+                if (typeof options === "number") {
+                    _this.numInterfaces = options;
+                    _this.pollEnabled = true;
+                }
+                if (typeof options === "object") {
+                    _this.specifiedInterfaces = options;
+                    _this.pollEnabled = false;
+                    for (var _i = 0, _a = _this.specifiedInterfaces; _i < _a.length; _i++) {
+                        var iface = _a[_i];
+                        log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
+                        _this.addInterface(iface.ifaceNo, iface.modelCode);
+                    }
+                }
+            }
+            connection.autoConnect();
+            connection.subscribe('textReceived', function (sender, message) {
                 if (message.text) {
                     if (_this.awake)
                         _this.handleMessage(message.text);
@@ -49,12 +67,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     }
                 }
             });
-            socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection' && socket.connected) {
-                    if (!_this.pollIndex)
+            connection.subscribe('connect', function (sender, message) {
+                if (message.type === 'Connection' && connection.connected) {
+                    log("Connected", _this.pollEnabled);
+                    if (!_this.pollIndex && _this.pollEnabled)
                         _this.pollNext();
                 }
                 else {
+                    log("Disconnected");
                     if (!_this.interfaces.length)
                         _this.pollIndex = 0;
                 }
@@ -75,16 +95,52 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         Nexmosphere.prototype.pollNext = function () {
             var _this = this;
-            ++this.pollIndex;
-            this.queryPortConfig(this.pollIndex);
+            var ix = this.pollIndex + 1 | 0;
+            if (ix % 10 === 9) {
+                var tens = Math.round(ix / 10);
+                if (ix < 200) {
+                    switch (tens) {
+                        case 0:
+                            ix = 111;
+                            break;
+                        case 11:
+                        case 12:
+                        case 13:
+                        case 14:
+                        case 15:
+                            ix += 2;
+                            break;
+                        case 16:
+                            ix = 211;
+                            break;
+                    }
+                }
+                else {
+                    switch (tens % 10) {
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 4:
+                            ix += 2;
+                            break;
+                        case 5:
+                            if (ix >= 959)
+                                throw "Port number is out of range for the device.";
+                            ix += 311 - 259;
+                            break;
+                    }
+                }
+            }
+            this.pollIndex = ix;
+            this.queryPortConfig(ix);
             var pollAgain = false;
-            if (this.pollIndex <= kNumInterfaces)
+            if (this.pollIndex < this.numInterfaces)
                 pollAgain = true;
             else if (!this.interfaces.length) {
                 this.pollIndex = 0;
                 pollAgain = true;
             }
-            if (pollAgain && this.socket.connected)
+            if (pollAgain && this.connection.connected)
                 wait(500).then(function () { return _this.pollNext(); });
         };
         Nexmosphere.prototype.queryPortConfig = function (portNumber) {
@@ -94,12 +150,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.send(sensorMessage);
         };
         Nexmosphere.prototype.send = function (rawData) {
-            this.socket.sendText(rawData, "\r\n");
+            this.connection.sendText(rawData, "\r\n");
         };
         Nexmosphere.prototype.reInitialize = function () {
             _super.prototype.reInitialize.call(this);
         };
         Nexmosphere.prototype.handleMessage = function (msg) {
+            log("Data from device", msg);
             var parseResult = kRfidPacketParser.exec(msg);
             if (parseResult) {
                 this.lastTag = {
@@ -110,6 +167,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             else if ((parseResult = kPortPacketParser.exec(msg))) {
                 var portNumber = parseInt(parseResult[1]);
                 var dataRecieved = parseResult[3];
+                log("Incoming data from port", portNumber, "Data", dataRecieved);
                 var index = portNumber - 1;
                 var targetElem = this.interfaces[index];
                 if (targetElem)
@@ -123,17 +181,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     modelCode: parseResult[2].trim()
                 };
                 var portNumber = (parseResult[1]);
-                var index = parseInt(portNumber) - 1;
-                var ctor = Nexmosphere_1.interfaceRegistry[modelInfo.modelCode];
-                if (ctor)
-                    this.interfaces[index] = new ctor(this, index);
-                else {
-                    console.warn("Unknown interface model - using generic 'unknown' type", modelInfo.modelCode);
-                    this.interfaces[index] = new UnknownInterface(this, index);
-                }
+                this.addInterface(parseInt(portNumber), modelInfo.modelCode);
             }
             else {
                 console.warn("Unknown command received from controller", msg);
+            }
+        };
+        Nexmosphere.prototype.addInterface = function (portNumber, modelCode, name) {
+            var ix = portNumber - 1;
+            var ctor = Nexmosphere_1.interfaceRegistry[modelCode];
+            if (ctor)
+                this.interfaces[ix] = new ctor(this, ix);
+            else {
+                console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
+                this.interfaces[ix] = new UnknownInterface(this, ix);
             }
         };
         var Nexmosphere_1;
@@ -273,8 +334,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var myIfaceNo = (("000" + (this.index + 1)).slice(-3));
             var defaultSetting = "X" + myIfaceNo + "S[10:6]";
             this.driver.send(defaultSetting);
+            console.log("NFC default setting sent");
         };
         NfcInterface.prototype.receiveData = function (data) {
+            console.log(data);
             var splitData = data.split(":");
             var newTagData = splitData[1];
             var newTagEvent = splitData[0];
