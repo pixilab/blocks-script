@@ -668,9 +668,9 @@ class QuadButtonInterface extends BaseInterface {
 	}
 }
 Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6"
-	// ,"0xff0xff0xff0xff0xff0xff0xff"
+	// ,"\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
 )
-/*	NOTE: "0xff0xff0xff0xff0xff0xff0xff" is how the built-in quad button interface of the XN-165 presents
+/*	NOTE: "\xFF\xFF\xFF\xFF\xFF\xFF\xFF" is how the built-in quad button interface of the XN-165 presents
 	itself. There was a suggestion to alwayw interpret this as QuadButtonInterface. But since this
 	actually means "unknown device" in general, that was deemed a Bad Idea. If you want to make
 	the built-in quad button interface of the XN-165 behave that way, then uncomment that line above
