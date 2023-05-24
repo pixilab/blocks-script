@@ -178,7 +178,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	 * Send a query for what's connected to port (1-based)
 	 */
 	private queryPortConfig(portNumber: number,) {
-		var sensorMessage: string = (("000" + portNumber).slice(-3)); // Pad index with leading zeroes
+		let sensorMessage: string = (("000" + portNumber).slice(-3)); // Pad index with leading zeroes
 		sensorMessage = "D" + sensorMessage + "B[TYPE]";
 		log("QQuery", sensorMessage);
 		this.send(sensorMessage);
@@ -204,7 +204,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	private handleMessage(msg: string) {
 		log("Data from device", msg);
 
-		var parseResult = kRfidPacketParser.exec(msg);
+		let parseResult = kRfidPacketParser.exec(msg);
 		if (parseResult) {
 			// Just store first part until the port packet arrives
 			this.lastTag = {
@@ -244,8 +244,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 			else {
 				console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
 				this.interfaces[ix] = new UnknownInterface(this, ix);
-	}
-
+		}
 	}
 }
 
@@ -724,23 +723,23 @@ class QuadButtonInterface extends BaseInterface {
 	constructor(driver: Nexmosphere, index: number) {
 		super(driver, index);
 		this.buttons = [];
-		for (var ix = 0; ix < 4; ++ix) {
+		for (let ix = 0; ix < 4; ++ix) {
 			this.buttons.push(new Button(this.getNamePrefix() + "_btn_" + (ix + 1), this, ix, driver));
 			// console.log("For buttons_" + (ix + 1));
 		}
 	}
 
 	receiveData(data: string) {
-		var bitMask = parseInt(data);
+		let bitMask = parseInt(data);
 		bitMask = bitMask >> 1;	// Unsave useless LSBit
-		for (var ix = 0; ix < 4; ++ix) {
-			var isPressed: boolean = !!(bitMask & (1 << ix));
+		for (let ix = 0; ix < 4; ++ix) {
+			let isPressed: boolean = !!(bitMask & (1 << ix));
 			this.buttons[ix].setState(isPressed);
 		}
 	}
 
 	ledStatusChanged(){
-		var toSend = 0;
+		let toSend = 0;
 		const buttons = this.buttons;
 		for (let ix = 0; ix < buttons.length; ++ix) {
 			toSend |= buttons[ix].ledData << ix*2;
