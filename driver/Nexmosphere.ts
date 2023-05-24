@@ -27,7 +27,7 @@
  */
 
 
-import {NetworkTCP} from "system/Network";
+import {NetworkTCP, SerialPort} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {callable, driver} from "system_lib/Metadata";
 import {PrimTypeSpecifier} from "../system/PubSub";
@@ -43,8 +43,11 @@ interface Dictionary<TElem> { [id: string]: TElem; }
 // A class constructor function
 interface BaseInterfaceCtor<T> { new(driver: Nexmosphere, index: number): T ;}
 
+type ConnType = NetworkTCP | SerialPort;	// I accept either type of backend
+
 @driver('NetworkTCP', {port: 4001})
-export class Nexmosphere extends Driver<NetworkTCP> {
+@driver('SerialPort', {baudRate: 115200})
+export class Nexmosphere extends Driver<ConnType> {
 
 	// Maps Nexmosphere model name to its implementation type
 	private static interfaceRegistry: Dictionary<BaseInterfaceCtor<BaseInterface>>;
