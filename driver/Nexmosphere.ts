@@ -2,12 +2,32 @@
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2021 by Mattias Andersson.
  *
- * Number of "interface channels" in the Nexmosphere controller defaults to 8, but can be overridden in the drivers options by specifiying the
- * highest expected interface channel number.
+ * Number of "interface channels" in the Nexmosphere controller defaults to 8, but can be overridden
+ * in the Driver Options field by specifiying Number of interface channels as a number.
+ *
+ * Alternatively, the interfaces can be specified explicitly in the Driver Options field using
+ * a JSON array like this (the "name" fields are optional):
+
+  [{
+    "modelCode": "XTB4N",
+    "ifaceNo": 1,
+    "name": "Buttons"
+ },
+ {
+    "modelCode": "XWL56",
+    "ifaceNo": 2,
+    "name": "Led"
+ },
+ {
+    "modelCode": "XY116",
+    "ifaceNo": 3,
+    "name": "Distance"
+ }]
+
  */
 
 
-import {NetworkTCP, SerialPort} from "system/Network";
+import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {callable, driver} from "system_lib/Metadata";
 import {PrimTypeSpecifier} from "../system/PubSub";
@@ -16,8 +36,6 @@ import {PrimitiveValue} from "../system_lib/ScriptBase";
 const kRfidPacketParser = /^XR\[P(.)(\d+)]$/; //parse RFID tag detection from XR-DR01 Rfid element
 const kPortPacketParser = /^X(\d+)(A|B)\[(.+)]$/; //parse interfaceNumber and attached Data
 const kProductCodeParser = /D(\d+)B\[\w+\=(.+)]$/; // Controllers response to a product code request (D003B[TYPE]) controller response D001B[TYPE=XRDR1  ]
-let kNumInterfaces = 8; // Number of "interface channels" in the Nexmosphere controller.
-
 
 // A simple map-like object type
 interface Dictionary<TElem> { [id: string]: TElem; }
@@ -25,27 +43,45 @@ interface Dictionary<TElem> { [id: string]: TElem; }
 // A class constructor function
 interface BaseInterfaceCtor<T> { new(driver: Nexmosphere, index: number): T ;}
 
-type ConnType = NetworkTCP | SerialPort;	// I accept either type of backend
-
 @driver('NetworkTCP', {port: 4001})
-@driver('SerialPort', {baudRate: 115200})
-export class Nexmosphere extends Driver<ConnType> {
+export class Nexmosphere extends Driver<NetworkTCP> {
 
-	// Map Nexmosphere model name to its implementation type
+	// Maps Nexmosphere model name to its implementation type
 	private static interfaceRegistry: Dictionary<BaseInterfaceCtor<BaseInterface>>;
+
+	private readonly specifiedInterfaces:IfaceInfo[] = []; // Array of specified interfaces from driver options.
+	private pollEnabled = true; // Polling is enabled by default, but will be automatically disabled if interfaces is manually added from driver options.
+	private numInterfaces = 8; // Number of "interface channels" in the Nexmosphere controller.
 
 	private lastTag: TagInfo;	// Store most recent RFID taginfo here, awaiting the port message
 	private readonly interfaces: BaseInterface[]; // Holds the interfaces discovered
 	private pollIndex = 0;		// Most recently polled interface
 	private awake = false;		// Set once we receive first data from device
-	public constructor(private connection: ConnType) {
+
+
+	public constructor(private connection: NetworkTCP) {
 		super(connection);
 		this.interfaces = [];	// Filled by data returned from polling the Nexmosphere
+
+		// Check if the driver has been configured with options, and if so, parse them.
 		if (connection.options){
-			kNumInterfaces = parseInt(connection.options)
+			const options = JSON.parse(connection.options);
+			if (typeof options === "number"){
+				this.numInterfaces = options;
+				this.pollEnabled = true;
+			}
+			if (typeof options === "object"){
+				this.specifiedInterfaces = options;
+				this.pollEnabled = false;
+				for (let iface of this.specifiedInterfaces){
+					log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
+					this.addInterface(iface.ifaceNo, iface.modelCode);
+				}
+			}
 		}
-		log("ifaces", kNumInterfaces, connection.options)
+
 		connection.autoConnect();
+
 		// Listen for data from the Nexmosphere bus
 		connection.subscribe('textReceived', (sender, message) => {
 			if (message.text) { // Ignore empty message, sometimes caused by separated CR/LF chars
@@ -63,10 +99,10 @@ export class Nexmosphere extends Driver<ConnType> {
 		connection.subscribe('connect', (sender, message) => {
 			// Initiate polling once connected and only first time (may reconnect several times)
 			if (message.type === 'Connection' && connection.connected) { // Just connected
-				log("Connected")
-				if (!this.pollIndex)	// Not yet polled for interfaces
+				log("Connected", this.pollEnabled)
+				if (!this.pollIndex && this.pollEnabled)	// Not yet polled for interfaces and polling is enabled
 					this.pollNext();	// Get started
-			} else {	// COnnection failed or disconnected
+			} else {	// Connection failed or disconnected
 				log("Disconnected")
 				if (!this.interfaces.length)	// Got NO interfaces - re-start polling on next connect
 					this.pollIndex = 0;
@@ -127,7 +163,7 @@ export class Nexmosphere extends Driver<ConnType> {
 
 		this.queryPortConfig(ix);
 		let pollAgain = false;
-		if (this.pollIndex < kNumInterfaces) // Poll next one soon
+		if (this.pollIndex < this.numInterfaces) // Poll next one soon
 			pollAgain = true;
 		else if (!this.interfaces.length) {	// Restart poll if no fish so far
 			this.pollIndex = 0;
@@ -142,7 +178,7 @@ export class Nexmosphere extends Driver<ConnType> {
 	 * Send a query for what's connected to port (1-based)
 	 */
 	private queryPortConfig(portNumber: number,) {
-		var sensorMessage: string = (("000" + portNumber).slice(-3)); // Pad index with leading zeroes
+		let sensorMessage: string = (("000" + portNumber).slice(-3)); // Pad index with leading zeroes
 		sensorMessage = "D" + sensorMessage + "B[TYPE]";
 		log("QQuery", sensorMessage);
 		this.send(sensorMessage);
@@ -168,7 +204,7 @@ export class Nexmosphere extends Driver<ConnType> {
 	private handleMessage(msg: string) {
 		log("Data from device", msg);
 
-		var parseResult = kRfidPacketParser.exec(msg);
+		let parseResult = kRfidPacketParser.exec(msg);
 		if (parseResult) {
 			// Just store first part until the port packet arrives
 			this.lastTag = {
@@ -179,6 +215,7 @@ export class Nexmosphere extends Driver<ConnType> {
 			// Incoming data from a sensor
 			const portNumber = parseInt(parseResult[1]); //get the recieving interface
 			const dataRecieved = parseResult[3]; //get input data as string
+			log("Incoming data from port", portNumber,"Data", dataRecieved);
 			const index = portNumber - 1;
 			const targetElem = this.interfaces[index];
 			if (targetElem)
@@ -192,23 +229,27 @@ export class Nexmosphere extends Driver<ConnType> {
 				modelCode: parseResult[2].trim()  // Remove any trailing whitespace in the product code.
 			}
 			const portNumber = (parseResult[1]);
-			const index = parseInt(portNumber) - 1;
+			this.addInterface(parseInt(portNumber), modelInfo.modelCode);
 
-			const ctor = Nexmosphere.interfaceRegistry[modelInfo.modelCode];
-			if (ctor)
-				this.interfaces[index] = new ctor(this, index);
-			else {
-				console.warn("Unknown interface model - using generic 'unknown' type", modelInfo.modelCode);
-				this.interfaces[index] = new UnknownInterface(this, index);
-			}
 		} else {
 			console.warn("Unknown command received from controller", msg)
+		}
+	}
+
+	private addInterface(portNumber: number, modelCode: string, name?:string){
+		const ix = portNumber - 1;
+		const ctor = Nexmosphere.interfaceRegistry[modelCode];
+		if (ctor)
+				this.interfaces[ix] = new ctor(this, ix);
+			else {
+				console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
+				this.interfaces[ix] = new UnknownInterface(this, ix);
 		}
 	}
 }
 
 /**
- * Model a single base element.
+ * Model a single base element. This is the base class for all elements.
  */
 abstract class BaseInterface {
 	protected constructor(
@@ -384,9 +425,7 @@ class NfcInterface extends BaseInterface {
 			}
 		);
 		this.sendDeviceDefaultSetting();
-
 	}
-
 
 	/* Set the wanted mode of the NFC driver */
 	sendDeviceDefaultSetting() {
@@ -394,7 +433,7 @@ class NfcInterface extends BaseInterface {
 			let myIfaceNo = (("000" + (this.index+1)).slice(-3));  // Pad index with leading zeroes
 			let defaultSetting = "X" + myIfaceNo + "S[10:6]"; //i.e X001S[10:6] returns UID, TNR and LB1 at every new scan.
 			this.driver.send(defaultSetting);
-			//console.log("NFC default setting sent");
+			console.log("NFC default setting sent");
 	}
 	receiveData(data: string) {
 		console.log(data);
@@ -684,23 +723,23 @@ class QuadButtonInterface extends BaseInterface {
 	constructor(driver: Nexmosphere, index: number) {
 		super(driver, index);
 		this.buttons = [];
-		for (var ix = 0; ix < 4; ++ix) {
+		for (let ix = 0; ix < 4; ++ix) {
 			this.buttons.push(new Button(this.getNamePrefix() + "_btn_" + (ix + 1), this, ix, driver));
 			// console.log("For buttons_" + (ix + 1));
 		}
 	}
 
 	receiveData(data: string) {
-		var bitMask = parseInt(data);
+		let bitMask = parseInt(data);
 		bitMask = bitMask >> 1;	// Unsave useless LSBit
-		for (var ix = 0; ix < 4; ++ix) {
-			var isPressed: boolean = !!(bitMask & (1 << ix));
+		for (let ix = 0; ix < 4; ++ix) {
+			let isPressed: boolean = !!(bitMask & (1 << ix));
 			this.buttons[ix].setState(isPressed);
 		}
 	}
 
 	ledStatusChanged(){
-		var toSend = 0;
+		let toSend = 0;
 		const buttons = this.buttons;
 		for (let ix = 0; ix < buttons.length; ++ix) {
 			toSend |= buttons[ix].ledData << ix*2;
@@ -715,22 +754,7 @@ class QuadButtonInterface extends BaseInterface {
 		console.log(command);
 	}
 }
-Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6"
-	// ,"\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
-)
-/*	NOTE: "\xFF\xFF\xFF\xFF\xFF\xFF\xFF" is how the built-in quad button interface of the XN-165 presents
-	itself. There was a suggestion to alwayw interpret this as QuadButtonInterface. But since this
-	actually means "unknown device" in general, that was deemed a Bad Idea. If you want to make
-	the built-in quad button interface of the XN-165 behave that way, then uncomment that line above
-	and recompile the driver.
-
-	Nexmosphere have indicated they may provide a better way of determining this in the future.
-
-	Another idea here would be to make this driver configurable using the Custom Options field, where
-	you could then manually specify how each of the ports on the hub is configured, rather than relying
-	on querying the hub for this (which can be somewhat flaky depending on the order things are
-	connected/powered).
-*/
+Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6");
 
 
 /**
@@ -900,6 +924,12 @@ interface NfcTagInfo {
 interface ModelInfo {
 	modelCode: string;
 	serialNo?: string;
+}
+
+interface IfaceInfo {
+	modelCode: string;
+	ifaceNo: number;
+	name?: string;
 }
 
 /**
