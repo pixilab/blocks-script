@@ -1,30 +1,30 @@
 /*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2021 by Mattias Andersson.
- *
- * Number of "interface channels" in the Nexmosphere controller defaults to 8, but can be overridden
- * in the Driver Options field by specifiying Number of interface channels as a number.
- *
- * Alternatively, the interfaces can be specified explicitly in the Driver Options field using
- * a JSON array like this (the "name" fields are optional):
+* Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+* Created 2021 by Mattias Andersson.
+*
+* Number of "interface channels" in the Nexmosphere controller defaults to 8, but can be overridden
+* in the Driver Options field by specifiying Number of interface channels as a number.
+*
+* Alternatively, the interfaces can be specified explicitly in the Driver Options field using
+* a JSON array like this (the "name" fields are optional):
 
-  [{
-    "modelCode": "XTB4N",
-    "ifaceNo": 1,
-    "name": "Buttons"
- },
- {
-    "modelCode": "XWL56",
-    "ifaceNo": 2,
-    "name": "Led"
- },
- {
-    "modelCode": "XY116",
-    "ifaceNo": 3,
-    "name": "Distance"
- }]
+ [{
+   "modelCode": "XTB4N",
+   "ifaceNo": 1,
+   "name": "Buttons"
+},
+{
+   "modelCode": "XWL56",
+   "ifaceNo": 2,
+   "name": "Led"
+},
+{
+   "modelCode": "XY116",
+   "ifaceNo": 3,
+   "name": "Distance"
+}]
 
- */
+*/
 
 
 import {NetworkTCP} from "system/Network";
@@ -41,7 +41,7 @@ const kProductCodeParser = /D(\d+)B\[\w+\=(.+)]$/; // Controllers response to a 
 interface Dictionary<TElem> { [id: string]: TElem; }
 
 // A class constructor function
-interface BaseInterfaceCtor<T> { new(driver: Nexmosphere, index: number): T ;}
+interface BaseInterfaceCtor<T> { new(driver: Nexmosphere, index: number, name:string): T ;}
 
 @driver('NetworkTCP', {port: 4001})
 export class Nexmosphere extends Driver<NetworkTCP> {
@@ -75,7 +75,7 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 				this.pollEnabled = false;
 				for (let iface of this.specifiedInterfaces){
 					log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
-					this.addInterface(iface.ifaceNo, iface.modelCode);
+					this.addInterface(iface.ifaceNo, iface.modelCode, iface.name);
 				}
 			}
 		}
@@ -175,8 +175,8 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 
 
 	/**
-	 * Send a query for what's connected to port (1-based)
-	 */
+	* Send a query for what's connected to port (1-based)
+	*/
 	private queryPortConfig(portNumber: number,) {
 		let sensorMessage: string = (("000" + portNumber).slice(-3)); // Pad index with leading zeroes
 		sensorMessage = "D" + sensorMessage + "B[TYPE]";
@@ -185,8 +185,8 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 * Send raw messages to the Nexmosphere controller
-	 */
+	* Send raw messages to the Nexmosphere controller
+	*/
 	@callable("Send raw string data to the Nexmosphere controller")
 	send(rawData: string) {
 		this.connection.sendText(rawData, "\r\n");
@@ -199,8 +199,8 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 * Look for the messages we care about and act on those.
-	 */
+	* Look for the messages we care about and act on those.
+	*/
 	private handleMessage(msg: string) {
 		log("Data from device", msg);
 
@@ -240,10 +240,10 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 		const ix = portNumber - 1;
 		const ctor = Nexmosphere.interfaceRegistry[modelCode];
 		if (ctor)
-				this.interfaces[ix] = new ctor(this, ix);
+				this.interfaces[ix] = new ctor(this, ix, name);
 			else {
 				console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
-				this.interfaces[ix] = new UnknownInterface(this, ix);
+				this.interfaces[ix] = new UnknownInterface(this, ix, name);
 		}
 	}
 }
@@ -254,13 +254,18 @@ export class Nexmosphere extends Driver<NetworkTCP> {
 abstract class BaseInterface {
 	protected constructor(
 		protected readonly driver: Nexmosphere,
-		protected readonly index: number
+		protected readonly index: number,
+		protected readonly name?: string
 	) {
 		//console.log("Created", index, modelInfo.modelCode);
 	}
 
 	protected getNamePrefix() {
-		return "iface_" + (this.index + 1);
+		let prefix = "iface_"
+		if (this.name) {
+			prefix = this.name + "_";
+		}
+		return prefix + (this.index + 1);
 	}
 
 	abstract receiveData(data: string, tag?: TagInfo): void;
@@ -272,8 +277,8 @@ class UnknownInterface extends BaseInterface {
 	private readonly propName: string;
 	private propValue: string;
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.propName = this.getNamePrefix() + "_unknown";
 		this.driver.property<string>(
 			this.propName,
@@ -307,8 +312,8 @@ class RfidInterface extends BaseInterface {
 		isPlaced: false
 	}
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.tagPropName = this.getNamePrefix() + "_tagId";
 		this.driver.property<number>(
 			this.tagPropName,
@@ -371,8 +376,8 @@ class NfcInterface extends BaseInterface {
 	}
 	private lastTagEvent: string = "";
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.uidPropName = this.getNamePrefix() + "_nfcTagUid";
 		this.driver.property<string>(
 			this.uidPropName,
@@ -489,8 +494,8 @@ class XWaveLedInterface extends BaseInterface {
 	private readonly propName: string;
 	private propValue: string;
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.propName = this.getNamePrefix() + "_X-Wave_Command";
 		this.driver.property<string>(
 			this.propName,
@@ -530,8 +535,8 @@ class ProximityInterface extends BaseInterface {
 	private readonly propName: string;
 	private propValue: number;
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.propName = this.getNamePrefix() + "_proximity";
 		this.driver.property<number>(
 			this.propName,
@@ -552,6 +557,7 @@ class ProximityInterface extends BaseInterface {
 	}
 }
 Nexmosphere.registerInterface(ProximityInterface, "XY116", "XY146", "XY176");
+
 /**
 * Proximity sensors Time of Flight versions
 */
@@ -561,8 +567,8 @@ class TimeOfFlightInterface extends BaseInterface {
 	private zonePropValue: number;
 	private btnPropValue: boolean;
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.zonePropName = this.getNamePrefix() + "_time_of_flightproximity";
 		this.buttonPropName = this.getNamePrefix() + "_air_button";
 		this.zonePropValue = 8;
@@ -638,8 +644,8 @@ class AirGestureInterface extends BaseInterface {
 	private readonly propName: string;
 	private propValue: string;
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.propName = this.getNamePrefix() + "_gesture";
 		this.driver.property<string>(
 			this.propName,
@@ -711,8 +717,6 @@ class Button {
 }
 
 
-
-
 /**
  *Modle a Quad Button detector interface.
  */
@@ -720,8 +724,8 @@ class QuadButtonInterface extends BaseInterface {
 
 	private buttons: Button[];
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.buttons = [];
 		for (let ix = 0; ix < 4; ++ix) {
 			this.buttons.push(new Button(this.getNamePrefix() + "_btn_" + (ix + 1), this, ix, driver));
@@ -765,8 +769,8 @@ class MotionInterface extends BaseInterface {
 	private propValue: number;
 
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.propName = this.getNamePrefix() + "_motion";
 		this.driver.property<number>(
 			this.propName,
@@ -814,8 +818,8 @@ class GenderSubProperty<PropType extends PrimitiveValue> {
 	}
 
 	/**
-	 * Update my value, firing property change if this was news.
-	 */
+	* Update my value, firing property change if this was news.
+	*/
 	setValue(poteniallyNewValue: PropType) {
 		const oldValue = this.value;
 		this.value = poteniallyNewValue;
@@ -832,8 +836,8 @@ class GenderInterface extends BaseInterface {
 	private static readonly kParser = /^(0|1)(M|F|U)(X|L|H)([0-7])(X|L|H)(L|C|R|U)/;
 	private subProp: GenderSubProperty<any>[];
 
-	constructor(driver: Nexmosphere, index: number) {
-		super(driver, index);
+	constructor(driver: Nexmosphere, index: number, name: string) {
+		super(driver, index, name);
 		this.subProp = [];
 
 		// CAUTION: Same number and order as in parser below!
@@ -888,7 +892,7 @@ class GenderInterface extends BaseInterface {
 		A= Age range estimation value between 0-7
 		C= Confidence level age X = Very Low, L=Low, H=High
 		G= Gaze indication L=Left, C=Center, R=Right, U=Unidentified
-	 */
+	*/
 	receiveData(data: string) {
 		//console.log(data);
 		const parseResult = GenderInterface.kParser.exec(data);
@@ -935,7 +939,7 @@ interface IfaceInfo {
 /**
  Log messages, allowing my logging to be easily disabled in one place.
  */
- const DEBUG = false;	// Controls verbose logging
+ const DEBUG = true;	// Controls verbose logging
  function log(...messages: any[]) {
 	if (DEBUG)
 		// Set to false to disable my logging
