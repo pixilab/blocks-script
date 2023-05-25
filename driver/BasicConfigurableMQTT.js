@@ -137,20 +137,25 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         BasicConfigurableMQTT.optsFromPropSetting = function (ps) {
             return {
                 type: ps.dataType,
-                readOnly: !!ps.readOnly
+                readOnly: !!ps.readOnly,
+                description: ps.description
             };
         };
         BasicConfigurableMQTT.prototype.makeNumProp = function (ps) {
             var _this = this;
             var opts = BasicConfigurableMQTT_1.optsFromPropSetting(ps);
-            if (typeof ps.min === "number")
+            if (ps.min !== undefined)
                 opts.min = ps.min;
-            if (typeof ps.max === "number")
+            if (ps.max !== undefined)
                 opts.max = ps.max;
             var currValue = ps.initial !== undefined ? ps.initial :
                 opts.min !== undefined ? opts.min : 0;
             var sgFunc = function (newValue, isFeedback) {
-                if (!ps.readOnly && newValue !== undefined) {
+                if ((isFeedback || !ps.readOnly) && newValue !== undefined) {
+                    if (ps.min !== undefined)
+                        newValue = Math.max(newValue, ps.min);
+                    if (ps.max !== undefined)
+                        newValue = Math.min(newValue, ps.max);
                     currValue = newValue;
                     if (!isFeedback)
                         _this.mqtt.sendText(newValue.toString(), ps.subTopic);
@@ -163,7 +168,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
             var _this = this;
             var currValue = ps.initial || false;
             var sgFunc = function (newValue, isFeedback) {
-                if (!ps.readOnly && newValue !== undefined) {
+                if ((isFeedback || !ps.readOnly) && newValue !== undefined) {
                     currValue = newValue;
                     var valueToSend = newValue ?
                         (ps.trueValue || "true") :
@@ -179,7 +184,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
             var _this = this;
             var currValue = ps.initial || "";
             var sgFunc = function (newValue, isFeedback) {
-                if (!ps.readOnly && newValue !== undefined) {
+                if ((isFeedback || !ps.readOnly) && newValue !== undefined) {
                     currValue = newValue;
                     if (!isFeedback)
                         _this.mqtt.sendText(newValue, ps.subTopic);

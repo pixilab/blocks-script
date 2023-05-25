@@ -6,6 +6,7 @@
 	[{
 		"property": "NumPropName",
 		"subTopic": "some/sub/topicWithNumericValue",
+		"description": "Descriptive text shown in Blocks editor",
 		"readOnly": true,
 		"dataType": "Number", "min": 1, "max": 10
 	 }, {
@@ -29,6 +30,7 @@
 
 		readOnly    Set to true to disallow setting the topic's data from Blocks (default is false)
 		dataType    One of the values "Number", "Boolean" or "String" (default is "String")
+		desciption	Text you want to show to the user in the Blocks editor
 
 	and the following data type specific fields for "Number" type:
 
@@ -67,6 +69,7 @@ interface PropSettings {
 	readOnly?: boolean;		// If true, topic can't be set from Blocks side, but will subscribe
 	writeOnly?: boolean;	// If true, topic will not be subscribed to but can still be set
 	dataType?:  PrimValueType;	// Default is "String"
+	description?: string;	// Descriptive text shown in Blocks editor
 }
 
 /**
@@ -242,7 +245,8 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	private static optsFromPropSetting(ps: PropSettings): SGOptions {
 		return {
 			type: ps.dataType,
-			readOnly: !!ps.readOnly
+			readOnly: !!ps.readOnly,
+			description: ps.description
 		};
 	}
 
@@ -251,16 +255,22 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	 */
 	private makeNumProp(ps: NumPropSettings) {
 		const opts = BasicConfigurableMQTT.optsFromPropSetting(ps);
-		if (typeof ps.min === "number")
+		if (ps.min !== undefined)
 			opts.min = ps.min;
-		if (typeof ps.max === "number")
+		if (ps.max !== undefined)
 			opts.max = ps.max;
 
-		// Current property value held in closure
-		var currValue: number = ps.initial !== undefined ? ps.initial :
+		// Current property value held in closure, initialized to min or 0
+		let currValue: number = ps.initial !== undefined ? ps.initial :
 			opts.min !== undefined ? opts.min : 0;
+
 		const sgFunc = (newValue?: number, isFeedback?: boolean) => {
-			if (!ps.readOnly && newValue !== undefined) {
+			if ((isFeedback || !ps.readOnly) && newValue !== undefined) {
+				// Clip value to min/max if specified
+				if (ps.min !== undefined)
+					newValue = Math.max(newValue, ps.min);
+				if (ps.max !== undefined)
+					newValue = Math.min(newValue, ps.max);
 				currValue = newValue;
 				if (!isFeedback)	// Don't send if called due to feedback
 					this.mqtt.sendText(newValue.toString(), ps.subTopic);
@@ -276,7 +286,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	private makeBoolProp(ps: BoolPropSettings) {
 		let currValue: boolean = ps.initial || false;
 		const sgFunc = (newValue?: boolean, isFeedback?: boolean) => {
-			if (!ps.readOnly && newValue !== undefined) {
+			if ((isFeedback || !ps.readOnly)  && newValue !== undefined) {
 				currValue = newValue;
 				let valueToSend = newValue ?
 					(ps.trueValue || "true") :
@@ -294,9 +304,9 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	 * Make and advertize a string property according to ps.
 	 */
 	private makeStrProp(ps: StringPropSettings) {
-		var currValue: string = ps.initial || "";
+		let currValue: string = ps.initial || "";
 		const sgFunc = (newValue?: string, isFeedback?: boolean) => {
-			if (!ps.readOnly && newValue !== undefined) {
+			if ((isFeedback || !ps.readOnly)  && newValue !== undefined) {
 				currValue = newValue;
 				if (!isFeedback)	// Don't send if called due to feedback
 					this.mqtt.sendText(newValue, ps.subTopic);
