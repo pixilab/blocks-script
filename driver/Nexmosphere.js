@@ -52,7 +52,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     for (var _i = 0, _a = _this.specifiedInterfaces; _i < _a.length; _i++) {
                         var iface = _a[_i];
                         log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
-                        _this.addInterface(iface.ifaceNo, iface.modelCode);
+                        _this.addInterface(iface.ifaceNo, iface.modelCode, iface.name);
                     }
                 }
             }
@@ -191,10 +191,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var ix = portNumber - 1;
             var ctor = Nexmosphere_1.interfaceRegistry[modelCode];
             if (ctor)
-                this.interfaces[ix] = new ctor(this, ix);
+                this.interfaces[ix] = new ctor(this, ix, name);
             else {
                 console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
-                this.interfaces[ix] = new UnknownInterface(this, ix);
+                this.interfaces[ix] = new UnknownInterface(this, ix, name);
             }
         };
         var Nexmosphere_1;
@@ -218,19 +218,24 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(Driver_1.Driver));
     exports.Nexmosphere = Nexmosphere;
     var BaseInterface = (function () {
-        function BaseInterface(driver, index) {
+        function BaseInterface(driver, index, name) {
             this.driver = driver;
             this.index = index;
+            this.name = name;
         }
         BaseInterface.prototype.getNamePrefix = function () {
-            return "iface_" + (this.index + 1);
+            var prefix = "iface_";
+            if (this.name) {
+                prefix = this.name + "_";
+            }
+            return prefix + (this.index + 1);
         };
         return BaseInterface;
     }());
     var UnknownInterface = (function (_super) {
         __extends(UnknownInterface, _super);
-        function UnknownInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function UnknownInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.propName = _this.getNamePrefix() + "_unknown";
             _this.driver.property(_this.propName, {
                 type: String,
@@ -249,8 +254,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }(BaseInterface));
     var RfidInterface = (function (_super) {
         __extends(RfidInterface, _super);
-        function RfidInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function RfidInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.tagInfo = {
                 tagNumber: 0,
                 isPlaced: false
@@ -286,8 +291,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     Nexmosphere.registerInterface(RfidInterface, "XRDR1");
     var NfcInterface = (function (_super) {
         __extends(NfcInterface, _super);
-        function NfcInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function NfcInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.nfcTagInfo = {
                 tagUID: "",
                 isPlaced: false,
@@ -377,8 +382,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     Nexmosphere.registerInterface(NfcInterface, "XRDW2");
     var XWaveLedInterface = (function (_super) {
         __extends(XWaveLedInterface, _super);
-        function XWaveLedInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function XWaveLedInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.propName = _this.getNamePrefix() + "_X-Wave_Command";
             _this.driver.property(_this.propName, {
                 type: String,
@@ -406,8 +411,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     Nexmosphere.registerInterface(XWaveLedInterface, "XWC56", "XWL56");
     var ProximityInterface = (function (_super) {
         __extends(ProximityInterface, _super);
-        function ProximityInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function ProximityInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.propName = _this.getNamePrefix() + "_proximity";
             _this.driver.property(_this.propName, {
                 type: Number,
@@ -427,8 +432,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     Nexmosphere.registerInterface(ProximityInterface, "XY116", "XY146", "XY176");
     var TimeOfFlightInterface = (function (_super) {
         __extends(TimeOfFlightInterface, _super);
-        function TimeOfFlightInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function TimeOfFlightInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.zonePropName = _this.getNamePrefix() + "_time_of_flightproximity";
             _this.buttonPropName = _this.getNamePrefix() + "_air_button";
             _this.zonePropValue = 8;
@@ -488,8 +493,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     Nexmosphere.registerInterface(TimeOfFlightInterface, "XY241");
     var AirGestureInterface = (function (_super) {
         __extends(AirGestureInterface, _super);
-        function AirGestureInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function AirGestureInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.propName = _this.getNamePrefix() + "_gesture";
             _this.driver.property(_this.propName, {
                 type: String,
@@ -543,8 +548,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }());
     var QuadButtonInterface = (function (_super) {
         __extends(QuadButtonInterface, _super);
-        function QuadButtonInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function QuadButtonInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.buttons = [];
             for (var ix = 0; ix < 4; ++ix) {
                 _this.buttons.push(new Button(_this.getNamePrefix() + "_btn_" + (ix + 1), _this, ix, driver));
@@ -578,8 +583,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6", "XT4FW6");
     var MotionInterface = (function (_super) {
         __extends(MotionInterface, _super);
-        function MotionInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function MotionInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.propName = _this.getNamePrefix() + "_motion";
             _this.driver.property(_this.propName, {
                 type: Number,
@@ -617,8 +622,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     }());
     var GenderInterface = (function (_super) {
         __extends(GenderInterface, _super);
-        function GenderInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function GenderInterface(driver, index, name) {
+            var _this = _super.call(this, driver, index, name) || this;
             _this.subProp = [];
             _this.subProp.push(new GenderSubProperty(driver, _this.getNamePrefix() + "_is Person", "Person detected", String, false));
             _this.subProp.push(new GenderSubProperty(driver, _this.getNamePrefix() + "_gender", "Gender; M=Male, F=Female, U=Unidentified", String, 'U'));
@@ -643,7 +648,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         return GenderInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
-    var DEBUG = false;
+    var DEBUG = true;
     function log() {
         var messages = [];
         for (var _i = 0; _i < arguments.length; _i++) {
