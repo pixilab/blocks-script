@@ -40,7 +40,7 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
         }
         Object.defineProperty(Driver.prototype, "connected", {
             get: function () {
-                return this.__scriptFacade.connected ? true : false;
+                return !!this.__scriptFacade.connected;
             },
             enumerable: false,
             configurable: true

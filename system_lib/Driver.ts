@@ -30,7 +30,7 @@ export class Driver<FacadeType extends NetworkBase> extends ScriptBase<FacadeTyp
 	@Meta.property("Connected to peer")
 	public get connected(): boolean {
 		// Returns false if connected is undefined
-		return (<any>this.__scriptFacade).connected ? true : false;
+		return !!(<any>this.__scriptFacade).connected;
 	}
 
 	/**
