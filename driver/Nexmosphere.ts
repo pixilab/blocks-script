@@ -264,14 +264,23 @@ export class Nexmosphere extends Driver<ConnType> {
 		name?:string	  // optional name (from Config Options)
 	){
 		const ix = portNumber - 1;
-		const ifaceName = name || "e" + portNumber;
 		let ctor = Nexmosphere.interfaceRegistry[modelCode];
 		if (!ctor) {
 			console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
 			ctor = UnknownInterface;
 		}
 		// Make it accessible both by name and 0-based interface index
-		this.interface[ix] = this.element[ifaceName] = new ctor(this, ix);
+
+		const iface = new ctor(this, ix);
+		let ifaceName = name;
+		if (!ifaceName) {	// Synthesize a name
+			ifaceName = iface.userFriendlyName();
+			if (!(iface instanceof UnknownInterface)) // Skip funky FFF... "model code"
+				ifaceName = ifaceName + '_' + modelCode;
+			ifaceName = ifaceName + '_' + portNumber
+		}
+
+		this.interface[ix] = this.element[ifaceName] = iface;
 	}
 }
 
@@ -288,6 +297,10 @@ class BaseInterface extends AggregateElem {
 
 	receiveData(data: string, tag?: TagInfo): void {
 		console.log("Unexpected data recieved on interface " + this.index + " " + data);
+	}
+
+	userFriendlyName() {
+		return "Unknown";
 	}
 }
 
@@ -333,6 +346,10 @@ class RfidInterface extends BaseInterface {
 		this.isPlaced = tag.isPlaced
 		this.tagNumber = tag.tagNumber;
 	}
+
+	userFriendlyName() {
+		return "RFID";
+	}
 }
 Nexmosphere.registerInterface(RfidInterface, "XRDR1");
 
@@ -372,6 +389,10 @@ class NfcInterface extends BaseInterface {
 				break;
 		}
 	}
+
+	userFriendlyName() {
+		return "NFC";
+	}
 }
 Nexmosphere.registerInterface(NfcInterface, "XRDW2");
 
@@ -390,6 +411,10 @@ class XWaveLedInterface extends BaseInterface {
 		const message = "X" + myIfaceNo + "B[" + data +"]";
 		this.driver.send(message);
 	}
+
+	userFriendlyName() {
+		return "LED";
+	}
 }
 Nexmosphere.registerInterface(XWaveLedInterface, "XWC56", "XWL56");
 
@@ -397,7 +422,7 @@ Nexmosphere.registerInterface(XWaveLedInterface, "XWC56", "XWL56");
 * Proximity sensors
 */
 class ProximityInterface extends BaseInterface {
-	private mProximity: number;
+	private mProximity: number = 0;
 
 	@property("Proximity zone", true)
 	get proximity(): number { return this.mProximity; }
@@ -405,6 +430,10 @@ class ProximityInterface extends BaseInterface {
 
 	receiveData(data: string) {
 		this.proximity = parseInt(data);
+	}
+
+	userFriendlyName() {
+		return "Prox";
 	}
 }
 Nexmosphere.registerInterface(ProximityInterface, "XY116", "XY146", "XY176");
@@ -445,6 +474,10 @@ class TimeOfFlightInterface extends BaseInterface {
 			break;
 		}
 	}
+
+	userFriendlyName() {
+		return "TOF";
+	}
 }
 Nexmosphere.registerInterface(TimeOfFlightInterface, "XY241");
 
@@ -460,6 +493,10 @@ class AirGestureInterface extends BaseInterface {
 
 	receiveData(data: string) {
 		this.gesture = data;
+	}
+
+	userFriendlyName() {
+		return "Air";
 	}
 }
 Nexmosphere.registerInterface(AirGestureInterface, "XTEF650", "XTEF30", "XTEF630", "XTEF680");
@@ -577,6 +614,10 @@ class QuadButtonInterface extends BaseInterface {
 		this.driver.send(command);
 		console.log(command);
 	}
+
+	userFriendlyName() {
+		return "Btn";
+	}
 }
 Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6");
 
@@ -593,6 +634,10 @@ class MotionInterface extends BaseInterface {
 
 	receiveData(data: string) {
 		this.motion = parseInt(data);
+	}
+
+	userFriendlyName() {
+		return "Motion";
 	}
 }
 Nexmosphere.registerInterface(MotionInterface, "XY320");
@@ -655,6 +700,10 @@ class GenderInterface extends BaseInterface {
 			this.ageConfidence = parseResult[4];
 			this.gaze = parseResult[5];
 		}
+	}
+
+	userFriendlyName() {
+		return "Gender";
 	}
 }
 Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");

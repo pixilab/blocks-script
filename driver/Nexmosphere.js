@@ -190,13 +190,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         Nexmosphere.prototype.addInterface = function (portNumber, modelCode, name) {
             var ix = portNumber - 1;
-            var ifaceName = name || "e" + portNumber;
             var ctor = Nexmosphere_1.interfaceRegistry[modelCode];
             if (!ctor) {
                 console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
                 ctor = UnknownInterface;
             }
-            this.interface[ix] = this.element[ifaceName] = new ctor(this, ix);
+            var iface = new ctor(this, ix);
+            var ifaceName = name;
+            if (!ifaceName) {
+                ifaceName = iface.userFriendlyName();
+                if (!(iface instanceof UnknownInterface))
+                    ifaceName = ifaceName + '_' + modelCode;
+                ifaceName = ifaceName + '_' + portNumber;
+            }
+            this.interface[ix] = this.element[ifaceName] = iface;
         };
         var Nexmosphere_1;
         __decorate([
@@ -229,6 +236,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         }
         BaseInterface.prototype.receiveData = function (data, tag) {
             console.log("Unexpected data recieved on interface " + this.index + " " + data);
+        };
+        BaseInterface.prototype.userFriendlyName = function () {
+            return "Unknown";
         };
         return BaseInterface;
     }(ScriptBase_1.AggregateElem));
@@ -285,6 +295,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.isPlaced = tag.isPlaced;
             this.tagNumber = tag.tagNumber;
         };
+        RfidInterface.prototype.userFriendlyName = function () {
+            return "RFID";
+        };
         __decorate([
             (0, Metadata_1.property)("Last recieved RFID tag ID", true),
             __metadata("design:type", Number),
@@ -338,6 +351,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     break;
             }
         };
+        NfcInterface.prototype.userFriendlyName = function () {
+            return "NFC";
+        };
         __decorate([
             (0, Metadata_1.property)("Last recieved tag UID", true),
             __metadata("design:type", String),
@@ -372,6 +388,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             var message = "X" + myIfaceNo + "B[" + data + "]";
             this.driver.send(message);
         };
+        XWaveLedInterface.prototype.userFriendlyName = function () {
+            return "LED";
+        };
         __decorate([
             (0, Metadata_1.property)("Command sent"),
             __metadata("design:type", String),
@@ -383,7 +402,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var ProximityInterface = (function (_super) {
         __extends(ProximityInterface, _super);
         function ProximityInterface() {
-            return _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.mProximity = 0;
+            return _this;
         }
         Object.defineProperty(ProximityInterface.prototype, "proximity", {
             get: function () { return this.mProximity; },
@@ -393,6 +414,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         });
         ProximityInterface.prototype.receiveData = function (data) {
             this.proximity = parseInt(data);
+        };
+        ProximityInterface.prototype.userFriendlyName = function () {
+            return "Prox";
         };
         __decorate([
             (0, Metadata_1.property)("Proximity zone", true),
@@ -439,6 +463,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     break;
             }
         };
+        TimeOfFlightInterface.prototype.userFriendlyName = function () {
+            return "TOF";
+        };
         __decorate([
             (0, Metadata_1.property)("Proximity zone", true),
             __metadata("design:type", Number),
@@ -467,6 +494,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         });
         AirGestureInterface.prototype.receiveData = function (data) {
             this.gesture = data;
+        };
+        AirGestureInterface.prototype.userFriendlyName = function () {
+            return "Air";
         };
         __decorate([
             (0, Metadata_1.property)("Gesture detected", true),
@@ -573,6 +603,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.driver.send(command);
             console.log(command);
         };
+        QuadButtonInterface.prototype.userFriendlyName = function () {
+            return "Btn";
+        };
         QuadButtonInterface.kNumButtons = 4;
         __decorate([
             (0, Metadata_1.property)(kButtonDescr, true),
@@ -641,6 +674,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         MotionInterface.prototype.receiveData = function (data) {
             this.motion = parseInt(data);
         };
+        MotionInterface.prototype.userFriendlyName = function () {
+            return "Motion";
+        };
         __decorate([
             (0, Metadata_1.property)("Motion detected", true),
             __metadata("design:type", Number),
@@ -707,6 +743,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 this.ageConfidence = parseResult[4];
                 this.gaze = parseResult[5];
             }
+        };
+        GenderInterface.prototype.userFriendlyName = function () {
+            return "Gender";
         };
         GenderInterface.kParser = /^(0|1)(M|F|U)(X|L|H)([0-7])(X|L|H)(L|C|R|U)/;
         __decorate([
