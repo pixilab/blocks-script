@@ -39,7 +39,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             _this.numInterfaces = 8;
             _this.pollIndex = 0;
             _this.awake = false;
-            _this.interface = _this.namedAggregateProperty("interface", BaseInterface);
+            _this.element = _this.namedAggregateProperty("element", BaseInterface);
+            _this.interface = [];
             if (connection.options) {
                 var options = JSON.parse(connection.options);
                 if (typeof options === "number") {
@@ -75,7 +76,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 }
                 else {
                     log("Disconnected");
-                    if (!_this.interfaces.length)
+                    if (!_this.interface.length)
                         _this.pollIndex = 0;
                 }
             });
@@ -136,7 +137,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             var pollAgain = false;
             if (this.pollIndex < this.numInterfaces)
                 pollAgain = true;
-            else if (!this.interfaces.length) {
+            else if (!this.interface.length) {
                 this.pollIndex = 0;
                 pollAgain = true;
             }
@@ -169,9 +170,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 var dataRecieved = parseResult[3];
                 log("Incoming data from port", portNumber, "Data", dataRecieved);
                 var index = portNumber - 1;
-                var targetElem = this.interfaces[index];
-                if (targetElem)
-                    targetElem.receiveData(dataRecieved, this.lastTag);
+                var interfacePort = this.interface[index];
+                if (interfacePort)
+                    interfacePort.receiveData(dataRecieved, this.lastTag);
                 else
                     console.warn("Message from unexpected port", portNumber);
             }
@@ -189,13 +190,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         Nexmosphere.prototype.addInterface = function (portNumber, modelCode, name) {
             var ix = portNumber - 1;
-            var ifaceName = name || "iface" + portNumber;
+            var ifaceName = name || "e" + portNumber;
             var ctor = Nexmosphere_1.interfaceRegistry[modelCode];
             if (!ctor) {
                 console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
                 ctor = UnknownInterface;
             }
-            this.interface[ifaceName] = new ctor(this, ix);
+            this.interface[ix] = this.element[ifaceName] = new ctor(this, ix);
         };
         var Nexmosphere_1;
         __decorate([
@@ -299,14 +300,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     Nexmosphere.registerInterface(RfidInterface, "XRDR1");
     var NfcInterface = (function (_super) {
         __extends(NfcInterface, _super);
-        function NfcInterface(driver, index) {
-            var _this = _super.call(this, driver, index) || this;
+        function NfcInterface() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
             _this.lastTagEvent = "";
             _this.mTagUID = "";
             _this.mIsPlaced = false;
-            _this.mTagNumber = 0;
-            _this.mTagLabel = "";
-            _this.sendDeviceDefaultSetting();
             return _this;
         }
         Object.defineProperty(NfcInterface.prototype, "tagUID", {
@@ -321,47 +319,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             enumerable: false,
             configurable: true
         });
-        Object.defineProperty(NfcInterface.prototype, "tagNumber", {
-            get: function () { return this.mTagNumber; },
-            set: function (value) { this.mTagNumber = value; },
-            enumerable: false,
-            configurable: true
-        });
-        Object.defineProperty(NfcInterface.prototype, "tagLabel", {
-            get: function () { return this.mTagLabel; },
-            set: function (value) { this.mTagLabel = value; },
-            enumerable: false,
-            configurable: true
-        });
-        NfcInterface.prototype.sendDeviceDefaultSetting = function () {
-            var myIfaceNo = (("000" + (this.index + 1)).slice(-3));
-            var defaultSetting = "X" + myIfaceNo + "S[10:6]";
-            this.driver.send(defaultSetting);
-        };
         NfcInterface.prototype.receiveData = function (data) {
             console.log(data);
             var splitData = data.split(":");
             var newTagData = splitData[1];
             var newTagEvent = splitData[0];
-            if (this.lastTagEvent === "TD=UID" && newTagEvent === "TR=UID")
-                this.sendDeviceDefaultSetting();
             this.lastTagEvent = newTagEvent;
             switch (newTagEvent) {
                 case "TD=UID":
                     this.isPlaced = true;
                     this.tagUID = newTagData;
                     break;
-                case "TD=TNR":
-                    this.tagNumber = parseInt(newTagData);
-                    break;
-                case "TD=LB1":
-                    this.tagLabel = newTagData;
-                    break;
-                case "TR=LB1":
-                    this.isPlaced = false;
-                    break;
                 case "TR=UID":
-                case "TR=TNR":
+                    this.isPlaced = false;
                     break;
                 default:
                     _super.prototype.receiveData.call(this, data);
@@ -378,23 +348,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NfcInterface.prototype, "isPlaced", null);
-        __decorate([
-            (0, Metadata_1.property)("Tag number", true),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], NfcInterface.prototype, "tagNumber", null);
-        __decorate([
-            (0, Metadata_1.property)("Tag label 1", true),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], NfcInterface.prototype, "tagLabel", null);
         return NfcInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(NfcInterface, "XRDW2");
     var XWaveLedInterface = (function (_super) {
         __extends(XWaveLedInterface, _super);
         function XWaveLedInterface() {
-            return _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.mX_Wave_Command = "";
+            return _this;
         }
         Object.defineProperty(XWaveLedInterface.prototype, "X_Wave_Command", {
             get: function () { return this.mX_Wave_Command; },
@@ -493,7 +455,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var AirGestureInterface = (function (_super) {
         __extends(AirGestureInterface, _super);
         function AirGestureInterface() {
-            return _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.mGesture = "";
+            return _this;
         }
         Object.defineProperty(AirGestureInterface.prototype, "gesture", {
             get: function () { return this.mGesture; },
@@ -778,7 +742,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         return GenderInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
-    var DEBUG = true;
+    var DEBUG = false;
     function log() {
         var messages = [];
         for (var _i = 0; _i < arguments.length; _i++) {
