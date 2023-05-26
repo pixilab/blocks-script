@@ -648,7 +648,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         return GenderInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
-    var DEBUG = true;
+    var DEBUG = false;
     function log() {
         var messages = [];
         for (var _i = 0; _i < arguments.length; _i++) {
