@@ -939,7 +939,7 @@ interface IfaceInfo {
 /**
  Log messages, allowing my logging to be easily disabled in one place.
  */
- const DEBUG = true;	// Controls verbose logging
+ const DEBUG = false;	// Controls verbose logging
  function log(...messages: any[]) {
 	if (DEBUG)
 		// Set to false to disable my logging

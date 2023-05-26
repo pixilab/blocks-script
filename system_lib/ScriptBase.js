@@ -25,6 +25,9 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.indexedProperty = function (name, itemType) {
             return this.__scriptFacade.indexedProperty(name, itemType);
         };
+        ScriptBase.prototype.namedAggregateProperty = function (name, itemType) {
+            return this.__scriptFacade.namedAggregate(name, itemType);
+        };
         ScriptBase.prototype.changed = function (propName) {
             this.__scriptFacade.changed(propName);
         };
