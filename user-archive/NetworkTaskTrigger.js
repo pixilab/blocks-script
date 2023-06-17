@@ -30,7 +30,7 @@ define(["require", "exports", "../system_lib/Script", "../system_lib/Metadata", 
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NetworkTaskTrigger = void 0;
     var PORT = 3042;
-    var DEBUG = true;
+    var DEBUG = false;
     var NetworkTaskTrigger = (function (_super) {
         __extends(NetworkTaskTrigger, _super);
         function NetworkTaskTrigger(env) {

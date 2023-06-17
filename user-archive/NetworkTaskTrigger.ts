@@ -30,7 +30,7 @@ import {Connection, SimpleServer} from "../system/SimpleServer";
 import {Realm} from "../system/Realm";
 
 const PORT = 3042;	// Port this script listens on
-const DEBUG = true;	// Controls verbose logging and passes error messages back to client
+const DEBUG = false; // Enables verbose logging and passes errors back to client
 
 export class NetworkTaskTrigger extends Script {
 
@@ -51,6 +51,11 @@ export class NetworkTaskTrigger extends Script {
 		env.subscribe('finish', () => this.discard());
 	}
 
+	/**
+	 * White-list specified realm, realm.group or real.group.task (see block
+	 * comment at top of script for detals). You MUST call this at least
+	 * once to enable the TCP socket.
+	 */
 	@callable("Allow Tasks to be triggered from outside")
 	public whiteList(
 		@parameter("Name of Realm containing tasks") realm: string,
@@ -74,7 +79,7 @@ export class NetworkTaskTrigger extends Script {
 	 * Initiate socket listening for commands. Done once something has been white-listed.
 	 */
 	private init() {
-		if (!this.inited) {
+		if (!this.inited) {	// Do this only once
 			this.inited = true;
 			const listener = SimpleServer.newTextServer(PORT, 3);
 			listener.subscribe('client', (sender, message) => {
