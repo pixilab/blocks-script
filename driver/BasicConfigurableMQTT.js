@@ -212,31 +212,18 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         };
         BasicConfigurableMQTT.prototype.createValueToPublish = function (value, settings) {
             if (!settings.jsonTemplate) {
-                return value.toString();
+                return value;
             }
-            var templateValue = value;
-            if (settings.jsonCoerceToType === true ||
-                settings.jsonCoerceToType === undefined) {
-                templateValue = BasicConfigurableMQTT_1.coerceToType(settings, value);
-            }
-            var result = JSON.parse(JSON.stringify(settings.jsonTemplate));
-            var subObj = result;
-            var maxDepth = 500;
-            var depth = 0;
-            while (depth <= maxDepth) {
-                var keys = Object.keys(subObj);
-                if (keys.length !== 1) {
-                    throw "Invalid jsonTemplate";
+            var typedValue = BasicConfigurableMQTT_1.coerceToType(settings, value);
+            return JSON.stringify(settings.jsonTemplate, function (k, v) {
+                if (typeof v === "string") {
+                    if (v === "#BLOCKS#") {
+                        return typedValue;
+                    }
+                    return v.replace(/\$BLOCKS\$/g, value);
                 }
-                var key = keys[0];
-                if (subObj[key] === "VALUE") {
-                    subObj[key] = templateValue;
-                    break;
-                }
-                subObj = subObj[key];
-                ++depth;
-            }
-            return JSON.stringify(result);
+                return v;
+            });
         };
         BasicConfigurableMQTT.prototype.getValueFromJSONPath = function (jsonObj, jsonPath) {
             var subObj = jsonObj;
