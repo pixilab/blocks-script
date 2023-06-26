@@ -69,8 +69,13 @@ export class Script extends ScriptBase<ScriptEnv> {
 	 * Get Record based on secondary key fieldValue in id field fieldName.
 	 * Returns null if not found.
 	 */
-	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, fieldValue: string|number): DST|null {
-		return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue);
+	getRecordSec<DST extends RecordBase>(
+		type: Ctor<DST>,	// Class (constructir function) od record expected
+		fieldName: string, 	// Secondary key field name
+		fieldValue: string|number,	// Value used as key
+		optional?: boolean	// Don't log warning if record not found - just return null
+	): DST|null {
+		return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue, optional);
 	}
 
 	/**
@@ -109,7 +114,7 @@ export interface ScriptEnv extends ScriptBaseEnv {
 	sendOnChannel(name: string, data: string):void;
 	newRecord<DST extends RecordBase>(type: Ctor<DST>): DST;
 	getRecord<DST extends RecordBase>(type: Ctor<DST>, puid: number): DST;
-	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, key: string|number): DST;
+	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, key: string|number, optional?: boolean): DST;
 	deleteRecords<DST extends RecordBase>(type: Ctor<DST>, archive: boolean): void;
 	deleteRecord<DST extends RecordBase>(record: DST, archive?: boolean, filesToArchive?: string[]): void;
 	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[];

@@ -14,5 +14,10 @@ export interface ModbusModule { [channelName: string]: ModbusChannel; }
 
 export interface ModbusChannel {
 	value: number|boolean;	// Read only if channel is input
+
+	/**
+	 * Call lilstener when the value of the channel changes with its new value.
+	 * NOTE: You need to re-subscribe if the object fires the 'finish' event.
+	 */
 	subscribe(event: "change", listener: (sender: ModbusChannel, message:{value:number|boolean})=>void): void;
 }

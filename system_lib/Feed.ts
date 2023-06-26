@@ -63,6 +63,9 @@ export interface StaticFeed<ListItem extends Object, DetailsItem extends ListIte
 	/*	Provide full details of requested object. This function is not needed if
 		listType and itemType specify the same type (in which case getList has already
 		provided all data required).
+
+		IMPORTANT: The getDetails function must return a proper superset of the
+		corresponding list item, including all its data fields.
 	 */
 	getDetails?(spec: FeedDetailsSpec): Promise<DetailsItem | undefined> | DetailsItem | undefined;
 }

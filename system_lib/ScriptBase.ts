@@ -93,6 +93,12 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	 * needed.
 	 *
 	 * The value associated with the property varies with the type of property.
+	 *
+	 * IMPORTANT: Unlike object-specific "subscribe" methods, a property
+	 * connection established through this function will persist across any
+	 * recreation or reinitialization of any associated object. Thus, you
+	 * must NOT repeat any getProperty call when an object emits a 'finish'
+	 * event.
 	 */
 	getProperty<PropType extends PrimitiveValue>(
 		fullPath: string,

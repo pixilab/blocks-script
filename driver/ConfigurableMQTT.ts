@@ -35,7 +35,7 @@
 					topic for reading the value.
 		jsonPath	If the device publishes the property in a JSON object, specify the "path" to
 					the property in jsonPath. For example, if the device publishes
-					{ "data": { "property": "VALUE" } } where VALUE is the property value, set 
+					{ "data": { "property": "VALUE" } } where VALUE is the property value, set
 					jsonPath to ["data", "property"].
 		jsonTemplate	To publish a property in a JSON object, specify a jsonTemplate. The
 					template specifies the structure of the JSON object that will be published. All
@@ -132,7 +132,7 @@ interface Subscriber {
 }
 
 @driver('MQTT')
-export class BasicConfigurableMQTT extends Driver<MQTT> {
+export class ConfigurableMQTT extends Driver<MQTT> {
 
 	// Keeps track of all properties my - keyed by sub-topic
 	private readonly properties: Dictionary<Subscriber> = {};
@@ -211,7 +211,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 		if (subscriber) {
 			if (subscriber.settings.jsonPath) {
 				let jsonData;
-				
+
 				try {
 					jsonData = JSON.parse(value);
 				} catch (error) {
@@ -226,7 +226,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 				}
 			}
 			try {
-				const typedValue = BasicConfigurableMQTT.coerceToType(subscriber.settings, value);
+				const typedValue = ConfigurableMQTT.coerceToType(subscriber.settings, value);
 				subscriber.handler(typedValue, true);	// Applies the value
 				this.changed(subscriber.settings.property);	// Must fire change notifications myself here
 			} catch (coercionError) {
@@ -248,7 +248,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 				throw "Not a number";
 			break;
 		case "Boolean":
-			result = BasicConfigurableMQTT.parseBool(<BoolPropSettings>setting, rawValue);
+			result = ConfigurableMQTT.parseBool(<BoolPropSettings>setting, rawValue);
 			break;
 		}
 
@@ -290,7 +290,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	 * Make and advertize a numeric property according to ps.
 	 */
 	private makeNumProp(ps: NumPropSettings) {
-		const opts = BasicConfigurableMQTT.optsFromPropSetting(ps);
+		const opts = ConfigurableMQTT.optsFromPropSetting(ps);
 		if (ps.min !== undefined)
 			opts.min = ps.min;
 		if (ps.max !== undefined)
@@ -333,7 +333,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 			}
 			return currValue;
 		}
-		this.registerProp(ps, BasicConfigurableMQTT.optsFromPropSetting(ps), sgFunc)
+		this.registerProp(ps, ConfigurableMQTT.optsFromPropSetting(ps), sgFunc)
 	}
 
 	/**
@@ -349,7 +349,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 			}
 			return currValue;
 		}
-		this.registerProp(ps, BasicConfigurableMQTT.optsFromPropSetting(ps), sgFunc)
+		this.registerProp(ps, ConfigurableMQTT.optsFromPropSetting(ps), sgFunc)
 	}
 
 	/**
@@ -360,9 +360,9 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 		if (!settings.jsonTemplate) {
 			return value;
 		}
-		
-		let typedValue: PrimitiveValue = BasicConfigurableMQTT.coerceToType(settings, value);
-			
+
+		let typedValue: PrimitiveValue = ConfigurableMQTT.coerceToType(settings, value);
+
 		return JSON.stringify(settings.jsonTemplate, (k, v) => { // Can throw
 			if (typeof v === "string") {
 				if (v === "#BLOCKS#") {

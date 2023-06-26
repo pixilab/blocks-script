@@ -16,7 +16,7 @@ import {Driver, DriverFacade} from "../system_lib/Driver";
  */
 export var Network: { [deviceName: string]:
 	NetworkTCP | NetworkUDP |		// Applies when no driver is assigned
-	Driver<NetworkTCP|NetworkUDP|SerialPort|MQTT>;	// Driver subclass (when driver is assigned)
+	Driver<NetworkTCP | NetworkUDP | SerialPort | MQTT>; // Driver subclass (when one is assigned)
 };
 
 /**
@@ -82,16 +82,18 @@ interface IStreamConnection extends DriverFacade {
 		up to (but not including) the end of line (which may be CR, CR/LF or LF).
 		This default termination may be overridden by calling setReceiveFraming.
 		NOT applicable when connected in rawBytesMode.
+		NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
-	subscribe(event: 'textReceived', listener: (emitter: IStreamConnection, message: {
+	subscribe<T extends IStreamConnection>(this: T, event: 'textReceived', listener: (emitter: T, message: {
 		text: string			// The text string that was received (excluding line terminator)
 	}) => void): void;
 
 	/*	Read "raw" data. Only applicable when connected in rawBytesMode. Note that data received
 		has no "framing" applied, and is just the next batch of bytes in the connection's
 		incoming data stream. Any framing needs to be applied by the receiveing driver/script.
+		NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
-	subscribe(event: 'bytesReceived', listener: (emitter: IStreamConnection, message: {
+	subscribe<T extends IStreamConnection>(this: T, event: 'bytesReceived', listener: (emitter: T, message: {
 		rawData: number[]		// The raw data that was received
 	}) => void): void;
 
@@ -99,14 +101,15 @@ interface IStreamConnection extends DriverFacade {
 	 * Notification when connection state changes or fails. May be used as an alternative
 	 * to the promise returned from connect(), and/or to be notified if the connection is
 	 * dropped.
+	 * NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
-	subscribe(event: 'connect', listener: (emitter: IStreamConnection, message: {
+	subscribe<T extends IStreamConnection>(this: T, event: 'connect', listener: (emitter: T, message: {
 		type: 'Connection' |		// Connection state changed (check connected)
 			'ConnectionFailed'	// Connection attempt failed
 	}) => void): void;
 
 	// Object is being shut down
-	subscribe(event: 'finish', listener: (emitter: IStreamConnection)=>void): void;
+	subscribe<T extends IStreamConnection>(this: T, event: 'finish', listener: (emitter: T)=>void): void;
 }
 
 /**
@@ -194,13 +197,17 @@ export interface NetworkUDP extends NetworkIPBase {
 
 	// // // // Notification subscription management // // // //
 
-	// Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
+	/*	Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
+		NOTE: You need to re-subscribe if the object fires the 'finish' event.
+	 */
 	subscribe(event: 'textReceived', listener: (emitter: NetworkUDP, message:{
 		text:string,			// The text string that was received
 		sender: string			// Address of peer data was received from
 	})=>void): void;
 
-	// Receive "raw" data containing the entire UDP packet.
+	/*	Receive "raw" data containing the entire UDP packet.
+		NOTE: You need to re-subscribe if the object fires the 'finish' event.
+	 */
 	subscribe(event: 'bytesReceived', listener: (emitter: NetworkUDP, message:{
 		rawData:number[],		// The raw data that was received
 		sender: string			// Address of peer data was received from
@@ -247,6 +254,7 @@ export interface MQTT extends NetworkBase {
 
 	/**
 	 * Notification when broker connection fails or its state changes.
+	 * NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'connect', listener: (emitter: MQTT, message: {
 		type:

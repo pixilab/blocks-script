@@ -51,7 +51,8 @@ export interface BaseSpot {
 	 */
 	playingBlock: string;	// Read-only
 
-	// Spot disconnected and must no longer be used
+	/**	Spot disconnected and must no longer be used.
+	 */
 	subscribe(event: 'finish', listener: (sender: BaseSpot)=>void): void;
 
 	/*	Explicitly end subscription from listener function to event,
@@ -251,6 +252,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 
 	/**
 	 * Event fired when interesting connection state event occurs.
+	 * NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
 		readonly type:
@@ -260,6 +262,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 
 	/**
 	 *	Event fired when various spot state changes occur.
+	 * 	NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: "spot", listener: (sender: DisplaySpot, message:{
 		readonly type:
@@ -273,7 +276,8 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	})=>void): void;
 
 	/**
-	 *	Event fired when user navigates manually to a block path
+	 *	Event fired when user navigates manually to a block path.
+	 * 	NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'navigation', listener: (sender: DisplaySpot, message: {
 		readonly targetPath: string,	// Path navigated to
@@ -282,6 +286,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 
 	/**
 	 *	Event fired when keyboard faux-GPIO (numeric key 0...9) changes state.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'keyPress', listener: (sender: DisplaySpot, message: {
 		readonly input: number,		// Input that changed; 0...9
@@ -290,6 +295,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 
 	/**
 	 *	Event fired when on RFID/QR scanner input (keyboard text entry).
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'scannerInput', listener: (sender: DisplaySpot, message: {
 		readonly code: string,		// Scanned code, or empty string at end of scan
@@ -297,6 +303,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 
 	/**
 	 *	Event fired when Locator changes location of spot.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'location', listener: (sender:DisplaySpot, message: {
 		readonly location: string	// New location, as Spot path, or empty string if left location
@@ -304,6 +311,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 
 	/**
 	 *	Event fired when image is received from Camera block on Spot.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'image', listener: (sender: DisplaySpot, message: {
 		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
@@ -350,6 +358,7 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 
 	/**
 	 * Events fired due to block changes.
+	 * NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'spot', listener: (sender: MobileSpot, message:{
 		readonly type:
@@ -376,6 +385,7 @@ export interface MobileSpot extends SpotGroupItem, BaseSpot {
 	 *	the	Visitor object will receive the 'image' event first, and then the
 	 *	enclosing MobileSpot will receive it. In general, you should handle this
 	 *	event EITHER at the Visitor level OR the MobileSpot - not both.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'image', listener: (sender: MobileSpot, message: {
 		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
@@ -404,6 +414,7 @@ export interface Visitor<RecordType extends RecordBase> extends ControllableSpot
 
 	/**
 	 *	Event fired when various spot state changes occur.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: "spot", listener: (sender: Visitor<RecordType>, message:{
 		readonly type:
@@ -414,6 +425,7 @@ export interface Visitor<RecordType extends RecordBase> extends ControllableSpot
 
 	/**
 	 *	Event fired when Locator changes location of spot.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'location', listener: (sender: Visitor<RecordType>, message: {
 		readonly location: string	// New location, as Spot path, or empty string if left location
@@ -421,6 +433,7 @@ export interface Visitor<RecordType extends RecordBase> extends ControllableSpot
 
 	/**
 	 *	Event fired when image is received from Camera block on Spot.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'image', listener: (sender: Visitor<RecordType>, message: {
 		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
@@ -428,7 +441,8 @@ export interface Visitor<RecordType extends RecordBase> extends ControllableSpot
 	})=>void): void;
 
 	/**
-	 *	Event fired when user navigates manually to a block path
+	 *	Event fired when user navigates manually to a block path.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: 'navigation', listener: (sender: Visitor<RecordType>, message: {
 		readonly targetPath: string,	// Path navigated to
@@ -444,6 +458,10 @@ export interface Visitor<RecordType extends RecordBase> extends ControllableSpot
 export interface VirtualSpot extends SpotGroupItem, BaseSpot, GeoZonable  {
 	isOfTypeName(typeName: "VirtualSpot"): VirtualSpot | null;
 
+	/**
+	 *	Event fired when various spot state changes occur.
+	 *  NOTE: You need to re-subscribe if the object fires the 'finish' event.
+	 */
 	subscribe(event: "spot", listener: (sender: VirtualSpot, message:{
 		type:
 			'DefaultBlock'|		// Default block changed (may be schedule)
