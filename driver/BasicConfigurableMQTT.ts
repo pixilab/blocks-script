@@ -30,7 +30,20 @@
 
 		readOnly    Set to true to disallow setting the topic's data from Blocks (default is false)
 		dataType    One of the values "Number", "Boolean" or "String" (default is "String")
-		desciption	Text you want to show to the user in the Blocks editor
+		description	Text you want to show to the user in the Blocks editor
+		publishSubTopic		Set this if the sub topic for publishing is different from the sub
+					topic for reading the value.
+		jsonPath	If the device publishes the property in a JSON object, specify the "path" to
+					the property in jsonPath. For example, if the device publishes
+					{ "data": { "property": "VALUE" } } where VALUE is the property value, set 
+					jsonPath to ["data", "property"].
+		jsonTemplate	To publish a property in a JSON object, specify a jsonTemplate. The
+					template specifies the structure of the JSON object that will be published. All
+					occurrences of the string "$BLOCKS$" (except for keys) will be replaced by the
+					property value. To cast the property value to its dataType, use "#BLOCKS#"
+					instead. Note that "$BLOCKS$" can be used multiple times inside a string
+					containing other characters whereas "#BLOCKS#" cannot. Example:
+					{ "data": { "inString": "Property $BLOCKS$ + $BLOCKS$", "value": "#BLOCKS#" } }
 
 	and the following data type specific fields for "Number" type:
 
@@ -60,6 +73,9 @@ import {PrimitiveValue} from "../system_lib/ScriptBase";
 
 type PrimValueType = "Number" | "Boolean" | "String";
 
+type JSONPath = string[];
+type JSONTemplate = any;
+
 /**
  * Common settings for all properties in JSON config data
  */
@@ -70,6 +86,9 @@ interface PropSettings {
 	writeOnly?: boolean;	// If true, topic will not be subscribed to but can still be set
 	dataType?:  PrimValueType;	// Default is "String"
 	description?: string;	// Descriptive text shown in Blocks editor
+	publishSubTopic?: string; // Different publish sub topic. If undefined, same as subTopic
+	jsonPath?: JSONPath; // Path to nested JSON object holding the value
+	jsonTemplate?: JSONTemplate; // Template for publishing JSON object
 }
 
 /**
@@ -118,9 +137,9 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	// Keeps track of all properties my - keyed by sub-topic
 	private readonly properties: Dictionary<Subscriber> = {};
 
-    public constructor(public mqtt: MQTT) {
-        super(mqtt);
-        if (mqtt.options) {
+	public constructor(public mqtt: MQTT) {
+		super(mqtt);
+		if (mqtt.options) {
 			try {
 				const propSettingsList: PropSettings[] = JSON.parse(mqtt.options);
 				if (Array.isArray(propSettingsList)) {
@@ -133,7 +152,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 			}
 		} else
 			console.error("No Custom Options specified");
-    }
+	}
 
 	private doPropSettings(propSettingsList: PropSettings[]) {
 		for (const ps of propSettingsList) {
@@ -188,7 +207,24 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 	 */
 	private dataFromSubTopic(subTopic: string, value: string) {
 		const subscriber = this.properties[subTopic];
+
 		if (subscriber) {
+			if (subscriber.settings.jsonPath) {
+				let jsonData;
+				
+				try {
+					jsonData = JSON.parse(value);
+				} catch (error) {
+					console.error("Invalid JSON data from", subTopic);
+					return;
+				}
+				try {
+					value = this.getValueFromJSONPath(jsonData, subscriber.settings.jsonPath);
+				} catch (error) {
+					console.error("Invalid jsonPath for sub topic", subTopic);
+					return;
+				}
+			}
 			try {
 				const typedValue = BasicConfigurableMQTT.coerceToType(subscriber.settings, value);
 				subscriber.handler(typedValue, true);	// Applies the value
@@ -273,7 +309,7 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 					newValue = Math.min(newValue, ps.max);
 				currValue = newValue;
 				if (!isFeedback)	// Don't send if called due to feedback
-					this.mqtt.sendText(newValue.toString(), ps.subTopic);
+					this.sendValue(newValue.toString(), ps);
 			}
 			return currValue;
 		}
@@ -289,11 +325,11 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 			if ((isFeedback || !ps.readOnly)  && newValue !== undefined) {
 				currValue = newValue;
 				let valueToSend = newValue ?
-					(ps.trueValue || "true") :
-					(ps.falseValue || "false");
+				(ps.trueValue || "true") :
+				(ps.falseValue || "false");
 
 				if (!isFeedback)	// Don't send if called due to feedback
-					this.mqtt.sendText(valueToSend, ps.subTopic);
+					this.sendValue(valueToSend, ps);
 			}
 			return currValue;
 		}
@@ -309,19 +345,69 @@ export class BasicConfigurableMQTT extends Driver<MQTT> {
 			if ((isFeedback || !ps.readOnly)  && newValue !== undefined) {
 				currValue = newValue;
 				if (!isFeedback)	// Don't send if called due to feedback
-					this.mqtt.sendText(newValue, ps.subTopic);
+					this.sendValue(newValue, ps);
 			}
 			return currValue;
 		}
 		this.registerProp(ps, BasicConfigurableMQTT.optsFromPropSetting(ps), sgFunc)
 	}
 
-    /*	Send text string to broker on specified sub-topic.
-   	*/
-   	@callable("Send raw text data to subTopic")
-   	sendText(text: string, subTopic: string): void {
-           this.mqtt.sendText(text, subTopic);
-    }
+	/**
+	 * Create string to publish from PropSettings. Throws if the jsonTemplate
+	 * is invalid.
+	 */
+	private createValueToPublish(value: string, settings: PropSettings): string {
+		if (!settings.jsonTemplate) {
+			return value;
+		}
+		
+		let typedValue: PrimitiveValue = BasicConfigurableMQTT.coerceToType(settings, value);
+			
+		return JSON.stringify(settings.jsonTemplate, (k, v) => { // Can throw
+			if (typeof v === "string") {
+				if (v === "#BLOCKS#") {
+					return typedValue;
+				}
+				return v.replace(/\$BLOCKS\$/g, value);
+			}
+			return v;
+		});
+	}
+
+	/**
+	 * Returns string value from a JSONPath. Throws if the path is invalid.
+	 */
+	private getValueFromJSONPath(jsonObj: any, jsonPath: JSONPath): string {
+		let subObj = jsonObj;
+
+		for (const jsonKey of jsonPath) {
+			if (!(jsonKey in subObj)) {
+				throw "Invalid JSON path";
+			}
+			subObj = subObj[jsonKey];
+		}
+		return subObj.toString();
+	}
+
+	/**
+	 * Send a property value to a subTopic.
+	 */
+	private sendValue(value: string, ps: PropSettings) {
+		try {
+			let valueToPublish = this.createValueToPublish(value, ps);
+			this.mqtt.sendText(valueToPublish, ps.publishSubTopic ? ps.publishSubTopic : ps.subTopic);
+		}
+		catch (jsonTemplateError) {
+			console.error("Invalid jsonTemplate");
+		}
+	}
+
+	/*	Send text string to broker on specified sub-topic.
+		*/
+		@callable("Send raw text data to subTopic")
+		sendText(text: string, subTopic: string): void {
+			this.mqtt.sendText(text, subTopic);
+	}
 }
 
 /**

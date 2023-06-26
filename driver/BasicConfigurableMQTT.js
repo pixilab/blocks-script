@@ -94,6 +94,23 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         BasicConfigurableMQTT.prototype.dataFromSubTopic = function (subTopic, value) {
             var subscriber = this.properties[subTopic];
             if (subscriber) {
+                if (subscriber.settings.jsonPath) {
+                    var jsonData = void 0;
+                    try {
+                        jsonData = JSON.parse(value);
+                    }
+                    catch (error) {
+                        console.error("Invalid JSON data from", subTopic);
+                        return;
+                    }
+                    try {
+                        value = this.getValueFromJSONPath(jsonData, subscriber.settings.jsonPath);
+                    }
+                    catch (error) {
+                        console.error("Invalid jsonPath for sub topic", subTopic);
+                        return;
+                    }
+                }
                 try {
                     var typedValue = BasicConfigurableMQTT_1.coerceToType(subscriber.settings, value);
                     subscriber.handler(typedValue, true);
@@ -158,7 +175,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
                         newValue = Math.min(newValue, ps.max);
                     currValue = newValue;
                     if (!isFeedback)
-                        _this.mqtt.sendText(newValue.toString(), ps.subTopic);
+                        _this.sendValue(newValue.toString(), ps);
                 }
                 return currValue;
             };
@@ -174,7 +191,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
                         (ps.trueValue || "true") :
                         (ps.falseValue || "false");
                     if (!isFeedback)
-                        _this.mqtt.sendText(valueToSend, ps.subTopic);
+                        _this.sendValue(valueToSend, ps);
                 }
                 return currValue;
             };
@@ -187,11 +204,46 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
                 if ((isFeedback || !ps.readOnly) && newValue !== undefined) {
                     currValue = newValue;
                     if (!isFeedback)
-                        _this.mqtt.sendText(newValue, ps.subTopic);
+                        _this.sendValue(newValue, ps);
                 }
                 return currValue;
             };
             this.registerProp(ps, BasicConfigurableMQTT_1.optsFromPropSetting(ps), sgFunc);
+        };
+        BasicConfigurableMQTT.prototype.createValueToPublish = function (value, settings) {
+            if (!settings.jsonTemplate) {
+                return value;
+            }
+            var typedValue = BasicConfigurableMQTT_1.coerceToType(settings, value);
+            return JSON.stringify(settings.jsonTemplate, function (k, v) {
+                if (typeof v === "string") {
+                    if (v === "#BLOCKS#") {
+                        return typedValue;
+                    }
+                    return v.replace(/\$BLOCKS\$/g, value);
+                }
+                return v;
+            });
+        };
+        BasicConfigurableMQTT.prototype.getValueFromJSONPath = function (jsonObj, jsonPath) {
+            var subObj = jsonObj;
+            for (var _i = 0, jsonPath_1 = jsonPath; _i < jsonPath_1.length; _i++) {
+                var jsonKey = jsonPath_1[_i];
+                if (!(jsonKey in subObj)) {
+                    throw "Invalid JSON path";
+                }
+                subObj = subObj[jsonKey];
+            }
+            return subObj.toString();
+        };
+        BasicConfigurableMQTT.prototype.sendValue = function (value, ps) {
+            try {
+                var valueToPublish = this.createValueToPublish(value, ps);
+                this.mqtt.sendText(valueToPublish, ps.publishSubTopic ? ps.publishSubTopic : ps.subTopic);
+            }
+            catch (jsonTemplateError) {
+                console.error("Invalid jsonTemplate");
+            }
         };
         BasicConfigurableMQTT.prototype.sendText = function (text, subTopic) {
             this.mqtt.sendText(text, subTopic);
