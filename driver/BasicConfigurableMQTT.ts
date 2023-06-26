@@ -30,7 +30,7 @@
 
 		readOnly    Set to true to disallow setting the topic's data from Blocks (default is false)
 		dataType    One of the values "Number", "Boolean" or "String" (default is "String")
-		desciption	Text you want to show to the user in the Blocks editor
+		description	Text you want to show to the user in the Blocks editor
 		publishSubTopic		Set this if the sub topic for publishing is different from the sub
 					topic for reading the value.
 		jsonPath	If the device publishes the property in a JSON object, specify the "path" to
