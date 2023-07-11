@@ -1,14 +1,14 @@
 /*	Some base classes often useful when building a Personal Visitor Experience based
-	on Stations that can be visited by visitors, assuming one visitor at a time
-	at any given station.
+ on Stations that can be visited by visitors, assuming one visitor at a time
+ at any given station.
 
-	Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 
-import {BaseSpot, Spot, Visitor} from "../system/Spot";
-import {PropertyAccessor, Script} from "../system_lib/Script";
-import {PrimitiveValue, RecordBase} from "../system_lib/ScriptBase";
+import { BaseSpot, Spot, Visitor } from "../system/Spot";
+import { PropertyAccessor, Script } from "../system_lib/Script";
+import { PrimitiveValue, RecordBase } from "../system_lib/ScriptBase";
 
 const DEBUG = false;	// Controls verbose logging
 
@@ -40,7 +40,7 @@ export abstract class VisitorScriptBase<
 	VisitorPhone extends VisitorPhoneBase<VisitorRecord, Station> | undefined = undefined
 > extends Script {
 	// All Stations, keyed by their spot paths
-	private readonly stations: Dictionary<Station> = {};
+	public readonly stations: Dictionary<Station> = {};
 
 	// Active visitors current location, keyed by visitor's $puid
 	private readonly visitorLoc: Dictionary<Station> = {};
@@ -151,7 +151,7 @@ export abstract class VisitorScriptBase<
  */
 export abstract class StationBase<
 	VisitorRecord extends VisitorRecordBase,
-	VisitorScript extends VisitorScriptBase <
+	VisitorScript extends VisitorScriptBase<
 		any,
 		VisitorRecord,
 		VisitorPhoneBase<VisitorRecord, any>
@@ -228,7 +228,7 @@ export abstract class StationBase<
 
 	/*	Navigate to active or passive attractor state. Sometimes better than setting
 		Spot's active property since gotoBlock establishes a new timeout. Assumes
-        that the Block at this Spot has a top level Attractor.
+		that the Block at this Spot has a top level Attractor.
 	 */
 	protected activateByGotoBlock(act: boolean) {
 		// OK with block index here, since child at '0' is always active child
@@ -327,12 +327,15 @@ export abstract class StationBase<
 	 * me, and then, inly if I return true, proceed with their own spot-related
 	 * connections.
 	 */
-	protected connectSpot() {
+	protected connectSpot(reconnect = false) {
 		const spot = Spot[this.spotPath] as SpotType;
 		if (spot) {
 			// Attempt to reconnect if my current spot object finishes its life cycle
-			spot.subscribe('finish', () => this.connectSpot());
-		}
+			spot.subscribe('finish', () =>
+				this.connectSpot()
+			);
+		} else
+			console.warn(`Spot ${this.spotPath} not found, not ${reconnect ? 're' : ''}connected...`);
 		this.mySpot = spot;
 		return !!spot;
 	}
@@ -510,7 +513,7 @@ export class VisitorPhoneBase<
 
 	/** Visitor disconnected - do what's appropriate here.
 	 */
-	private visitorGone() {
+	protected visitorGone() {
 		log('VisitorPhone disconnected', this.visitor.identity);
 
 		this.owner.lostPhone(this);
