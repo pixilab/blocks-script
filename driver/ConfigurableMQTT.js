@@ -40,7 +40,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
                         _this.init();
                     }
                     else
-                        console.error("Custom Options incalid (expected an array)");
+                        console.error("Custom Options invalid (expected an array)");
                 }
                 catch (parseError) {
                     console.error("Can't parse Custom Options", parseError);
@@ -85,8 +85,8 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
             var _this = this;
             for (var subTopic in this.properties) {
                 for (var _i = 0, _a = this.properties[subTopic]; _i < _a.length; _i++) {
-                    var property_1 = _a[_i];
-                    if (!property_1.settings.writeOnly) {
+                    var property = _a[_i];
+                    if (!property.settings.writeOnly) {
                         this.mqtt.subscribeTopic(subTopic, function (emitter, message) {
                             return _this.dataFromSubTopic(message.subTopic, message.text);
                         });
@@ -103,7 +103,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
             for (var _i = 0, subscribers_1 = subscribers; _i < subscribers_1.length; _i++) {
                 var subscriber = subscribers_1[_i];
                 if (subscriber.settings.writeOnly) {
-                    return;
+                    continue;
                 }
                 var value = data;
                 if (subscriber.settings.jsonPath) {

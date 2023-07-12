@@ -30,6 +30,8 @@
 	and the following optional fields:
 
 		readOnly    Set to true to disallow setting the topic's data from Blocks (default is false)
+		writeOnly   Set to true to make property write only, skipping subTopic subscription
+					(default is false).
 		dataType    One of the values "Number", "Boolean" or "String" (default is "String")
 		description	Text you want to show to the user in the Blocks editor
 		publishSubTopic		Set this if the sub topic for publishing is different from the sub
@@ -68,7 +70,7 @@
 import {SGOptions} from "../system/PubSub";
 import {MQTT} from "../system/Network";
 import { Driver } from "../system_lib/Driver";
-import {callable, driver, property} from "../system_lib/Metadata";
+import {callable, driver} from "../system_lib/Metadata";
 import {PrimitiveValue} from "../system_lib/ScriptBase";
 
 
@@ -147,7 +149,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 					this.doPropSettings(propSettingsList);
 					this.init();
 				} else
-					console.error("Custom Options incalid (expected an array)");
+					console.error("Custom Options invalid (expected an array)");
 			} catch (parseError) {
 				console.error("Can't parse Custom Options", parseError);
 			}
@@ -217,7 +219,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 
 		for (const subscriber of subscribers) {
 			if (subscriber.settings.writeOnly) {
-				return;
+				continue;
 			}
 			let value = data;
 
