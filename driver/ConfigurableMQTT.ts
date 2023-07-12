@@ -24,11 +24,14 @@
 	has the following mandatory fields:
 
 		property    The name of the property, as exposed by Blocks
-		subTopic    The sub-topic providing the data
+		subTopic    The sub-topic providing the data. Multiple properties can have the same
+					subTopic.
 
 	and the following optional fields:
 
 		readOnly    Set to true to disallow setting the topic's data from Blocks (default is false)
+		writeOnly   Set to true to make property write only, skipping subTopic subscription
+					(default is false).
 		dataType    One of the values "Number", "Boolean" or "String" (default is "String")
 		description	Text you want to show to the user in the Blocks editor
 		publishSubTopic		Set this if the sub topic for publishing is different from the sub
@@ -67,7 +70,7 @@
 import {SGOptions} from "../system/PubSub";
 import {MQTT} from "../system/Network";
 import { Driver } from "../system_lib/Driver";
-import {callable, driver, property} from "../system_lib/Metadata";
+import {callable, driver} from "../system_lib/Metadata";
 import {PrimitiveValue} from "../system_lib/ScriptBase";
 
 
@@ -135,7 +138,7 @@ interface Subscriber {
 export class ConfigurableMQTT extends Driver<MQTT> {
 
 	// Keeps track of all properties my - keyed by sub-topic
-	private readonly properties: Dictionary<Subscriber> = {};
+	private readonly properties: Dictionary<Subscriber[]> = {};
 
 	public constructor(public mqtt: MQTT) {
 		super(mqtt);
@@ -146,7 +149,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 					this.doPropSettings(propSettingsList);
 					this.init();
 				} else
-					console.error("Custom Options incalid (expected an array)");
+					console.error("Custom Options invalid (expected an array)");
 			} catch (parseError) {
 				console.error("Can't parse Custom Options", parseError);
 			}
@@ -193,36 +196,54 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 	 */
 	private doSubscribe() {
 		for (const subTopic in this.properties) {
-			if (!this.properties[subTopic].settings.writeOnly) {
-				this.mqtt.subscribeTopic(subTopic, (emitter, message) =>
-					this.dataFromSubTopic(message.subTopic, message.text)
-				);
+			for (const property of this.properties[subTopic]) {
+				if (!property.settings.writeOnly) {
+					this.mqtt.subscribeTopic(subTopic, (emitter, message) =>
+						this.dataFromSubTopic(message.subTopic, message.text)
+					);
+					break;
+				}
 			}
 		}
 	}
 
 	/**
-	 * Data received from subTopic. Map to corresponding property, coerce value to proper type
-	 * and apply value to prop.
+	 * Data received from subTopic. Map to corresponding properties, coerce value to proper type
+	 * and apply value to properties.
 	 */
-	private dataFromSubTopic(subTopic: string, value: string) {
-		const subscriber = this.properties[subTopic];
+	private dataFromSubTopic(subTopic: string, data: string) {
+		const subscribers = this.properties[subTopic];
+		let hasParsedJson = false;
+		let wasInvalidJsonData = false;
+		let jsonData;
 
-		if (subscriber) {
+		for (const subscriber of subscribers) {
+			if (subscriber.settings.writeOnly) {
+				continue;
+			}
+			let value = data;
+
 			if (subscriber.settings.jsonPath) {
-				let jsonData;
-
-				try {
-					jsonData = JSON.parse(value);
-				} catch (error) {
-					console.error("Invalid JSON data from", subTopic);
-					return;
+				if (!hasParsedJson) { // Only need to parse once
+					try {
+						hasParsedJson = true;
+						jsonData = JSON.parse(data);
+					} catch (error) {
+						console.error("Invalid JSON data from", subTopic);
+						wasInvalidJsonData = true;
+						continue;
+					}
 				}
+				else if (wasInvalidJsonData) {
+					console.error("Invalid JSON data from", subTopic);
+					continue;
+				}
+
 				try {
 					value = this.getValueFromJSONPath(jsonData, subscriber.settings.jsonPath);
 				} catch (error) {
 					console.error("Invalid jsonPath for sub topic", subTopic);
-					return;
+					continue;
 				}
 			}
 			try {
@@ -232,8 +253,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 			} catch (coercionError) {
 				console.error("Unable to coerce to", subscriber.settings.dataType, value);
 			}
-		} else
-			console.error("Data from unexpected subtopic", subTopic);
+		}
 	}
 
 	/**
@@ -271,10 +291,13 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 	 * on topic. Also establishes the corresponding property.
 	 */
 	private registerProp(ps: PropSettings, propOpts: SGOptions, sgFunc: MySgFunc) {
-		this.properties[ps.subTopic] = {
+		if (!this.properties[ps.subTopic]) {
+			this.properties[ps.subTopic] = [];
+		}
+		this.properties[ps.subTopic].push({
 			settings: ps,
 			handler: sgFunc
-		};
+		});
 		this.property(ps.property, propOpts, sgFunc);	// Inform Blocks about this property
 	}
 
