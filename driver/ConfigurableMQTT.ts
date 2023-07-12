@@ -1,4 +1,4 @@
-/*	Generic MQTT mapping a configurable set of MQTT topics to Blocks properties.
+/*	Generic MQTT driver, mapping a configurable set of MQTT topics to Blocks properties.
 	This driver MUST be configured by relevant JSON data to be meaningful. This
 	data is specified using the "Custom Options" field in the Network device, and
 	has the following structure:
@@ -29,24 +29,24 @@
 
 	and the following optional fields:
 
-		readOnly    Set to true to disallow setting the topic's data from Blocks (default is false)
-		writeOnly   Set to true to make property write only, skipping subTopic subscription
-					(default is false).
-		dataType    One of the values "Number", "Boolean" or "String" (default is "String")
-		description	Text you want to show to the user in the Blocks editor
-		publishSubTopic		Set this if the sub topic for publishing is different from the sub
-					topic for reading the value.
-		jsonPath	If the device publishes the property in a JSON object, specify the "path" to
-					the property in jsonPath. For example, if the device publishes
-					{ "data": { "property": "VALUE" } } where VALUE is the property value, set
-					jsonPath to ["data", "property"].
+		readOnly    	Set to true to disallow setting the topic's data from Blocks (default is false)
+		writeOnly   	Set to true to make property write only, skipping subTopic subscription
+						(default is false).
+		dataType    	One of the values "Number", "Boolean" or "String" (default is "String")
+		description		Text you want to show to the user in the Blocks editor
+		publishSubTopic	Set this if the sub topic for publishing is different from the sub
+						topic for reading the value.
+		jsonPath		If the device publishes the property in a JSON object, specify the "path" to
+						the property in jsonPath. For example, if the device publishes
+						{ "data": { "property": "VALUE" } } where VALUE is the property value, set
+						jsonPath to ["data", "property"].
 		jsonTemplate	To publish a property in a JSON object, specify a jsonTemplate. The
-					template specifies the structure of the JSON object that will be published. All
-					occurrences of the string "$BLOCKS$" (except for keys) will be replaced by the
-					property value. To cast the property value to its dataType, use "#BLOCKS#"
-					instead. Note that "$BLOCKS$" can be used multiple times inside a string
-					containing other characters whereas "#BLOCKS#" cannot. Example:
-					{ "data": { "inString": "Property $BLOCKS$ + $BLOCKS$", "value": "#BLOCKS#" } }
+						template specifies the structure of the JSON object that will be published. All
+						occurrences of the string "$BLOCKS$" (except for keys) will be replaced by the
+						property value. To cast the property value to its dataType, use "#BLOCKS#"
+						instead. Note that "$BLOCKS$" can be used multiple times inside a string
+						containing other characters whereas "#BLOCKS#" cannot. Example:
+						{ "data": { "inString": "Property $BLOCKS$ + $BLOCKS$", "value": "#BLOCKS#" } }
 
 	and the following data type specific fields for "Number" type:
 
@@ -64,6 +64,7 @@
 
 		initial		Initial value, provided for prop initially (default is empty string)
 
+	Enhanced by Melvin Manninen.
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
