@@ -37,7 +37,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
                     var propSettingsList = JSON.parse(mqtt.options);
                     if (Array.isArray(propSettingsList)) {
                         _this.doPropSettings(propSettingsList);
-                        _this.init();
+                        _this.doSubscribe();
                     }
                     else
                         console.error("Custom Options invalid (expected an array)");
@@ -71,15 +71,6 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
                         throw "Bad dataType " + dataType;
                 }
             }
-        };
-        ConfigurableMQTT.prototype.init = function () {
-            var _this = this;
-            if (this.mqtt.connected)
-                this.doSubscribe();
-            this.mqtt.subscribe('connect', function (emitter, message) {
-                if (message.type === "Connection" && _this.mqtt.connected)
-                    _this.doSubscribe();
-            });
         };
         ConfigurableMQTT.prototype.doSubscribe = function () {
             var _this = this;

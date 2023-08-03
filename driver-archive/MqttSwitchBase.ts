@@ -37,7 +37,8 @@ export abstract class MqttSwitchBase<Output extends OutputBase, Input extends In
 	}
 
 	/**
-	 * Rest of initialization goes here rather than in ctor, since the derived ctor must
+	 * Rest of initialization goes here rather than in ctor, since the most derived ctor
+	 * must finish its work before doing these things.
 	 */
 	protected initialize() {
 		const kMaxIOCount = 32;	// Some reasonable upper limit to I/O pins

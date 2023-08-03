@@ -148,7 +148,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 				const propSettingsList: PropSettings[] = JSON.parse(mqtt.options);
 				if (Array.isArray(propSettingsList)) {
 					this.doPropSettings(propSettingsList);
-					this.init();
+					this.doSubscribe();
 				} else
 					console.error("Custom Options invalid (expected an array)");
 			} catch (parseError) {
@@ -177,19 +177,6 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 				throw "Bad dataType " + dataType;
 			}
 		}
-	}
-
-	/**
-	 * I've scanned settings and established properties. Set up to subscribe to topics when
-	 * connected.
-	 */
-	private init() {
-		if (this.mqtt.connected)	// Was connected initially
-			this.doSubscribe();
-		this.mqtt.subscribe('connect', (emitter, message) => {
-			if (message.type === "Connection" &&  this.mqtt.connected) // Just became connected (or re-connected)
-				this.doSubscribe();
-		});
 	}
 
 	/**
