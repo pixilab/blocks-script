@@ -1,16 +1,16 @@
 /*
     This is a simple general-purpose user script that can be used to bind
-    "source" properties to "destination" properties. Any changes to the source 
+    "source" properties to "destination" properties. Any changes to the source
     property will be applied to the destination property.
 
     Use the "bind" and "unbind" callables to bind and unbind properties. The
-    property paths must be complete paths written in dot notation, e.g. 
+    property paths must be complete paths written in dot notation, e.g.
     "Realm.Main.variable.myVariable.value".
 
     IMPORTANT: The script does not check compatibility between source and
-    destination properties: *You* have to make sure that the source property is 
-    of the same type as the destination property and that the destination 
-    property is writeable!
+    destination properties; Make sure that the source property is of the
+    same type as the destination property and that the destination
+    property is writeable.
 
     Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
     melvinm1 2023-08-03
@@ -39,9 +39,9 @@ export class PropertyBinder extends Script {
     // we can reuse the same PropertyAccessors for multiple bindings. The
     // dictionary is keyed by property path.
     private accessors: Dictionary<ReusableAccessor> = {};
-    
+
     // We use two dictionaries to represent the bindings. The first dictionary
-    // is keyed by source property paths. The second dictionary is keyed by 
+    // is keyed by source property paths. The second dictionary is keyed by
     // destination paths.
     private bindings: Dictionary<Dictionary<Binding>> = {};
 
@@ -64,7 +64,7 @@ export class PropertyBinder extends Script {
             this.bindings[source][destination] = binding;
             return; // Source has already been bound to destination
         }
-        
+
         if (!(source in this.accessors)) {
             try {
                 this.accessors[source] = this.createReusableAccessor(source);
@@ -73,10 +73,10 @@ export class PropertyBinder extends Script {
                 throw "Could not access source property!";
             }
         }
-        
+
         if (!(destination in this.accessors)) {
             try {
-                this.accessors[destination] = 
+                this.accessors[destination] =
                     this.createReusableAccessor(destination);
             }
             catch (err) {
@@ -97,7 +97,7 @@ export class PropertyBinder extends Script {
     @callable("Unbinds a source property from a destination property.")
     public unbind(
         @parameter("Full path to source property.") source: string,
-        @parameter("Full path to destination property.") destination: string 
+        @parameter("Full path to destination property.") destination: string
     ): void {
         if (this.bindings[source] && this.bindings[source][destination]) {
             let sourceAccessor = this.accessors[source];

@@ -254,7 +254,13 @@ export interface MQTT extends NetworkBase {
 
 	/**
 	 * Notification when broker connection fails or its state changes.
-	 * NOTE: You need to re-subscribe if the object fires the 'finish' event.
+	 *
+	 * NOTE 1: You don't need to call subscribeTopic to re-subscribe
+	 * to topics if the broker connection is lost and then re-established.
+	 * Subscriptions remain intact across broker re-connections.
+	 *
+	 * NOTE 2: You need to re-subscribe to this event if the object
+	 * fires the 'finish' event.
 	 */
 	subscribe(event: 'connect', listener: (emitter: MQTT, message: {
 		type:
