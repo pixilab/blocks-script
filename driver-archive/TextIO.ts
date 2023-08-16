@@ -1,10 +1,6 @@
-/*	A simple generic TCP or Serial port driver listening for a string to arrive, published
-	as the "recievedText" property. By default, the recievedText property is cleared after a brief
-	delay (in order to detect a new message with the same content), but this behavior can be
-	disabled by setting the autoClear property to false. There is also a sendText Task-callable
-	function that can be used to send raw data to the device.
+/*	Simple Blocks driver for sending and receiveing text strings to/from a TCP device
 
- 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 import {NetworkTCP, SerialPort} from "system/Network";
@@ -17,7 +13,8 @@ type ConnType = NetworkTCP | SerialPort;
 @driver('SerialPort')
 export class TextIO extends Driver<ConnType> {
 	private mRecievedText = '';	// Most recently received mCommand, or empty string
-	private mAutoClear: boolean = true; // Controls whether to clear mCommand after timeout
+	private mAutoClear: boolean = true; // Clear recievedText after timeout
+	private mAlwaysFireChange: boolean = false; // Fire change when new data received even if recievedText didn't change
 	private mClearTimer?: CancelablePromise<void>;	// Clear mCommand timer, if set
 
 	public constructor(private connection: ConnType) {
@@ -38,7 +35,10 @@ export class TextIO extends Driver<ConnType> {
 		@parameter('Line termination. Default is a carriage return. Pass null for none.', true)
 		termination?: string
 	) {
-		this.connection.sendText(rawData, termination);
+		if (termination === undefined)
+			this.connection.sendText(rawData);	// Use default framing
+		else
+			this.connection.sendText(rawData, termination);
 		log("Sent: " + rawData);
 	}
 
@@ -50,7 +50,11 @@ export class TextIO extends Driver<ConnType> {
 		return this.mRecievedText;
 	}
 	public set recievedText(msg: string) {
+		const oldData = this.mRecievedText;
 		this.mRecievedText = msg;
+		if (this.mAlwaysFireChange && oldData === msg)
+			this.changed('recievedText');
+		// Else change notification will be fired automatically when property changes
 
 		// Cancel and clear out any existing timer
 		if (this.mClearTimer) {
@@ -68,15 +72,21 @@ export class TextIO extends Driver<ConnType> {
 			});
 		}
 	}
-	/**
-	*Property that controls whether to clear the last message after a timeout
-	*/
+
 	@property("Clear recievedText automatically after 300 mS")
 	public get autoClear(): boolean {
 		return this.mAutoClear;
 	}
 	public set autoClear(cmd: boolean) {
 		this.mAutoClear = cmd;
+	}
+
+	@property("Fire change on data received even if recievedText didn't change")
+	get alwaysFireChange(): boolean {
+		return this.mAlwaysFireChange;
+	}
+	set alwaysFireChange(value: boolean) {
+		this.mAlwaysFireChange = value;
 	}
 }
 

@@ -36,6 +36,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.connection = connection;
             _this.mRecievedText = '';
             _this.mAutoClear = true;
+            _this.mAlwaysFireChange = false;
             connection.autoConnect();
             connection.subscribe('textReceived', function (sender, msg) {
                 _this.recievedText = msg.text;
@@ -44,7 +45,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             return _this;
         }
         TextIO.prototype.sendText = function (rawData, termination) {
-            this.connection.sendText(rawData, termination);
+            if (termination === undefined)
+                this.connection.sendText(rawData);
+            else
+                this.connection.sendText(rawData, termination);
             log("Sent: " + rawData);
         };
         Object.defineProperty(TextIO.prototype, "recievedText", {
@@ -53,7 +57,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             },
             set: function (msg) {
                 var _this = this;
+                var oldData = this.mRecievedText;
                 this.mRecievedText = msg;
+                if (this.mAlwaysFireChange && oldData === msg)
+                    this.changed('recievedText');
                 if (this.mClearTimer) {
                     this.mClearTimer.cancel();
                     this.mClearTimer = undefined;
@@ -80,6 +87,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(TextIO.prototype, "alwaysFireChange", {
+            get: function () {
+                return this.mAlwaysFireChange;
+            },
+            set: function (value) {
+                this.mAlwaysFireChange = value;
+            },
+            enumerable: false,
+            configurable: true
+        });
         __decorate([
             (0, Metadata_1.callable)("Sends rawData to the device"),
             __param(1, (0, Metadata_1.parameter)('Line termination. Default is a carriage return. Pass null for none.', true)),
@@ -97,6 +114,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], TextIO.prototype, "autoClear", null);
+        __decorate([
+            (0, Metadata_1.property)("Fire change on data received even if recievedText didn't change"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TextIO.prototype, "alwaysFireChange", null);
         TextIO = __decorate([
             (0, Metadata_1.driver)('NetworkTCP'),
             (0, Metadata_1.driver)('SerialPort'),
