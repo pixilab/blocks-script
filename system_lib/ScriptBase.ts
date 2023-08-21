@@ -158,17 +158,23 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 
 	/**
 	 * Turn an array-like object into a proper JavaScript array, which is returned.
-	 * Simply returns arr if already appears to be fine.
+	 * Simply returns arr if already appears to be fine, else make a real JS Array
+	 * with a shallow copy of arrayLike's elements.
 	 */
-	makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
-		if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
-			return arrayLike;	// Already seems like a bona fide JS array
-
+	public static makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
+		if (Array.isArray(arrayLike))
+			return arrayLike;	// Already is a bona-fide JS array
+		// Else make one and copy all elelents
 		const realArray: T[] = [];
 		const length = arrayLike.length;
 		for (var i = 0; i < length; ++i)
 			realArray.push(arrayLike[i]);
 		return realArray;
+	}
+
+	// Also as instance method for backward compatibility
+	public makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
+		return ScriptBase.makeJSArray(arrayLike);
 	}
 }
 
