@@ -19,21 +19,6 @@ export abstract class Feed  extends ScriptBase<FeedEnv>{
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>) {
 		this.__scriptFacade.establishFeed(feed);
 	}
-
-	/**
-	 * Turn an array-like object into a proper JavaScript array, which is returned.
-	 * Simply returns arr if already appears to be fine.
-	 */
-	static makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
-		if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
-			return arrayLike;	// Already seems like a bona fide JS array
-
-		const realArray: T[] = [];
-		const length = arrayLike.length;
-		for (var i = 0; i < length; ++i)
-			realArray.push(arrayLike[i]);
-		return realArray;
-	}
 }
 
 // An array-like type having "index signature" and a length property

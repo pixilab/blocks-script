@@ -4,6 +4,10 @@
  *
  * The driver works by sending and receiving lighting playback commands/messages.
  * Unfortunately the devices have no commands for getting initial status at this time.
+ *
+ * See also the VPCueCore driver, which adds features and also works with CueCore 3,
+ * as well as the CueCore2PIXI driver which provides individual cue list management
+ * for lighting control playback.
  */
 
 import { NetworkTCP } from "system/Network";
