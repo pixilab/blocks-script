@@ -25,6 +25,9 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.indexedProperty = function (name, itemType) {
             return this.__scriptFacade.indexedProperty(name, itemType);
         };
+        ScriptBase.prototype.namedAggregateProperty = function (name, itemType) {
+            return this.__scriptFacade.namedAggregate(name, itemType);
+        };
         ScriptBase.prototype.changed = function (propName) {
             this.__scriptFacade.changed(propName);
         };
@@ -42,14 +45,17 @@ define(["require", "exports"], function (require, exports) {
         ScriptBase.prototype.reInitialize = function () {
             this.__scriptFacade.reInitialize();
         };
-        ScriptBase.prototype.makeJSArray = function (arrayLike) {
-            if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
+        ScriptBase.makeJSArray = function (arrayLike) {
+            if (Array.isArray(arrayLike))
                 return arrayLike;
             var realArray = [];
             var length = arrayLike.length;
             for (var i = 0; i < length; ++i)
                 realArray.push(arrayLike[i]);
             return realArray;
+        };
+        ScriptBase.prototype.makeJSArray = function (arrayLike) {
+            return ScriptBase.makeJSArray(arrayLike);
         };
         return ScriptBase;
     }());

@@ -25,15 +25,6 @@ define(["require", "exports", "./ScriptBase"], function (require, exports, Scrip
         Feed.prototype.establishFeed = function (feed) {
             this.__scriptFacade.establishFeed(feed);
         };
-        Feed.makeJSArray = function (arrayLike) {
-            if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
-                return arrayLike;
-            var realArray = [];
-            var length = arrayLike.length;
-            for (var i = 0; i < length; ++i)
-                realArray.push(arrayLike[i]);
-            return realArray;
-        };
         return Feed;
     }(ScriptBase_1.ScriptBase));
     exports.Feed = Feed;

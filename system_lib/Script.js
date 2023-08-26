@@ -46,8 +46,8 @@ define(["require", "exports", "system_lib/ScriptBase"], function (require, expor
         Script.prototype.getRecord = function (type, puid) {
             return this.__scriptFacade.getRecord(type, puid);
         };
-        Script.prototype.getRecordSec = function (type, fieldName, fieldValue) {
-            return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue);
+        Script.prototype.getRecordSec = function (type, fieldName, fieldValue, optional) {
+            return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue, optional);
         };
         Script.prototype.getAllPuids = function (ofType) {
             return this.__scriptFacade.getAllPuids(ofType);

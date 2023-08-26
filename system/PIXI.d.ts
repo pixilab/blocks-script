@@ -30,10 +30,11 @@ declare var console: Console;	// Globally accessible through "console"
 
 
 /**	A Promise generally manages the future completion/failure of lengthy tasks. It is
-	returned in cases where the result typically can't be provided immediately. The eventual
+ 	typically returned in cases where the result can't be provided immediately. The eventual
 	outcome/failure will then instead trigger a callback. Promises are chainable in that
 	the callback from one fulfillment can in its turn return a promise, and so on.
-	Learn more about Promises here:
+
+	More on Promises can be found here:
 	https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises
 */
 // @ts-ignore // the fact that Promise may also be declared elsewhere
@@ -41,10 +42,11 @@ declare class Promise<T> implements Thenable<T> {
 	constructor(callback: promiseCallback<T>);
 
 	/**	onFulfilled is called when/if "promise" resolves. onRejected is called when/if "promise" rejects.
-		Both are optional, if either/both are omitted the next onFulfilled/onRejected in the chain is called.
-		Both callbacks have a single parameter , the fulfillment value or rejection reason.
-		"then" returns a new promise equivalent to the value you return from onFulfilled/onRejected after being passed through Promise.resolve.
-		If an error is thrown in the callback, the returned promise rejects with that error.
+		Both are optional, if either/both are omitted the next onFulfilled/onRejected in the chain is
+	 	called. Both callbacks take a single parameter; the fulfillment value or rejection reason.
+		"then" returns a new promise equivalent to the value you return from onFulfilled/onRejected
+		after being passed through Promise.resolve. If an error is thrown in the callback,
+		the returned promise rejects with that error.
 
 		onFulfilled called when/if "promise" resolves
 		onRejected called when/if "promise" rejects

@@ -11,8 +11,8 @@
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {driver, max, min, property} from "system_lib/Metadata";
-import {PrimTypeSpecifier} from "../system/PubSub";
-import {PrimitiveValue} from "../system_lib/ScriptBase";
+import {PrimTypeSpecifier} from "system/PubSub";
+import {PrimitiveValue} from "system_lib/ScriptBase";
 
 /**
  * Fixed position slots in commands and replies byte arrays accoding to the MDC protocol spec.

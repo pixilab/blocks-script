@@ -36,6 +36,7 @@ export var SimpleMail: {
 	 * file name is specified), files are expected to reside under script/files.
 	 * You may also specify one of the follwing absolute paths:
 	 * /public/*	Specifies a file path under public
+	 * /auth/*		Specifies a path under auth (similar to public, but requires login)
 	 * /temp/*		Specifies a file path under temp
 	 *
 	 * Returns a promise that will be resolved once sent, or

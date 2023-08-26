@@ -45,16 +45,37 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	/**
 	 * Expose a named and indexed property of object type T.
 	 *
-	 * IMPORTANT: The name you specify here MUST be identical to
+	 * IMPORTANT: The name specified  MUST be identical to
 	 * the instance variable name used to hold this indexed
 	 * property, or the property won't be found by task
 	 * expressions or other scripts.
+	 *
+	 * NOTE: T should normally extend AggregateElem, allowing
+	 * you to use explicit change notification. Not enforced
+	 * here for backward compatibility, since that wasn't
+	 * the case early on.
 	 */
-	indexedProperty<T>(
+	indexedProperty<T /* extends AggregateElem */>(
 		name: string, 		// Name of the indexed property
 		itemType: Ctor<T>	// Type of elements held
 	): IndexedProperty<T> {
 		return this.__scriptFacade.indexedProperty(name, itemType);
+	}
+
+	/**
+	 * Expose a named property acting as a dictionary for named
+	 * sub-objects of type T exposing properties of their own.
+	 *
+	 * IMPORTANT: The name specified  MUST be identical to
+	 * the instance variable name used to hold this aggregate
+	 * property, or the property won't be found by task
+	 * expressions or other scripts.
+	 */
+	namedAggregateProperty<T extends AggregateElem>(
+		name: string, 		// Property holding the aggregates
+		itemType: Ctor<T>	// Type common to all aggregates held
+	): Dictionary<T> {
+		return this.__scriptFacade.namedAggregate(name, itemType);
 	}
 
 	/**	Inform others that prop has changed, causing any
@@ -72,8 +93,17 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	 * needed.
 	 *
 	 * The value associated with the property varies with the type of property.
+	 *
+	 * IMPORTANT: Unlike object-specific "subscribe" methods, a property
+	 * connection established through this function will persist across any
+	 * recreation or reinitialization of any associated object. Thus, you
+	 * must NOT repeat any getProperty call when an object emits a 'finish'
+	 * event.
 	 */
-	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: PropType)=>void): PropertyAccessor<PropType> {
+	getProperty<PropType extends PrimitiveValue>(
+		fullPath: string,
+		changeNotification?: (value: PropType)=>void
+	): PropertyAccessor<PropType> {
 		return changeNotification ?
 			this.__scriptFacade.getProperty<PropType>(fullPath, changeNotification) :
 			this.__scriptFacade.getProperty<PropType>(fullPath);
@@ -128,17 +158,23 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 
 	/**
 	 * Turn an array-like object into a proper JavaScript array, which is returned.
-	 * Simply returns arr if already appears to be fine.
+	 * Simply returns arr if already appears to be fine, else make a real JS Array
+	 * with a shallow copy of arrayLike's elements.
 	 */
-	makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
-		if (Array.isArray(arrayLike) && arrayLike.sort && arrayLike.splice)
-			return arrayLike;	// Already seems like a bona fide JS array
-
+	public static makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
+		if (Array.isArray(arrayLike))
+			return arrayLike;	// Already is a bona-fide JS array
+		// Else make one and copy all elelents
 		const realArray: T[] = [];
 		const length = arrayLike.length;
 		for (var i = 0; i < length; ++i)
 			realArray.push(arrayLike[i]);
 		return realArray;
+	}
+
+	// Also as instance method for backward compatibility
+	public makeJSArray<T>(arrayLike: IndexedAny<T>): T[] {
+		return ScriptBase.makeJSArray(arrayLike);
 	}
 }
 
@@ -208,6 +244,11 @@ export interface IndexedProperty<T> extends IndexedAny<T> {
 }
 
 /**
+ * 	A simple, map-like type
+ */
+export interface Dictionary<TElem> { [id: string]: TElem; }
+
+/**
  * A plain, typed, primitive property value accessor.
  */
 export interface PropertyValue<PropType extends PrimitiveValue> {
@@ -232,9 +273,10 @@ export abstract class RecordBase {
 export interface ScriptBaseEnv extends ChangeNotifier  {
 	property<PropType extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<any>): PropertyValue<PropType>;
 	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
-	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
-	changed(prop: string): void; // Named child property has changed
+	unsubscribe(event: string, listener: Function): void;
+	changed(prop: string): void;
 	indexedProperty<T>(name: string, elemType: Ctor<T>): IndexedProperty<T>;
+	namedAggregate<T>(name: string, elemType: Ctor<T>): Dictionary<T>;
 	reInitialize(): void;
 	getMonotonousMillis(): number;
 }
