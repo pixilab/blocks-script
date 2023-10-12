@@ -121,7 +121,8 @@ export var SimpleFile: {
  * Information returned by the list method. Reported files or subdirectories have the same
  * form as the requested directory. I.e., if the requested directory is relative (and
  * hence implicitly under script/files), the listed files will have a relative path.
- * Likewise, if the requested directory is absolute, all results will be absolute.
+ * Likewise, if the requested directory is absolute, all results will be absolute
+ * (i.e., starting from the Blocks root directory).
  *
  * Only plain files and subdirectories will be returned. Not hidden files (including
  * any . and .. entries) or symlinks.

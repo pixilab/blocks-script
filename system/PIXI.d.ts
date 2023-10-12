@@ -120,8 +120,10 @@ interface promiseCallback<T> {
 declare function require(name: string): any;
 
 /**
- * Data indicating a time position and rate. Used for various playback,
- * timing and sync purposes. Also includes some generally useful, time-related
+ * Data indicating a time position and rate. Used for playback,
+ * timing and synchronization purposes. All time valus in mS. The rate
+ * is in seconds per second (nominally 1 if time is moving normally, or 0 if
+ * time is standing still). Also includes some generally useful, time-related
  * constants and functions.
  */
 declare class TimeFlow  {
