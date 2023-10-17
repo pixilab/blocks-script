@@ -5,8 +5,9 @@
 
 
 declare global {
-	var $metaSupport$: {
+	var $metaSupport$: {	// From $core
 		property(description ?: string, readOnly ?: boolean): any;
+		driverInfo(baseDriverType: string, typeSpecificMeta?: any): any;
 		callable(description ?: string): any;
 		fieldMetadata(metadataValue: any): {
 			(target: Function): void;
@@ -28,23 +29,16 @@ interface ICallableParamDescr {
 
 /**
  Decorator defining a class acting as a device driver. This class must have a constructor
- that takes the baseDriverType of low-level driver to attach to. The driverMeta passed in
+ that takes the baseDriverType of low-level driver to attach to. The typeSpecificMeta passed in
  is an object with keys/values that vary with the type of driver attached (see
- NetworkTCPDriverMetaData and NetworkUDPDriverMetaData in Network.ts for those driver
- types).
-
- Note to self: I must pass in baseDriverType as a string, since those are typically
- defined as interfaces (implemented in Java-land). So I can't get the param type
- using design:paramtypes since that then just says 'Object'.
+ NetworkTCPDriverMetaData, NetworkUDPDriverMetaData and SerialPortDriverMetaData in
+ Network.ts for those driver types).
  */
-export function driver(baseDriverType: 'NetworkTCP'|'NetworkUDP', typeSpecificMeta: any) {
-	const info: DriverInfo = {
-		paramTypes: [baseDriverType],
-		info: typeSpecificMeta
-	};
-	return function(target: any): void {
-		return Reflect.defineMetadata("pixi:driver", info, target);
-	}
+export function driver(
+	baseDriverType: 'NetworkTCP'|'NetworkUDP'|'MQTT'|'SerialPort',
+	typeSpecificMeta?: any
+) {
+	return $metaSupport$.driverInfo(baseDriverType, typeSpecificMeta);
 }
 
 // Implements the @record decorator, marking a class as a data store DTO
@@ -52,13 +46,6 @@ export function record(description?: string) {
 	return $metaSupport$.record(description);
 }
 
-/**
- What I attach to my pixi:driver metadata key.
- */
-interface DriverInfo {
-	info: any;
-	paramTypes: string[];
-}
 
 // Set of valid role identifiers
 type RoleRequired = 'Admin'|'Manager'|'Creator'|'Editor'|'Contributor'|'Staff'|'Spot';
@@ -78,7 +65,7 @@ export function roleRequired(role: RoleRequired) {
  the property's value.
  */
 export function property(description?: string, readOnly?: boolean) {
-	return $metaSupport$.property(description, readOnly); // Impl in $core
+	return $metaSupport$.property(description, readOnly);
 }
 
 /**
@@ -86,7 +73,7 @@ export function property(description?: string, readOnly?: boolean) {
  with optional description.
  */
 export function callable(description?: string) {
-	return $metaSupport$.callable(description); // Impl in $core
+	return $metaSupport$.callable(description);
 }
 
 /**
@@ -98,7 +85,7 @@ export function parameter(description?: string, optional?: boolean) {
 	return $metaSupport$.callableParameter({
 		descr: description || "",
 		opt: optional || false
-	}); // Impl in $core
+	});
 }
 
 
@@ -113,12 +100,16 @@ export function field(description?: string) {
 
 
 /**
- * Mark a field in specified Record as a Spot Parameter, making its value readable and
- * writable also as such.
+ * Mark a field in specified Record as a Visitor Spot Parameter, making its value
+ * readable and writable also as such. Note that this functionality applies
+ * only to the Visitor spot (if any) used to interact with the individual visitor.
+ * Specifically, it does NOT make the data available to any Display Spots visited
+ * using a Locator or similar mechanism. Here you must explicitly set the properties
+ * appearing on such a Display Spot by other means.
  *
- * IMPORTANT: You must also add a parameter with the same name in the Spot's settings
- * for this to work. Merely marking it with @spotParameter() in the record definition
- * is not sufficient.
+ * IMPORTANT: You must also add a parameter with the same name in the Block being shown
+ * onthe Visitor Spot or the Visitor Spot's settings. Merely decorating the field with
+ * @spotParameter() in the record definition is not sufficient.
  */
 export function spotParameter() {
 	return $metaSupport$.spotParameter();
@@ -128,7 +119,6 @@ export function spotParameter() {
  * Decorator for item ID field, if any. For feed script, only a single ID field
  * may be specified. A Record may use multiple ID fields, where each one can
  * be used to look up the Record instance. Typically of string or number type.
- * Read-only by definition (since it's used as lookup key).
  */
 export function id(description?: string) {
 	return $metaSupport$.fieldMetadata( {description: description, id: true} );
@@ -197,6 +187,7 @@ different URL, provoking authentication if not already done:
 
  	/rest/script/invoke-auth/<user-script-name>/<method-name>
 
+To protect an endpoint with an API key, add the @apiKey decorator.
  */
 export function resource(
 	roleRequired?: RoleRequired, // Authentication role required to call, or undefined
@@ -211,3 +202,16 @@ export function resource(
 	}
 }
 
+/**
+ Decorator specifying an API key to be used for calling a function also decorated
+ with @resource. The mandatory parameter spcifies the name of an apiKey, as defined
+ under apiKeys in Blocks configuration file.
+
+ IMPORTANT: Use and enforce HTTPS for all requests to Blocks to make sure any API keys
+ are not sent as clear text, if sent over an unsecure network.
+ */
+export function apiKey(keyName: string) {
+	return function(target: any, propertyKey: string) {
+		Reflect.defineMetadata("pixi:apiKey", keyName, target, propertyKey);
+	}
+}

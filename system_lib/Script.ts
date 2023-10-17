@@ -69,14 +69,24 @@ export class Script extends ScriptBase<ScriptEnv> {
 	 * Get Record based on secondary key fieldValue in id field fieldName.
 	 * Returns null if not found.
 	 */
-	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, fieldValue: string|number): DST|null {
-		return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue);
+	getRecordSec<DST extends RecordBase>(
+		type: Ctor<DST>,	// Class (constructir function) od record expected
+		fieldName: string, 	// Secondary key field name
+		fieldValue: string|number,	// Value used as key
+		optional?: boolean	// Don't log warning if record not found - just return null
+	): DST|null {
+		return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue, optional);
 	}
 
 	/**
-	 * Get ALL live puids ofType. Occasionally useful if you want to do some processing
-	 * of all records, such as before calling deleteRecords, to update or move or clean up any
-	 * associated data or files.
+	 * Get a list PUIDs of all live records ofType. Occasionally useful if you want to do some processing
+	 * of all such records, such as before calling deleteRecords, to update or move or clean up any
+	 * associated data or files, or to do some aggregation of data across records.
+	 *
+	 * NOTE: This returns an "array-like" object that supports indexing and length, but
+	 * not other JavaScript array methods.
+	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Indexed_collections#working_with_array-like_objects
+	 * To turn this into a true JavaScript array, use the ScriptBase.makeJSArray() function
 	 */
 	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[] {
 		return this.__scriptFacade.getAllPuids(ofType);
@@ -100,6 +110,7 @@ export interface PropertyAccessor<PropType extends PrimitiveValue> extends Prope
 export interface ScriptEnv extends ScriptBaseEnv {
 	// Script is being shut down
 	subscribe(event: 'finish', listener: ()=>void): void;
+	unsubscribe(event: string, listener: Function): void;	// Unsubscribe to a previously subscribed event
 
 	// 	Following are INTERNAL implementation details, and may change.
 	// 	DO NOT CALL directly from scripts/drivers!
@@ -108,7 +119,7 @@ export interface ScriptEnv extends ScriptBaseEnv {
 	sendOnChannel(name: string, data: string):void;
 	newRecord<DST extends RecordBase>(type: Ctor<DST>): DST;
 	getRecord<DST extends RecordBase>(type: Ctor<DST>, puid: number): DST;
-	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, key: string|number): DST;
+	getRecordSec<DST extends RecordBase>(type: Ctor<DST>, fieldName: string, key: string|number, optional?: boolean): DST;
 	deleteRecords<DST extends RecordBase>(type: Ctor<DST>, archive: boolean): void;
 	deleteRecord<DST extends RecordBase>(record: DST, archive?: boolean, filesToArchive?: string[]): void;
 	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[];

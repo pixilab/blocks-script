@@ -21,11 +21,13 @@ export interface Request {
 	setTimeout(seconds: number): Request;	// Maximum time the request may take
 	header(headerName:string, headerValue:string): Request; // Additional header sent with request
 
-	get<RetType>(): Promise<Response<RetType>>;	// Basic GET request, expected to return RetType (if interpreted)
+	get<RetType>(): Promise<Response<RetType>>;	// GET request, expected to return RetType (if interpreted)
 
 	// Default mediaType (aka "Content-Type") is "application/json" unless explicitly specified below
 	put<RetType>(dataToSend: string,  mediaType?: string): Promise<Response<RetType>>;	// PUT request with supplied data
 	post<RetType>(dataToSend: string,  mediaType?: string): Promise<Response<RetType>>;	// POST request with supplied data
+
+	delete(): Promise<Response<void>>;	// DELETE request, passing and returning no data
 }
 
 interface ReqOpts {
@@ -55,7 +57,7 @@ interface ReqOpts {
 	// Options applicable only for interpreting CSV data.
 	columnSeparator?: string, 	// Separator character; default is ',' other common option is '\t'
 	escapeChar?: string,		// Escape character; default is none
-	quote?: string | false 		// Quote charagter to use, none if false; default is '"'
+	quote?: string | false 		// Quote character to use, none if false; default is '"'
 }
 
 /**

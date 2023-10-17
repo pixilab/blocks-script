@@ -8,6 +8,7 @@
  * absolute paths:
  *
  *	/public/*	Specifies a path under public
+ *	/auth/*		Specifies a path under auth (similar to public, but requires login)
  *	/temp/*		Specifies a path under temp
  *
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
@@ -120,15 +121,18 @@ export var SimpleFile: {
  * Information returned by the list method. Reported files or subdirectories have the same
  * form as the requested directory. I.e., if the requested directory is relative (and
  * hence implicitly under script/files), the listed files will have a relative path.
- * Likewise, if the requested directory is absolute, all results will be absolute.
+ * Likewise, if the requested directory is absolute, all results will be absolute
+ * (i.e., starting from the Blocks root directory).
  *
  * Only plain files and subdirectories will be returned. Not hidden files (including
  * any . and .. entries) or symlinks.
  *
  * IMPORTANT: The files and directories entries are "array-like" in that they
  * have length and can be indexed into, but they aren't true JavaScript
- * arrays (e.g., they don't support forEach, etc methods). If you need true
- * JS arrays, use the Feed.makeJSArray function to convert.
+ * arrays (e.g., they don't support forEach, etc methods).
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Indexed_collections#working_with_array-like_objects
+ *
+ * To turn this into a true JavaScript array, use the ScriptBase.makeJSArray() function.
  */
 export interface DirInfo {
 	files: string[];			// Plain files found in the specified directory

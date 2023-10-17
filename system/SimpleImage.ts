@@ -3,6 +3,7 @@
  * By default (if a relative path or plain file name is specified), files are stored under script/files.
  * You may also specify one of the follwing absolute paths:
  * /public/*	Specifies a file path under public
+ * /auth/*		Specifies a path under auth (similar to public, but requires login)
  * /temp/*		Specifies a file path under temp
  *
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.

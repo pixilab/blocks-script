@@ -9,7 +9,7 @@
 
 import {callable, parameter, property} from "system_lib/Metadata"
 import {Script, ScriptEnv} from "system_lib/Script";
-import * as SunCalc from "suncalc";
+import * as SunCalc from "lib-archive/suncalc";
 
 const suncalc: typeof SunCalc = require("lib/suncalc");
 
