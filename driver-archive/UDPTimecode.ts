@@ -39,7 +39,7 @@ export class UDPTimecode extends Driver<NetworkUDP> {
 	 * Process time data in the form described in block comment at top of this file.
 	 */
 	private timeData(rawTime: string) {
-		console.log("rawTime", rawTime);
+		// console.log("rawTime", rawTime);
 		rawTime = rawTime.trim();	// Get rid of any trailing CR/LF or other unwanted data
 		const parts = rawTime.trim().split(' ');
 		if (parts.length === 2 && parts[0].length === 8) {

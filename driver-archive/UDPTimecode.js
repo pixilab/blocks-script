@@ -46,7 +46,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             configurable: true
         });
         UDPTimecode.prototype.timeData = function (rawTime) {
-            console.log("rawTime", rawTime);
             rawTime = rawTime.trim();
             var parts = rawTime.trim().split(' ');
             if (parts.length === 2 && parts[0].length === 8) {
