@@ -1,24 +1,34 @@
 #!/usr/bin/env bash
 
-# Setup script for updating to the latest script base from github.
-# Script is assumed to run as the user running blocks, normally pixi-server, or blocks.
+# Script for updating drivers and script support files. It's designed to run from within the
+# script directory found inside your Blocks root directory, so you must cd into that
+# directory before running.
+#
+# Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+#
 
-echo "Creating backups of the common user directories in case of overwriting customized files"
+if [ ! -d "system_lib" ]; then
+  echo "ABORTING. The current directory doesn't seem to be Blocks' script"
+  exho "directory. Use the cd command to move into that directory first."
+  exit
+fi
 
-# Set the name of the zip file
-zip_file="user_driver_backup_$(date +%Y-%m-%d_%H-%M-%S).zip"
-# Add the directories to the zip file
+echo "••• Stopping Blocks"
+~/stop.sh
+
+# Name of the zip file based on the current date
+zip_file="backup_$(date +%Y-%m-%d_%H-%M-%S).zip"
+echo "••• Backing up non-system script files to $zip_file"
 zip -r -q "${zip_file}" driver driver-archive user user-archive
 
-echo "Getting the latest script-base from Pixilab"
-git clone https://github.com/pixilab/blocks-script.git
+echo "••• Downloading the update"
+git clone -q https://github.com/pixilab/blocks-script.git
 
-echo "Merging new files into the script directory"
+echo "••• Merging the update into the script directory"
 cp -r  blocks-script/* .
 
-echo "Cleaning up"
+#Cleaning up
 rm -r -f blocks-script
-echo "Done. "
-echo "A backupfile was created from the old directory before the merge: ${zip_file}"
+echo "••• DONE."
 
 
