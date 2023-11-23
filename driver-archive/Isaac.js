@@ -37,7 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -210,9 +210,9 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
         };
         Isaac.prototype.hookupVars = function (config) {
             return __awaiter(this, void 0, void 0, function () {
-                var endpoint, existingVars, setOfKnownVars, _i, _a, xv, spec, _b, _c, varName, result, _d, _e, _f, unwanted, id;
-                return __generator(this, function (_g) {
-                    switch (_g.label) {
+                var endpoint, existingVars, setOfKnownVars, _i, _a, xv, spec, _b, _c, varName, result, _d, _e, _f, _g, unwanted, id;
+                return __generator(this, function (_h) {
+                    switch (_h.label) {
                         case 0:
                             if (!config.variables) return [3, 11];
                             endpoint = '/api/v1/variables';
@@ -220,7 +220,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                                     .newRequest(endpoint + '?subsystemExternalId=' + config.subsystemExternalId)
                                     .get()];
                         case 1:
-                            existingVars = _g.sent();
+                            existingVars = _h.sent();
                             setOfKnownVars = {};
                             for (_i = 0, _a = existingVars.interpreted; _i < _a.length; _i++) {
                                 xv = _a[_i];
@@ -234,7 +234,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                                 externalRef: null
                             };
                             _b = 0, _c = config.variables;
-                            _g.label = 2;
+                            _h.label = 2;
                         case 2:
                             if (!(_b < _c.length)) return [3, 7];
                             varName = _c[_b];
@@ -244,36 +244,39 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                             return [3, 5];
                         case 3: return [4, this.newRequest(endpoint).post(JSON.stringify(spec))];
                         case 4:
-                            result = _g.sent();
+                            result = _h.sent();
                             if (result.status > 299)
                                 console.warn(endpoint, result.status, result.data);
                             this.varIds[varName] = result.interpreted._id;
-                            _g.label = 5;
+                            _h.label = 5;
                         case 5:
                             if (!this.varsSubscribed)
                                 this.establishVariable(varName);
-                            _g.label = 6;
+                            _h.label = 6;
                         case 6:
                             _b++;
                             return [3, 2];
                         case 7:
                             this.varsSubscribed = true;
-                            _d = [];
-                            for (_e in setOfKnownVars)
-                                _d.push(_e);
-                            _f = 0;
-                            _g.label = 8;
+                            _d = setOfKnownVars;
+                            _e = [];
+                            for (_f in _d)
+                                _e.push(_f);
+                            _g = 0;
+                            _h.label = 8;
                         case 8:
-                            if (!(_f < _d.length)) return [3, 11];
-                            unwanted = _d[_f];
+                            if (!(_g < _e.length)) return [3, 11];
+                            _f = _e[_g];
+                            if (!(_f in _d)) return [3, 10];
+                            unwanted = _f;
                             id = setOfKnownVars[unwanted];
                             log("Removing variable", unwanted, "with ID", id);
                             return [4, this.newRequest(endpoint + '/' + id).delete()];
                         case 9:
-                            _g.sent();
-                            _g.label = 10;
+                            _h.sent();
+                            _h.label = 10;
                         case 10:
-                            _f++;
+                            _g++;
                             return [3, 8];
                         case 11: return [2];
                     }
@@ -282,9 +285,9 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
         };
         Isaac.prototype.hookupEvents = function (config) {
             return __awaiter(this, void 0, void 0, function () {
-                var endpoint, existingVars, knownTasks, _i, _a, xv, spec, _b, _c, evtName, result, _d, _e, _f, unwanted, id;
-                return __generator(this, function (_g) {
-                    switch (_g.label) {
+                var endpoint, existingVars, knownTasks, _i, _a, xv, spec, _b, _c, evtName, result, _d, _e, _f, _g, unwanted, id;
+                return __generator(this, function (_h) {
+                    switch (_h.label) {
                         case 0:
                             if (!config.events) return [3, 10];
                             endpoint = '/api/v1/events';
@@ -292,7 +295,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                                     .newRequest(endpoint + '?subsystemExternalId=' + config.subsystemExternalId)
                                     .get()];
                         case 1:
-                            existingVars = _g.sent();
+                            existingVars = _h.sent();
                             knownTasks = {};
                             for (_i = 0, _a = existingVars.interpreted; _i < _a.length; _i++) {
                                 xv = _a[_i];
@@ -308,7 +311,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                                 command: null
                             };
                             _b = 0, _c = config.events;
-                            _g.label = 2;
+                            _h.label = 2;
                         case 2:
                             if (!(_b < _c.length)) return [3, 6];
                             evtName = _c[_b];
@@ -321,32 +324,35 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                             spec.displayName = evtName;
                             return [4, this.newRequest(endpoint).post(JSON.stringify(spec))];
                         case 4:
-                            result = _g.sent();
+                            result = _h.sent();
                             if (result.status > 299)
                                 console.warn(endpoint, result.status, result.data);
                             this.taskIds[evtName] = result.interpreted._id;
-                            _g.label = 5;
+                            _h.label = 5;
                         case 5:
                             _b++;
                             return [3, 2];
                         case 6:
                             this.hookupEventTriggers(config);
-                            _d = [];
-                            for (_e in knownTasks)
-                                _d.push(_e);
-                            _f = 0;
-                            _g.label = 7;
+                            _d = knownTasks;
+                            _e = [];
+                            for (_f in _d)
+                                _e.push(_f);
+                            _g = 0;
+                            _h.label = 7;
                         case 7:
-                            if (!(_f < _d.length)) return [3, 10];
-                            unwanted = _d[_f];
+                            if (!(_g < _e.length)) return [3, 10];
+                            _f = _e[_g];
+                            if (!(_f in _d)) return [3, 9];
+                            unwanted = _f;
                             id = knownTasks[unwanted];
                             log("Removing event", unwanted, "with ID", id);
                             return [4, this.newRequest(endpoint + '/' + id).delete()];
                         case 8:
-                            _g.sent();
-                            _g.label = 9;
+                            _h.sent();
+                            _h.label = 9;
                         case 9:
-                            _f++;
+                            _g++;
                             return [3, 7];
                         case 10: return [2];
                     }
