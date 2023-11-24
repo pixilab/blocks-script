@@ -95,6 +95,7 @@ define(["require", "exports", "system_lib/Script", "system/Spot", "system/Simple
                 }
                 else {
                     if (spot.connected) {
+                        spot.power = true;
                         _this.connectedSpots[spotPath] = true;
                         if (_this.recentlyDisconnectedSpots[spotPath]) {
                             delete _this.recentlyDisconnectedSpots[spotPath];

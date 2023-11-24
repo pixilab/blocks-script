@@ -110,7 +110,7 @@ export class SpotReporter extends Script {
 				if (spot.connected) {	// Spot is connected
 					// if (!this.connectedSpots[spotPath])
 					// 	console.log("Noted connected", spotPath);
-
+					spot.power = true; // Explicit set power prop to avoid situation where power has not been set therefor change with connected property.
 					this.connectedSpots[spotPath] = true;
 
 					if (this.recentlyDisconnectedSpots[spotPath]) {
