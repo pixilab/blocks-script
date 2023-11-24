@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MiniMadVIDEO = void 0;
-    var MiniMadVIDEO = (function (_super) {
+    var MiniMadVIDEO = exports.MiniMadVIDEO = (function (_super) {
         __extends(MiniMadVIDEO, _super);
         function MiniMadVIDEO() {
             return _super !== null && _super.apply(this, arguments) || this;
@@ -154,5 +154,4 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
         ], MiniMadVIDEO);
         return MiniMadVIDEO;
     }(OSCviaUDP_1.OSCviaUDP));
-    exports.MiniMadVIDEO = MiniMadVIDEO;
 });

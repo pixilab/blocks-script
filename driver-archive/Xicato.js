@@ -34,7 +34,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
     var XIC_GROUP_OFFSET = 49152;
     var XIC_MAX_DEVICE_GROUPS = 16;
     var XIC_MAX_DEVICE_SCENES = 32;
-    var Xicato = (function (_super) {
+    var Xicato = exports.Xicato = (function (_super) {
         __extends(Xicato, _super);
         function Xicato(socket) {
             var _this = _super.call(this, socket) || this;
@@ -580,7 +580,6 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         ], Xicato);
         return Xicato;
     }(Driver_1.Driver));
-    exports.Xicato = Xicato;
     var XicatoSettings = (function () {
         function XicatoSettings() {
             this.username = '';

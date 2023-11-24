@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Countdown = void 0;
-    var Countdown = (function (_super) {
+    var Countdown = exports.Countdown = (function (_super) {
         __extends(Countdown, _super);
         function Countdown(env) {
             var _this = _super.call(this, env) || this;
@@ -157,7 +157,6 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ], Countdown.prototype, "start", null);
         return Countdown;
     }(Script_1.Script));
-    exports.Countdown = Countdown;
     function padTwoDigits(val) {
         var result = val.toString();
         if (result.length < 2)

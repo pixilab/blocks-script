@@ -46,7 +46,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Metadata", "../
     var OSC_TYPE_TAG_BOOLEAN_TRUE = 'T';
     var OSC_TYPE_TAG_BOOLEAN_FALSE = 'F';
     var split = require("lib/split-string");
-    var OSCviaUDP = (function (_super) {
+    var OSCviaUDP = exports.OSCviaUDP = (function (_super) {
         __extends(OSCviaUDP, _super);
         function OSCviaUDP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -242,5 +242,4 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Metadata", "../
         ], OSCviaUDP);
         return OSCviaUDP;
     }(NetworkDriver_1.NetworkDriver));
-    exports.OSCviaUDP = OSCviaUDP;
 });

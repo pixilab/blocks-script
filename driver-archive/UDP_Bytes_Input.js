@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UDP_Bytes_Input = void 0;
-    var UDP_Bytes_Input = (function (_super) {
+    var UDP_Bytes_Input = exports.UDP_Bytes_Input = (function (_super) {
         __extends(UDP_Bytes_Input, _super);
         function UDP_Bytes_Input(socket) {
             var _this = _super.call(this, socket) || this;
@@ -70,7 +70,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], UDP_Bytes_Input);
         return UDP_Bytes_Input;
     }(Driver_1.Driver));
-    exports.UDP_Bytes_Input = UDP_Bytes_Input;
     function toHexString(data) {
         var result = "";
         var len = Math.min(data.length, 20);

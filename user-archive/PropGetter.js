@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system/Realm", "system/Spot"
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PropGetter = void 0;
-    var PropGetter = (function (_super) {
+    var PropGetter = exports.PropGetter = (function (_super) {
         __extends(PropGetter, _super);
         function PropGetter(env) {
             return _super.call(this, env) || this;
@@ -58,5 +58,4 @@ define(["require", "exports", "system_lib/Script", "system/Realm", "system/Spot"
         ], PropGetter.prototype, "readSpotState", null);
         return PropGetter;
     }(Script_1.Script));
-    exports.PropGetter = PropGetter;
 });

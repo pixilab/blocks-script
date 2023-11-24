@@ -29,7 +29,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Flock = void 0;
-    var Flock = (function (_super) {
+    var Flock = exports.Flock = (function (_super) {
         __extends(Flock, _super);
         function Flock(env) {
             var _this = _super.call(this, env) || this;
@@ -76,5 +76,4 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         ], Flock.prototype, "sendRichMessage", null);
         return Flock;
     }(Script_1.Script));
-    exports.Flock = Flock;
 });

@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NumState = exports.BoolState = exports.State = exports.NetworkProjector = void 0;
-    var NetworkProjector = (function (_super) {
+    var NetworkProjector = exports.NetworkProjector = (function (_super) {
         __extends(NetworkProjector, _super);
         function NetworkProjector(socket) {
             var _this = _super.call(this, socket) || this;
@@ -286,7 +286,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         ], NetworkProjector.prototype, "connected", null);
         return NetworkProjector;
     }(Driver_1.Driver));
-    exports.NetworkProjector = NetworkProjector;
     var State = (function () {
         function State(baseCmd, propName, correctionApprover) {
             this.baseCmd = baseCmd;

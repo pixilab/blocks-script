@@ -26,7 +26,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Christie_GS = void 0;
-    var Christie_GS = (function (_super) {
+    var Christie_GS = exports.Christie_GS = (function (_super) {
         __extends(Christie_GS, _super);
         function Christie_GS(socket) {
             var _this = _super.call(this, socket) || this;
@@ -125,5 +125,4 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         ], Christie_GS);
         return Christie_GS;
     }(NetworkProjector_1.NetworkProjector));
-    exports.Christie_GS = Christie_GS;
 });

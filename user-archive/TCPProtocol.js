@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleServer", "syste
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TCPProtocol = void 0;
-    var TCPProtocol = (function (_super) {
+    var TCPProtocol = exports.TCPProtocol = (function (_super) {
         __extends(TCPProtocol, _super);
         function TCPProtocol(env) {
             var _this = _super.call(this, env) || this;
@@ -84,7 +84,6 @@ define(["require", "exports", "system_lib/Script", "system/SimpleServer", "syste
         ], TCPProtocol.prototype, "reload", null);
         return TCPProtocol;
     }(Script_1.Script));
-    exports.TCPProtocol = TCPProtocol;
     var WhiteBlackList = (function () {
         function WhiteBlackList(paths, isWhiteList) {
             this.listedPaths = {};

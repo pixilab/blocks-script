@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TextIO = void 0;
-    var TextIO = (function (_super) {
+    var TextIO = exports.TextIO = (function (_super) {
         __extends(TextIO, _super);
         function TextIO(connection) {
             var _this = _super.call(this, connection) || this;
@@ -126,7 +126,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], TextIO);
         return TextIO;
     }(Driver_1.Driver));
-    exports.TextIO = TextIO;
     var DEBUG = false;
     function log() {
         var messages = [];

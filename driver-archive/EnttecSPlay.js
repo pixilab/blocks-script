@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.EnttecSPlay = void 0;
-    var EnttecSPlay = (function (_super) {
+    var EnttecSPlay = exports.EnttecSPlay = (function (_super) {
         __extends(EnttecSPlay, _super);
         function EnttecSPlay(socket) {
             var _this = _super.call(this, socket) || this;
@@ -116,5 +116,4 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
         ], EnttecSPlay);
         return EnttecSPlay;
     }(OSCviaUDP_1.OSCviaUDP));
-    exports.EnttecSPlay = EnttecSPlay;
 });

@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Driver = void 0;
-    var Driver = (function (_super) {
+    var Driver = exports.Driver = (function (_super) {
         __extends(Driver, _super);
         function Driver(scriptFacade) {
             var _this = _super.call(this, scriptFacade) || this;
@@ -97,5 +97,4 @@ define(["require", "exports", "system_lib/ScriptBase", "system_lib/Metadata"], f
         ], Driver.prototype, "deviceType", null);
         return Driver;
     }(ScriptBase_1.ScriptBase));
-    exports.Driver = Driver;
 });

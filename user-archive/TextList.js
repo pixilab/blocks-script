@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TextList = void 0;
-    var TextList = (function (_super) {
+    var TextList = exports.TextList = (function (_super) {
         __extends(TextList, _super);
         function TextList(scriptFacade) {
             var _this = _super.call(this, scriptFacade) || this;
@@ -96,7 +96,6 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
         ], TextList.prototype, "lineCount", null);
         return TextList;
     }(Script_1.Script));
-    exports.TextList = TextList;
     var IndexedPropItem = (function () {
         function IndexedPropItem(value) {
             this.mStrValue = "";

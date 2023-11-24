@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.VISCA = void 0;
-    var VISCA = (function (_super) {
+    var VISCA = exports.VISCA = (function (_super) {
         __extends(VISCA, _super);
         function VISCA(socket) {
             var _this = _super.call(this, socket) || this;
@@ -269,7 +269,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], VISCA);
         return VISCA;
     }(Driver_1.Driver));
-    exports.VISCA = VISCA;
     function bytesToString(bytes) {
         var result = '';
         var hasData = false;
@@ -354,24 +353,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var RecallPresetCmd = (function (_super) {
         __extends(RecallPresetCmd, _super);
         function RecallPresetCmd(presetNumber) {
-            var _this = this;
             var cmd = [0x81, 1, 4, 0x3f, 2, Math.round(Math.min(254, presetNumber))];
-            _this = _super.call(this, 'RecallPreset', cmd) || this;
-            return _this;
+            return _super.call(this, 'RecallPreset', cmd) || this;
         }
         return RecallPresetCmd;
     }(Instr));
     var PanTiltCmd = (function (_super) {
         __extends(PanTiltCmd, _super);
         function PanTiltCmd(owner) {
-            var _this = this;
             var data = [0x81, 1, 6, 2];
             data.push(owner.propValueNum(PanSpeed.propName));
             data.push(owner.propValueNum(TiltSpeed.propName));
             Instr.pushNibs(data, owner.propValueNum(Pan.propName));
             Instr.pushNibs(data, owner.propValueNum(Tilt.propName));
-            _this = _super.call(this, 'PanTilt', data) || this;
-            return _this;
+            return _super.call(this, 'PanTilt', data) || this;
         }
         return PanTiltCmd;
     }(Instr));

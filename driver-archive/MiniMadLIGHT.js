@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MiniMadLIGHT = void 0;
-    var MiniMadLIGHT = (function (_super) {
+    var MiniMadLIGHT = exports.MiniMadLIGHT = (function (_super) {
         __extends(MiniMadLIGHT, _super);
         function MiniMadLIGHT(socket) {
             var _this = _super.call(this, socket) || this;
@@ -148,5 +148,4 @@ define(["require", "exports", "system_lib/Metadata", "./OSCviaUDP"], function (r
         ], MiniMadLIGHT);
         return MiniMadLIGHT;
     }(OSCviaUDP_1.OSCviaUDP));
-    exports.MiniMadLIGHT = MiniMadLIGHT;
 });

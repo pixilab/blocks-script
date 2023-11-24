@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CloudDCM1e = void 0;
-    var CloudDCM1e = (function (_super) {
+    var CloudDCM1e = exports.CloudDCM1e = (function (_super) {
         __extends(CloudDCM1e, _super);
         function CloudDCM1e(socket) {
             var _this = _super.call(this, socket) || this;
@@ -375,7 +375,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], CloudDCM1e);
         return CloudDCM1e;
     }(Driver_1.Driver));
-    exports.CloudDCM1e = CloudDCM1e;
     var Request = (function () {
         function Request(request, responsePattern) {
             var _this = this;

@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SamsungMDCBasic = void 0;
-    var SamsungMDCBasic = (function (_super) {
+    var SamsungMDCBasic = exports.SamsungMDCBasic = (function (_super) {
         __extends(SamsungMDCBasic, _super);
         function SamsungMDCBasic(socket) {
             var _this = _super.call(this, socket) || this;
@@ -135,5 +135,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], SamsungMDCBasic);
         return SamsungMDCBasic;
     }(Driver_1.Driver));
-    exports.SamsungMDCBasic = SamsungMDCBasic;
 });

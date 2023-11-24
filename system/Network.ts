@@ -236,7 +236,7 @@ export interface MQTT extends NetworkBase {
 
 	/*	Send text string to broker on specified sub-topic.
 	*/
-	sendText(text: string, subTopic: string): void;
+	sendText(text: string, subTopic: string, options?: MqttSendOpts): void;
 
 	/*	Subscribe to topic text from specified subTopic, interpreted as ASCII/UTF-8.
 		Specified subTopic may include MQTT wildcards.
@@ -270,6 +270,12 @@ export interface MQTT extends NetworkBase {
 
 	// Object is being shut down
 	subscribe(event: 'finish', listener: (emitter: MQTT)=>void): void;
+}
+
+/** Additional options that can be provided with MQTT send operations.
+ */
+interface MqttSendOpts {
+	retain?: boolean;	// Controls the "retain" flag of outgoing MQTT message
 }
 
 /**

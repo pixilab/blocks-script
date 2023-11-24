@@ -136,8 +136,15 @@ interface ControllableSpot extends BaseSpot {
 	customClasses: string;
 
 	/**
+	 * Comma separated list of tags applied to this spot. Use forceTags if you want to change this.
+	 * Note that the tagSet reported here includes all tags, including those statically assigned
+	 * through the Spot's configuration.
+	 */
+	readonly tagSet: string;
+
+	/**
 	 * Force set of local tags to only those specified (comma separated). Does not
-	 * alter any tags specified in the Spot's configuration. If ofSet specified,
+	 * alter any tags specified in the Spot's configuration. If ofSet is specified,
 	 * then alter only tags within ofSet, leaving others alone.
 	 */
 	forceTags(tags: string, ofSet?: string): void;
@@ -191,6 +198,10 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 */
 	readonly geoZone: GeoZone|null;
 
+	/**
+	 * Set Spot's startup and (if enabled) cached root block, as Group/Name.
+	 */
+	setDefaultBlock(block: string): void;
 
 	/**
 	 * Reload the current block. Occasionally useful after making server-side changes to

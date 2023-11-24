@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GrandMA = void 0;
-    var GrandMA = (function (_super) {
+    var GrandMA = exports.GrandMA = (function (_super) {
         __extends(GrandMA, _super);
         function GrandMA(socket) {
             var _this = _super.call(this, socket) || this;
@@ -79,5 +79,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], GrandMA);
         return GrandMA;
     }(Driver_1.Driver));
-    exports.GrandMA = GrandMA;
 });

@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SimpleHttpInput = void 0;
-    var SimpleHttpInput = (function (_super) {
+    var SimpleHttpInput = exports.SimpleHttpInput = (function (_super) {
         __extends(SimpleHttpInput, _super);
         function SimpleHttpInput(env) {
             var _this = _super.call(this, env) || this;
@@ -70,5 +70,4 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ], SimpleHttpInput.prototype, "lastMessage", null);
         return SimpleHttpInput;
     }(Script_1.Script));
-    exports.SimpleHttpInput = SimpleHttpInput;
 });

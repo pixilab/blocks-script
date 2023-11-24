@@ -26,7 +26,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PJLink = void 0;
-    var PJLink = (function (_super) {
+    var PJLink = exports.PJLink = (function (_super) {
         __extends(PJLink, _super);
         function PJLink(socket) {
             var _this = _super.call(this, socket) || this;
@@ -211,5 +211,4 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         ], PJLink);
         return PJLink;
     }(NetworkProjector_1.NetworkProjector));
-    exports.PJLink = PJLink;
 });

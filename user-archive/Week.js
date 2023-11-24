@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Week = void 0;
-    var Week = (function (_super) {
+    var Week = exports.Week = (function (_super) {
         __extends(Week, _super);
         function Week(env) {
             var _this = _super.call(this, env) || this;
@@ -113,5 +113,4 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ], Week.prototype, "evenWeekNumber", null);
         return Week;
     }(Script_1.Script));
-    exports.Week = Week;
 });

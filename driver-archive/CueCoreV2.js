@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CueCoreV2 = void 0;
-    var CueCoreV2 = (function (_super) {
+    var CueCoreV2 = exports.CueCoreV2 = (function (_super) {
         __extends(CueCoreV2, _super);
         function CueCoreV2(socket) {
             var _this = _super.call(this, socket) || this;
@@ -334,5 +334,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], CueCoreV2);
         return CueCoreV2;
     }(Driver_1.Driver));
-    exports.CueCoreV2 = CueCoreV2;
 });

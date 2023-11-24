@@ -35,7 +35,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         PinMode[PinMode["Servo"] = 4] = "Servo";
         PinMode[PinMode["Pullup"] = 11] = "Pullup";
     })(PinMode || (PinMode = {}));
-    var Firmata = (function (_super) {
+    var Firmata = exports.Firmata = (function (_super) {
         __extends(Firmata, _super);
         function Firmata(connection) {
             var _this = _super.call(this, connection) || this;
@@ -439,5 +439,4 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         ], Firmata);
         return Firmata;
     }(Driver_1.Driver));
-    exports.Firmata = Firmata;
 });

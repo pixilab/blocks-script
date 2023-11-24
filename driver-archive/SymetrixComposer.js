@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SymetrixComposer = void 0;
-    var SymetrixComposer = (function (_super) {
+    var SymetrixComposer = exports.SymetrixComposer = (function (_super) {
         __extends(SymetrixComposer, _super);
         function SymetrixComposer(socket) {
             var _this = _super.call(this, socket) || this;
@@ -143,5 +143,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], SymetrixComposer);
         return SymetrixComposer;
     }(Driver_1.Driver));
-    exports.SymetrixComposer = SymetrixComposer;
 });

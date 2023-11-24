@@ -17,7 +17,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile"], functio
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Persistent = void 0;
-    var Persistent = (function (_super) {
+    var Persistent = exports.Persistent = (function (_super) {
         __extends(Persistent, _super);
         function Persistent(env) {
             var _this = _super.call(this, env) || this;
@@ -77,5 +77,4 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile"], functio
         Persistent.kFileName = "Persistent.json";
         return Persistent;
     }(Script_1.Script));
-    exports.Persistent = Persistent;
 });

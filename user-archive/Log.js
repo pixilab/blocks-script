@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Log = void 0;
-    var Log = (function (_super) {
+    var Log = exports.Log = (function (_super) {
         __extends(Log, _super);
         function Log(env) {
             return _super.call(this, env) || this;
@@ -47,5 +47,4 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ], Log.prototype, "warning", null);
         return Log;
     }(Script_1.Script));
-    exports.Log = Log;
 });

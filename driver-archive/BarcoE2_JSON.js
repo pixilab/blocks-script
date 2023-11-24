@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BarcoE2_JSON = void 0;
-    var BarcoE2_JSON = (function (_super) {
+    var BarcoE2_JSON = exports.BarcoE2_JSON = (function (_super) {
         __extends(BarcoE2_JSON, _super);
         function BarcoE2_JSON(socket) {
             var _this = _super.call(this, socket) || this;
@@ -94,7 +94,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], BarcoE2_JSON);
         return BarcoE2_JSON;
     }(Driver_1.Driver));
-    exports.BarcoE2_JSON = BarcoE2_JSON;
     var Command = (function () {
         function Command(method, params) {
             this.method = method;

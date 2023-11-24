@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     var POLL_INTERVAL = 200;
     var TIMEOUT = 2000;
     var DEFAULT_PORT = 4001;
-    var LeuzeBPS8 = (function (_super) {
+    var LeuzeBPS8 = exports.LeuzeBPS8 = (function (_super) {
         __extends(LeuzeBPS8, _super);
         function LeuzeBPS8(socket) {
             var _this = _super.call(this, socket) || this;
@@ -278,5 +278,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], LeuzeBPS8);
         return LeuzeBPS8;
     }(Driver_1.Driver));
-    exports.LeuzeBPS8 = LeuzeBPS8;
 });

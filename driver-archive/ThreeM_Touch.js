@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ThreeM_Touch = void 0;
-    var ThreeM_Touch = (function (_super) {
+    var ThreeM_Touch = exports.ThreeM_Touch = (function (_super) {
         __extends(ThreeM_Touch, _super);
         function ThreeM_Touch(socket) {
             var _this = _super.call(this, socket) || this;
@@ -118,7 +118,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], ThreeM_Touch);
         return ThreeM_Touch;
     }(Driver_1.Driver));
-    exports.ThreeM_Touch = ThreeM_Touch;
     function buildCommand(opcodePage, opcode, param) {
         var data = [];
         data.push(1);

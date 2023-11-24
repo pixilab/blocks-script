@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ConfigurableMQTT = void 0;
-    var ConfigurableMQTT = (function (_super) {
+    var ConfigurableMQTT = exports.ConfigurableMQTT = (function (_super) {
         __extends(ConfigurableMQTT, _super);
         function ConfigurableMQTT(mqtt) {
             var _this = _super.call(this, mqtt) || this;
@@ -272,5 +272,4 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         ], ConfigurableMQTT);
         return ConfigurableMQTT;
     }(Driver_1.Driver));
-    exports.ConfigurableMQTT = ConfigurableMQTT;
 });

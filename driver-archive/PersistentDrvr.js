@@ -26,7 +26,7 @@ define(["require", "exports", "system/SimpleFile", "system_lib/Driver", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PersistentDrvr = void 0;
-    var PersistentDrvr = (function (_super) {
+    var PersistentDrvr = exports.PersistentDrvr = (function (_super) {
         __extends(PersistentDrvr, _super);
         function PersistentDrvr(socket) {
             var _this = _super.call(this, socket) || this;
@@ -71,5 +71,4 @@ define(["require", "exports", "system/SimpleFile", "system_lib/Driver", "system_
         ], PersistentDrvr);
         return PersistentDrvr;
     }(Driver_1.Driver));
-    exports.PersistentDrvr = PersistentDrvr;
 });

@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WallClock = void 0;
-    var WallClock = (function (_super) {
+    var WallClock = exports.WallClock = (function (_super) {
         __extends(WallClock, _super);
         function WallClock(env) {
             var _this = _super.call(this, env) || this;
@@ -59,7 +59,6 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ], WallClock.prototype, "currentTime", null);
         return WallClock;
     }(Script_1.Script));
-    exports.WallClock = WallClock;
     function padTwoDigits(val) {
         var result = val.toString();
         if (result.length < 2)

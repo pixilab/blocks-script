@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleMail", "system/
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MailLog = void 0;
-    var MailLog = (function (_super) {
+    var MailLog = exports.MailLog = (function (_super) {
         __extends(MailLog, _super);
         function MailLog() {
             return _super !== null && _super.apply(this, arguments) || this;
@@ -54,5 +54,4 @@ define(["require", "exports", "system_lib/Script", "system/SimpleMail", "system/
         ], MailLog.prototype, "sendLogTo", null);
         return MailLog;
     }(Script_1.Script));
-    exports.MailLog = MailLog;
 });

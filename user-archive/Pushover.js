@@ -29,7 +29,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Pushover = void 0;
-    var Pushover = (function (_super) {
+    var Pushover = exports.Pushover = (function (_super) {
         __extends(Pushover, _super);
         function Pushover(env) {
             var _this = _super.call(this, env) || this;
@@ -74,5 +74,4 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         ], Pushover.prototype, "sendMessage", null);
         return Pushover;
     }(Script_1.Script));
-    exports.Pushover = Pushover;
 });

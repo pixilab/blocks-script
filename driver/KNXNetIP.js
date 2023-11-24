@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.KNXNetIP = void 0;
-    var KNXNetIP = (function (_super) {
+    var KNXNetIP = exports.KNXNetIP = (function (_super) {
         __extends(KNXNetIP, _super);
         function KNXNetIP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -425,7 +425,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver", "syste
         ], KNXNetIP);
         return KNXNetIP;
     }(Driver_1.Driver));
-    exports.KNXNetIP = KNXNetIP;
     var AnalogProp = (function () {
         function AnalogProp(owner, analog) {
             var _this = this;

@@ -29,7 +29,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Slack = void 0;
-    var Slack = (function (_super) {
+    var Slack = exports.Slack = (function (_super) {
         __extends(Slack, _super);
         function Slack(env) {
             var _this = _super.call(this, env) || this;
@@ -62,5 +62,4 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         ], Slack.prototype, "sendMessage", null);
         return Slack;
     }(Script_1.Script));
-    exports.Slack = Slack;
 });

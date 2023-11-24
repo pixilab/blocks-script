@@ -29,7 +29,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MersiveOpenControl = void 0;
-    var MersiveOpenControl = (function (_super) {
+    var MersiveOpenControl = exports.MersiveOpenControl = (function (_super) {
         __extends(MersiveOpenControl, _super);
         function MersiveOpenControl(socket) {
             var _this = _super.call(this, socket) || this;
@@ -106,5 +106,4 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
         ], MersiveOpenControl);
         return MersiveOpenControl;
     }(Driver_1.Driver));
-    exports.MersiveOpenControl = MersiveOpenControl;
 });

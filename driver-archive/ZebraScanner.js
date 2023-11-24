@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", 
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ZebraScanner = void 0;
-    var ZebraScanner = (function (_super) {
+    var ZebraScanner = exports.ZebraScanner = (function (_super) {
         __extends(ZebraScanner, _super);
         function ZebraScanner(socket) {
             var _this = _super.call(this, socket) || this;
@@ -71,5 +71,4 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", 
         ], ZebraScanner);
         return ZebraScanner;
     }(Driver_1.Driver));
-    exports.ZebraScanner = ZebraScanner;
 });
