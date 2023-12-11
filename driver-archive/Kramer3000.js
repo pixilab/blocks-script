@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Kramer3000 = void 0;
-    var Kramer3000 = (function (_super) {
+    var Kramer3000 = exports.Kramer3000 = (function (_super) {
         __extends(Kramer3000, _super);
         function Kramer3000(socket) {
             var _this = _super.call(this, socket) || this;
@@ -80,7 +80,6 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         ], Kramer3000);
         return Kramer3000;
     }(Driver_1.Driver));
-    exports.Kramer3000 = Kramer3000;
     var SwitchDest = (function () {
         function SwitchDest(driver, index) {
             var _this = this;

@@ -35,7 +35,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         Mapping[Mapping["Position"] = 0] = "Position";
         Mapping[Mapping["Value"] = 1] = "Value";
     })(Mapping || (Mapping = {}));
-    var QSYS = (function (_super) {
+    var QSYS = exports.QSYS = (function (_super) {
         __extends(QSYS, _super);
         function QSYS(socket) {
             var _this = _super.call(this, socket) || this;
@@ -305,5 +305,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], QSYS);
         return QSYS;
     }(Driver_1.Driver));
-    exports.QSYS = QSYS;
 });

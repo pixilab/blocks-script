@@ -27,7 +27,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SunAngle = void 0;
     var suncalc = require("lib/suncalc");
-    var SunAngle = (function (_super) {
+    var SunAngle = exports.SunAngle = (function (_super) {
         __extends(SunAngle, _super);
         function SunAngle(env) {
             var _this = _super.call(this, env) || this;
@@ -106,5 +106,4 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
         ], SunAngle.prototype, "azimuth", null);
         return SunAngle;
     }(Script_1.Script));
-    exports.SunAngle = SunAngle;
 });

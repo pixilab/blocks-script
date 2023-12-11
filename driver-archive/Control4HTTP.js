@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", 
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Control4HTTP = void 0;
-    var Control4HTTP = (function (_super) {
+    var Control4HTTP = exports.Control4HTTP = (function (_super) {
         __extends(Control4HTTP, _super);
         function Control4HTTP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -53,5 +53,4 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", 
         ], Control4HTTP);
         return Control4HTTP;
     }(Driver_1.Driver));
-    exports.Control4HTTP = Control4HTTP;
 });

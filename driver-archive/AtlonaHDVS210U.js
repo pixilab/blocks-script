@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AtlonaHDVS210U = void 0;
-    var AtlonaHDVS210U = (function (_super) {
+    var AtlonaHDVS210U = exports.AtlonaHDVS210U = (function (_super) {
         __extends(AtlonaHDVS210U, _super);
         function AtlonaHDVS210U(socket) {
             var _this = _super.call(this, socket) || this;
@@ -78,5 +78,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], AtlonaHDVS210U);
         return AtlonaHDVS210U;
     }(Driver_1.Driver));
-    exports.AtlonaHDVS210U = AtlonaHDVS210U;
 });

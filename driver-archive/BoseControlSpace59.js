@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BoseControlSpace59 = void 0;
-    var BoseControlSpace59 = (function (_super) {
+    var BoseControlSpace59 = exports.BoseControlSpace59 = (function (_super) {
         __extends(BoseControlSpace59, _super);
         function BoseControlSpace59(socket) {
             var _this = _super.call(this, socket) || this;
@@ -166,7 +166,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         ], BoseControlSpace59);
         return BoseControlSpace59;
     }(Driver_1.Driver));
-    exports.BoseControlSpace59 = BoseControlSpace59;
     var Command = (function () {
         function Command(baseCmd) {
             this.baseCmd = baseCmd;

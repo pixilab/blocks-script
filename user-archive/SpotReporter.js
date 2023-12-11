@@ -30,7 +30,7 @@ define(["require", "exports", "system_lib/Script", "system/Spot", "system/Simple
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SpotReporter = void 0;
     var kNewline = "<br>\n";
-    var SpotReporter = (function (_super) {
+    var SpotReporter = exports.SpotReporter = (function (_super) {
         __extends(SpotReporter, _super);
         function SpotReporter(env) {
             var _this = _super.call(this, env) || this;
@@ -95,6 +95,7 @@ define(["require", "exports", "system_lib/Script", "system/Spot", "system/Simple
                 }
                 else {
                     if (spot.connected) {
+                        spot.power = true;
                         _this.connectedSpots[spotPath] = true;
                         if (_this.recentlyDisconnectedSpots[spotPath]) {
                             delete _this.recentlyDisconnectedSpots[spotPath];
@@ -213,5 +214,4 @@ define(["require", "exports", "system_lib/Script", "system/Spot", "system/Simple
         ], SpotReporter.prototype, "checkNow", null);
         return SpotReporter;
     }(Script_1.Script));
-    exports.SpotReporter = SpotReporter;
 });

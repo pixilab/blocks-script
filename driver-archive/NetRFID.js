@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NetRFID = void 0;
-    var NetRFID = (function (_super) {
+    var NetRFID = exports.NetRFID = (function (_super) {
         __extends(NetRFID, _super);
         function NetRFID(socket) {
             var _this = _super.call(this, socket) || this;
@@ -86,5 +86,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], NetRFID);
         return NetRFID;
     }(Driver_1.Driver));
-    exports.NetRFID = NetRFID;
 });

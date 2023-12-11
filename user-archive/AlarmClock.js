@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Script", "../system_lib/Metadata"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AlarmClock = void 0;
-    var AlarmClock = (function (_super) {
+    var AlarmClock = exports.AlarmClock = (function (_super) {
         __extends(AlarmClock, _super);
         function AlarmClock(env) {
             var _this = _super.call(this, env) || this;
@@ -109,5 +109,4 @@ define(["require", "exports", "../system_lib/Script", "../system_lib/Metadata"],
         ], AlarmClock.prototype, "getTime", null);
         return AlarmClock;
     }(Script_1.Script));
-    exports.AlarmClock = AlarmClock;
 });

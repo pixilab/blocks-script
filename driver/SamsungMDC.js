@@ -28,7 +28,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     exports.SamsungMDC = void 0;
     var kHeaderData = 0xAA;
     var kAckData = 0x41;
-    var SamsungMDC = (function (_super) {
+    var SamsungMDC = exports.SamsungMDC = (function (_super) {
         __extends(SamsungMDC, _super);
         function SamsungMDC(socket) {
             var _this = _super.call(this, socket) || this;
@@ -280,7 +280,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], SamsungMDC);
         return SamsungMDC;
     }(Driver_1.Driver));
-    exports.SamsungMDC = SamsungMDC;
     var Command = (function () {
         function Command(name, id, cmdType, paramByte) {
             this.name = name;

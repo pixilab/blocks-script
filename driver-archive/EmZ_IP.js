@@ -63,7 +63,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     var SERVER_IP = '10.0.2.10';
     var MAX_WAIT_FOR_ACKNOWLEDGEMENT = 500;
     var LOG_DEBUG = false;
-    var EmZ_IP = (function (_super) {
+    var EmZ_IP = exports.EmZ_IP = (function (_super) {
         __extends(EmZ_IP, _super);
         function EmZ_IP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -218,7 +218,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], EmZ_IP);
         return EmZ_IP;
     }(Driver_1.Driver));
-    exports.EmZ_IP = EmZ_IP;
     var EmZIPMessage = (function () {
         function EmZIPMessage(iddom, cde) {
             this._fields = {};

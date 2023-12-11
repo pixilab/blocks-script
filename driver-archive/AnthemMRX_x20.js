@@ -53,7 +53,7 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
     var VOL_MIN = -90;
     var VOL_MAX = 10;
     var LOG_DEBUG = true;
-    var AnthemMRX_x20 = (function (_super) {
+    var AnthemMRX_x20 = exports.AnthemMRX_x20 = (function (_super) {
         __extends(AnthemMRX_x20, _super);
         function AnthemMRX_x20(socket) {
             var _this = this;
@@ -432,7 +432,6 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
         ], AnthemMRX_x20);
         return AnthemMRX_x20;
     }(NetworkProjector_1.NetworkProjector));
-    exports.AnthemMRX_x20 = AnthemMRX_x20;
     var StringState = (function (_super) {
         __extends(StringState, _super);
         function StringState() {

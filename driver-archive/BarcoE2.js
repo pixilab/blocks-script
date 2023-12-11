@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BarcoE2 = void 0;
-    var BarcoE2 = (function (_super) {
+    var BarcoE2 = exports.BarcoE2 = (function (_super) {
         __extends(BarcoE2, _super);
         function BarcoE2(socket) {
             var _this = _super.call(this, socket) || this;
@@ -73,5 +73,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], BarcoE2);
         return BarcoE2;
     }(Driver_1.Driver));
-    exports.BarcoE2 = BarcoE2;
 });

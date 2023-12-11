@@ -8,6 +8,5 @@ For more details on drivers and scripting development, see
 https://pixilab.se/docs/blocks/drivers  
 https://pixilab.se/docs/blocks/advanced_scripting
 
-### Preparations for development purposes
-If you plan on doing development of drivers/scripts
-After cloning/downloading and installing these files, run "npm install" to avoid compilation errors for missing packages.
+### Additional Preparations for Development
+If you plan on doing development of drivers/scripts, there's an additional step required after cloning/downloading/installing these files. You must then also run the *npm install* command from within the *script* directory to download and install any development dependencies, as specified by the package.json file. If such dependencies are not installed, you may get TypeScript compilation errors.

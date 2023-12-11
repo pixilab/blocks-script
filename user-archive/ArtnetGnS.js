@@ -38,7 +38,7 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
     var PUBLISH_SCENE_PROPERTIES = false;
     var PUBLISH_CROSSFADER_PROPERTIES = false;
     var split = require("lib/split-string");
-    var ArtnetGnS = (function (_super) {
+    var ArtnetGnS = exports.ArtnetGnS = (function (_super) {
         __extends(ArtnetGnS, _super);
         function ArtnetGnS(env) {
             var _this = _super.call(this, env) || this;
@@ -808,7 +808,6 @@ define(["require", "exports", "system/Artnet", "system/Realm", "system_lib/Scrip
         ], ArtnetGnS.prototype, "reset", null);
         return ArtnetGnS;
     }(Script_1.Script));
-    exports.ArtnetGnS = ArtnetGnS;
     var ArtnetCrossfader = (function () {
         function ArtnetCrossfader(groupA, groupB, maxValueA, maxValueB) {
             this.maxValueA = 1;

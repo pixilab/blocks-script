@@ -31,7 +31,7 @@ define(["require", "exports", "../system/SimpleProcess", "../system/Spot", "../s
     exports.WakeOnLan = void 0;
     var VERSION = '0.1.0';
     var MAC_ID_PREFIX = 'MAC_';
-    var WakeOnLan = (function (_super) {
+    var WakeOnLan = exports.WakeOnLan = (function (_super) {
         __extends(WakeOnLan, _super);
         function WakeOnLan(env) {
             var _this = _super.call(this, env) || this;
@@ -97,5 +97,4 @@ define(["require", "exports", "../system/SimpleProcess", "../system/Spot", "../s
         ], WakeOnLan.prototype, "wakeUp", null);
         return WakeOnLan;
     }(Script_1.Script));
-    exports.WakeOnLan = WakeOnLan;
 });

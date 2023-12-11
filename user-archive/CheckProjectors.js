@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Script", "../system/Network", "../s
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CheckProjectors = void 0;
-    var CheckProjectors = (function (_super) {
+    var CheckProjectors = exports.CheckProjectors = (function (_super) {
         __extends(CheckProjectors, _super);
         function CheckProjectors(env) {
             var _this = _super.call(this, env) || this;
@@ -124,5 +124,4 @@ define(["require", "exports", "../system_lib/Script", "../system/Network", "../s
         ], CheckProjectors.prototype, "reattachAll", null);
         return CheckProjectors;
     }(Script_1.Script));
-    exports.CheckProjectors = CheckProjectors;
 });

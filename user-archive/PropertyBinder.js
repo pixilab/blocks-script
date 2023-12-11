@@ -29,7 +29,7 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Script"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PropertyBinder = void 0;
-    var PropertyBinder = (function (_super) {
+    var PropertyBinder = exports.PropertyBinder = (function (_super) {
         __extends(PropertyBinder, _super);
         function PropertyBinder(env) {
             var _this = _super.call(this, env) || this;
@@ -140,5 +140,4 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Script"],
         ], PropertyBinder.prototype, "unbind", null);
         return PropertyBinder;
     }(Script_1.Script));
-    exports.PropertyBinder = PropertyBinder;
 });

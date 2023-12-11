@@ -29,7 +29,7 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PanasonicPanTilt = void 0;
-    var PanasonicPanTilt = (function (_super) {
+    var PanasonicPanTilt = exports.PanasonicPanTilt = (function (_super) {
         __extends(PanasonicPanTilt, _super);
         function PanasonicPanTilt(socket) {
             var _this = _super.call(this, socket) || this;
@@ -137,7 +137,6 @@ define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_
         ], PanasonicPanTilt);
         return PanasonicPanTilt;
     }(Driver_1.Driver));
-    exports.PanasonicPanTilt = PanasonicPanTilt;
     var CmdProcessor = (function () {
         function CmdProcessor(server) {
             this.server = server;

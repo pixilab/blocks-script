@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UDP_Input = void 0;
-    var UDP_Input = (function (_super) {
+    var UDP_Input = exports.UDP_Input = (function (_super) {
         __extends(UDP_Input, _super);
         function UDP_Input(socket) {
             var _this = _super.call(this, socket) || this;
@@ -79,5 +79,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], UDP_Input);
         return UDP_Input;
     }(Driver_1.Driver));
-    exports.UDP_Input = UDP_Input;
 });

@@ -35,7 +35,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PhilipsSICP = void 0;
-    var PhilipsSICP = (function (_super) {
+    var PhilipsSICP = exports.PhilipsSICP = (function (_super) {
         __extends(PhilipsSICP, _super);
         function PhilipsSICP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -171,5 +171,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], PhilipsSICP);
         return PhilipsSICP;
     }(Driver_1.Driver));
-    exports.PhilipsSICP = PhilipsSICP;
 });

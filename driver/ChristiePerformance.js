@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ChristiePerformance = void 0;
-    var ChristiePerformance = (function (_super) {
+    var ChristiePerformance = exports.ChristiePerformance = (function (_super) {
         __extends(ChristiePerformance, _super);
         function ChristiePerformance(socket) {
             var _this = _super.call(this, socket) || this;
@@ -184,5 +184,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], ChristiePerformance);
         return ChristiePerformance;
     }(Driver_1.Driver));
-    exports.ChristiePerformance = ChristiePerformance;
 });

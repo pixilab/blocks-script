@@ -30,7 +30,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SunClock = void 0;
     var suncalc = require("lib/suncalc");
-    var SunClock = (function (_super) {
+    var SunClock = exports.SunClock = (function (_super) {
         __extends(SunClock, _super);
         function SunClock(env) {
             var _this = _super.call(this, env) || this;
@@ -152,7 +152,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Script"], funct
         ], SunClock.prototype, "longitude", null);
         return SunClock;
     }(Script_1.Script));
-    exports.SunClock = SunClock;
     var SunProp = (function () {
         function SunProp(owner, propName, startMoment, startOffset, endMoment, endOffset) {
             var _this = this;

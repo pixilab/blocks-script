@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Xilica = void 0;
-    var Xilica = (function (_super) {
+    var Xilica = exports.Xilica = (function (_super) {
         __extends(Xilica, _super);
         function Xilica(socket) {
             var _this = _super.call(this, socket) || this;
@@ -232,7 +232,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], Xilica);
         return Xilica;
     }(Driver_1.Driver));
-    exports.Xilica = Xilica;
     var Output = (function () {
         function Output(xilica, channel) {
             this.xilica = xilica;

@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.VaddioVideoBridge = void 0;
-    var VaddioVideoBridge = (function (_super) {
+    var VaddioVideoBridge = exports.VaddioVideoBridge = (function (_super) {
         __extends(VaddioVideoBridge, _super);
         function VaddioVideoBridge(socket) {
             var _this = _super.call(this, socket) || this;
@@ -106,5 +106,4 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"],
         ], VaddioVideoBridge);
         return VaddioVideoBridge;
     }(Driver_1.Driver));
-    exports.VaddioVideoBridge = VaddioVideoBridge;
 });

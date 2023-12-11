@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.VPCueCore = void 0;
-    var VPCueCore = (function (_super) {
+    var VPCueCore = exports.VPCueCore = (function (_super) {
         __extends(VPCueCore, _super);
         function VPCueCore(socket) {
             var _this = _super.call(this, socket) || this;
@@ -189,5 +189,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], VPCueCore);
         return VPCueCore;
     }(Driver_1.Driver));
-    exports.VPCueCore = VPCueCore;
 });

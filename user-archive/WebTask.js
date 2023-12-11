@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system/Realm", "system/Simpl
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebTask = void 0;
-    var WebTask = (function (_super) {
+    var WebTask = exports.WebTask = (function (_super) {
         __extends(WebTask, _super);
         function WebTask(env) {
             var _this = _super.call(this, env) || this;
@@ -69,5 +69,4 @@ define(["require", "exports", "system_lib/Script", "system/Realm", "system/Simpl
         ], WebTask.prototype, "start", null);
         return WebTask;
     }(Script_1.Script));
-    exports.WebTask = WebTask;
 });

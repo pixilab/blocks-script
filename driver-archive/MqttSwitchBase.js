@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InputBase = exports.OutputBase = exports.MqttSwitchBase = void 0;
-    var MqttSwitchBase = (function (_super) {
+    var MqttSwitchBase = exports.MqttSwitchBase = (function (_super) {
         __extends(MqttSwitchBase, _super);
         function MqttSwitchBase(mqtt) {
             var _this = _super.call(this, mqtt) || this;
@@ -80,8 +80,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], MqttSwitchBase.prototype, "connected", null);
         return MqttSwitchBase;
     }(Driver_1.Driver));
-    exports.MqttSwitchBase = MqttSwitchBase;
-    var OutputBase = (function () {
+    var OutputBase = exports.OutputBase = (function () {
         function OutputBase(owner, index) {
             this.owner = owner;
             this.index = index;
@@ -117,8 +116,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], OutputBase.prototype, "on", null);
         return OutputBase;
     }());
-    exports.OutputBase = OutputBase;
-    var InputBase = (function () {
+    var InputBase = exports.InputBase = (function () {
         function InputBase(owner, index) {
             this.owner = owner;
             this.index = index;
@@ -148,5 +146,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], InputBase.prototype, "active", null);
         return InputBase;
     }());
-    exports.InputBase = InputBase;
 });

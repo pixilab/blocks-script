@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Pharos = void 0;
-    var Pharos = (function (_super) {
+    var Pharos = exports.Pharos = (function (_super) {
         __extends(Pharos, _super);
         function Pharos(socket) {
             var _this = _super.call(this, socket) || this;
@@ -46,7 +46,6 @@ define(["require", "exports", "../system_lib/Metadata", "../system_lib/Driver"],
         ], Pharos);
         return Pharos;
     }(Driver_1.Driver));
-    exports.Pharos = Pharos;
     var Scene = (function () {
         function Scene(owner, ix) {
             this.owner = owner;

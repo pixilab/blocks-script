@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Wyrestorm = void 0;
-    var Wyrestorm = (function (_super) {
+    var Wyrestorm = exports.Wyrestorm = (function (_super) {
         __extends(Wyrestorm, _super);
         function Wyrestorm(socket) {
             var _this = _super.call(this, socket) || this;
@@ -177,7 +177,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], Wyrestorm);
         return Wyrestorm;
     }(Driver_1.Driver));
-    exports.Wyrestorm = Wyrestorm;
     var Tile = (function () {
         function Tile(tileIx, applyChanges) {
             this.tileIx = tileIx;

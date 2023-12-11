@@ -79,14 +79,9 @@ export class Script extends ScriptBase<ScriptEnv> {
 	}
 
 	/**
-	 * Get a list PUIDs of all live records ofType. Occasionally useful if you want to do some processing
+	 * Get an array of PUIDs of all live records ofType. Occasionally useful if you want to do some processing
 	 * of all such records, such as before calling deleteRecords, to update or move or clean up any
 	 * associated data or files, or to do some aggregation of data across records.
-	 *
-	 * NOTE: This returns an "array-like" object that supports indexing and length, but
-	 * not other JavaScript array methods.
-	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Indexed_collections#working_with_array-like_objects
-	 * To turn this into a true JavaScript array, use the ScriptBase.makeJSArray() function
 	 */
 	getAllPuids<DST extends RecordBase>(ofType: Ctor<DST>): number[] {
 		return this.__scriptFacade.getAllPuids(ofType);

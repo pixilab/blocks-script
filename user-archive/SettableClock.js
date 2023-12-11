@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SettableClock = void 0;
-    var SettableClock = (function (_super) {
+    var SettableClock = exports.SettableClock = (function (_super) {
         __extends(SettableClock, _super);
         function SettableClock(env) {
             var _this = _super.call(this, env) || this;
@@ -185,5 +185,4 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
         ], SettableClock.prototype, "endMinute", null);
         return SettableClock;
     }(Script_1.Script));
-    exports.SettableClock = SettableClock;
 });

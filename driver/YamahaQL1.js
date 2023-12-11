@@ -30,7 +30,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.YamahaQL1 = void 0;
     var notifyPattern = /^(NOTIFY|OK) (get|set|sscurrent_ex) (\S*) (\d\d?)(?: 0 |)(?:"([^"]*)|(\S*))/;
-    var YamahaQL1 = (function (_super) {
+    var YamahaQL1 = exports.YamahaQL1 = (function (_super) {
         __extends(YamahaQL1, _super);
         function YamahaQL1(socket) {
             var _this = _super.call(this, socket) || this;
@@ -143,7 +143,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "syste
         ], YamahaQL1);
         return YamahaQL1;
     }(Driver_1.Driver));
-    exports.YamahaQL1 = YamahaQL1;
     var KeepAliver = (function () {
         function KeepAliver(YamahaQL1) {
             this.YamahaQL1 = YamahaQL1;

@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.HelvarNet = void 0;
-    var HelvarNet = (function (_super) {
+    var HelvarNet = exports.HelvarNet = (function (_super) {
         __extends(HelvarNet, _super);
         function HelvarNet(socket) {
             var _this = _super.call(this, socket) || this;
@@ -143,7 +143,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], HelvarNet);
         return HelvarNet;
     }(Driver_1.Driver));
-    exports.HelvarNet = HelvarNet;
     function fadeParam(timeInSeconds) {
         if (timeInSeconds === undefined)
             timeInSeconds = 0;

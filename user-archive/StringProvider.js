@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StringProvider = void 0;
-    var StringProvider = (function (_super) {
+    var StringProvider = exports.StringProvider = (function (_super) {
         __extends(StringProvider, _super);
         function StringProvider(env) {
             var _this = _super.call(this, env) || this;
@@ -96,5 +96,4 @@ define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_
         ], StringProvider.prototype, "fetch", null);
         return StringProvider;
     }(Script_1.Script));
-    exports.StringProvider = StringProvider;
 });

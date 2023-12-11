@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Metadata", "./MqttSwitchBase"], functi
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShellySwitchGen1 = void 0;
-    var ShellySwitchGen1 = (function (_super) {
+    var ShellySwitchGen1 = exports.ShellySwitchGen1 = (function (_super) {
         __extends(ShellySwitchGen1, _super);
         function ShellySwitchGen1(mqtt) {
             var _this = _super.call(this, mqtt) || this;
@@ -48,7 +48,6 @@ define(["require", "exports", "system_lib/Metadata", "./MqttSwitchBase"], functi
         ], ShellySwitchGen1);
         return ShellySwitchGen1;
     }(MqttSwitchBase_1.MqttSwitchBase));
-    exports.ShellySwitchGen1 = ShellySwitchGen1;
     var Output = (function (_super) {
         __extends(Output, _super);
         function Output(owner, index) {

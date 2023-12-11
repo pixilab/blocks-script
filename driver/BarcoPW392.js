@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BarcoPW392 = void 0;
-    var BarcoPW392 = (function (_super) {
+    var BarcoPW392 = exports.BarcoPW392 = (function (_super) {
         __extends(BarcoPW392, _super);
         function BarcoPW392(socket) {
             var _this = _super.call(this, socket) || this;
@@ -93,5 +93,4 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
         ], BarcoPW392);
         return BarcoPW392;
     }(NetworkProjector_1.NetworkProjector));
-    exports.BarcoPW392 = BarcoPW392;
 });

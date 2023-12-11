@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ClassyScript = void 0;
-    var ClassyScript = (function (_super) {
+    var ClassyScript = exports.ClassyScript = (function (_super) {
         __extends(ClassyScript, _super);
         function ClassyScript(env) {
             var _this = _super.call(this, env) || this;
@@ -106,5 +106,4 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ], ClassyScript.prototype, "doSomething", null);
         return ClassyScript;
     }(Script_1.Script));
-    exports.ClassyScript = ClassyScript;
 });

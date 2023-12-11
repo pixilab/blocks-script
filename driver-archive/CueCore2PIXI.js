@@ -128,7 +128,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", 
         ], Playback.prototype, "rate", null);
         return Playback;
     }(ScriptBase_1.AggregateElem));
-    var CueCore2PIXI = (function (_super) {
+    var CueCore2PIXI = exports.CueCore2PIXI = (function (_super) {
         __extends(CueCore2PIXI, _super);
         function CueCore2PIXI(connection) {
             var _this = _super.call(this, connection) || this;
@@ -237,7 +237,8 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", 
             this.pollForever();
         };
         CueCore2PIXI.prototype.handleMessage = function (message) {
-            var _a = message.split("="), cmd = _a[0], value = _a[1];
+            var _a;
+            var cmd = (_a = message.split("="), _a[0]), value = _a[1];
             if (cmd in this.cmdHandlers) {
                 this.feedback = true;
                 try {
@@ -307,5 +308,4 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata", 
         ], CueCore2PIXI);
         return CueCore2PIXI;
     }(Driver_1.Driver));
-    exports.CueCore2PIXI = CueCore2PIXI;
 });

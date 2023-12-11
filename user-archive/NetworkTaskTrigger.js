@@ -31,7 +31,7 @@ define(["require", "exports", "../system_lib/Script", "../system_lib/Metadata", 
     exports.NetworkTaskTrigger = void 0;
     var PORT = 3042;
     var DEBUG = false;
-    var NetworkTaskTrigger = (function (_super) {
+    var NetworkTaskTrigger = exports.NetworkTaskTrigger = (function (_super) {
         __extends(NetworkTaskTrigger, _super);
         function NetworkTaskTrigger(env) {
             var _this = _super.call(this, env) || this;
@@ -131,7 +131,6 @@ define(["require", "exports", "../system_lib/Script", "../system_lib/Metadata", 
         ], NetworkTaskTrigger.prototype, "whiteList", null);
         return NetworkTaskTrigger;
     }(Script_1.Script));
-    exports.NetworkTaskTrigger = NetworkTaskTrigger;
     function getSingleEntry(dict) {
         var item = null;
         for (var key in dict) {

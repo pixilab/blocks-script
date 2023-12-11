@@ -38,7 +38,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UIRobot = void 0;
-    var UIRobot = (function (_super) {
+    var UIRobot = exports.UIRobot = (function (_super) {
         __extends(UIRobot, _super);
         function UIRobot(socket, bufferSize) {
             var _this = _super.call(this, socket) || this;
@@ -283,5 +283,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], UIRobot);
         return UIRobot;
     }(Driver_1.Driver));
-    exports.UIRobot = UIRobot;
 });

@@ -26,7 +26,7 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NavigationSynchronizer = void 0;
-    var NavigationSynchronizer = (function (_super) {
+    var NavigationSynchronizer = exports.NavigationSynchronizer = (function (_super) {
         __extends(NavigationSynchronizer, _super);
         function NavigationSynchronizer(env) {
             var _this = _super.call(this, env) || this;
@@ -78,7 +78,6 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system_lib/Me
         ], NavigationSynchronizer.prototype, "stop", null);
         return NavigationSynchronizer;
     }(Script_1.Script));
-    exports.NavigationSynchronizer = NavigationSynchronizer;
     var NavigationMaster = (function () {
         function NavigationMaster(spotGroup, sourceSpotName) {
             this.sourceSpot = undefined;

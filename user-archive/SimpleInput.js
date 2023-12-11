@@ -26,7 +26,7 @@ define(["require", "exports", "system/SimpleServer", "system_lib/Script", "syste
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SimpleInput = void 0;
-    var SimpleInput = (function (_super) {
+    var SimpleInput = exports.SimpleInput = (function (_super) {
         __extends(SimpleInput, _super);
         function SimpleInput(env) {
             var _this = _super.call(this, env) || this;
@@ -68,5 +68,4 @@ define(["require", "exports", "system/SimpleServer", "system_lib/Script", "syste
         ], SimpleInput.prototype, "command", null);
         return SimpleInput;
     }(Script_1.Script));
-    exports.SimpleInput = SimpleInput;
 });
