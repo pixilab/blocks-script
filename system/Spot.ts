@@ -19,6 +19,14 @@ export var Spot: SpotGroup;
  */
 export interface SpotGroupItem {
 	isOfTypeName(typeName: string): SpotGroupItem|null;
+
+	/** The name given to this item.
+	 */
+	readonly name: string;
+
+	/** Full path, including "Spot."
+	 */
+	readonly fullName: string;
 }
 
 export interface SpotGroup extends SpotGroupItem {
@@ -34,8 +42,9 @@ export interface BaseSpot {
 	readonly fullName: string;		// Full path to this system object
 
 	/**
-	 Default block name as "group/leaf", or empty string
-	 if none.
+	 Get/set block name as "group/leaf", or empty string if none.
+	 NOTE: See the setDefaultBlock function, which also controls
+	 block to be cached, if enabled.
 	 */
 	block: string;
 
@@ -46,10 +55,10 @@ export interface BaseSpot {
 	priorityBlock: string;
 
 	/**
-	 Get current playing block name as "group/leaf", or empty tring
+	 Get current playing block name as "group/leaf", or empty string
 	 if none.
 	 */
-	playingBlock: string;	// Read-only
+	readonly playingBlock: string;
 
 	/**	Spot disconnected and must no longer be used.
 	 */
@@ -183,23 +192,24 @@ interface ControllableSpot extends BaseSpot {
 export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable {
 	isOfTypeName(typeName: "DisplaySpot"): DisplaySpot|null;
 
-	/**
-	 True if the spot is connected.
+	/** True if the spot is connected.
 	 */
 	readonly connected: boolean;
 
-	/**
-	 * Dot-separated IP address of display spot, if connected, else null.
+	/** Dot-separated IP address of display spot, if connected, else null.
 	 */
 	readonly address: string;
 
-	/**
-	 * Get any geolocation associated with spot, or null if none.
+	/** Get any geolocation associated with spot, or null if none.
 	 */
 	readonly geoZone: GeoZone|null;
 
 	/**
-	 * Set Spot's startup and (if enabled) cached root block, as Group/Name.
+	 * Most recently pressed keyboard key code, or emoty string if none.
+	 */
+	readonly keyCode: string;
+
+	/** Set Spot's startup and (if enabled) cached root block, as Group/Name.
 	 */
 	setDefaultBlock(block: string): void;
 
@@ -221,10 +231,21 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 */
 	power: boolean;
 
-	/**
-	 * Power up the display spot. Promise resolved once spot has connected.
+	/** Power up the display spot. Promise resolved once spot has connected.
 	 */
 	wakeUp(timeoutSeconds?: number): Promise<any>;
+
+	/**
+	 * Ask spot to shut down cleanly, without affecting the its 'power' property.
+	 * This is sometimes useful as a precaution prior to turning power off by
+	 * other means (such as a mains power switch), allowing the player to shut
+	 * down cleanly. The reason to not affecting the spot's 'power' property
+	 * is that setting it to false would make Blocks insist on keeping
+	 * the spot off, which would interfere with later attempting to turn
+	 * it on through the same external means.
+	 *
+	 */
+	shutDown(): void;
 
 	/**
 	 * Current time position (e.g., in video), in seconds. Write to position the video.
@@ -233,8 +254,7 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 */
 	time: number;
 
-	/**
-	 Ask display to reboot/reload. Not supported by all displays.
+	/** Ask display to reboot/reload. Not supported by all displays.
 	 */
 	reboot(): void;
 
@@ -246,20 +266,21 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 */
 	pictureSource: string;
 
-	/**
-	 Spot is playing (true) or paused (false).
+	/** Spot is playing (true) or paused (false).
 	 */
 	playing: boolean;
 
-	/**
-	 Spot is actively viewed
+	/** Spot is actively viewed
 	 */
 	active: boolean;
 
-	/**
-	 Controls or returns audio volume, if possible, as 0...1.
+	/** Controls or returns audio volume, if possible, as 0...1.
 	 */
 	volume: number;
+
+	/** Spot's MAC address, if known, else null
+	 */
+	readonly macAddress: string|null;
 
 	/**
 	 * Event fired when interesting connection state event occurs.
@@ -267,23 +288,25 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 */
 	subscribe(event: "connect", listener: (sender: DisplaySpot, message:{
 		readonly type:
-			'Connection'|		// Connection state changed (check with isConnected)
-			'ConnectionFailed'	// Connection attempt failed
+			'Connection'|		// The 'connected' state changed
+			'ConnectionFailed'	// A connection attempt failed
 	})=>void): void;
 
 	/**
-	 *	Event fired when various spot state changes occur.
+	 *	Event fired when various Spot state changes occur.
 	 * 	NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */
 	subscribe(event: "spot", listener: (sender: DisplaySpot, message:{
-		readonly type:
-			'DefaultBlock'|		// Default block changed
-			'PriorityBlock'|	// Priority block changed
-			'PlayingBlock'|		// Actually playing block changed
-			'InputSource'|		// Input source selection changed
-			'Volume'|			// Audio volume changed (from Blocks)
-			'Active'|			// Actively viewed state changed
-			'Playing'			// Playing/paused state changed
+		readonly type:	// Indicates that a Spot property has changed:
+			'DefaultBlock'|		// block
+			'PriorityBlock'|	// priorityBlock
+			'PlayingBlock'|		// playingBlock
+			'InputSource'|		// pictureSource
+			'Volume'|			// volume (when changed through Blocks)
+			'Active'|			// active
+			'Playing'|			// playing
+			'KeyCode'|			// keyCode
+			'TagSet'			// tagSet
 	})=>void): void;
 
 	/**
@@ -328,7 +351,6 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 		readonly filePath: string,	// Path to file just received (typically "/temp/xxx/xxx.jpeg")
 		readonly rollName: string	// Camera Block's assigned "roll name"
 	})=>void): void;
-
 
 	// Spot disconnected and must no longer be used
 	subscribe(event: 'finish', listener: (sender: DisplaySpot)=>void): void;

@@ -29,7 +29,7 @@
 	put newlines inside the string. The maximum length of such a string is 4096 characters. Split
 	commands into multiple strings to send more.
 
-	Since a plain TCP connection provides no security, a while/black-list mechanism is provided,
+	Since a plain TCP connection provides no security, a white/black-list mechanism is provided,
 	allowing you to explicitly state which properties that may (or may not) be set through
 	the protocol. This mechanism does not currently limit which properties can be subscribed to.
 	Specify this as a JSON file located at script/files/TCPProtocol.json, containing data

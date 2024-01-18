@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UDPTimecode = void 0;
-    var UDPTimecode = (function (_super) {
+    var UDPTimecode = exports.UDPTimecode = (function (_super) {
         __extends(UDPTimecode, _super);
         function UDPTimecode(socket) {
             var _this = _super.call(this, socket) || this;
@@ -95,5 +95,4 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         ], UDPTimecode);
         return UDPTimecode;
     }(Driver_1.Driver));
-    exports.UDPTimecode = UDPTimecode;
 });

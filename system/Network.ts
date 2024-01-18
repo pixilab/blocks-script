@@ -311,7 +311,7 @@ interface NetworkIPBase extends NetworkBase {
 
 	/**
 	 * Send wake-on-LAN message to this device or device with specified MAC address,
-	 * which must be exactly 6 bytes long, or a colon separated string in the form
+	 * which must be exactly 6 bytes long, or a string in the form "112233445566" or
 	 * "11:22:33:44:55:66". To use "this device" (i.e., no argument), you must have
 	 * called enableWakeOnLAN() early on (typically in the driver's constructor),
 	 * and enugh time must have elapsed for the MAC address to be picked up and
