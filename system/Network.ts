@@ -295,9 +295,9 @@ export interface NetworkBase extends DriverFacade {
 	isOfTypeName(typeName: string): NetworkBase|null;
 
 	readonly enabled: boolean;		// True if I'm enabled (else won't send data)
-	readonly address: string;		// Resolved or initial address
 	readonly options: string;		// Any "Custom Options" assigned to the Network Device
-	readonly addressString: string;	// IP address exactly as set on the Network Device page.
+	readonly addressString: string;	// Original address, as set on the Network Device page.
+	readonly address: string;		// Resolved or initial address, if known, else empty string
 }
 
 /**
