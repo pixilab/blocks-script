@@ -62,17 +62,29 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShellyHTTP = void 0;
-    var ShellyHTTP = exports.ShellyHTTP = (function (_super) {
+    var ShellyHTTP = (function (_super) {
         __extends(ShellyHTTP, _super);
         function ShellyHTTP(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this._relay0 = false;
             _this._relay1 = false;
             _this._relay2 = false;
             _this._relay3 = false;
             _this._relay4 = false;
             return _this;
         }
+        Object.defineProperty(ShellyHTTP.prototype, "relay0", {
+            get: function () {
+                return this._relay0;
+            },
+            set: function (on) {
+                this.makeRelayRequest(0, on);
+                this._relay0 = on;
+            },
+            enumerable: false,
+            configurable: true
+        });
         Object.defineProperty(ShellyHTTP.prototype, "relay1", {
             get: function () {
                 return this._relay1;
@@ -127,6 +139,11 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
             });
         };
         __decorate([
+            (0, Metadata_1.property)("Relay 0"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], ShellyHTTP.prototype, "relay0", null);
+        __decorate([
             (0, Metadata_1.property)("Relay 1"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
@@ -152,4 +169,5 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
         ], ShellyHTTP);
         return ShellyHTTP;
     }(Driver_1.Driver));
+    exports.ShellyHTTP = ShellyHTTP;
 });
