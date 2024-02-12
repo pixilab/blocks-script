@@ -10,7 +10,7 @@
  * 
  * Version history:
  * 1.0 - One way control of Shelly device, Relay 1-4 via HTTP REST API. (Johnny Karhinen, johnny@levandeteknik.se)
- * 1.1 - Added support for Relay 0 to support Shelly 2. (Jonas Hjalmarsson, jonas@jalma.se)
+ * 1.1 - Bugfixes and changed to zero-based index API request. (Jonas Hjalmarsson, jonas@jalma.se)
  */
 
 import { NetworkTCP } from "../system/Network";
@@ -20,7 +20,6 @@ import { driver, property } from "../system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 80 })
 export class ShellyHTTP extends Driver<NetworkTCP> {
-    private _relay0: boolean = false
     private _relay1: boolean = false
     private _relay2: boolean = false
     private _relay3: boolean = false
@@ -32,21 +31,12 @@ export class ShellyHTTP extends Driver<NetworkTCP> {
         super(socket)
     }
 
-    @property("Relay 0")
-    get relay0(): boolean {
-        return this._relay0
-    }
-    set relay0(on: boolean) {
-        this.makeRelayRequest(0, on)
-        this._relay0 = on
-    }
-
     @property("Relay 1")
     get relay1(): boolean {
         return this._relay1
     }
     set relay1(on: boolean) {
-        this.makeRelayRequest(1, on)
+        this.makeRelayRequest(0, on)
         this._relay1 = on
     }
 
@@ -55,8 +45,8 @@ export class ShellyHTTP extends Driver<NetworkTCP> {
         return this._relay2
     }
     set relay2(on: boolean) {
-        this.makeRelayRequest(2, on)
-        this._relay1 = on
+        this.makeRelayRequest(1, on)
+        this._relay2 = on
     }
 
     @property("Relay 3")
@@ -64,8 +54,8 @@ export class ShellyHTTP extends Driver<NetworkTCP> {
         return this._relay3
     }
     set relay3(on: boolean) {
-        this.makeRelayRequest(3, on)
-        this._relay1 = on
+        this.makeRelayRequest(2, on)
+        this._relay3 = on
     }
 
     @property("Relay 4")
@@ -73,7 +63,7 @@ export class ShellyHTTP extends Driver<NetworkTCP> {
         return this._relay4
     }
     set relay4(on: boolean) {
-        this.makeRelayRequest(4, on)
+        this.makeRelayRequest(3, on)
         this._relay4 = on
     }
 

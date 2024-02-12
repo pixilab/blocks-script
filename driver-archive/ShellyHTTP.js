@@ -67,30 +67,18 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
         function ShellyHTTP(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
-            _this._relay0 = false;
             _this._relay1 = false;
             _this._relay2 = false;
             _this._relay3 = false;
             _this._relay4 = false;
             return _this;
         }
-        Object.defineProperty(ShellyHTTP.prototype, "relay0", {
-            get: function () {
-                return this._relay0;
-            },
-            set: function (on) {
-                this.makeRelayRequest(0, on);
-                this._relay0 = on;
-            },
-            enumerable: false,
-            configurable: true
-        });
         Object.defineProperty(ShellyHTTP.prototype, "relay1", {
             get: function () {
                 return this._relay1;
             },
             set: function (on) {
-                this.makeRelayRequest(1, on);
+                this.makeRelayRequest(0, on);
                 this._relay1 = on;
             },
             enumerable: false,
@@ -101,8 +89,8 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 return this._relay2;
             },
             set: function (on) {
-                this.makeRelayRequest(2, on);
-                this._relay1 = on;
+                this.makeRelayRequest(1, on);
+                this._relay2 = on;
             },
             enumerable: false,
             configurable: true
@@ -112,8 +100,8 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 return this._relay3;
             },
             set: function (on) {
-                this.makeRelayRequest(3, on);
-                this._relay1 = on;
+                this.makeRelayRequest(2, on);
+                this._relay3 = on;
             },
             enumerable: false,
             configurable: true
@@ -123,7 +111,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 return this._relay4;
             },
             set: function (on) {
-                this.makeRelayRequest(4, on);
+                this.makeRelayRequest(3, on);
                 this._relay4 = on;
             },
             enumerable: false,
@@ -138,11 +126,6 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 });
             });
         };
-        __decorate([
-            (0, Metadata_1.property)("Relay 0"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], ShellyHTTP.prototype, "relay0", null);
         __decorate([
             (0, Metadata_1.property)("Relay 1"),
             __metadata("design:type", Boolean),
