@@ -308,6 +308,8 @@ interface NetworkIPBase extends NetworkBase {
 
 	readonly address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
 	readonly port: number;			// Port number sending data to
+	readonly driverName: string;	// Name of any associated device driver, or empty string
+	readonly deviceType: "NetworkTCP" | "NetworkUDP" | "MQTT" | "Serial";
 
 	/**
 	 * Send wake-on-LAN message to this device or device with specified MAC address,
