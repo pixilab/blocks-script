@@ -62,7 +62,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShellyHTTP = void 0;
-    var ShellyHTTP = exports.ShellyHTTP = (function (_super) {
+    var ShellyHTTP = (function (_super) {
         __extends(ShellyHTTP, _super);
         function ShellyHTTP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -78,7 +78,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 return this._relay1;
             },
             set: function (on) {
-                this.makeRelayRequest(1, on);
+                this.makeRelayRequest(0, on);
                 this._relay1 = on;
             },
             enumerable: false,
@@ -89,8 +89,8 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 return this._relay2;
             },
             set: function (on) {
-                this.makeRelayRequest(2, on);
-                this._relay1 = on;
+                this.makeRelayRequest(1, on);
+                this._relay2 = on;
             },
             enumerable: false,
             configurable: true
@@ -100,8 +100,8 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 return this._relay3;
             },
             set: function (on) {
-                this.makeRelayRequest(3, on);
-                this._relay1 = on;
+                this.makeRelayRequest(2, on);
+                this._relay3 = on;
             },
             enumerable: false,
             configurable: true
@@ -111,7 +111,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 return this._relay4;
             },
             set: function (on) {
-                this.makeRelayRequest(4, on);
+                this.makeRelayRequest(3, on);
                 this._relay4 = on;
             },
             enumerable: false,
@@ -152,4 +152,5 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
         ], ShellyHTTP);
         return ShellyHTTP;
     }(Driver_1.Driver));
+    exports.ShellyHTTP = ShellyHTTP;
 });
