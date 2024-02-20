@@ -39,5 +39,4 @@ export type PrimTypeSpecifier =
 /**
  * Extend with additonal non-primitive property type(s).
  */
-export type PropTypeSpecifier = PrimTypeSpecifier
-	| "TimeFlow" | "Enum";
+export type PropTypeSpecifier = PrimTypeSpecifier | "TimeFlow" | "Enum";
