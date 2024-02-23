@@ -94,7 +94,7 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
     var API_VERSION = 1;
     var CONFIG_FILE = "MetricsProviderSettings.json";
     var settings = DEFAULT_SETTINGS;
-    var MetricsProvider = (function (_super) {
+    var MetricsProvider = exports.MetricsProvider = (function (_super) {
         __extends(MetricsProvider, _super);
         function MetricsProvider(env) {
             var _this = _super.call(this, env) || this;
@@ -237,7 +237,6 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
         ], MetricsProvider.prototype, "reinit", null);
         return MetricsProvider;
     }(Script_1.Script));
-    exports.MetricsProvider = MetricsProvider;
     function createRandomHexString(length) {
         var characters = '0123456789abcdef';
         var hexString = '';

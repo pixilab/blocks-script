@@ -85,7 +85,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
             }
         ]
     };
-    var RSS = (function (_super) {
+    var RSS = exports.RSS = (function (_super) {
         __extends(RSS, _super);
         function RSS(env) {
             var _this = _super.call(this, env) || this;
@@ -158,7 +158,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
         ], RSS.prototype, "addFeed", null);
         return RSS;
     }(feed.Feed));
-    exports.RSS = RSS;
     var Channel = (function () {
         function Channel(name, url, owner, targetImageHeight, targetImageWidth) {
             this.url = url;

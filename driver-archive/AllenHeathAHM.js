@@ -26,7 +26,7 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AllenHeathAHM = void 0;
-    var AllenHeathAHM = (function (_super) {
+    var AllenHeathAHM = exports.AllenHeathAHM = (function (_super) {
         __extends(AllenHeathAHM, _super);
         function AllenHeathAHM(socket) {
             var _this = _super.call(this, socket) || this;
@@ -71,7 +71,8 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
             }
         };
         AllenHeathAHM.prototype.sendRecallPreset = function (presetNumber) {
-            var _a = this.toBankAndPreset(presetNumber), bank = _a.bank, preset = _a.preset;
+            var _a;
+            var bank = (_a = this.toBankAndPreset(presetNumber), _a.bank), preset = _a.preset;
             return this.socket.sendBytes([0xB0, 0x00, bank, 0xC0, preset]);
         };
         AllenHeathAHM.prototype.parsePresetRecallResponse = function (bytes) {
@@ -107,5 +108,4 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
         ], AllenHeathAHM);
         return AllenHeathAHM;
     }(Driver_1.Driver));
-    exports.AllenHeathAHM = AllenHeathAHM;
 });

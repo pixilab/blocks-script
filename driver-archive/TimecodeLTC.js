@@ -35,8 +35,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.mTime = new TimeFlow(0, 0);
             _this.mSpeed = 0;
             _this.mVolume = 0;
+            _this.mOffset = 0;
+            _this.mOffsetMs = 0;
+            _this.mResetOnStop = false;
             _this.mConnected = false;
             _this.lastDataTime = 0;
+            _this.isReset = false;
             var typePropOpts = {
                 type: "Enum",
                 description: "Expected type of timecode",
@@ -85,6 +89,25 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(TimecodeLTC.prototype, "offset", {
+            get: function () { return this.mOffset; },
+            set: function (value) {
+                this.mOffset = value;
+                this.mOffsetMs = Math.round(value * 1000);
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimecodeLTC.prototype, "resetOnStop", {
+            get: function () { return this.mResetOnStop; },
+            set: function (value) {
+                this.mResetOnStop = value;
+                if (!value)
+                    this.isReset = false;
+            },
+            enumerable: false,
+            configurable: true
+        });
         TimecodeLTC.prototype.applySettingsSoon = function (howSoon) {
             var _this = this;
             if (howSoon === void 0) { howSoon = 100; }
@@ -98,7 +121,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var settings = "i/" + kinterval +
                 "/t/" + kTypeMap[this.mType].parName +
                 "/p/" + this.socket.listenerPort +
-                "/n/1/c/0";
+                "/n/1/c/0/w/150";
             this.socket.sendText(settings);
             if (this.getMonotonousMillis() - this.lastDataTime >= kinterval * 2)
                 this.connected = false;
@@ -112,21 +135,71 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             var item = {};
             for (var ix = 0; ix < pieceCount; ix += 2)
                 item[itemPairs[ix]] = itemPairs[ix + 1];
-            var speedStr = item['s'];
-            if (speedStr)
-                this.speed = parseFloat(speedStr);
+            var version = parseFloat(item['v']);
+            if (version < 1.1) {
+                if (!this.toldOldversion) {
+                    console.error("Requires version 1.1 or later of the timecode-reader program");
+                    this.toldOldversion = true;
+                }
+                return;
+            }
+            this.toldOldversion = false;
             var sigLevel = item['l'];
             if (sigLevel) {
                 var val = ((parseFloat(sigLevel) + 64) / 64);
                 this.volume = Math.max(0, Math.min(1, val));
             }
+            var now = this.getMonotonousMillis();
             var frameNum = item['n'];
             if (frameNum) {
-                var timPosMillis = Math.round(parseFloat(frameNum) / kTypeMap[this.mType].fps * 1000);
-                this.time = new TimeFlow(timPosMillis, this.speed);
+                this.updateTime(now, parseFloat(item['s']), parseInt(frameNum), parseInt(item['t']), item['a'] === '1');
             }
             this.connected = true;
-            this.lastDataTime = this.getMonotonousMillis();
+            this.lastDataTime = now;
+        };
+        TimecodeLTC.prototype.updateTime = function (serverTime, speed, frameNum, sampleTime, abrupt) {
+            var _this = this;
+            var millis = Math.round(frameNum / kTypeMap[this.mType].fps * 1000);
+            var playing = speed > 0;
+            if (!playing && this.isReset)
+                return;
+            this.isReset = false;
+            var playingStateChanged = playing !== !!this.speed;
+            if (playingStateChanged)
+                abrupt = true;
+            var elapsedDelta = 0;
+            if (abrupt || !playing) {
+                if (this.time.rate !== speed || this.time.position !== millis) {
+                    this.time = new TimeFlow(millis, speed, undefined, false);
+                }
+            }
+            else {
+                var elapsedServerTime = (serverTime - this.lastServerTime) * this.speed;
+                var elapsedSampleTime = sampleTime - this.lastSampleTime;
+                elapsedDelta = elapsedServerTime - elapsedSampleTime;
+                millis += elapsedDelta + this.mOffsetMs;
+                this.time = new TimeFlow(millis, speed, undefined, false);
+            }
+            if (playingStateChanged) {
+                if (!playing) {
+                    if (this.mResetOnStop) {
+                        this.resetOnStopTimer = wait(400);
+                        this.resetOnStopTimer.then(function () {
+                            _this.resetOnStopTimer = undefined;
+                            _this.time = new TimeFlow(0, 0, undefined, false);
+                            _this.isReset = true;
+                        });
+                    }
+                }
+                else if (this.resetOnStopTimer) {
+                    this.resetOnStopTimer.cancel();
+                    this.resetOnStopTimer = undefined;
+                    this.isReset = false;
+                }
+            }
+            this.speed = speed;
+            this.lastSampleTime = sampleTime;
+            this.lastServerTime = serverTime - elapsedDelta;
         };
         __decorate([
             (0, Metadata_1.property)("The current time position", true),
@@ -148,6 +221,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], TimecodeLTC.prototype, "connected", null);
+        __decorate([
+            (0, Metadata_1.property)("Offset added to timecode received, in seconds. May be negative."),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], TimecodeLTC.prototype, "offset", null);
+        __decorate([
+            (0, Metadata_1.property)("Auto reset time position to 0 when timecode stops"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimecodeLTC.prototype, "resetOnStop", null);
         TimecodeLTC = __decorate([
             (0, Metadata_1.driver)('NetworkUDP', { port: 1632, rcvPort: 1632 }),
             __metadata("design:paramtypes", [Object])
