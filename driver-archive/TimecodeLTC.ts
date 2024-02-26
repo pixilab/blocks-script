@@ -12,7 +12,13 @@
  	You must set the 'type' property of this driver to the expected type of timecode.
  	This can be done using a Task triggered on system start-up or the 'connected'
  	property of this driver (which becomes true once the 'timecode-reader' program
- 	appears on the network).
+ 	appears on the network). Alternatively, you can set options on the driver using
+ 	JSON data like this:
+
+ 	{
+ 		"type": "29.97_drop",
+ 		"offset": 0.2
+ 	}
 
  	Copyright (c) 2024 PIXILAB Technologies AB, Sweden (http://pixilab.se).
  	All Rights Reserved.
@@ -24,7 +30,27 @@ import {driver, property} from "system_lib/Metadata";
 import {SGOptions} from "system/PubSub";
 import {Dictionary} from "system_lib/ScriptBase";
 
-@driver('NetworkUDP', { port: 1632, rcvPort: 1632 })
+/**
+ * Maps enumValues to param type, Keys must match enumValues in type property
+ */
+const kTypeMap: Dictionary<TypeInfo> = {
+	"24": { parName: "24", fps: 24},
+	"25": { parName: "25", fps: 25},
+	"29.97_drop": { parName: "df", fps: 29.97},
+	"29.97_nondrop": { parName: "ndf", fps: 29.97},
+	"30": { parName: "30", fps: 30}
+}
+
+/**
+ * Custom driver options for setting initial state. Or you can use a task to set
+ * properties as desired when my 'connect' property becomes true.
+ */
+interface Config {
+	type?: string;		// One of the kTypeMap keys above
+	offset?: number;	// Added to timecode received, seconds (with fractions)
+}
+
+@driver('NetworkUDP', { port: 1632, rcvPort: 1633 })
 export class TimecodeLTC extends Driver<NetworkUDP> {
 	private mType = "25";	// Deffault timecode type
 	private mTime: TimeFlow = new TimeFlow(0, 0);
@@ -48,6 +74,14 @@ export class TimecodeLTC extends Driver<NetworkUDP> {
 
 	public constructor(private socket: NetworkUDP) {
 		super(socket);
+		if (socket.options) {	// Set initial state from options
+			let config = JSON.parse(socket.options) as Config;
+			if (config.type)
+				this.mType = config.type.toString(); // toString in case user passed a number
+			const offs = config.offset;
+			if (offs && typeof offs === "number")
+				this.offset = offs;
+		}
 
 		// Declare enumerated "type" property, and its possible values
 		const typePropOpts: SGOptions = {
@@ -279,16 +313,5 @@ export class TimecodeLTC extends Driver<NetworkUDP> {
 interface TypeInfo {
 	parName: string;	// Parameter sent to peer
 	fps: number;		// Expected, nominal frames per second
-}
-
-/**
- * Maps enumValues to param type, Keys must match enumValues in type property
- */
-const kTypeMap: Dictionary<TypeInfo> = {
-	"24": { parName: "24", fps: 24},
-	"25": { parName: "25", fps: 25},
-	"29.97_drop": { parName: "df", fps: 29.97},
-	"29.97_nondrop": { parName: "ndf", fps: 29.97},
-	"30": { parName: "30", fps: 30}
 }
 

@@ -26,6 +26,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TimecodeLTC = void 0;
+    var kTypeMap = {
+        "24": { parName: "24", fps: 24 },
+        "25": { parName: "25", fps: 25 },
+        "29.97_drop": { parName: "df", fps: 29.97 },
+        "29.97_nondrop": { parName: "ndf", fps: 29.97 },
+        "30": { parName: "30", fps: 30 }
+    };
     var TimecodeLTC = exports.TimecodeLTC = (function (_super) {
         __extends(TimecodeLTC, _super);
         function TimecodeLTC(socket) {
@@ -41,6 +48,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.mConnected = false;
             _this.lastDataTime = 0;
             _this.isReset = false;
+            if (socket.options) {
+                var config = JSON.parse(socket.options);
+                if (config.type)
+                    _this.mType = config.type.toString();
+                var offs = config.offset;
+                if (offs && typeof offs === "number")
+                    _this.offset = offs;
+            }
             var typePropOpts = {
                 type: "Enum",
                 description: "Expected type of timecode",
@@ -232,16 +247,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Boolean])
         ], TimecodeLTC.prototype, "resetOnStop", null);
         TimecodeLTC = __decorate([
-            (0, Metadata_1.driver)('NetworkUDP', { port: 1632, rcvPort: 1632 }),
+            (0, Metadata_1.driver)('NetworkUDP', { port: 1632, rcvPort: 1633 }),
             __metadata("design:paramtypes", [Object])
         ], TimecodeLTC);
         return TimecodeLTC;
     }(Driver_1.Driver));
-    var kTypeMap = {
-        "24": { parName: "24", fps: 24 },
-        "25": { parName: "25", fps: 25 },
-        "29.97_drop": { parName: "df", fps: 29.97 },
-        "29.97_nondrop": { parName: "ndf", fps: 29.97 },
-        "30": { parName: "30", fps: 30 }
-    };
 });
