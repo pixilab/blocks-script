@@ -76,8 +76,14 @@ export class TimecodeLTC extends Driver<NetworkUDP> {
 		super(socket);
 		if (socket.options) {	// Set initial state from options
 			let config = JSON.parse(socket.options) as Config;
-			if (config.type)
-				this.mType = config.type.toString(); // toString in case user passed a number
+			if (config.type) {
+				// toString in case user passed a number
+				const sType = config.type.toString();
+				if (kTypeMap[sType])
+					this.mType = sType;
+				else
+					console.error("Invalid type in config", sType);
+			}
 			const offs = config.offset;
 			if (offs && typeof offs === "number")
 				this.offset = offs;

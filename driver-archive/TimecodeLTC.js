@@ -50,8 +50,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.isReset = false;
             if (socket.options) {
                 var config = JSON.parse(socket.options);
-                if (config.type)
-                    _this.mType = config.type.toString();
+                if (config.type) {
+                    var sType = config.type.toString();
+                    if (kTypeMap[sType])
+                        _this.mType = sType;
+                    else
+                        console.error("Invalid type in config", sType);
+                }
                 var offs = config.offset;
                 if (offs && typeof offs === "number")
                     _this.offset = offs;
