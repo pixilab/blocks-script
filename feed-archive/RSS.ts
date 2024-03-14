@@ -1,6 +1,7 @@
 /*
 	RSS feed script 
-	Feeds can be configured using a config file stored in /script/files/. The script will produce an example file to use as a starting point. 
+	Feeds can be configured using a config file stored in /script/files/ or with a callable from task in run-time. The script will produce an example file to use as a starting point. 
+ 	Rename the Rss.config.example.json to Rss.config.json to enable the configuration.
 	The script - 
 	- can accept wanted image target sizes for feeds that has a group with alternative images as per https://www.rssboard.org/media-rss 
 	- can limit the feed with a maxAge setting. (days)
