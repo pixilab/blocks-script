@@ -65,15 +65,17 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.RSS = void 0;
-    var DEBUG_LOGGING_ENABLED = false;
+    var DEBUG_LOGGING_ENABLED = true;
     var CONFIG_FILE = "Rss.config.json";
-    var DEFAULT_SETTINGS = {
+    var EXAMPLE_SETTINGS = {
         channels: [
             {
-                url: 'http://rss.cnn.com/rss/edition_world.rss',
-                feedTitle: 'CNN_World',
+                url: "http://rss.cnn.com/rss/edition_world.rss",
+                feedTitle: "CNN_World",
                 imageWidth: 100,
-                imageHeight: 100
+                imageHeight: 100,
+                maxAge: 400,
+                maxLength: 10
             },
             {
                 url: 'http://www.nrk.no/nyheter/siste.rss',
@@ -85,7 +87,11 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
             }
         ]
     };
-    var RSS = exports.RSS = (function (_super) {
+    var DEFAULT_MAX_LENGTH = 999;
+    var DEFAULT_MAX_AGE = 999;
+    var DEFAULT_TARGET_WIDTH = 600;
+    var DEFAULT_TARGET_HEIGHT = 600;
+    var RSS = (function (_super) {
         __extends(RSS, _super);
         function RSS(env) {
             var _this = _super.call(this, env) || this;
@@ -94,31 +100,28 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
         }
         RSS.prototype.readSettingsFile = function (filename) {
             var _this = this;
+            var exampleFilename = filename.replace(".json", ".example.json");
             SimpleFile_1.SimpleFile.exists(filename)
                 .then(function (exists) {
                 if (exists === 1) {
                     SimpleFile_1.SimpleFile.readJson(filename)
                         .then(function (data) {
                         var settings = data;
-                        if (settings) {
+                        if (settings.channels) {
                             for (var _i = 0, _a = settings.channels; _i < _a.length; _i++) {
                                 var channel = _a[_i];
-                                _this.addFeed(channel.feedTitle, channel.url, channel.imageHeight || 400, channel.imageWidth || 400);
+                                _this.addFeed(channel.feedTitle, channel.url, channel.imageHeight, channel.imageWidth, channel.maxAge, channel.maxLength);
                             }
                         }
                     })
                         .catch(function (error) {
-                        console.error("Failed reading settings , attemt to write an example as reference (in /script/files/:", filename, error);
-                        _this.writeJsonToFile(filename + ".example", DEFAULT_SETTINGS);
+                        console.error("Failed reading settings file, attemt to write an example file as reference (in /script/files/:", filename, error);
+                        _this.writeJsonToFile(exampleFilename, EXAMPLE_SETTINGS);
                     });
                 }
-                else if (exists === 0) {
-                    _this.writeJsonToFile(filename, DEFAULT_SETTINGS);
-                    _this.readSettingsFile(filename);
-                }
                 else {
-                    console.error("Specified path exists but is not a file:", filename);
-                    _this.writeJsonToFile(filename, DEFAULT_SETTINGS);
+                    console.error("Could not find a config file, this may be on purpose, making sure we have an example file:", exampleFilename, filename);
+                    _this.writeJsonToFile(exampleFilename, EXAMPLE_SETTINGS);
                 }
             })
                 .catch(function (error) {
@@ -131,14 +134,15 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
                 console.log("File written successfully, ", filename);
             })
                 .catch(function (error) {
-                console.error("Failed writing file:", CONFIG_FILE, error);
+                console.error("Failed writing file:", filename, error);
             });
         };
         RSS.prototype.reInitialize = function () {
+            console.log("Reinitialize");
             _super.prototype.reInitialize.call(this);
         };
-        RSS.prototype.addFeed = function (channelName, channelUrl, targetImageHeight, targetImageWidth) {
-            this.establishFeed(new Channel(channelName, channelUrl, this, targetImageHeight, targetImageWidth));
+        RSS.prototype.addFeed = function (channelName, channelUrl, targetImageHeight, targetImageWidth, maxAge, maxFeedLength) {
+            this.establishFeed(new Channel(channelName, channelUrl, this, targetImageHeight || DEFAULT_TARGET_HEIGHT, targetImageWidth || DEFAULT_TARGET_WIDTH, maxAge || DEFAULT_MAX_AGE, maxFeedLength || DEFAULT_MAX_LENGTH));
         };
         __decorate([
             (0, Metadata_1.callable)("Re-initialize feedscript, run to reset feed config"),
@@ -147,50 +151,82 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
             __metadata("design:returntype", void 0)
         ], RSS.prototype, "reInitialize", null);
         __decorate([
-            (0, Metadata_1.callable)("Add feed"),
+            (0, Metadata_1.callable)("Add a feed in runtime, not persisted."),
             __param(0, (0, Metadata_1.parameter)("Channel name, i.e. Latest News", false)),
             __param(1, (0, Metadata_1.parameter)("Channel URL, i.e. http://nrk.no/nyheter/latest.rss", false)),
-            __param(2, (0, Metadata_1.parameter)("Specify a target image height. Only applies if the feed has group of media:image. ", false)),
-            __param(3, (0, Metadata_1.parameter)("Specify a target image height. Only applies if the feed has group of media:image. ", false)),
+            __param(2, (0, Metadata_1.parameter)("Specify a target image height. Only applies if the feed has group of images in a media:group tag.", true)),
+            __param(3, (0, Metadata_1.parameter)("Specify a target image height. Only applies if the feed has group of images in a media:group tag.", true)),
+            __param(4, (0, Metadata_1.parameter)("Specify max age of the publish date. ", true)),
+            __param(5, (0, Metadata_1.parameter)("Specify max length of the feed (How many items to publish.). ", true)),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String, Number, Number]),
+            __metadata("design:paramtypes", [String, String, Number, Number, Number, Number]),
             __metadata("design:returntype", void 0)
         ], RSS.prototype, "addFeed", null);
         return RSS;
     }(feed.Feed));
+    exports.RSS = RSS;
     var Channel = (function () {
-        function Channel(name, url, owner, targetImageHeight, targetImageWidth) {
+        function Channel(name, url, owner, targetImageHeight, targetImageWidth, maxAge, maxFeedLength) {
+            if (url === void 0) { url = ""; }
+            this.name = name;
             this.url = url;
+            this.targetImageHeight = targetImageHeight;
+            this.targetImageWidth = targetImageWidth;
+            this.maxAge = maxAge;
+            this.maxFeedLength = maxFeedLength;
             this.listType = ListItem;
             this.itemType = ListItem;
             this.channelTitle = "";
             this.channelImageUrl = "";
-            this.name = name;
             this.owner = owner;
-            this.targetImageHeight = targetImageHeight;
-            this.targetImageWidth = targetImageWidth;
         }
         Channel.prototype.getList = function (spec) {
+            var _a;
             return __awaiter(this, void 0, void 0, function () {
-                var feed, items, itemList, _i, itemList_1, item;
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0: return [4, SimpleHTTP_1.SimpleHTTP.newRequest(this.url, { interpretResponse: true }).get()];
+                var feed_1, items, currentDate, maxAgeDate, itemList, _i, itemList_1, item, pubDate, error_1;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            _b.trys.push([0, 2, , 3]);
+                            return [4, SimpleHTTP_1.SimpleHTTP.newRequest(this.url, { interpretResponse: true }).get()];
                         case 1:
-                            feed = _a.sent();
+                            feed_1 = _b.sent();
                             items = [];
-                            log("Status: ", this.url, feed.status);
-                            if (feed.status === 200) {
-                                this.channelImageUrl = feed.interpreted.channel.image.url || "";
-                                this.channelTitle = feed.interpreted.channel.title || "";
-                                itemList = feed.interpreted.channel.item;
+                            log("Status: ", this.url, feed_1.status);
+                            currentDate = new Date();
+                            maxAgeDate = new Date(currentDate.getTime() - this.maxAge * 24 * 60 * 60 * 1000);
+                            if (feed_1.status === 200) {
+                                this.channelImageUrl = ((_a = feed_1.interpreted.channel.image) === null || _a === void 0 ? void 0 : _a.url) || "";
+                                this.channelTitle = feed_1.interpreted.channel.title;
+                                itemList = feed_1.interpreted.channel.item || feed_1.interpreted.item || [];
                                 for (_i = 0, itemList_1 = itemList; _i < itemList_1.length; _i++) {
                                     item = itemList_1[_i];
-                                    items.push(new ListItem(item, this));
-                                    log("Item found", item.title);
+                                    pubDate = item.pubDate ? new Date(item.pubDate) : item.date ? new Date(item.date) : null;
+                                    log("Pubdate:", pubDate, "Max age date:", maxAgeDate);
+                                    if (pubDate && pubDate >= maxAgeDate) {
+                                        if (items.length < this.maxFeedLength) {
+                                            log("Item found", item.title);
+                                            items.push(new ListItem(item, this));
+                                        }
+                                        else {
+                                            log("Item ignored, out of current maxLength scoop");
+                                        }
+                                    }
+                                    else {
+                                        log("Item ignored, out of current maxAge scoop");
+                                    }
+                                }
+                                log(items.length, "valid items found");
+                                if (items.length === 0) {
+                                    return [2, { items: [] }];
                                 }
                             }
                             return [2, { items: items }];
+                        case 2:
+                            error_1 = _b.sent();
+                            console.error("Error occurred while getting the feed:", error_1);
+                            return [2, { items: [] }];
+                        case 3: return [2];
                     }
                 });
             });
@@ -199,27 +235,29 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
     }());
     var ListItem = (function () {
         function ListItem(rss, owner) {
+            log(rss.date, rss.pubDate);
             this.guid = rss.guid || "";
             this.title = rss.title || "";
             this.link = rss.link || "";
-            this.description = rss.description || "";
-            this.date = rss.pubDate || "";
+            this.description = rss.encoded || rss.description || "";
+            this.date = rss.pubDate || rss.date || "";
             this.category = ListItem.getCategory(rss.category);
             this.channelImageUrl = owner.channelImageUrl || "";
             this.channelTitle = owner.channelTitle || "";
             if (rss.group) {
+                log("Item contains an RSS group");
                 var media = ListItem.getBestMatchedImage(rss.group, owner.targetImageHeight, owner.targetImageWidth);
-                log("Feed contains an RSS group");
                 if (media) {
                     this.imageUrl = media.url || "";
                     this.imageTitle = media.title || "";
                     this.imageCredit = media.credit ? media.credit[""] : "";
                 }
-                else
+                else {
                     this.imageUrl = this.imageTitle = this.imageCredit = "";
+                }
             }
             else if (rss.content) {
-                log("Feed contains an RSS content");
+                log("Item contains an RSS content");
                 var media = rss.content;
                 if (media) {
                     this.imageUrl = media.url || "";
@@ -230,20 +268,24 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
                     this.imageUrl = this.imageTitle = this.imageCredit = "";
                 }
             }
+            else if (rss.thumbnail) {
+                log("Item contains a thumbnail");
+                this.imageUrl = rss.thumbnail.url || "";
+                this.imageTitle = this.imageCredit = "";
+            }
             else {
+                log("No image found");
                 this.imageUrl = this.imageTitle = this.imageCredit = "";
             }
         }
         ListItem.getBestMatchedImage = function (group, targetWidth, targetHeight) {
             var bestMatch;
             var firstImage;
-            log("Target image  h and w ", targetHeight, targetWidth);
             for (var _i = 0, _a = group.content; _i < _a.length; _i++) {
                 var content = _a[_i];
                 if (content.height > 0 && content.width > 0) {
                     var widthDifference = Math.abs(content.width - targetWidth);
                     var heightDifference = Math.abs(content.height - targetHeight);
-                    log("Image compare H:", content.height, "Diff", heightDifference, "W", content.width, "Diff", widthDifference, content.url);
                     if (!bestMatch || (widthDifference + heightDifference) < (Math.abs(bestMatch.width - targetWidth) + Math.abs(bestMatch.height - targetHeight))) {
                         bestMatch = content;
                     }
