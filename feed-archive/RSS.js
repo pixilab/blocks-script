@@ -65,7 +65,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.RSS = void 0;
-    var DEBUG_LOGGING_ENABLED = true;
+    var DEBUG_LOGGING_ENABLED = false;
     var CONFIG_FILE = "Rss.config.json";
     var EXAMPLE_SETTINGS = {
         channels: [
@@ -235,7 +235,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
     }());
     var ListItem = (function () {
         function ListItem(rss, owner) {
-            log(rss.date, rss.pubDate);
             this.guid = rss.guid || "";
             this.title = rss.title || "";
             this.link = rss.link || "";

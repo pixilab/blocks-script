@@ -24,7 +24,7 @@ import {ListData} from "system_lib/Feed";
 import {SimpleHTTP} from "../system/SimpleHTTP";
 import { SimpleFile} from "system/SimpleFile";
 
-const DEBUG_LOGGING_ENABLED = true;
+const DEBUG_LOGGING_ENABLED = false;  
 const CONFIG_FILE = "Rss.config.json";
 const EXAMPLE_SETTINGS: RSSSettings = {
     channels: [
@@ -247,14 +247,14 @@ class ListItem {
 
 	// Map the fields in the RSS data into my feed fields. Som fields use fallbacks in a best effort priority order that may or may not be optimal for a particular feed.
 	constructor(rss: RSSItem, owner:Channel) {
-		log(rss.date, rss.pubDate)
+		
 		this.guid = rss.guid || "";
 		this.title = rss.title || "";
 		this.link = rss.link || "";
 		this.description = rss.encoded || rss.description || ""; //We use encoded (from content namespace) also as source for description but with higher priority.
 		this.date = rss.pubDate || rss.date || "";
 		this.category = ListItem.getCategory(rss.category)
-		//Channel information copied to all items, acceeable in blocks by hardcoding to item index 0.
+		//Channel information copied to all items, accessable in blocks by hardcoding to item index 0.
 		this.channelImageUrl = owner.channelImageUrl || "" 
 		this.channelTitle = owner.channelTitle || ""
 		
