@@ -16,27 +16,32 @@ export class Xilica extends Driver<NetworkTCP> {
 
 	public constructor(public socket: NetworkTCP) {
 		super(socket);
-		socket.autoConnect();
+
 
 		// Instantiate outputs
 		this.outputs = [];
 		for (var ix = 1; ix <= 4; ++ix)
 			this.outputs.push(new Output(this, ix));
 
-		this.keepAliver = new KeepAliver(this);
+		if (socket.enabled) {
+			socket.autoConnect();
+			this.keepAliver = new KeepAliver(this);
 
-		// Subscribe to data received from device
-		socket.subscribe('textReceived', (sender, message) => this.gotData(message.text));
+			// Handle disabling driver
+			socket.subscribe('finish', () => this.keepAliver.discard());
 
-		// Listen for connection state change
-		socket.subscribe('connect', (sender, message) => {
-			if (message.type === 'Connection') {
-				if (!socket.connected)
-					console.error("Connection dropped unexpectedly");
-			} else
-				console.error(message.type);
-		});
-		// console.log("Xilica driver started");
+			// Subscribe to data received from device
+			socket.subscribe('textReceived', (sender, message) => this.gotData(message.text));
+
+			// Listen for connection state change
+			socket.subscribe('connect', (sender, message) => {
+				if (message.type === 'Connection') {
+					if (!socket.connected)
+						console.error("Connection dropped unexpectedly");
+				} else
+					console.error(message.type);
+			});
+		}
 	}
 
 	/** Data received from DSP. Log any errors, ignore others.
@@ -168,14 +173,27 @@ class Output {
 }
 
 class KeepAliver {
+	private pending: CancelablePromise<any>;
 	constructor(private xilica: Xilica) {
 		this.saySomethingInAWhile();
 	}
 
-	/** Send some data once in a while to keep connection open.
-	*/
+	/**
+	 * Discard me, stopping my regular saySomethingInAWhile calls
+	 */
+	discard() {
+		if (this.pending) {
+			this.pending.cancel();
+			this.pending = undefined;
+		}
+	}
+
+	/** 
+	 * Send some data once in a while to keep connection open.
+	 */
 	private saySomethingInAWhile() {
-		wait(9000).then(() => {
+		this.pending = wait(9000);
+		this.pending.then(() => {
 			this.sayNow();
 			this.saySomethingInAWhile();	// Ad infinitum
 		});
