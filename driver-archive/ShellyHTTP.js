@@ -62,7 +62,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShellyHTTP = void 0;
-    var ShellyHTTP = (function (_super) {
+    var ShellyHTTP = exports.ShellyHTTP = (function (_super) {
         __extends(ShellyHTTP, _super);
         function ShellyHTTP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -152,5 +152,4 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
         ], ShellyHTTP);
         return ShellyHTTP;
     }(Driver_1.Driver));
-    exports.ShellyHTTP = ShellyHTTP;
 });

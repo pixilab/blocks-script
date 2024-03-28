@@ -3,7 +3,7 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {PrimitiveValue, PropertyValue, RecordBase, ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
+import {PropertyValue, PropValueType, RecordBase, ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
 
 /**
  Ultimate base class for all TypeScript based user scripts.
@@ -95,7 +95,7 @@ export class Script extends ScriptBase<ScriptEnv> {
  * this property, call close() to terminate the connection. No further change
  * notification callbacks will be received after calling close().
  */
-export interface PropertyAccessor<PropType extends PrimitiveValue> extends PropertyValue<PropType> {
+export interface PropertyAccessor<PropType extends PropValueType> extends PropertyValue<PropType> {
 	value: PropType;	// Current property value (read only if property is read only)
 	readonly available: boolean;	// Property has been attached and is now live
 	close(): void;	// Close down this accessor - can no longer be used

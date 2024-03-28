@@ -295,9 +295,9 @@ export interface NetworkBase extends DriverFacade {
 	isOfTypeName(typeName: string): NetworkBase|null;
 
 	readonly enabled: boolean;		// True if I'm enabled (else won't send data)
-	readonly address: string;		// Resolved or initial address
 	readonly options: string;		// Any "Custom Options" assigned to the Network Device
-	readonly addressString: string;	// IP address exactly as set on the Network Device page.
+	readonly addressString: string;	// Original address, as set on the Network Device page.
+	readonly address: string;		// Resolved or initial address, if known, else empty string
 }
 
 /**
@@ -308,6 +308,8 @@ interface NetworkIPBase extends NetworkBase {
 
 	readonly address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
 	readonly port: number;			// Port number sending data to
+	readonly driverName: string;	// Name of any associated device driver, or empty string
+	readonly deviceType: "NetworkTCP" | "NetworkUDP" | "MQTT" | "Serial";
 
 	/**
 	 * Send wake-on-LAN message to this device or device with specified MAC address,

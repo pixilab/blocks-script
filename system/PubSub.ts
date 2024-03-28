@@ -22,6 +22,7 @@ export interface SGOptions {
 	readOnly?: boolean;			// Default is read/write
 	min?: number;				// Allowed range (Number property type only)
 	max?:number;
+	enumValues?: string[];		// Allowed enum values
 }
 
 /**
@@ -38,5 +39,4 @@ export type PrimTypeSpecifier =
 /**
  * Extend with additonal non-primitive property type(s).
  */
-export type PropTypeSpecifier = PrimTypeSpecifier
-	| "TimeFlow";
+export type PropTypeSpecifier = PrimTypeSpecifier | "TimeFlow" | "Enum";
