@@ -91,7 +91,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
     var DEFAULT_MAX_AGE = 999;
     var DEFAULT_TARGET_WIDTH = 600;
     var DEFAULT_TARGET_HEIGHT = 600;
-    var RSS = (function (_super) {
+    var RSS = exports.RSS = (function (_super) {
         __extends(RSS, _super);
         function RSS(env) {
             var _this = _super.call(this, env) || this;
@@ -164,7 +164,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Feed", "../syst
         ], RSS.prototype, "addFeed", null);
         return RSS;
     }(feed.Feed));
-    exports.RSS = RSS;
     var Channel = (function () {
         function Channel(name, url, owner, targetImageHeight, targetImageWidth, maxAge, maxFeedLength) {
             if (url === void 0) { url = ""; }

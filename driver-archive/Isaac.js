@@ -359,57 +359,6 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                 });
             });
         };
-        Isaac.prototype.hookupVarsOld = function (config) {
-            if (config.variables) {
-                var varPaths = [];
-                for (var _i = 0, _a = config.variables; _i < _a.length; _i++) {
-                    var varName = _a[_i];
-                    this.establishVariable(varName);
-                    varPaths.push(varName);
-                }
-                var vars = {
-                    externalRefs: varPaths
-                };
-                var endpoint_1 = "/api/v1/subsystems/".concat(config.subsystemExternalId, "/variables/_available");
-                var result = this.newRequest(endpoint_1).put(JSON.stringify(vars));
-                result.then(function (result) {
-                    if (result.status > 299)
-                        console.warn(endpoint_1, result.status, result.data);
-                })
-                    .catch(function (error) { return console.error(endpoint_1, error); });
-                return result;
-            }
-        };
-        Isaac.prototype.hookupEventsOld = function (config) {
-            var _this = this;
-            if (config.events) {
-                var eventPaths_1 = [];
-                var ids = [];
-                var ix = 0;
-                for (var _i = 0, _a = config.events; _i < _a.length; _i++) {
-                    var taskName = _a[_i];
-                    eventPaths_1.push(taskName);
-                    ids.push(ix++);
-                }
-                var tasks = {
-                    commands: eventPaths_1,
-                    ids: ids
-                };
-                this.newRequest("/api/v1/subsystems/".concat(config.subsystemExternalId, "/events/_available"))
-                    .put(JSON.stringify(tasks))
-                    .then(function (result) {
-                    if (result.status > 299) {
-                        console.warn("events/_available status", result.status, result.data);
-                        _this.registerEvents(eventPaths_1);
-                    }
-                    else
-                        _this.registerEvents(eventPaths_1);
-                })
-                    .catch(function (error) { return console.error("events/_available failure", error); });
-                if (config.events)
-                    this.hookupEventTriggers(config);
-            }
-        };
         Isaac.prototype.registerEvents = function (eventPaths, ix) {
             var _this = this;
             if (ix === void 0) { ix = 0; }
@@ -524,7 +473,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
                 this.varSnitch.notify(path, accessor.value);
             this.accessors.push(accessor);
         };
-        Isaac.prototype.destroy = function () {
+        Isaac.prototype.shutDown = function () {
             if (this.heartBeatTimer)
                 this.heartBeatTimer.cancel();
             if (this.keepAliveTimer)

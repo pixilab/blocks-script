@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UpAndDownTimer = void 0;
-    var UpAndDownTimer = (function (_super) {
+    var UpAndDownTimer = exports.UpAndDownTimer = (function (_super) {
         __extends(UpAndDownTimer, _super);
         function UpAndDownTimer(env) {
             var _this = _super.call(this, env) || this;
@@ -285,7 +285,6 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         ], UpAndDownTimer.prototype, "startUp", null);
         return UpAndDownTimer;
     }(Script_1.Script));
-    exports.UpAndDownTimer = UpAndDownTimer;
     function padTwoDigits(val) {
         var result = val.toString();
         if (result.length < 2)
