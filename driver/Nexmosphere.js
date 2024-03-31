@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var kRfidPacketParser = /^XR\[P(.)(\d+)]$/;
     var kPortPacketParser = /^X(\d+)([AB])\[(.+)]$/;
     var kProductCodeParser = /D(\d+)B\[\w+=(.+)]$/;
-    var Nexmosphere = exports.Nexmosphere = (function (_super) {
+    var Nexmosphere = (function (_super) {
         __extends(Nexmosphere, _super);
         function Nexmosphere(connection) {
             var _this = _super.call(this, connection) || this;
@@ -225,6 +225,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], Nexmosphere);
         return Nexmosphere;
     }(Driver_1.Driver));
+    exports.Nexmosphere = Nexmosphere;
     var BaseInterface = (function (_super) {
         __extends(BaseInterface, _super);
         function BaseInterface(driver, index) {
@@ -428,7 +429,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var TimeOfFlightInterface = (function (_super) {
         __extends(TimeOfFlightInterface, _super);
         function TimeOfFlightInterface() {
-            return _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.mTrigger1 = false;
+            _this.mTrigger2 = false;
+            _this.mTrigger3 = false;
+            _this.mTrigger4 = false;
+            _this.mTrigger5 = false;
+            _this.mTrigger6 = false;
+            _this.mTrigger7 = false;
+            return _this;
         }
         Object.defineProperty(TimeOfFlightInterface.prototype, "proximity", {
             get: function () { return this.mProximity; },
@@ -442,12 +451,62 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "rawData", {
+            get: function () { return this.mRawData; },
+            set: function (value) { this.mRawData = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn1", {
+            get: function () { return this.mTrigger1; },
+            set: function (value) { this.mTrigger1 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn2", {
+            get: function () { return this.mTrigger2; },
+            set: function (value) { this.mTrigger2 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn3", {
+            get: function () { return this.mTrigger3; },
+            set: function (value) { this.mTrigger3 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn4", {
+            get: function () { return this.mTrigger4; },
+            set: function (value) { this.mTrigger4 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn5", {
+            get: function () { return this.mTrigger5; },
+            set: function (value) { this.mTrigger5 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn6", {
+            get: function () { return this.mTrigger6; },
+            set: function (value) { this.mTrigger6 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn7", {
+            get: function () { return this.mTrigger7; },
+            set: function (value) { this.mTrigger7 = value; },
+            enumerable: false,
+            configurable: true
+        });
         TimeOfFlightInterface.prototype.receiveData = function (data) {
             var splitData = data.split("=");
             var sensorValue = splitData[1];
+            this.rawData = data;
             switch (sensorValue) {
                 case "AB":
                     this.airButton = true;
+                    this.proximity = 1;
                     break;
                 case "XX":
                     this.airButton = false;
@@ -461,6 +520,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     }
                     break;
             }
+            this.triggerOn1 = this.proximity <= 1;
+            this.triggerOn2 = this.proximity <= 2;
+            this.triggerOn3 = this.proximity <= 3;
+            this.triggerOn4 = this.proximity <= 4;
+            this.triggerOn5 = this.proximity <= 5;
+            this.triggerOn6 = this.proximity <= 6;
+            this.triggerOn7 = this.proximity <= 7;
         };
         TimeOfFlightInterface.prototype.userFriendlyName = function () {
             return "TOF";
@@ -475,6 +541,46 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], TimeOfFlightInterface.prototype, "airButton", null);
+        __decorate([
+            (0, Metadata_1.property)("Raw data last received", true),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], TimeOfFlightInterface.prototype, "rawData", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 1 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn1", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 2 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn2", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 3 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn3", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 4 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn4", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 5 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn5", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 6 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn6", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 7 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn7", null);
         return TimeOfFlightInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(TimeOfFlightInterface, "XY241");
