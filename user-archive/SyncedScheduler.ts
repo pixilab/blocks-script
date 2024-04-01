@@ -1,5 +1,17 @@
 /*	Schedule the triggering of tasks accurately in relation to a TimeFlow.
 
+	For this script to have any effect, you must first call (from a Task) the 'initialize'
+	function, specifying the Realm and Group in which Task to be triggered live as well as
+	the path to a time property (such as the 'time' of a Display Spot playing a video inside
+	a Synchronizer, or the path to a driver property providing a TimeFlow, such as the
+	TimecodeLTC driver).
+
+	Then you must call the 'schedule' function to hook up all the Tasks tto be triggered to
+	the time at which to trigger those. The time must be expressed as a string, where the
+	last segment is fractions (not frames). To make these settings permanent, you may want
+	to set this configuration script to trogger on System Start, so it is performed
+	automatically whenever your Blocks server is started.
+
  	Copyright (c) 2024 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
@@ -27,7 +39,7 @@ export class SyncedScheduler extends Script {
 	initialize(
 		@parameter("Name of Realm in which tasks to trigger is found") realm: string,
 		@parameter("Name of Group in which tasks to trigger is found") group: string,
-		@parameter("Full property path to time used as sync source") timeProp: string
+		@parameter("Full path to time property used as sync source") timeProp: string
 	) {
 		// Verify realm and group exists
 		if (!Realm[realm].group[group])
@@ -46,8 +58,11 @@ export class SyncedScheduler extends Script {
 		);
 	}
 
-	@callable()
-	schedule(time: string, taskName: string) {
+	@callable("Specify a Task to run and when to start it relative to my synch source")
+	schedule(
+		@parameter('The time position, as a string, e.g., "3:12.533"') time: string,
+		@parameter("Name of the Task to trigger at that time") taskName: string
+	) {
 		const prevTime = this.cues.length ? this.cues[0].time : 0;
 		const added = new Cue(time, taskName);
 		this.cues.push(added);
@@ -57,10 +72,9 @@ export class SyncedScheduler extends Script {
 			this.scheduleCue();
 	}
 
-	@property("Current time of sync source")
-	get time() {
-		return this.lastTime;
-	}
+	@property("Current time of synchronization source", true)
+	get time() { return this.lastTime; }
+	set time(newTime: TimeFlow) { this.lastTime = newTime; }
 
 	/**
 	 * New time received. See if this is interesting change vs lastTime
@@ -95,13 +109,13 @@ export class SyncedScheduler extends Script {
 				}
 			}
 		}
-		this.lastTime = new TimeFlow(newTimeTime, newTime.rate, newTime.end, newTime.dead);
+		this.time = new TimeFlow(newTimeTime, newTime.rate, newTime.end, newTime.dead);
 	}
 
 	/**
 	 * I'm supposed to be running. Figure out what's the next cue, then wait
 	 * for that cue's time to occur. If timeFlow provided, use that, else
-	 * use lkast received timeFlow.
+	 * use last received timeFlow.
 	 */
 	private scheduleCue(timeFlow?: TimeFlow) {
 		this.cancelNextCue();
@@ -168,9 +182,12 @@ export class SyncedScheduler extends Script {
 	}
 }
 
+/**
+ * Information associated with each "cue".
+ */
 class Cue {
-	readonly time: number;
-	readonly taskName: string;
+	readonly time: number;	// Sync source time, in mS, when to run the cue
+	readonly taskName: string;	// Name of task to run
 
 	constructor(timeStr: string, taskName: string) {
 		this.time = TimeFlow.stringToMillis(timeStr);
