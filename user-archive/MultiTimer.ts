@@ -22,15 +22,17 @@ export class MultiTimer extends Script {
 		this.timer = this.indexedProperty('timer', Timer);
 	}
 
-	@callable("Append one more timer to my list")
+	@callable("Append a timer to my list")
 	public addTimer(
 		@parameter("Creates a countdown timer if true.") countBackwards: boolean,
 		@parameter("Milliseconds. Must be > 0 for a countdown timer.", true) startTime?: number
 	) {
-		if (countBackwards && startTime <= 0)
+		if (typeof startTime === 'string') // Also accept time-formatted string
+			startTime = TimeFlow.stringToMillis(startTime);
+		if (countBackwards && (!startTime || startTime <= 0))
 			throw "startTime must be > 0 when running countBackwards";
 		if (!startTime || startTime < 0)
-			startTime = 0;	// Default start time when counting up
+			startTime = 0;	// Default start time
 		this.timer.push(new Timer(countBackwards, startTime));
 	}
 
@@ -81,6 +83,15 @@ class Timer extends AggregateElem {
 	@property("The current time position")
 	get time(): TimeFlow { return this.mTime; }
 	set time(value: TimeFlow) {
+		/*	Supposed to be a TimeFlow, but also accept string and number
+			by converting those into a stopped TimeFlow. This may be
+			useful for setting my time from a task expression.
+		 */
+		if (typeof value === 'string') // Assume a valid time format
+			value =  new TimeFlow(TimeFlow.stringToMillis(value), 0);
+		else if (typeof value === 'number') // Take as milliseconds
+			value = new TimeFlow(value, 0);
+
 		if (!value.rate && this.mRun) // Timeflow not running
 			this.run = false; // Neither should I
 		this.mTime = value;
@@ -97,7 +108,7 @@ class Timer extends AggregateElem {
 					if (currTime <= 0)
 						throw "Timer already at zero";
 					if (this.runRate < 0) { // Running backwards - make sure stops at 0
-						this.stopStopTimer();
+						this.cancelStopTimer();
 						this.stopTimer = wait(currTime);
 						this.stopTimer.then(() => {  // Stop at 0 exactly
 							this.run = false;
@@ -106,7 +117,7 @@ class Timer extends AggregateElem {
 					}
 				}
 			} else	// Stop running
-				this.stopStopTimer();
+				this.cancelStopTimer();
 
 			/*	Here I assign to the backing store and fires a change notification
 				manually rather then assigning though the setter (which automatically
@@ -123,7 +134,7 @@ class Timer extends AggregateElem {
 	/**
 	 * Stop any stopTimer I may have running,
 	 */
-	private stopStopTimer() {
+	private cancelStopTimer() {
 		if (this.stopTimer) {
 			this.stopTimer.cancel();
 			this.stopTimer = undefined;
@@ -134,6 +145,6 @@ class Timer extends AggregateElem {
 	 * This timer is going away. Do any cleanup required.
 	 */
 	discard() {
-		this.stopStopTimer();
+		this.cancelStopTimer();
 	}
 }
