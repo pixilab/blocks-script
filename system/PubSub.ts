@@ -22,7 +22,7 @@ export interface SGOptions {
 	readOnly?: boolean;			// Default is read/write
 	min?: number;				// Allowed range (Number property type only)
 	max?:number;
-	enumValues?: string[];		// Allowed enum values
+	enumValues?: string[];		// Allowed enum values (if type is "Enum")
 }
 
 /**

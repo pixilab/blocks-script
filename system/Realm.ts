@@ -8,7 +8,7 @@
 export var Realm: {
 	[realmName: string]: {	// Realms, by name
 		group: {
-			[realmName: string]: TaskGroup	// Groups, by name
+			[groupName: string]: TaskGroup	// Groups, by name
 		};
 
 		variable: {

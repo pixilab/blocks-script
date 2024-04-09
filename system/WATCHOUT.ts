@@ -73,18 +73,21 @@ export interface WATCHOUTCluster extends Timeline {
 
 	setInput(name:string, value:number, slewRateMs?:number): void;
 
-	/*	Get information about control cues on auxTimelineName or on main timeline if
-		auxTimelineName not specified, with "include" being a number (bitmask)
-		specifying what kind of control cues to return:
+	/*	Get information about control cues on auxTimelineName or on Main timeline
+		if auxTimelineName is unspecified. If the include parameter is undefined
+		or 0, then return only named cues that have some effect and targets the
+		current timeline.
 
-	 	1	Cues with no effect when executed (e.g., a Play cue with no target timeline)
+		Pass a value in the include parameter to also return:
+
+	 	1	Cues that have no effect when executed (e.g., Play with no target timeline)
 		2	Cues targeting other timelines
 		4	Cues having no name
 
-		You can specify multiple flags like this: 1 | 4
-		returning cues with no effect and no name. Pass 0 here for default behavior
-		which will return named control cues that have some effect, targeting the
-		current timeline. The control cues will be sorted in ascending time order.
+		You can specify multiple includes by adding the numbers shown above.
+		E.g., calling getControlCues(1+4) will also return control cues
+		that have no effect and no name. The control cues returned will be
+		sorted in ascending time order.
 	 */
 	getControlCues(include?: number, auxTimelineName?:string): Promise<ControlCueInfo[]>;
 
