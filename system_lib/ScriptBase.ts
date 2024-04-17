@@ -23,7 +23,7 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 
 	/** Expose a named property of type T with specified options and getter/setter function.
 	 */
-	property<T extends PropValueType>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): PropertyValue<T> {
+	property<T extends PropValueType>(name: string, options: SGOptions|null, gsFunc: SetterGetter<T>): PropertyValue<T> {
 
 		// Make assignment work also for direct JS use
 		const propDescriptor: TypedPropertyDescriptor<T> & ThisType<any> = {

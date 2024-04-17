@@ -147,9 +147,16 @@ interface ControllableSpot extends BaseSpot {
 	/**
 	 * Comma separated list of tags applied to this spot. Use forceTags if you want to change this.
 	 * Note that the tagSet reported here includes all tags, including those statically assigned
-	 * through the Spot's configuration.
+	 * through the Spot's configuration. This is available only when the Spot is connected.
 	 */
 	readonly tagSet: string;
+
+	/**
+	 * Comma separated list of fixed tags assigned through the Spot's configuration. This includes ONLY
+	 * those tags specified as "Fixed Tags". To obtain dynamically assigned tags, use tagSet instead.
+	 * This is available regardless of whether the Spot is connected or not.
+	 */
+	readonly fixedTagSet: string;
 
 	/**
 	 * Force set of local tags to only those specified (comma separated). Does not
