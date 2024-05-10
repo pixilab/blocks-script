@@ -30,8 +30,13 @@ export abstract class Recordings {
 }
 
 export interface Recording {
-	// Starts/stops free-running playback of this recording (r/o during sync playback)
+	/*	Starts/stops free-running playback of this recording (r/o during sync playback).
+		There's no concept of "pause" here, so you can't resume after stopping.
+	 */
 	playing: boolean;
+
+	// Current playback time position
+	readonly time: TimeFlow;
 
 	// Start playback synchronized to propPath, which must be a TimeFlow
 	startSync(propPath: string, timeOffset?: number): void;
