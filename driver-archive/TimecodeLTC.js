@@ -35,9 +35,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     };
     var TimecodeLTC = exports.TimecodeLTC = (function (_super) {
         __extends(TimecodeLTC, _super);
-        function TimecodeLTC(socket) {
-            var _this = _super.call(this, socket) || this;
-            _this.socket = socket;
+        function TimecodeLTC(connection) {
+            var _this = _super.call(this, connection) || this;
+            _this.connection = connection;
             _this.mType = "25";
             _this.mTime = new TimeFlow(0, 0);
             _this.mSpeed = 0;
@@ -48,8 +48,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.mConnected = false;
             _this.lastDataTime = 0;
             _this.isReset = false;
-            if (socket.options) {
-                var config = JSON.parse(socket.options);
+            if (connection.options) {
+                var config = JSON.parse(connection.options);
                 if (config.type) {
                     var sType = config.type.toString();
                     if (kTypeMap[sType])
@@ -79,7 +79,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 }
                 return _this.mType;
             });
-            socket.subscribe('textReceived', function (emitter, message) {
+            connection.subscribe('textReceived', function (sender, message) {
                 _this.dataReceived(message.text.trim());
             });
             _this.applySettingsSoon();
@@ -138,11 +138,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         };
         TimecodeLTC.prototype.applySettings = function () {
             var kinterval = 2000;
+            var portOpt = "";
+            var isSerial = !!this.connection.isOfTypeName("Serial");
+            if (!isSerial)
+                portOpt = "/p/" + this.connection.listenerPort;
             var settings = "i/" + kinterval +
                 "/t/" + kTypeMap[this.mType].parName +
-                "/p/" + this.socket.listenerPort +
-                "/n/1/c/0/w/150";
-            this.socket.sendText(settings);
+                portOpt +
+                "/n/1/c/0/w/150/f/2";
+            if (isSerial)
+                settings += '\r';
+            this.connection.sendText(settings);
             if (this.getMonotonousMillis() - this.lastDataTime >= kinterval * 2)
                 this.connected = false;
             this.applySettingsSoon(5000);
@@ -253,6 +259,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], TimecodeLTC.prototype, "resetOnStop", null);
         TimecodeLTC = __decorate([
             (0, Metadata_1.driver)('NetworkUDP', { port: 1632, rcvPort: 1633 }),
+            (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
             __metadata("design:paramtypes", [Object])
         ], TimecodeLTC);
         return TimecodeLTC;

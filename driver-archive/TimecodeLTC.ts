@@ -1,30 +1,41 @@
 /** Blocks driver for providing time from an LTC (SMPTE or EBU) timecode source.
-	The timecode must be connected to the audio input on a Linux computer, such
-	as a our Linux based server image, running our 'timecode-reader' program.
-	This program is located in the native directory located in the home directory
-	of the pixi-server user, and must be run from there since it depends on
-	other components located in the directory.
 
-	Configure this driver with the IP address of localhost (or 127.0.0.1) if you run the
- 	'timecode-reader' program om your Blocks server. If you run the program on another
- 	computer then enter the IP address of that computer.
+	There are two options for receiving the LTC audio-level timecode signal:
 
- 	You must set the 'type' property of this driver to the expected type of timecode.
+	1. Using the audio input of a Linux computer, such as a our Linux based
+	server image, running our 'timecode-reader' program. This program is located
+	in the native directory located in the home directory of the pixi-server
+	user, and must be run from there since it depends on other components
+	located in the directory. Add to Blocks as a Network TCP/UDP Device, specifying this
+	driver. If you run the 'timecode-reader' program on your Blocks server, set
+	the the IP address to localhost (or 127.0.0.1) . If you run the program on
+	another computer then enter the IP address of that computer.
+
+ 	2. Using the timecode reader "dongle" from joananton@joananton.com. This
+ 	must be connected to a USB port on a PIXILAB Player (e.g., NUC). Add to
+ 	Blocks as a Network Serial Device, specifying this driver. Specify the name
+ 	of (or full, dot-separated path to) the Display Spot to which the USB
+ 	dongle is connected in the "Connected through Spot" field. More info here:
+ 	https://youtube.com/playlist?list=PLC8ugsKcEiLSQ4Uh95o6x1U41qk1aHBuH
+ 	https://youtu.be/VY9kEkZim_k?si=a6x0Ltv8wJJObBlS
+
+	Finally, you must configure the driver for the expected timecode type. This
+	can be done in either of the following ways:
+
+ 	A. Set the 'type' property of this Network Device to the expected type.
  	This can be done using a Task triggered on system start-up or the 'connected'
  	property of this driver (which becomes true once the 'timecode-reader' program
- 	appears on the network). Alternatively, you can set options on the driver using
- 	JSON data like this:
+ 	appears on the network).
 
- 	{
- 		"type": "29.97_drop",
- 		"offset": 0.2
- 	}
+ 	B. Set options using JSON data in the "Custom Options" field of the Network
+ 	Device, like this: {"type": "29.97_drop", "offset": 0.0}
+ 	See kTypeMap below for valid type names.
 
  	Copyright (c) 2024 PIXILAB Technologies AB, Sweden (http://pixilab.se).
  	All Rights Reserved.
  */
 
-import {NetworkUDP} from "system/Network";
+import {NetworkUDP, SerialPort} from "system/Network";
 import {Driver} from "system_lib/Driver";
 import {driver, property} from "system_lib/Metadata";
 import {SGOptions} from "system/PubSub";
@@ -47,11 +58,14 @@ const kTypeMap: Dictionary<TypeInfo> = {
  */
 interface Config {
 	type?: string;		// One of the kTypeMap keys above
-	offset?: number;	// Added to timecode received, seconds (with fractions)
+	offset?: number;	// Added to timecode received, in seconds (with fractions)
 }
 
+type ConnType = NetworkUDP | SerialPort;
+
 @driver('NetworkUDP', { port: 1632, rcvPort: 1633 })
-export class TimecodeLTC extends Driver<NetworkUDP> {
+@driver('SerialPort', {baudRate: 115200})
+export class TimecodeLTC extends Driver<ConnType> {
 	private mType = "25";	// Deffault timecode type
 	private mTime: TimeFlow = new TimeFlow(0, 0);
 	private mSpeed = 0;
@@ -72,10 +86,10 @@ export class TimecodeLTC extends Driver<NetworkUDP> {
 
 	private toldOldversion: boolean;	// Do not nag about old version
 
-	public constructor(private socket: NetworkUDP) {
-		super(socket);
-		if (socket.options) {	// Set initial state from options
-			let config = JSON.parse(socket.options) as Config;
+	public constructor(private connection: ConnType) {
+		super(connection);
+		if (connection.options) {	// Set initial state from options
+			let config = JSON.parse(connection.options) as Config;
 			if (config.type) {
 				// toString in case user passed a number
 				const sType = config.type.toString();
@@ -107,9 +121,15 @@ export class TimecodeLTC extends Driver<NetworkUDP> {
 				this.applySettingsSoon();
 			}
 			return this.mType;
-		})
+		});
 
-		socket.subscribe('textReceived', (emitter, message) => {
+
+		/*	Both Serial and UDP support textReceived providing message.text so this is OK.
+			The cast is just needed to keep TypeScript compiler happy. Alternatively,
+			a type check could have been used, but the code in both branches would end
+			up being the same anyway, so no need really.
+		 */
+		(<NetworkUDP>connection).subscribe('textReceived', (sender, message) => {
 			this.dataReceived(message.text.trim());
 		});
 
@@ -163,11 +183,17 @@ export class TimecodeLTC extends Driver<NetworkUDP> {
 	 */
 	private applySettings() {
 		const kinterval = 2000;	// Longest interval for updates from peer
+		var portOpt = "";		// Not used in serial case
+		const isSerial = !!this.connection.isOfTypeName("Serial");
+		if (!isSerial) // Specify UDP network port to send data to
+			portOpt = "/p/" + (<NetworkUDP>this.connection).listenerPort;
 		var settings: string = "i/" + kinterval +
 			"/t/" + kTypeMap[this.mType].parName +
-			"/p/" + this.socket.listenerPort +
-			"/n/1/c/0/w/150";	// Frames but no timecode, free-wheel 150 mS
-		this.socket.sendText(settings);
+			portOpt +
+			"/n/1/c/0/w/150/f/2";	// Frames but no timecode, free-wheel 150 mS
+		if (isSerial) // Needs explicit line termination
+			settings += '\r';
+		this.connection.sendText(settings);
 
 		/*	Since this happens with some regularity, check "connection"
 			status here as well. Will lag a bit, but will be
