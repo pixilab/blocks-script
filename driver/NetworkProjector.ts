@@ -257,7 +257,8 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected connectStateChanged() {
 		this.connecting = false;
 		if (!this.socket.connected) {
-			this.connected = false;	// Tell clients connection dropped
+			this.connected = false;		// Tell clients connection dropped
+			this.currCmd = undefined;	// No longer pertinent
 			if (this.correctionRetry)
 				this.correctionRetry.cancel();
 			if (this.reqToSend())

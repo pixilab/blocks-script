@@ -177,6 +177,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             this.connecting = false;
             if (!this.socket.connected) {
                 this.connected = false;
+                this.currCmd = undefined;
                 if (this.correctionRetry)
                     this.correctionRetry.cancel();
                 if (this.reqToSend())
