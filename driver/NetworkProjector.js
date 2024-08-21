@@ -35,6 +35,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
             _this.propList = [];
+            _this.awake = false;
             socket.subscribe('connect', function (sender, message) {
                 if (message.type === 'Connection') {
                     if (_this.socket.connected)
@@ -182,15 +183,15 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                     this.connectSoon();
             }
         };
-        NetworkProjector.prototype.disconnectAndTryAgainSoon = function () {
+        NetworkProjector.prototype.disconnectAndTryAgainSoon = function (howSoonMillis) {
             if (this.socket.connected)
                 this.socket.disconnect();
-            this.connectSoon();
+            this.connectSoon(howSoonMillis);
         };
-        NetworkProjector.prototype.connectSoon = function () {
+        NetworkProjector.prototype.connectSoon = function (howSoonMillis) {
             var _this = this;
             if (!this.connectDly) {
-                this.connectDly = wait(8000);
+                this.connectDly = wait(howSoonMillis || 8000);
                 this.connectDly.then(function () {
                     _this.connectDly = undefined;
                     _this.attemptConnect();

@@ -33,15 +33,14 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
             _this.socket = socket;
             _this.mConnected = false;
             _this.outputs = [];
-            console.info("Netio PowerBOX instantiated");
-            SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(socket.address, "/netio.json")).get().then(function (result) {
+            SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(socket.address, "/netio.json"))
+                .get().then(function (result) {
                 _this.connected = true;
-                var jsonObj = JSON.parse(result.data);
-                _this.outputs = jsonObj.Outputs;
+                var parsedResponse = JSON.parse(result.data);
+                _this.outputs = parsedResponse.Outputs;
             }).catch(function (error) { return _this.requestFailed(error); });
-            for (var i = 1; i <= 3; i++) {
+            for (var i = 1; i <= 3; i++)
                 _this.createOutlets(i);
-            }
             return _this;
         }
         NetioPowerBox.prototype.requestFailed = function (error) {
@@ -62,9 +61,10 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
             var _this = this;
             this.property("Power outlet ".concat(outletNumber), { type: 'Boolean', description: 'Power on outlet ' + outletNumber }, function (val) {
                 if (val !== undefined) {
-                    var theOutlet1 = _this.outputs.filter(function (x) { return x.ID == 1; })[0];
+                    var theOutlet1 = _this.outputs.filter(function (x) { return x.ID === 1; })[0];
                     theOutlet1.State = val ? 1 : 0;
-                    SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(_this.socket.address, "/netio.json")).post("{ \"Outputs\":[ { \"ID\":\"".concat(outletNumber, "\", \"Action\":\"").concat(val ? 1 : 0, "\" } ] }"), 'application/json').then(function (result) {
+                    SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(_this.socket.address, "/netio.json")).
+                        post("{ \"Outputs\":[ { \"ID\":\"".concat(outletNumber, "\", \"Action\":\"").concat(val ? 1 : 0, "\" } ] }"), 'application/json').then(function (result) {
                         _this.connected = true;
                         var jsonObj = JSON.parse(result.data);
                         _this.outputs = jsonObj.Outputs;
@@ -72,13 +72,12 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
                     }).catch(function (error) { return _this.requestFailed(error); });
                 }
                 var state = _this.outputs.filter(function (x) { return x.ID == outletNumber; })[0];
-                if (state) {
+                if (state)
                     return state.State == 1 ? true : false;
-                }
             });
         };
         __decorate([
-            (0, Metadata_1.property)("Verified connection with the Netio PowerBOX", true),
+            (0, Metadata_1.property)("True if communication attempt succeeded", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetioPowerBox.prototype, "connected", null);

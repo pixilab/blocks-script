@@ -50,7 +50,7 @@ export class PJLink extends NetworkProjector {
 				}
 			).catch(error => {
 				this.warnMsg("pollStatus error", error);
-				this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
+				this.disconnectAndTryAgainSoon(50);	// Triggers a new cycle soon
 			});
 			// console.info("pollStatus");
 		}
@@ -98,7 +98,7 @@ export class PJLink extends NetworkProjector {
 				}
 			},
 			error => {
-				this.warnMsg("getInitialState POWR error - retry soon", error);
+				this.warnMsg("getInitialState POWR error - retrying", error);
 				this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
 			}
 		);

@@ -51,7 +51,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                         _this.getInputState(true);
                 }).catch(function (error) {
                     _this.warnMsg("pollStatus error", error);
-                    _this.disconnectAndTryAgainSoon();
+                    _this.disconnectAndTryAgainSoon(50);
                 });
             }
             return true;
@@ -83,7 +83,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                     _this.sendCorrection();
                 }
             }, function (error) {
-                _this.warnMsg("getInitialState POWR error - retry soon", error);
+                _this.warnMsg("getInitialState POWR error - retrying", error);
                 _this.disconnectAndTryAgainSoon();
             });
         };

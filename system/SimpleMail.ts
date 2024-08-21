@@ -12,6 +12,7 @@ mail:
   smtp.host: mail.pixilab.se
   smtp.port: 587
   smtp.ssl.trust: mail.pixilab.se
+  smtp.allow8bitmime: true
 
 You must specify EITHER the relevant smtp OR ipap options, as documented here
 http://connector.sourceforge.net/doc-files/Properties.html
