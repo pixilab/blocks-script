@@ -139,8 +139,8 @@ export interface WATCHOUTCluster extends Timeline {
  * explicitly to save on resources.
  */
 export interface AuxTimeline extends Timeline {
-	name: string;		// Read-only
-	duration: number;	// Read-only, milliseconds
+	readonly name: string;
+	readonly duration: number;	// Milliseconds
 	stopped: boolean;
 	close(): void;		// Close the connection to this auxiliary timeline
 

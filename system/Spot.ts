@@ -1,10 +1,8 @@
-/*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2017 by Mike Fahl.
- */
+/* 	Provides script access to Spots.
 
-/// <reference path = 'PIXI.d.ts' />
-
+	Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ 	Created 2017 by Mike Fahl.
+*/
 
 import {RecordBase} from "../system_lib/ScriptBase";
 
