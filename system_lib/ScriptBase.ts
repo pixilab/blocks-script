@@ -190,16 +190,17 @@ interface ChangeNotifier {
 type IndexedAny<T> = { [index:number]: T; readonly length: number };
 
 /**
- * Base your IndexedProperty elements on this class to support "changed" notifications, like
- * in the top level script/driver object. Not required if the indexed elements are
- * immutable (can not change while being used). If data can change, then use this as
- * the base class of your IndexedProperty elements, and call this.changed("fieldname")
- * from within the element when it's data is known to have changed, where fieldname is
- * the name of the field in the element. All fields in IndexedProperty elements must be
- * of primitive type (i.e., string, boolean or number).
+ * Base your indexed or aggregate property objects on this class to support
+ * explicit "changed" notifications, like the top level script/driver object.
+ * Call this.changed("sub-property-name") from within the object
+ * when a sub-property is known to have changed by other means than its setter
+ * being called (which handles this automatically), with sub-property-name being
+ * the name of the changed sub-property. Note that all sub-properties must be
+ * of primitive type (i.e., string, boolean or number) - nested aggregates or
+ * indexed properties are not supported.
  */
 export class AggregateElem implements ChangeNotifier {
-	private readonly __scriptFacade: ChangeNotifier;	// Internal use only!
+	private readonly __scriptFacade: ChangeNotifier; // Internal use only!
 
 	changed(propName: string): void {
 		this.__scriptFacade.changed(propName);

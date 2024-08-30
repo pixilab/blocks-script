@@ -1,10 +1,8 @@
-/*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2017 by Mike Fahl.
- */
+/* 	Provides script access to Spots.
 
-/// <reference path = 'PIXI.d.ts' />
-
+	Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ 	Created 2017 by Mike Fahl.
+*/
 
 import {RecordBase} from "../system_lib/ScriptBase";
 
@@ -258,8 +256,20 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	 * Current time position (e.g., in video), in seconds. Write to position the video.
 	 * Reading is supported only when spot has an active Synchronizer block which provides
 	 * this information (else returns NaN).
+	 *
+	 * NOTE: For historical reasons, there's an unfortunate discrepancy between the
+	 * Spot's 'time' property (which is a TimeFlow) and this scripting-side property,
+	 * which is a number. To obtain the TimeFlow from a script, use timeFlow below
+	 * instead.
 	 */
 	time: number;
+
+	/**
+	 * Current time position as a TimeFlow.
+	 * Available only when spot has an active Synchronizer block which provides
+	 * this information (else this is null).
+	 */
+	readonly timeFlow: TimeFlow | null;
 
 	/** Ask display to reboot/reload. Not supported by all displays.
 	 */
