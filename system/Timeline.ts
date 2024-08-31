@@ -5,15 +5,15 @@
 */
 
 /**
- * Access a Timeline, firstly under under its group and secondly
- * under its individual name (e.g., using dot notation or
+ * Access to Blocks' Timeline, firstly under under its group and
+ * then under its individual name (e.g., using dot notation or
  * array-style notation).
  */
 export var Timeline: { [timelineName: string]: Group; };
 
 // Group level, accessed by name from the global Timeline root above.
 export interface Group {
-	[name: string]: Timeline;
+	[name: string]: Timeline;	// Specific Timeline, by name
 }
 
 /**
