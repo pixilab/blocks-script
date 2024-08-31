@@ -35,9 +35,11 @@ define(["require", "exports", "system_lib/Script", "system/SimpleMail", "system_
             return _super !== null && _super.apply(this, arguments) || this;
         }
         MailTester.prototype.mailTo = function (emailAddress, subject, body) {
-            SimpleMail_1.SimpleMail.send(emailAddress, subject || "From Blocks MailTester", body || ("Sent to verify working email from Blocks on " + new Date().toString())).catch(function (errorMsg) {
+            var sendResult = SimpleMail_1.SimpleMail.send(emailAddress, subject || "From Blocks MailTester", body || ("Sent to verify working email from Blocks on " + new Date().toString()));
+            sendResult.catch(function (errorMsg) {
                 return console.error("Failed sending email - check your configuration file; " + errorMsg);
             });
+            return sendResult;
         };
         __decorate([
             (0, Metadata_1.callable)("Send an email to the specified address"),

@@ -22,12 +22,16 @@ export class MailTester extends Script {
 		@parameter("Subject field of the email", true) subject?: string,
 		@parameter("Text content of the email", true) body?:string
 	) {
-		SimpleMail.send(
+		const sendResult = SimpleMail.send(
 			emailAddress,
 			subject || "From Blocks MailTester",
 			body || ("Sent to verify working email from Blocks on " + new Date().toString())
-		).catch(errorMsg => 	// Log any error
+		);
+
+		sendResult.catch(errorMsg => 	// Log any error
 			console.error("Failed sending email - check your configuration file; " + errorMsg)
 		);
+
+		return sendResult;	// Makes calling task wait or send to finish before proceeding
 	}
 }
