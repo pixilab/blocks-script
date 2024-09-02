@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var kRfidPacketParser = /^XR\[P(.)(\d+)]$/;
     var kPortPacketParser = /^X(\d+)([AB])\[(.+)]$/;
     var kProductCodeParser = /D(\d+)B\[\w+=(.+)]$/;
-    var Nexmosphere = exports.Nexmosphere = (function (_super) {
+    var Nexmosphere = (function (_super) {
         __extends(Nexmosphere, _super);
         function Nexmosphere(connection) {
             var _this = _super.call(this, connection) || this;
@@ -225,6 +225,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], Nexmosphere);
         return Nexmosphere;
     }(Driver_1.Driver));
+    exports.Nexmosphere = Nexmosphere;
     var BaseInterface = (function (_super) {
         __extends(BaseInterface, _super);
         function BaseInterface(driver, index) {
@@ -298,7 +299,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return "RFID";
         };
         __decorate([
-            (0, Metadata_1.property)("Last recieved RFID tag ID", true),
+            (0, Metadata_1.property)("Last recieved RFID tag ID", false),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], RfidInterface.prototype, "tagNumber", null);
@@ -354,7 +355,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return "NFC";
         };
         __decorate([
-            (0, Metadata_1.property)("Last recieved tag UID", true),
+            (0, Metadata_1.property)("Last recieved tag UID", false),
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], NfcInterface.prototype, "tagUID", null);

@@ -330,7 +330,7 @@ class RfidInterface extends BaseInterface {
 	private mTagNumber = 0;
 	private mIsPlaced = false;
 
-	@property("Last recieved RFID tag ID", true)
+	@property("Last recieved RFID tag ID", false)
 	get tagNumber(): number {
 		return this.mTagNumber;
 	}
@@ -360,7 +360,7 @@ class NfcInterface extends BaseInterface {
 	private mTagUID = "";
 	private mIsPlaced = false;
 
-	@property("Last recieved tag UID", true)
+	@property("Last recieved tag UID", false)
 	get tagUID(): string { return this.mTagUID; }
 	set tagUID(value: string) { this.mTagUID = value; }
 
