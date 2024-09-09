@@ -34,12 +34,12 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
     var XIC_GROUP_OFFSET = 49152;
     var XIC_MAX_DEVICE_GROUPS = 16;
     var XIC_MAX_DEVICE_SCENES = 32;
-    var Xicato = (function (_super) {
+    var Xicato = exports.Xicato = (function (_super) {
         __extends(Xicato, _super);
         function Xicato(socket) {
             var _this = _super.call(this, socket) || this;
             var settingsFileName = XIC_CONFIG_BASE_PATH + '/' + socket.name + '.config';
-            var dataPath = XIC_CONFIG_BASE_PATH + '/' + socket.name + '';
+            var dataPath = XIC_CONFIG_BASE_PATH + '/' + socket.name;
             _this.devicesFileName = dataPath + '/devices.json';
             _this.groupsFileName = dataPath + '/groups.json';
             _this.scenesFileName = dataPath + '/scenes.json';
@@ -580,7 +580,6 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         ], Xicato);
         return Xicato;
     }(Driver_1.Driver));
-    exports.Xicato = Xicato;
     var XicatoSettings = (function () {
         function XicatoSettings() {
             this.username = '';

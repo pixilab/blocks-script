@@ -59,7 +59,7 @@ export class Xicato extends Driver<NetworkTCP> {
 
         // no auto-connect needed since REST API
         const settingsFileName = XIC_CONFIG_BASE_PATH + '/' + socket.name + '.config';
-        const dataPath = XIC_CONFIG_BASE_PATH + '/' + socket.name + '';
+        const dataPath = XIC_CONFIG_BASE_PATH + '/' + socket.name;
         this.devicesFileName = dataPath + '/devices.json';
         this.groupsFileName = dataPath + '/groups.json';
         this.scenesFileName = dataPath + '/scenes.json';

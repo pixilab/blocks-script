@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/NetworkDriver", "system_lib/Metadata"]
     var CMD_SHUTDOWN = [0xff, 0x16, 0x01, 0x30, 0x30, 0x30, 0x31, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe];
     var CMD_RESTART_COMPUTER = [0xff, 0x16, 0x01, 0x30, 0x30, 0x30, 0x31, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe];
     var CMD_RESTART_WINDOWS = [0xff, 0x16, 0x01, 0x30, 0x30, 0x30, 0x31, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe];
-    var MedialonAppLauncher = (function (_super) {
+    var MedialonAppLauncher = exports.MedialonAppLauncher = (function (_super) {
         __extends(MedialonAppLauncher, _super);
         function MedialonAppLauncher(socket) {
             var _this = _super.call(this, socket) || this;
@@ -129,5 +129,4 @@ define(["require", "exports", "system_lib/NetworkDriver", "system_lib/Metadata"]
         ], MedialonAppLauncher);
         return MedialonAppLauncher;
     }(NetworkDriver_1.NetworkDriver));
-    exports.MedialonAppLauncher = MedialonAppLauncher;
 });
