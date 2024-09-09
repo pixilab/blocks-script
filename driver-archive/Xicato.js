@@ -34,7 +34,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
     var XIC_GROUP_OFFSET = 49152;
     var XIC_MAX_DEVICE_GROUPS = 16;
     var XIC_MAX_DEVICE_SCENES = 32;
-    var Xicato = exports.Xicato = (function (_super) {
+    var Xicato = (function (_super) {
         __extends(Xicato, _super);
         function Xicato(socket) {
             var _this = _super.call(this, socket) || this;
@@ -48,7 +48,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
                 _this.mUsername = settings.username;
                 _this.mPassword = settings.password;
                 _this.mAlive = true;
-                _this.mBaseURL = 'http://' + socket.address + ':' + socket.port + '/';
+                _this.mBaseURL = 'http://' + socket.address + ':' + socket.port + '';
                 if (socket.enabled) {
                     socket.subscribe('finish', function (_sender) {
                         _this.onFinish();
@@ -285,7 +285,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         };
         Xicato.prototype.authenticationPoll = function () {
             var _this = this;
-            SimpleHTTP_1.SimpleHTTP.newRequest(this.mBaseURL + 'api/token').
+            SimpleHTTP_1.SimpleHTTP.newRequest(this.mBaseURL + '/api/token').
                 header('Authorization', 'Basic ' + this.toBase64(this.mUsername + ':' + this.mPassword)).
                 get().
                 then(function (response) {
@@ -580,6 +580,7 @@ define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_
         ], Xicato);
         return Xicato;
     }(Driver_1.Driver));
+    exports.Xicato = Xicato;
     var XicatoSettings = (function () {
         function XicatoSettings() {
             this.username = '';
