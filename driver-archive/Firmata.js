@@ -377,7 +377,8 @@ define(["require", "exports", "../system_lib/Driver", "../system_lib/Metadata"],
             var port = bytes[0] & 0xF;
             var pinOffset = port * 8;
             var bitmask = bytes[1] | (bytes[2] << 7);
-            for (var i = 0; i < 7; i++) {
+            var PIN_NUMBERS = 8;
+            for (var i = 0; i < PIN_NUMBERS; i++) {
                 var pinNumber = pinOffset + i;
                 var pin = this.digitalPins[pinNumber];
                 if (pin && pin.mode !== PinMode.Output) {

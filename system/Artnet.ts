@@ -6,9 +6,44 @@
 
 /// <reference path = 'PIXI.d.ts' />
 
-export var Artnet: { [fixtureName: string]: Fixture; };
+export var Artnet: {
+	[name: string]: Fixture | Recordings;
+	Recording?: Recordings;	// Only if any recordings
+};
 
-export interface Fixture { [channelName: string]: AnalogChannel|RangeChannel; }
+/**
+ * A lighting fixture, with its channels, held in the
+ * Artnet object. Since this has class type, you can use instanceof
+ * to check for this type
+ */
+export abstract class Fixture {
+	[channelName: string]: AnalogChannel|RangeChannel;
+}
+
+/**
+ * A container for Art-Net recordings, held in the
+ * Artnet object. Since this has class type, you can use instanceof
+ * to check for this type
+ */
+export abstract class Recordings {
+	[recName: string]: Recording;
+}
+
+export interface Recording {
+	/*	Starts/stops free-running playback of this recording (r/o during sync playback).
+		There's no concept of "pause" here, so you can't resume after stopping.
+	 */
+	playing: boolean;
+
+	// Current playback time position
+	readonly time: TimeFlow;
+
+	// Start playback synchronized to propPath, which must be a TimeFlow
+	startSync(propPath: string, timeOffset?: number): void;
+
+	// Terminate synchronized platback
+	stopSync(): void;
+}
 
 /**
  * Common channel stuff, regardless of channel type.
@@ -26,7 +61,7 @@ export interface Channel {
  * channel's internal resolution (e.g., 8 or 16 bits).
  */
 export interface AnalogChannel extends Channel {
-	isOfTypeName(typeName: 'AnalogChannel'): AnalogChannel|null;
+	isOfTypeName(typeName: string | "AnalogChannel"): AnalogChannel|null;
 	maxValue: number;	// Read-only maximum of "value" (1 indicates normalized channel).
 }
 
@@ -38,7 +73,7 @@ export interface AnalogChannel extends Channel {
  * to 0...1.
  */
 export interface RangeChannel extends Channel {
-	isOfTypeName(typeName: 'RangeChannel'): RangeChannel|null;
+	isOfTypeName(typeName: string | "RangeChannel"): RangeChannel|null;
 	state: string;		// Name of currently selected range
 	ranges: Range[];	// Read-only list of ranges
 }

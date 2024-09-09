@@ -385,66 +385,6 @@ export class Isaac extends Driver<NetworkTCP>  {
 		}
 	}
 
-	/*	Hook up all properties to be exposed as Isaac variables.
-		Old style, no longer seems to work.
-	 */
-	private hookupVarsOld(config: IsaacConfig) {
-		if (config.variables) {
-			let varPaths: string[] = [];	// Collect variable paths here
-			for (let varName of config.variables) {
-				this.establishVariable(varName);
-				varPaths.push(varName);
-			}
-
-			// Package as data to send to /variables/_available
-			const vars: VarsAvailable = {
-				externalRefs: varPaths
-			}
-			const endpoint = `/api/v1/subsystems/${config.subsystemExternalId}/variables/_available`;
-
-			// Establish my variables (i.e., Blocks properties) Isaac side
-			const result = this.newRequest(endpoint).put(JSON.stringify(vars));
-
-			result.then(result => {
-				if (result.status > 299)	// Seems problematic
-					console.warn(endpoint, result.status, result.data);
-			})
-			.catch(error => console.error(endpoint, error));
-
-			return result;
-		}
-	}
-
-	// Same for events
-	private hookupEventsOld(config: IsaacConfig) {
-		if (config.events) {
-			let eventPaths: string[] = [];	// Collect event (aka Task) paths here
-			let ids: number[] = [];
-			let ix = 0;
-			for (let taskName of config.events) {
-				eventPaths.push(taskName);
-				ids.push(ix++);
-			}
-			const tasks: TasksAvailable = {
-				commands: eventPaths,
-				ids: ids	// Do we need those at all? What are they for?
-			}
-			this.newRequest(`/api/v1/subsystems/${config.subsystemExternalId}/events/_available`)
-			.put(JSON.stringify(tasks))
-			.then(result => {
-				if (result.status > 299) {	// Seems problematic
-					console.warn("events/_available status", result.status, result.data);
-					this.registerEvents(eventPaths);	// Do this anyway here until Isaac bug fixed +++
-				} else
-					this.registerEvents(eventPaths);
-			})
-			.catch(error => console.error("events/_available failure", error));
-
-			if (config.events)
-				this.hookupEventTriggers(config);
-		}
-	}
-
 	/**
 	 * In addition to events/_available done above, we also need to post each event separately, one by
 	 * one using another API function.
@@ -585,7 +525,7 @@ export class Isaac extends Driver<NetworkTCP>  {
 	/**
 	 * Do what needs to be done if this script is shut down.
 	 */
-	private destroy() {
+	private shutDown() {
 		if (this.heartBeatTimer)
 			this.heartBeatTimer.cancel();
 		if (this.keepAliveTimer)
@@ -673,7 +613,6 @@ export class Isaac extends Driver<NetworkTCP>  {
 		this.nextTalkerIx = ix;
 		return talker;
 	}
-
 
 	/**
 	 * Send a log message to Isaac.

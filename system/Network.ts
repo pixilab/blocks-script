@@ -117,6 +117,7 @@ interface IStreamConnection extends DriverFacade {
  */
 export interface NetworkTCP extends IStreamConnection, NetworkIPBase {
 	isOfTypeName(typeName: 'NetworkTCP'): NetworkTCP|null;	// Check subtype by name
+	isOfTypeName(typeName: string): any|null;
 
 	/*	Explicit connection. Returns a "connect finished" promise.
 		Optionally set "raw" data mode if not already opened in text mode.
@@ -149,6 +150,7 @@ interface NetworkTCPDriverMetaData {
  */
 export interface SerialPort extends IStreamConnection, NetworkBase {
 	isOfTypeName(typeName: 'SerialPort'): SerialPort|null;	// Check subtype by name
+	isOfTypeName(typeName: string): any|null;
 
 	/*	Request auto-connection behavior (default is OFF for a driver).
 		Optionally set "raw" data mode if not already opened in text mode.
@@ -186,6 +188,7 @@ interface SerialPortDriverMetaData {
  */
 export interface NetworkUDP extends NetworkIPBase {
 	isOfTypeName(typeName: 'NetworkUDP'): NetworkUDP|null;	// Check subtype by name
+	isOfTypeName(typeName: string): any|null;
 
 	readonly listenerPort: number;	// UDP listener port number, if any, else 0
 
@@ -228,11 +231,11 @@ export interface NetworkUDP extends NetworkIPBase {
  */
 export interface MQTT extends NetworkBase {
 	isOfTypeName(typeName: 'MQTT'): MQTT|null;	// Checks type by name
+	isOfTypeName(typeName: string): any|null;
 
 	readonly connected: boolean;		// True if I'm currently connected
 	readonly address: string			// Device-specific part of topic
 
-	isOfTypeName(typeName: string): any|null;
 
 	/*	Send text string to broker on specified sub-topic.
 	*/
@@ -293,11 +296,13 @@ interface NetworkUDPDriverMetaData {
 export interface NetworkBase extends DriverFacade {
 	// Check subtype by name (e.g., "NetworkUDP")
 	isOfTypeName(typeName: string): NetworkBase|null;
+	isOfTypeName(typeName: string): any|null;
 
+	readonly deviceType: "NetworkTCP" | "NetworkUDP" | "MQTT" | "Serial";
 	readonly enabled: boolean;		// True if I'm enabled (else won't send data)
-	readonly address: string;		// Resolved or initial address
 	readonly options: string;		// Any "Custom Options" assigned to the Network Device
-	readonly addressString: string;	// IP address exactly as set on the Network Device page.
+	readonly addressString: string;	// Original address, as set on the Network Device page.
+	readonly address: string;		// Resolved or initial address, if known, else empty string
 }
 
 /**
@@ -308,10 +313,11 @@ interface NetworkIPBase extends NetworkBase {
 
 	readonly address: string;		// Possibly resolved IP address (e.g., "10.0.2.45")
 	readonly port: number;			// Port number sending data to
+	readonly driverName: string;	// Name of any associated device driver, or empty string
 
 	/**
 	 * Send wake-on-LAN message to this device or device with specified MAC address,
-	 * which must be exactly 6 bytes long, or a colon separated string in the form
+	 * which must be exactly 6 bytes long, or a string in the form "112233445566" or
 	 * "11:22:33:44:55:66". To use "this device" (i.e., no argument), you must have
 	 * called enableWakeOnLAN() early on (typically in the driver's constructor),
 	 * and enugh time must have elapsed for the MAC address to be picked up and

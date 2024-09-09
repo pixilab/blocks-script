@@ -136,7 +136,25 @@ declare class TimeFlow  {
 
 	readonly serverTime?: number;	// Corresponding server time (mS, monotonous)
 
-	constructor(position: number, rate: number, end?: number, dead?: boolean);
+	constructor(
+		position: number, 	// Time position, in mS
+		rate: number, 		// 1 for playing at normal rate, 0 for paused
+		end?: number, 		// End time, if known
+		dead?: boolean, 	// Time data not available if true
+		/*	System time (from this.getMonotonousMillis() in a script).
+			Normally, you don't need to pass this, but may be useful in
+			some critical cases where times must match exactly.
+		 */
+		monotonousSysTimeNow?: number
+	);
+
+	/*	Similar to currentTime, but extrapolates to specified monotonousSysTimeNow.
+		This serves a similar purpose as the monotonousSysTimeNow constructor
+		parameter in supplying the "current" systsm time explicitly rather than
+		obtaining it internally, and may be useful when precise extrapolation is
+		required.
+	 */
+	extrapolate(monotonousSysTimeNow: number): number;
 
 
 	/*	Following are some useful constants and functions. Not really limited to

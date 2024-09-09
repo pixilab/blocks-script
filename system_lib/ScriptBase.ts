@@ -9,6 +9,7 @@ import {PropertyAccessor} from "./Script";
 interface Ctor<T> { new(... args: any[]): T ;}
 
 export type PrimitiveValue = number | string | boolean;
+export type PropValueType = PrimitiveValue | TimeFlow;
 
 /**
  * Common stuff shared between user scripts and drivers.
@@ -22,7 +23,7 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 
 	/** Expose a named property of type T with specified options and getter/setter function.
 	 */
-	property<T extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<T>): PropertyValue<T> {
+	property<T extends PropValueType>(name: string, options: SGOptions|null, gsFunc: SetterGetter<T>): PropertyValue<T> {
 
 		// Make assignment work also for direct JS use
 		const propDescriptor: TypedPropertyDescriptor<T> & ThisType<any> = {
@@ -97,10 +98,10 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	 * IMPORTANT: Unlike object-specific "subscribe" methods, a property
 	 * connection established through this function will persist across any
 	 * recreation or reinitialization of any associated object. Thus, you
-	 * must NOT repeat any getProperty call when an object emits a 'finish'
-	 * event.
+	 * must NOT repeat any getProperty call if its source object emits a
+	 * 'finish' event.
 	 */
-	getProperty<PropType extends PrimitiveValue>(
+	getProperty<PropType extends PropValueType>(
 		fullPath: string,
 		changeNotification?: (value: PropType)=>void
 	): PropertyAccessor<PropType> {
@@ -189,16 +190,17 @@ interface ChangeNotifier {
 type IndexedAny<T> = { [index:number]: T; readonly length: number };
 
 /**
- * Base your IndexedProperty elements on this class to support "changed" notifications, like
- * in the top level script/driver object. Not required if the indexed elements are
- * immutable (can not change while being used). If data can change, then use this as
- * the base class of your IndexedProperty elements, and call this.changed("fieldname")
- * from within the element when it's data is known to have changed, where fieldname is
- * the name of the field in the element. All fields in IndexedProperty elements must be
- * of primitive type (i.e., string, boolean or number).
+ * Base your indexed or aggregate property objects on this class to support
+ * explicit "changed" notifications, like the top level script/driver object.
+ * Call this.changed("sub-property-name") from within the object
+ * when a sub-property is known to have changed by other means than its setter
+ * being called (which handles this automatically), with sub-property-name being
+ * the name of the changed sub-property. Note that all sub-properties must be
+ * of primitive type (i.e., string, boolean or number) - nested aggregates or
+ * indexed properties are not supported.
  */
 export class AggregateElem implements ChangeNotifier {
-	private readonly __scriptFacade: ChangeNotifier;	// Internal use only!
+	private readonly __scriptFacade: ChangeNotifier; // Internal use only!
 
 	changed(propName: string): void {
 		this.__scriptFacade.changed(propName);
@@ -251,7 +253,7 @@ export interface Dictionary<TElem> { [id: string]: TElem; }
 /**
  * A plain, typed, primitive property value accessor.
  */
-export interface PropertyValue<PropType extends PrimitiveValue> {
+export interface PropertyValue<PropType extends PropValueType> {
 	value: PropType;	// Current value (read only if property is read only)
 }
 
@@ -271,8 +273,8 @@ export abstract class RecordBase {
 	equivalents.
  */
 export interface ScriptBaseEnv extends ChangeNotifier  {
-	property<PropType extends PrimitiveValue>(name: string, options: SGOptions, gsFunc: SetterGetter<any>): PropertyValue<PropType>;
-	getProperty<PropType extends PrimitiveValue>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
+	property<PropType extends PropValueType>(name: string, options: SGOptions, gsFunc: SetterGetter<any>): PropertyValue<PropType>;
+	getProperty<PropType extends PropValueType>(fullPath: string, changeNotification?: (value: any)=>void): PropertyAccessor<PropType>;
 	unsubscribe(event: string, listener: Function): void;
 	changed(prop: string): void;
 	indexedProperty<T>(name: string, elemType: Ctor<T>): IndexedProperty<T>;

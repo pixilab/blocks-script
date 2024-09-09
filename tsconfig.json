@@ -11,8 +11,7 @@
 		"isolatedModules": false,
 		"moduleResolution": "classic",
 		"rootDir":".",
-		"typeRoots": ["./system", "./node_modules"],
-		"watch": true
+		"typeRoots": ["./system", "./node_modules"]
 	},
 	"compileOnSave": true
 }

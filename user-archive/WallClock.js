@@ -31,25 +31,56 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
         function WallClock(env) {
             var _this = _super.call(this, env) || this;
             _this.mClockTime = "0:00";
+            _this.mYear = 0;
+            _this.mMonth = 0;
+            _this.mDate = 0;
+            _this.mFullDate = "";
             wait(100).then(function () { return _this.updateClock(); });
             return _this;
         }
         Object.defineProperty(WallClock.prototype, "currentTime", {
-            get: function () {
-                return this.mClockTime;
-            },
-            set: function (t) {
-                this.mClockTime = t;
-            },
+            get: function () { return this.mClockTime; },
+            set: function (t) { this.mClockTime = t; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(WallClock.prototype, "year", {
+            get: function () { return this.mYear; },
+            set: function (value) { this.mYear = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(WallClock.prototype, "month", {
+            get: function () { return this.mMonth; },
+            set: function (value) { this.mMonth = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(WallClock.prototype, "date", {
+            get: function () { return this.mDate; },
+            set: function (value) { this.mDate = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(WallClock.prototype, "fullDate", {
+            get: function () { return this.mFullDate; },
+            set: function (value) { this.mFullDate = value; },
             enumerable: false,
             configurable: true
         });
         WallClock.prototype.updateClock = function () {
             var _this = this;
-            var time = new Date();
-            var hour = time.getHours().toString();
-            var min = time.getMinutes();
+            var now = new Date();
+            var hour = now.getHours().toString();
+            var min = now.getMinutes();
             this.currentTime = hour + ':' + padTwoDigits(min);
+            var year = now.getFullYear();
+            this.year = year;
+            var month = now.getMonth() + 1;
+            this.month = month;
+            var date = now.getDate();
+            this.date = date;
+            this.fullDate = year + '-' + padTwoDigits(month) + '-' + padTwoDigits(date);
             wait(20 * 1000).then(function () { return _this.updateClock(); });
         };
         __decorate([
@@ -57,6 +88,26 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             __metadata("design:type", String),
             __metadata("design:paramtypes", [String])
         ], WallClock.prototype, "currentTime", null);
+        __decorate([
+            (0, Metadata_1.property)("Year; e.g. 2024", true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], WallClock.prototype, "year", null);
+        __decorate([
+            (0, Metadata_1.property)("Month, 1-based", true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], WallClock.prototype, "month", null);
+        __decorate([
+            (0, Metadata_1.property)("Day of month, 1-based", true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], WallClock.prototype, "date", null);
+        __decorate([
+            (0, Metadata_1.property)("Full date, in ISO format, e.g. 2024-05-23", true),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], WallClock.prototype, "fullDate", null);
         return WallClock;
     }(Script_1.Script));
     function padTwoDigits(val) {

@@ -34,20 +34,23 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         function Xilica(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
-            socket.autoConnect();
             _this.outputs = [];
             for (var ix = 1; ix <= 4; ++ix)
                 _this.outputs.push(new Output(_this, ix));
-            _this.keepAliver = new KeepAliver(_this);
-            socket.subscribe('textReceived', function (sender, message) { return _this.gotData(message.text); });
-            socket.subscribe('connect', function (sender, message) {
-                if (message.type === 'Connection') {
-                    if (!socket.connected)
-                        console.error("Connection dropped unexpectedly");
-                }
-                else
-                    console.error(message.type);
-            });
+            if (socket.enabled) {
+                socket.autoConnect();
+                _this.keepAliver = new KeepAliver(_this);
+                socket.subscribe('finish', function () { return _this.keepAliver.discard(); });
+                socket.subscribe('textReceived', function (sender, message) { return _this.gotData(message.text); });
+                socket.subscribe('connect', function (sender, message) {
+                    if (message.type === 'Connection') {
+                        if (!socket.connected)
+                            console.error("Connection dropped unexpectedly");
+                    }
+                    else
+                        console.error(message.type);
+                });
+            }
             return _this;
         }
         Xilica.prototype.gotData = function (data) {
@@ -256,9 +259,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             this.xilica = xilica;
             this.saySomethingInAWhile();
         }
+        KeepAliver.prototype.discard = function () {
+            if (this.pending) {
+                this.pending.cancel();
+                this.pending = undefined;
+            }
+        };
         KeepAliver.prototype.saySomethingInAWhile = function () {
             var _this = this;
-            wait(9000).then(function () {
+            this.pending = wait(9000);
+            this.pending.then(function () {
                 _this.sayNow();
                 _this.saySomethingInAWhile();
             });

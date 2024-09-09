@@ -1,5 +1,7 @@
 /*	Driver for controlling AvStumpfl PIXERA timelines, as well as providing timing information
 	from those timelines so Blocks can synchronize to them.
+	To use this driver, you must activate API Access (using the "JSON/TCP (dl)" protocol) in the
+ 	PIXERA settings menu.
 
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */

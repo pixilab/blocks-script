@@ -37,10 +37,10 @@ Created 2021 by Mattias Andersson.
 */
 
 
-import {NetworkTCP, SerialPort} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, max, min, property} from "system_lib/Metadata";
-import {AggregateElem} from "../system_lib/ScriptBase";
+import { NetworkTCP, SerialPort } from "system/Network";
+import { Driver } from "system_lib/Driver";
+import { callable, driver, max, min, property } from "system_lib/Metadata";
+import { AggregateElem } from "../system_lib/ScriptBase";
 
 // Parse RFID tag detection from XR-DR01 Rfid element
 const kRfidPacketParser = /^XR\[P(.)(\d+)]$/;
@@ -55,18 +55,18 @@ const kProductCodeParser = /D(\d+)B\[\w+=(.+)]$/;
 interface Dictionary<TElem> { [id: string]: TElem; }
 
 // A class constructor function
-interface BaseInterfaceCtor<T> { new(driver: Nexmosphere, index: number): T ;}
+interface BaseInterfaceCtor<T> { new(driver: Nexmosphere, index: number): T; }
 
 type ConnType = NetworkTCP | SerialPort;	// I accept either type of backend
 
-@driver('NetworkTCP', {port: 4001})
-@driver('SerialPort', {baudRate: 115200})
+@driver('NetworkTCP', { port: 4001 })
+@driver('SerialPort', { baudRate: 115200 })
 export class Nexmosphere extends Driver<ConnType> {
 
 	// Maps Nexmosphere model name to its implementation type
 	private static interfaceRegistry: Dictionary<BaseInterfaceCtor<BaseInterface>>;
 
-	private readonly specifiedInterfaces:IfaceInfo[] = []; // Interfaces hardcoded using Driver Options.
+	private readonly specifiedInterfaces: IfaceInfo[] = []; // Interfaces hardcoded using Driver Options.
 	private pollEnabled = true; // Enabled unless interfaces hardcoded in Driver options
 	private numInterfaces = 8; // Number of "interface channels" in the Nexmosphere controller.
 
@@ -83,16 +83,16 @@ export class Nexmosphere extends Driver<ConnType> {
 		this.interface = [];
 
 		// Check if the driver has been configured with options, and if so, parse them.
-		if (connection.options){
+		if (connection.options) {
 			const options = JSON.parse(connection.options);
-			if (typeof options === "number"){
+			if (typeof options === "number") {
 				this.numInterfaces = options;
 				this.pollEnabled = true;
 			}
-			if (typeof options === "object"){
+			if (typeof options === "object") {
 				this.specifiedInterfaces = options;
 				this.pollEnabled = false;
-				for (let iface of this.specifiedInterfaces){
+				for (let iface of this.specifiedInterfaces) {
 					log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
 					this.addInterface(iface.ifaceNo, iface.modelCode, iface.name);
 				}
@@ -129,10 +129,10 @@ export class Nexmosphere extends Driver<ConnType> {
 		});
 	}
 
-	static registerInterface(ctor: BaseInterfaceCtor<BaseInterface>, ...modelName: string[] ) {
+	static registerInterface(ctor: BaseInterfaceCtor<BaseInterface>, ...modelName: string[]) {
 		if (!Nexmosphere.interfaceRegistry)
 			Nexmosphere.interfaceRegistry = {};	// First time init
-		modelName.forEach(function(name) {
+		modelName.forEach(function (name) {
 			Nexmosphere.interfaceRegistry[name] = ctor;
 		});
 	}
@@ -148,33 +148,33 @@ export class Nexmosphere extends Driver<ConnType> {
 			const tens = Math.round(ix / 10);
 			if (ix < 200) {
 				switch (tens) {
-				case 0:
-					ix = 111;	// Big jump from 9 up to 111
-					break;
-				case 11:		// These ones skip from 119 to 121, etc
-				case 12:
-				case 13:
-				case 14:
-				case 15:
-					ix += 2;
-					break;
-				case 16:
-					ix = 211;
-					break;
+					case 0:
+						ix = 111;	// Big jump from 9 up to 111
+						break;
+					case 11:		// These ones skip from 119 to 121, etc
+					case 12:
+					case 13:
+					case 14:
+					case 15:
+						ix += 2;
+						break;
+					case 16:
+						ix = 211;
+						break;
 				}
 			} else {	// Deal with 200 and up
 				switch (tens % 10) {	// All the rest are the same based on 2nd index digit
-				case 1:		// Small skip - same as above
-				case 2:
-				case 3:
-				case 4:
-					ix += 2;
-					break;
-				case 5:
-					if (ix >= 959)
-						throw "Port number is out of range for the device."
-					ix += 311 - 259;	// Larger incremental jump, e.g. from 259 to 311
-					break;
+					case 1:		// Small skip - same as above
+					case 2:
+					case 3:
+					case 4:
+						ix += 2;
+						break;
+					case 5:
+						if (ix >= 959)
+							throw "Port number is out of range for the device."
+						ix += 311 - 259;	// Larger incremental jump, e.g. from 259 to 311
+						break;
 				}
 			}
 		}
@@ -234,7 +234,7 @@ export class Nexmosphere extends Driver<ConnType> {
 			// Incoming data from a sensor
 			const portNumber = parseInt(parseResult[1]); //get the recieving interface
 			const dataRecieved = parseResult[3]; //get input data as string
-			log("Incoming data from port", portNumber,"Data", dataRecieved);
+			log("Incoming data from port", portNumber, "Data", dataRecieved);
 			const index = portNumber - 1;
 			const interfacePort = this.interface[index];
 			if (interfacePort)
@@ -261,8 +261,8 @@ export class Nexmosphere extends Driver<ConnType> {
 	private addInterface(
 		portNumber: number,	// 1-based interface/port number
 		modelCode: string, // Nexmosphere's element model code
-		name?:string	  // optional name (from Config Options)
-	){
+		name?: string	  // optional name (from Config Options)
+	) {
 		const ix = portNumber - 1;
 		let ctor = Nexmosphere.interfaceRegistry[modelCode];
 		if (!ctor) {
@@ -330,7 +330,7 @@ class RfidInterface extends BaseInterface {
 	private mTagNumber = 0;
 	private mIsPlaced = false;
 
-	@property("Last recieved RFID tag ID", true)
+	@property("Last recieved RFID tag ID", false)
 	get tagNumber(): number {
 		return this.mTagNumber;
 	}
@@ -360,13 +360,13 @@ class NfcInterface extends BaseInterface {
 	private mTagUID = "";
 	private mIsPlaced = false;
 
-	@property("Last recieved tag UID", true)
+	@property("Last recieved tag UID", false)
 	get tagUID(): string { return this.mTagUID; }
 	set tagUID(value: string) { this.mTagUID = value; }
 
 	@property("A tag is placed", true)
 	get isPlaced(): boolean { return this.mIsPlaced; }
-	set isPlaced(value: boolean) { this.mIsPlaced = value;}
+	set isPlaced(value: boolean) { this.mIsPlaced = value; }
 
 
 	receiveData(data: string) {
@@ -406,9 +406,9 @@ class XWaveLedInterface extends BaseInterface {
 	}
 	get X_Wave_Command(): string { return this.mX_Wave_Command; }
 
-	private sendData(data:string) {
-		const myIfaceNo = (("000" + (this.index+1)).slice(-3));
-		const message = "X" + myIfaceNo + "B[" + data +"]";
+	private sendData(data: string) {
+		const myIfaceNo = (("000" + (this.index + 1)).slice(-3));
+		const message = "X" + myIfaceNo + "B[" + data + "]";
 		this.driver.send(message);
 	}
 
@@ -444,6 +444,14 @@ Nexmosphere.registerInterface(ProximityInterface, "XY116", "XY146", "XY176");
 class TimeOfFlightInterface extends BaseInterface {
 	private mProximity: number;
 	private mAirButton: boolean;
+	private mRawData: string;
+	private mTrigger1: boolean = false;
+	private mTrigger2: boolean = false;
+	private mTrigger3: boolean = false;
+	private mTrigger4: boolean = false;
+	private mTrigger5: boolean = false;
+	private mTrigger6: boolean = false;
+	private mTrigger7: boolean = false;
 
 	@property("Proximity zone", true)
 	get proximity(): number { return this.mProximity; }
@@ -453,26 +461,67 @@ class TimeOfFlightInterface extends BaseInterface {
 	get airButton(): boolean { return this.mAirButton; }
 	set airButton(value: boolean) { this.mAirButton = value; }
 
+	@property("Raw data last received", true)
+	get rawData(): string { return this.mRawData; }
+	set rawData(value: string) { this.mRawData = value; }
+
+	@property("Proximity 1 or below", true)
+	get triggerOn1(): boolean { return this.mTrigger1; }
+	set triggerOn1(value: boolean) { this.mTrigger1 = value; }
+
+	@property("Proximity 2 or below", true)
+	get triggerOn2(): boolean { return this.mTrigger2; }
+	set triggerOn2(value: boolean) { this.mTrigger2 = value; }
+
+	@property("Proximity 3 or below", true)
+	get triggerOn3(): boolean { return this.mTrigger3; }
+	set triggerOn3(value: boolean) { this.mTrigger3 = value; }
+
+	@property("Proximity 4 or below", true)
+	get triggerOn4(): boolean { return this.mTrigger4; }
+	set triggerOn4(value: boolean) { this.mTrigger4 = value; }
+
+	@property("Proximity 5 or below", true)
+	get triggerOn5(): boolean { return this.mTrigger5; }
+	set triggerOn5(value: boolean) { this.mTrigger5 = value; }
+
+	@property("Proximity 6 or below", true)
+	get triggerOn6(): boolean { return this.mTrigger6; }
+	set triggerOn6(value: boolean) { this.mTrigger6 = value; }
+
+	@property("Proximity 7 or below", true)
+	get triggerOn7(): boolean { return this.mTrigger7; }
+	set triggerOn7(value: boolean) { this.mTrigger7 = value; }
+
 	receiveData(data: string) {
 		const splitData = data.split("=");
 		const sensorValue = splitData[1];
-
+		this.rawData = data;
 		switch (sensorValue) {
-		case "AB":
-			this.airButton = true;
-			break;
-		case "XX":
-			this.airButton = false;
-			this.proximity = 8; //We define indefinite as zone 8
-			break;
-		default:	// Assume others are zone numbers
-			const proximity = parseInt(sensorValue);
-			if (!isNaN(proximity)) {
-				this.proximity = parseInt(sensorValue);
+			case "AB":
+				this.airButton = true;
+				this.proximity = 1; //We define AB as zone 1
+				break;
+			case "XX":
 				this.airButton = false;
-			}
-			break;
+				this.proximity = 8; //We define indefinite as zone 8
+				break;
+			default:	// Assume others are zone numbers
+				const proximity = parseInt(sensorValue);
+				if (!isNaN(proximity)) {
+					this.proximity = parseInt(sensorValue);
+					this.airButton = false;
+				}
+				break;
 		}
+		this.triggerOn1 = this.proximity <= 1;
+		this.triggerOn2 = this.proximity <= 2;
+		this.triggerOn3 = this.proximity <= 3;
+		this.triggerOn4 = this.proximity <= 4;
+		this.triggerOn5 = this.proximity <= 5;
+		this.triggerOn6 = this.proximity <= 6;
+		this.triggerOn7 = this.proximity <= 7;
+
 	}
 
 	userFriendlyName() {
@@ -523,7 +572,7 @@ class QuadButtonInterface extends BaseInterface {
 		super(driver, index);
 		this.buttons = [];
 		for (let ix = 0; ix < QuadButtonInterface.kNumButtons; ++ix)
-			this.buttons.push({state: false, ledData: 0});
+			this.buttons.push({ state: false, ledData: 0 });
 	}
 
 	@property(kButtonDescr, true)
@@ -564,19 +613,19 @@ class QuadButtonInterface extends BaseInterface {
 	// Yes, some ugly repetition above, but aggregates only do static properties
 
 	private getBtn(oneBasedIx: number): boolean {
-		return this.buttons[oneBasedIx-1].state;
+		return this.buttons[oneBasedIx - 1].state;
 	}
 
 	private setBtn(oneBasedIx: number, state: boolean) {
-		this.buttons[oneBasedIx-1].state = state;
+		this.buttons[oneBasedIx - 1].state = state;
 	}
 
 	private getLed(oneBasedIx: number): number {
-		return this.buttons[oneBasedIx-1].ledData;
+		return this.buttons[oneBasedIx - 1].ledData;
 	}
 
 	private setLed(oneBasedIx: number, state: number) {
-		this.buttons[oneBasedIx-1].ledData = state & 3;
+		this.buttons[oneBasedIx - 1].ledData = state & 3;
 		this.ledStatusChanged();
 	}
 
@@ -592,7 +641,7 @@ class QuadButtonInterface extends BaseInterface {
 			if (btn.state !== isPressed) {
 				btn.state = isPressed;
 				// Just fire explicitly since we assign to backing store
-				this.changed("button" + (ix+1));
+				this.changed("button" + (ix + 1));
 			}
 		}
 	}
@@ -600,17 +649,17 @@ class QuadButtonInterface extends BaseInterface {
 	/**
 	 * Send new LED status to device.
 	 */
-	private ledStatusChanged(){
+	private ledStatusChanged() {
 		let toSend = 0;
 		const buttons = this.buttons;
 		for (let ix = 0; ix < buttons.length; ++ix)
-			toSend |= buttons[ix].ledData << ix*2;
+			toSend |= buttons[ix].ledData << ix * 2;
 		this.sendCmd(toSend.toString());
 	}
 
-	private sendCmd(data:string) {
-		let myIfaceNo = (("000" + (this.index+1)).slice(-3));
-		let command = "X" + myIfaceNo + "A[" + data +"]";
+	private sendCmd(data: string) {
+		let myIfaceNo = (("000" + (this.index + 1)).slice(-3));
+		let command = "X" + myIfaceNo + "A[" + data + "]";
 		this.driver.send(command);
 		console.log(command);
 	}
@@ -619,7 +668,7 @@ class QuadButtonInterface extends BaseInterface {
 		return "Btn";
 	}
 }
-Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6","XT4FW6");
+Nexmosphere.registerInterface(QuadButtonInterface, "XTB4N", "XTB4N6", "XT4FW6");
 
 
 /**
@@ -674,8 +723,8 @@ class GenderInterface extends BaseInterface {
 	set age(value: number) { this.mAge = value; }
 
 	@property("X=Very Low, L=Low, H=High", true)
-	get ageConfidence(): string { return this.mAgeConfidence;}
-	set ageConfidence(value: string) { this.mAgeConfidence = value;}
+	get ageConfidence(): string { return this.mAgeConfidence; }
+	set ageConfidence(value: string) { this.mAgeConfidence = value; }
 
 	@property("L=Left, C=Center, R=Right, U=Unidentified", true)
 	get gaze(): string { return this.mGaze; }
@@ -732,8 +781,8 @@ interface IfaceInfo {
 /**
  Log messages, allowing my logging to be easily disabled in one place.
  */
- const DEBUG = false;	// Controls verbose logging
- function log(...messages: any[]) {
+const DEBUG = false;	// Controls verbose logging
+function log(...messages: any[]) {
 	if (DEBUG)
 		// Set to false to disable my logging
 		console.info(messages);

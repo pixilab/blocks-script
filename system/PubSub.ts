@@ -17,26 +17,23 @@ export interface SetterGetter<T> {
  * Options for property setter/getter.
  */
 export interface SGOptions {
-	type?: PropTypeSpecifier;	// Default is string
+	type?: PropTypeSpecifier;	// Assumes string if not specified
 	description?: string;		// Descriptive text for property
 	readOnly?: boolean;			// Default is read/write
 	min?: number;				// Allowed range (Number property type only)
 	max?:number;
+	enumValues?: string[];		// Allowed enum values (if type is "Enum")
 }
 
 /**
  * Specifies a primitive type, either by its global "constructor" function, or as a string.
  */
 export type PrimTypeSpecifier =
-	NumberConstructor
-	| BooleanConstructor
-	| StringConstructor
-	| "Number"
-	| "Boolean"
-	| "String";
+	NumberConstructor | "Number" | "number" |	// Synonymous
+	BooleanConstructor | "Boolean" | "boolean" |
+	StringConstructor | "String" | "string";
 
 /**
  * Extend with additonal non-primitive property type(s).
  */
-export type PropTypeSpecifier = PrimTypeSpecifier
-	| "TimeFlow";
+export type PropTypeSpecifier = PrimTypeSpecifier | "TimeFlow" | "Enum";

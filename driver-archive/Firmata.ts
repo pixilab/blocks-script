@@ -7,7 +7,7 @@
     The driver must be properly configured before it can be used. The pins/channels/servos to be
     used must be specified in the "Custom Options" field in the Network device. Below is a sample
     configuration covering the JSON syntax and all possible settings:
-    
+
     {
         "samplingInterval": 100,        // - How often to send analog samples in milliseconds
                                         //   (0-16383 ms). Default is 100 ms.
@@ -30,7 +30,7 @@
                 "channel": 3,           // - The channel number (0-15).
                 "property": "Temp",     // - The name of the Blocks property.
                 "threshold": 5,         // - The change required in the reported value for
-                                        //   reporting property change in Blocks. Default is 1. 
+                                        //   reporting property change in Blocks. Default is 1.
                 "maxValue": 12345       // - The reported value (0-16383) corresponding to
                                         //   normalized value 1. Default is 1023.
             }
@@ -48,12 +48,12 @@
                 "property": "Servo",    // - The name of the Blocks property.
                 "minPulse": 500,        // - The PWM pulse width in microseconds corresponding to
                                         //   0 degrees. Default is 544.
-                "maxPulse": 2500        // - The PWM pulse width in microseconds corresponding to 
+                "maxPulse": 2500        // - The PWM pulse width in microseconds corresponding to
                                         //   180 degrees. Default is 2400.
             }
         ]
     }
- 
+
     Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
     melvinm1 2023-08-01
 */
@@ -171,7 +171,7 @@ export class Firmata extends Driver<ConnType> {
 
     constructor(private connection: ConnType) {
         super(connection);
-        
+
         try {
             let config = JSON.parse(this.connection.options) as Config;
             this.readConfig(config);
@@ -223,7 +223,7 @@ export class Firmata extends Driver<ConnType> {
                 this.registerServoProperty(servoConfig);
             }
         }
-        if (config.samplingInterval !== undefined && 
+        if (config.samplingInterval !== undefined &&
             typeof config.samplingInterval === "number") {
             this.samplingInterval = config.samplingInterval;
         }
@@ -239,8 +239,8 @@ export class Firmata extends Driver<ConnType> {
         }
         let pinNumber = pinConfig.pin;
         let property = pinConfig.property;
-        let mode = pinConfig.output ? PinMode.Output : 
-            pinConfig.pullup === undefined || pinConfig.pullup ? 
+        let mode = pinConfig.output ? PinMode.Output :
+            pinConfig.pullup === undefined || pinConfig.pullup ?
                 PinMode.Pullup : PinMode.Input;
         let value = false; // Value held in closure
         let sgFunction = (newValue?: boolean, isFeedback?: boolean): boolean => {
@@ -259,7 +259,7 @@ export class Firmata extends Driver<ConnType> {
 
         this.property(
             property,
-            { type: Boolean, readOnly: mode !== PinMode.Output }, 
+            { type: Boolean, readOnly: mode !== PinMode.Output },
             sgFunction
         );
         this.digitalPins[pinNumber] = {
@@ -289,16 +289,16 @@ export class Firmata extends Driver<ConnType> {
         }
 
         this.property(
-            channelConfig.property, 
+            channelConfig.property,
             { type: Number, readOnly: true, min: 0, max: 1 },
             sgFunction
         );
         this.analogChannels[channelConfig.channel] = {
             number: channelConfig.channel,
             property: channelConfig.property,
-            threshold: channelConfig.threshold !== undefined ? 
+            threshold: channelConfig.threshold !== undefined ?
                 channelConfig.threshold : 1,
-            maxValue: channelConfig.maxValue !== undefined ? 
+            maxValue: channelConfig.maxValue !== undefined ?
                 channelConfig.maxValue : 1023, // Default for Arduino
             reportedValue: value,
             setterGetter: sgFunction
@@ -306,14 +306,14 @@ export class Firmata extends Driver<ConnType> {
     }
 
     /**
-     * Registers a PWM pin in this.pwmPins and creates corresponding Blocks 
+     * Registers a PWM pin in this.pwmPins and creates corresponding Blocks
      * property.
      */
     private registerPWMPinProperty(pwmPinConfig: PWMPinConfig): void {
         if (!this.isValidPinNumber(pwmPinConfig.pin)) {
             throw "Invalid PWM pin number!";
         }
-        let maxValue = pwmPinConfig.maxValue !== undefined ? 
+        let maxValue = pwmPinConfig.maxValue !== undefined ?
             pwmPinConfig.maxValue : 255; // 255 default for Arduino
         let value = 0;
         let sgFunction = (newValue?: number): number => {
@@ -334,7 +334,7 @@ export class Firmata extends Driver<ConnType> {
         }
 
         this.property(
-            pwmPinConfig.property, 
+            pwmPinConfig.property,
             { type: Number, min: 0, max: 1 },
             sgFunction
         );
@@ -371,16 +371,16 @@ export class Firmata extends Driver<ConnType> {
             return value;
         }
         this.property(
-            servoConfig.property, 
+            servoConfig.property,
             { type: Number, readOnly: false, min: 0, max: 1 },
             sgFunction
         );
         this.servos[servoConfig.pin] = {
             pinNumber: servoConfig.pin,
             property: servoConfig.property,
-            minPulse: servoConfig.minPulse !== undefined ? 
+            minPulse: servoConfig.minPulse !== undefined ?
                 servoConfig.minPulse : 544, // Default for Arduino
-            maxPulse: servoConfig.maxPulse !== undefined ? 
+            maxPulse: servoConfig.maxPulse !== undefined ?
                 servoConfig.maxPulse : 2400, // Default for Arduino
             setterGetter: sgFunction
         }
@@ -411,13 +411,13 @@ export class Firmata extends Driver<ConnType> {
     }
 
     /**
-     * Reports the pin modes for all digital pins and sets the value of all 
+     * Reports the pin modes for all digital pins and sets the value of all
      * digital output pins.
      */
     private reportDigitalPins(): void {
         for (const key in this.digitalPins) {
             let pin = this.digitalPins[key];
-            
+
             this.connection.sendBytes([
                 Firmata.SET_PIN_MODE,
                 pin.number,
@@ -493,13 +493,13 @@ export class Firmata extends Driver<ConnType> {
 
         for (const key in this.digitalPins) {
             let pin = this.digitalPins[key];
-            
+
             if (pin.mode !== PinMode.Output) {
                 let port = pin.number >> 3;
 
                 if (!reported[port]) {
                     this.connection.sendBytes([
-                        Firmata.TOGGLE_DIGITAL_REPORTING | port, 
+                        Firmata.TOGGLE_DIGITAL_REPORTING | port,
                         1 // Enable
                     ]);
                     reported[port] = true;
@@ -516,7 +516,7 @@ export class Firmata extends Driver<ConnType> {
             let channel = this.analogChannels[key];
 
             this.connection.sendBytes([
-                Firmata.TOGGLE_ANALOG_REPORTING | channel.number, 
+                Firmata.TOGGLE_ANALOG_REPORTING | channel.number,
                 1 // Enable
             ]);
         }
@@ -541,7 +541,7 @@ export class Firmata extends Driver<ConnType> {
                 else if (byte & 0x80) {
                     readBuffer = [byte]; // Start of new message
                 }
-                
+
                 if (readBuffer[0] === Firmata.START_SYSEX) { // Reading sysex
                     if (readBuffer[readBuffer.length - 1] === Firmata.END_SYSEX) {
                         this.handleSysexMessage(readBuffer);
@@ -568,7 +568,7 @@ export class Firmata extends Driver<ConnType> {
                 }
                 else {
                     readBuffer.pop(); // Not interested
-                }        
+                }
             }
         });
     }
@@ -577,7 +577,7 @@ export class Firmata extends Driver<ConnType> {
      * Handles a system exclusive (sysex) message.
      */
     private handleSysexMessage(bytes: number[]): void {
-        if (bytes.length > 2 && 
+        if (bytes.length > 2 &&
             bytes[1] === Firmata.ANALOG_MAPPING_RESPONSE) {
             this.handleAnalogMappingResponseMessage(bytes);
         }
@@ -594,7 +594,7 @@ export class Firmata extends Driver<ConnType> {
             if (channelNumber in this.analogChannels) {
                 this.connection.sendBytes([ // Report analog pin
                     Firmata.SET_PIN_MODE,
-                    pin, 
+                    pin,
                     PinMode.Analog
                 ]);
             }
@@ -608,14 +608,15 @@ export class Firmata extends Driver<ConnType> {
         let port = bytes[0] & 0xF;
         let pinOffset = port * 8;
         let bitmask = bytes[1] | (bytes[2] << 7); // Port (8 pins) bitmask
+        const PIN_NUMBERS = 8;
 
-        for (let i = 0; i < 7; i++) { // For each pin in port
+        for (let i = 0; i < PIN_NUMBERS; i++) { // For each pin in port
             let pinNumber = pinOffset + i;
             let pin = this.digitalPins[pinNumber];
-            
+
             if (pin && pin.mode !== PinMode.Output) {
                 let newValue = (bitmask & 1) === 1;
-                
+
                 pin.setterGetter(newValue, true);
                 this.changed(pin.property);
             }
@@ -629,7 +630,7 @@ export class Firmata extends Driver<ConnType> {
     private handleAnalogReportMessage(bytes: number[]): void {
         let channelNumber = bytes[0] & 0xF;
         let channel = this.analogChannels[channelNumber];
-        
+
         if (channel) {
             let newValue = bytes[1] + (bytes[2] << 7);
             let prevValue = channel.reportedValue;

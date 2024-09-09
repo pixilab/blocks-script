@@ -38,6 +38,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected constructor(protected socket: NetworkTCP) {
 		super(socket);
 		this.propList = [];
+		this.awake = false;	// Until we know
 		socket.subscribe('connect', (sender, message)=> {
 			if (message.type === 'Connection') {
 				if (this.socket.connected)
@@ -256,7 +257,8 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected connectStateChanged() {
 		this.connecting = false;
 		if (!this.socket.connected) {
-			this.connected = false;	// Tell clients connection dropped
+			this.connected = false;		// Tell clients connection dropped
+			this.currCmd = undefined;	// No longer pertinent
 			if (this.correctionRetry)
 				this.correctionRetry.cancel();
 			if (this.reqToSend())
@@ -267,19 +269,19 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	/**
 	 Some comms error happened. Disconnect and re-try from the start soon.
 	 */
-	protected disconnectAndTryAgainSoon() {
+	protected disconnectAndTryAgainSoon(howSoonMillis?: number) {
 		if (this.socket.connected)
 			this.socket.disconnect();
-		this.connectSoon();
+		this.connectSoon(howSoonMillis);
 	}
 
 	/**
 	 Arrange to attempt to connect soon.
 	 */
-	protected connectSoon() {
+	protected connectSoon(howSoonMillis?: number) {
 		if (!this.connectDly) {
 			// console.info("connectSoon");
-			this.connectDly = wait(8000);
+			this.connectDly = wait(howSoonMillis || 8000);
 			this.connectDly.then(
 				() => {
 					this.connectDly = undefined;

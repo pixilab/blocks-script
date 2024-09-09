@@ -133,8 +133,7 @@ export function list<T extends Object>(ofType: Ctor<T>, description?: string) {
 }
 
 /**
- Decorator defining a numeric value constraint, mainly for use on numeric properties and fields (although
- it could conceivably also be used on strings to define a min/max length, or similar).
+ Decorator defining a numeric value constraint, mainly for use on numeric properties and fields.
  */
 export function min(min:number) {
     return function (target: any, propertyKey: string) {

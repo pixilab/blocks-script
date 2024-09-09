@@ -597,10 +597,10 @@ export class ArtnetGnS extends Script {
         return channels;
     }
     private getFixtureChannels(fixtureName: string, channelNames?: string): Channel[] {
-        var fixture : Fixture = Artnet[fixtureName];
+        const fixture = Artnet[fixtureName] as Fixture;
         if (!fixture) return [];
-        var channels: Channel[] = [];
-        var channelNameList: string[] = channelNames && channelNames.trim().length > 0 ?
+		const channels: Channel[] = [];
+		const channelNameList: string[] = channelNames && channelNames.trim().length > 0 ?
             this.getStringArray(channelNames) : this.getFixtureChannelNames(fixtureName);
         for (let i = 0; i < channelNameList.length; i++) {
             var channel: Channel = fixture[channelNameList[i]];

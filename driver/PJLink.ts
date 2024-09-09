@@ -5,6 +5,7 @@
 import {NetworkTCP} from "system/Network";
 import {BoolState, NetworkProjector, NumState} from "driver/NetworkProjector";
 import * as Meta from "system_lib/Metadata";
+import {property} from "system_lib/Metadata";
 
 /**
  Manage a PJLink projector, accessed through a provided NetworkTCPDevice connection.
@@ -13,6 +14,7 @@ import * as Meta from "system_lib/Metadata";
 export class PJLink extends NetworkProjector {
 	private unauthenticated: boolean;	// True if projector requires authentication
 	protected _input: NumState;
+	protected _mute: MuteState;
 	private static kMinInput = 11;
 	private static kMaxInput = 59;
 	private busyHoldoff?: CancelablePromise<void>;	// See projectorBusy()
@@ -21,6 +23,7 @@ export class PJLink extends NetworkProjector {
 	constructor(socket: NetworkTCP) {
 		super(socket);
 		this.addState(this._power = new BoolState('POWR', 'power'));
+		this.addState(this._mute = new MuteState('AVMT', 'mute'));
 		this.addState(this._input = new NumState(
 			'INPT', 'input',
 			PJLink.kMinInput, PJLink.kMaxInput, () => this._power.getCurrent()
@@ -45,12 +48,12 @@ export class PJLink extends NetworkProjector {
 					const on = (value & 1) != 0;
 					if (!this.inCmdHoldoff())
 						this._power.updateCurrent(on);
-					if (on && this.okToSendCommand()) // Attempt input too on case never done
-						this.getInputState(true);
+					if (on && this.okToSendCommand()) // Attempt input too in case never done
+						this.getMiscState1(true);
 				}
 			).catch(error => {
 				this.warnMsg("pollStatus error", error);
-				this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
+				this.disconnectAndTryAgainSoon(70);	// Triggers a new cycle soon
 			});
 			// console.info("pollStatus");
 		}
@@ -67,7 +70,7 @@ export class PJLink extends NetworkProjector {
 	/**
 	 Set desired input source.
 	 */
-	@Meta.property("Desired input source number")
+	@Meta.property("Desired input source number; 11…59")
 	@Meta.min(PJLink.kMinInput)
 	@Meta.max(PJLink.kMaxInput)
 	public set input(value: number) {
@@ -82,6 +85,18 @@ export class PJLink extends NetworkProjector {
 	}
 
 	/**
+	 Mute video & audio..
+	 */
+	@property("A/V Muted")
+	public set mute(on: boolean) {
+		if (this._mute.set(on))
+			this.sendCorrection();
+	}
+	public get mute(): boolean {
+		return this._mute.get();
+	}
+
+	/**
 	 Send queries to obtain the initial state of the projector.
 	 */
 	private getInitialState() {
@@ -90,24 +105,24 @@ export class PJLink extends NetworkProjector {
 			reply => {
 				if (!this.inCmdHoldoff())
 					this._power.updateCurrent((parseInt(reply) & 1) != 0);
-				if (this._power.get()) // Power on - proceed quering input
-					this.getInputState();
+				if (this._power.get()) // Power on - proceed quering misc
+					this.getMiscState1();
 				else {
-					this.connected = true;	// Can't query input if off - skip this step
+					this.connected = true;	// Can't query input if off - skip that step
 					this.sendCorrection();
 				}
 			},
 			error => {
-				this.warnMsg("getInitialState POWR error - retry soon", error);
+				this.warnMsg("getInitialState POWR error - retrying", error);
 				this.disconnectAndTryAgainSoon();	// Triggers a new cycle soon
 			}
 		);
 	}
 
 	/**
-	 Once we know power is on, proceed quering input state.
+	 Once we know power is on, proceed quering other states.
 	 */
-	private getInputState(ignoreError?: boolean) {
+	private getMiscState1(ignoreError?: boolean) {
 		this.request('INPT').then(
 			reply => {
 				const value = parseInt(reply);
@@ -115,13 +130,14 @@ export class PJLink extends NetworkProjector {
 					throw "Invalid INPT query response " + reply;
 				if (!this.inCmdHoldoff())
 					this._input.updateCurrent(value);
-				this.connected = true;
-				this.sendCorrection();
+				this.getMiscState2();
 			},
 			error => {
 				// May fail for "normal" reasons, eg, during power up/down
-				this.warnMsg("getInitialState INPT error", error);
-				if (!ignoreError) {
+				this.warnMsg("INPT query error", error);
+				if (ignoreError)
+					this.getMiscState2();
+				else {
 					this.connected = true; // Allow things to proceed anyway
 					this.sendCorrection();
 				}
@@ -129,12 +145,35 @@ export class PJLink extends NetworkProjector {
 		);
 	}
 
+	private getMiscState2(ignoreError?: boolean) {
+		this.request('AVMT').then(
+			reply => {
+				const value = parseInt(reply);
+				if (typeof value !== 'number')
+					throw "Invalid AVMT query response " + reply;
+				if (!this.inCmdHoldoff())
+					this._mute.updateCurrent(value === 31);
+				this.connected = true;
+				this.sendCorrection();
+			},
+			error => {
+				// May fail for "normal" reasons, eg, during power up/down
+				this.warnMsg("AVMT query error", error);
+				if (!ignoreError) {
+					this.connected = true; // Allow things to proceed anyway
+					this.sendCorrection();
+				}
+			}
+		);
+
+	}
+
 	protected sendCorrection(): boolean {
 		const didSend = super.sendCorrection();
 		if (didSend) {
 			if (this.recentCmdHoldoff)
 				this.recentCmdHoldoff.cancel();
-			this.recentCmdHoldoff = wait(10000);
+			this.recentCmdHoldoff = wait(5000);
 			this.recentCmdHoldoff.then(() => this.recentCmdHoldoff = undefined);
 		}
 		return didSend;
@@ -190,7 +229,7 @@ export class PJLink extends NetworkProjector {
 
 		// console.info("textReceived", text);
 
-		// Strip ogg any leading garbage characters seen occasionally, up to expected %
+		// Strip off any leading garbage characters seen occasionally, up to expected %
 		const msgStart = text.indexOf('%');
 		if (msgStart > 0)
 			text = text.substring(msgStart);
@@ -198,7 +237,7 @@ export class PJLink extends NetworkProjector {
 		// If no query in flight - log a warning and ignore data
 		let currCmd = this.currCmd;
 		if (!currCmd) {
-			this.warnMsg("Unsolicited data", text);
+			this.warnMsg("Unexpected data from projector", text);
 			return;
 		}
 
@@ -208,7 +247,11 @@ export class PJLink extends NetworkProjector {
 			if (text.indexOf(expectedResponse) === 0) {
 				// Reply on expected command/question
 				text = text.substr(expectedResponse.length);	// Trailing text
-				var treatAsOk = text.indexOf('ERR') !== 0;
+				var treatAsOk = text.indexOf('ERR') !== 0; // Consider non-ERR respons as "OK"
+				if (treatAsOk && this.recentCmdHoldoff) {
+					this.recentCmdHoldoff.cancel();	// Consider ack end of any command holdoff
+					this.recentCmdHoldoff = undefined;
+				}
 				if (!treatAsOk) {	// Got error from projector
 					/*	Some errors are "terminal", meaning there's no reason to
 						attempt the command again. For those, just log them then
@@ -228,10 +271,12 @@ export class PJLink extends NetworkProjector {
 						break;
 					case 'ERR3':	// Bad time for this command (usually in standby or not yet awake)
 						// console.info("PJLink ERR3");
+						treatAsOk = true;	// Consider OK, but "busy" for a while
 						this.projectorBusy();
-						// Deliberate fallthrough
+						this.warnMsg("PJLink projector BUSY for command", currCmd, text);
+						break;
 					default:
-						this.warnMsg("PJLink response", currCmd, text);
+						this.warnMsg("PJLink unexpected response", currCmd, text);
 						break;
 					}
 					if (!treatAsOk)
@@ -269,5 +314,11 @@ export class PJLink extends NetworkProjector {
 	 */
 	protected okToSendCommand(): boolean {
 		return !this.busyHoldoff && super.okToSendCommand();
+	}
+}
+
+class MuteState extends BoolState {
+	correct(drvr: NetworkProjector): Promise<string> {
+		return this.correct2(drvr, this.wanted ? '31' : '30');
 	}
 }
