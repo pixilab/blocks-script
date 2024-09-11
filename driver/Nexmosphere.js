@@ -436,6 +436,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             _this.mTrigger5 = false;
             _this.mTrigger6 = false;
             _this.mTrigger7 = false;
+            _this.mTrigger8 = false;
+            _this.mTrigger9 = false;
+            _this.mTrigger10 = false;
             return _this;
         }
         Object.defineProperty(TimeOfFlightInterface.prototype, "proximity", {
@@ -498,6 +501,24 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn8", {
+            get: function () { return this.mTrigger8; },
+            set: function (value) { this.mTrigger8 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn9", {
+            get: function () { return this.mTrigger9; },
+            set: function (value) { this.mTrigger9 = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(TimeOfFlightInterface.prototype, "triggerOn10", {
+            get: function () { return this.mTrigger10; },
+            set: function (value) { this.mTrigger10 = value; },
+            enumerable: false,
+            configurable: true
+        });
         TimeOfFlightInterface.prototype.receiveData = function (data) {
             var splitData = data.split("=");
             var sensorValue = splitData[1];
@@ -509,7 +530,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     break;
                 case "XX":
                     this.airButton = false;
-                    this.proximity = 8;
+                    this.proximity = 999;
                     break;
                 default:
                     var proximity = parseInt(sensorValue);
@@ -526,6 +547,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.triggerOn5 = this.proximity <= 5;
             this.triggerOn6 = this.proximity <= 6;
             this.triggerOn7 = this.proximity <= 7;
+            this.triggerOn8 = this.proximity <= 8;
+            this.triggerOn9 = this.proximity <= 9;
+            this.triggerOn10 = this.proximity <= 10;
         };
         TimeOfFlightInterface.prototype.userFriendlyName = function () {
             return "TOF";
@@ -580,9 +604,24 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], TimeOfFlightInterface.prototype, "triggerOn7", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 8 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn8", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 9 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn9", null);
+        __decorate([
+            (0, Metadata_1.property)("Proximity 10 or below", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], TimeOfFlightInterface.prototype, "triggerOn10", null);
         return TimeOfFlightInterface;
     }(BaseInterface));
-    Nexmosphere.registerInterface(TimeOfFlightInterface, "XY241");
+    Nexmosphere.registerInterface(TimeOfFlightInterface, "XY240", "XY241");
     var AirGestureInterface = (function (_super) {
         __extends(AirGestureInterface, _super);
         function AirGestureInterface() {
@@ -851,7 +890,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         GenderInterface.prototype.userFriendlyName = function () {
             return "Gender";
         };
-        GenderInterface.kParser = /^(0|1)(M|F|U)(X|L|H)([0-7])(X|L|H)(L|C|R|U)/;
+        GenderInterface.kParser = /^(0|1)(M|F|U)(X|L|H)([0-8])(X|L|H)(L|C|R|U)/;
         __decorate([
             (0, Metadata_1.property)("Person detected", true),
             __metadata("design:type", Boolean),
@@ -868,7 +907,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:paramtypes", [String])
         ], GenderInterface.prototype, "genderConfidence", null);
         __decorate([
-            (0, Metadata_1.property)("Age range 0...7", true),
+            (0, Metadata_1.property)("Age range 0...8", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], GenderInterface.prototype, "age", null);
