@@ -135,7 +135,7 @@ export interface DirInfo {
 /**
  * Configuation options for the readCsv method,
  */
-interface CsvOptions {
+export interface CsvOptions {
 	columnSeparator?: string, // Separator character (default is ',' other common option is '\t')
 	escapeChar?: string,		// Escape character (default is none)
 	quote?: string | false 	// Quote charagter to use. None if false. (default is '"')
