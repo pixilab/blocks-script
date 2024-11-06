@@ -121,7 +121,7 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
                 console.log(error + " Could not find config, trying to write example file to script/files/ " + CONFIG_FILE);
                 SimpleFile_1.SimpleFile.write(CONFIG_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2))
                     .then(function () {
-                    return console.log("Config file not found. Exemple written to", CONFIG_FILE);
+                    return console.error("MetricsProvider config file missing. Exemple written to", CONFIG_FILE);
                 }).catch(function (error) {
                     return console.error("Failed writing to", CONFIG_FILE, error);
                 });

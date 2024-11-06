@@ -57,7 +57,7 @@ export class MetricsProvider extends Script {
 				console.log(error + " Could not find config, trying to write example file to script/files/ " + CONFIG_FILE)
                 SimpleFile.write(CONFIG_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2)) //stringify parameters to prettify the settings file
                 .then(() =>
-                    console.log("Config file not found. Exemple written to", CONFIG_FILE)
+                    console.error("MetricsProvider config file missing. Exemple written to", CONFIG_FILE)
                 ).catch(error =>
                     console.error("Failed writing to", CONFIG_FILE, error)
                 );
