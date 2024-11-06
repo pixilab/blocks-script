@@ -119,13 +119,11 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
                 }
             }).catch(function (error) {
                 console.log(error + " Could not find config, trying to write example file to script/files/ " + CONFIG_FILE);
-                SimpleFile_1.SimpleFile.write(CONFIG_FILE + ".example", JSON.stringify(DEFAULT_SETTINGS, null, 2))
+                SimpleFile_1.SimpleFile.write(CONFIG_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2))
                     .then(function () {
-                    console.log("Example config file with default values written successfully");
-                    _this.readSettingsFromFile();
-                })
-                    .catch(function (error) {
-                    console.error("Failed writing file:", CONFIG_FILE, error);
+                    return console.log("Config file not found. Exemple written to", CONFIG_FILE);
+                }).catch(function (error) {
+                    return console.error("Failed writing to", CONFIG_FILE, error);
                 });
             });
         };

@@ -1,4 +1,4 @@
-/**A user script that allows us to collect various usage aspect of blocks and send that data on to Matomo for analysis 
+/**A user script that allows us to collect various usage aspect of blocks and send that data on to Matomo for analysis
  * Make sure the credentials and settings is provided in a config file in script/files/
  * The script will generate an example config file for your convienience.
 */
@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS: MatricsProviderSettings = {
         de:"German"
     }
 }
-const API_VERSION = 1; //Script is targetting v.1 Do not change... 
+const API_VERSION = 1; //Script is targetting v.1 Do not change...
 const CONFIG_FILE = "MetricsProviderSettings.json";
 var settings:MatricsProviderSettings = DEFAULT_SETTINGS;
 
@@ -39,7 +39,7 @@ export class MetricsProvider extends Script {
     public constructor(env : ScriptEnv) {
         super(env);
         this.readSettingsFromFile(); //Get things going..
-       
+
     }
     /**Looking for a settings file, if not present we create one from default settings to use as an example. */
     private readSettingsFromFile(){
@@ -55,25 +55,21 @@ export class MetricsProvider extends Script {
 		}).catch(	// Failed reading file. Try wo write example file.
 			error => {
 				console.log(error + " Could not find config, trying to write example file to script/files/ " + CONFIG_FILE)
-                SimpleFile.write(CONFIG_FILE + ".example", JSON.stringify(DEFAULT_SETTINGS, null, 2)) //stringify parameters to prettify the settings file
-                .then(() => {
-                  
-                    console.log("Example config file with default values written successfully");
-                    this.readSettingsFromFile();
-                })
-                .catch(error => {
-                 
-                    console.error("Failed writing file:", CONFIG_FILE, error);
-                });
+                SimpleFile.write(CONFIG_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2)) //stringify parameters to prettify the settings file
+                .then(() =>
+                    console.log("Config file not found. Exemple written to", CONFIG_FILE)
+                ).catch(error =>
+                    console.error("Failed writing to", CONFIG_FILE, error)
+                );
             }
 		);
     }
     private messageQueue: MatomoBulkMessage = {
         requests:[],
         token_auth:settings.ACCESS_TOKEN
-    };  
-  
-   /**Finds all assigned spots in the system and start tracking them. 
+    };
+
+   /**Finds all assigned spots in the system and start tracking them.
     **/
     private getAllSpots(spotGroup:SpotGroup){
     let spotGroupItems = spotGroup
@@ -88,7 +84,7 @@ export class MetricsProvider extends Script {
                 if (spotGroup) {
                     log("Found spotgroup: " + spotGroupItem.fullName + " find spots recursive")
                     this.getAllSpots(spotGroupItem)
-                } 
+                }
             }
         }
     }
@@ -98,18 +94,18 @@ export class MetricsProvider extends Script {
        const spotPathWithoutSpot = spotPath.replace(/^Spot\./, '');
         if (Spot[spotPathWithoutSpot]){
             log("Recreated spot: " + spotPathWithoutSpot)
-            new TrackedSpot(Spot[spotPathWithoutSpot], this);   
-        } 
+            new TrackedSpot(Spot[spotPathWithoutSpot], this);
+        }
     }
-  
-    /**Return current time in hour minutes seconds as separate parameters 
+
+    /**Return current time in hour minutes seconds as separate parameters
     */
     private  getCurrentTime(): { h: number; m: number; s: number } {
             const now = new Date();
             const hours = now.getHours();
             const minutes = now.getMinutes();
             const seconds = now.getSeconds();
-        
+
             return { h: hours, m: minutes, s: seconds };
         }
 
@@ -119,19 +115,19 @@ export class MetricsProvider extends Script {
         let time:TimeStamp = this.getCurrentTime()
         let message:MatomoMessage = {
                 idsite: settings.SITE_ID,
-                rec: 1, 
+                rec: 1,
                 action_name: actionName,
                 url: url,
-                cid: id, 
+                cid: id,
                 rand: Math.floor(Math.random() * 10000),
-                apiv: API_VERSION, 
-                h: time.h, 
-                m: time.m, 
-                s:time.s,   
-        }     
-        this.queueMessage(message)    
+                apiv: API_VERSION,
+                h: time.h,
+                m: time.m,
+                s:time.s,
+        }
+        this.queueMessage(message)
     }
-    
+
     /**We queue up some messages before we send them on to optimise communication*/
     private queueMessage(message:MatomoMessage){
         const newMessage = '?' + Object.keys(message)
@@ -144,22 +140,22 @@ export class MetricsProvider extends Script {
             this.messageInterval = wait(settings.MAX_SEND_INTERVALL);
             this.messageInterval.then(()=> {
                 this.messageInterval.cancel();
-                this.messageInterval = undefined; 
+                this.messageInterval = undefined;
                 this.sendMessageQueue();
             });
-        } 
+        }
         if (this.messageQueue.requests.length >= settings.MAX_QUEUE_LENGTH){
-            this.sendMessageQueue();  
+            this.sendMessageQueue();
             this.messageQueue.requests=[]; //Clear the queue to allow for new data to arrive.
              // Cancel and clear out any existing send timer since we just sent what we had.
             if (this.messageInterval) {
                 this.messageInterval.cancel();
                 this.messageInterval = undefined;
-            }    
-        }   
-    }   
-             
-    async sendMessageQueue () : Promise<any>{   
+            }
+        }
+    }
+
+    async sendMessageQueue () : Promise<any>{
         let tempQueue = {...this.messageQueue}
         this.messageQueue.requests=[] //clear the cue to get ready for any arriving new messages while sending
         log("Sending outgoing message: " + JSON.stringify(tempQueue));
@@ -167,7 +163,7 @@ export class MetricsProvider extends Script {
         return request.post(JSON.stringify(tempQueue), 'application/json')
         .catch((error) => {
             console.error("Connection to the tracker failed:", error);
-            //We could consider to write data that could not be sent to file that can be sent later. 
+            //We could consider to write data that could not be sent to file that can be sent later.
         });
     }
 
@@ -178,7 +174,7 @@ export class MetricsProvider extends Script {
 
     getTagMappedFullName(key: string): string | undefined {
         const lowercaseKey = key.toLowerCase();
-      
+
         if (lowercaseKey in settings.LANGUAGE_TAG_MAPPING) {
           return settings.LANGUAGE_TAG_MAPPING[lowercaseKey];
         } else {
@@ -190,7 +186,7 @@ export class MetricsProvider extends Script {
 function createRandomHexString(length:number):string{
     const characters = '0123456789abcdef';
     let hexString = '';
-  
+
     for (let i = 0; i < length; i++) {
       const randomIndex = Math.floor(Math.random() * characters.length);
       hexString += characters.charAt(randomIndex);
@@ -201,19 +197,19 @@ function createRandomHexString(length:number):string{
 function replaceDoubleSlashWSingle(inputString: string): string {
     // Use a regular expression to match two consecutive forward slashes
     const regex = /\/\//g;
-  
+
     // Replace the first occurrence of two consecutive forward slashes with a single forward slash
     const resultString = inputString.replace(regex, '/');
-  
+
     return resultString;
   }
 
-   
+
 function log(msg:any){
     if (settings.LOGGING_ENABLED)
     	console.log(msg)
 }
- 
+
 class TrackedSpot {
 
     private trackedSpotName : string = "";
@@ -221,7 +217,7 @@ class TrackedSpot {
     private userID: string = "";
     private currentLanguage:string ="";
     constructor (
-        protected readonly trackedSpot : DisplaySpot,  
+        protected readonly trackedSpot : DisplaySpot,
         protected readonly owner : MetricsProvider
     ) {
         log("Tracked spot created " + this.trackedSpot.fullName);
@@ -229,8 +225,8 @@ class TrackedSpot {
         this.hookUpSources();
     }
 
- 
-    
+
+
     private onPropChanged(sender:DisplaySpot,message:any) {
         switch (message.type) {
             case "DefaultBlock":
@@ -271,7 +267,7 @@ class TrackedSpot {
                 break;
         }
     }
-    
+
 
     private onPropDefaultBlockChanged(){
 
@@ -282,7 +278,7 @@ class TrackedSpot {
     private onPropPlayingBlockChanged(){
     this.hasAttractor = false;
     let trackedPath = settings.TRACKED_URL + "/" + this.trackedSpot.fullName + "/" + this.trackedSpot.playingBlock + "/" + (this.currentLanguage ? this.currentLanguage : "")
-    //If we have a language selected we syntesize it into the full path. 
+    //If we have a language selected we syntesize it into the full path.
     let actionName = this.trackedSpot.playingBlock
     if (!actionName){
         actionName="No_block_playing"
@@ -309,13 +305,13 @@ class TrackedSpot {
     let tags=sender.tagSet.split(",")
     let foundMatch = false
     tags.forEach((tag) => { //look for tags that has been mapped as language tagsin settings. We assume only one language tag at any given time.
-        let mappedFullName = this.owner.getTagMappedFullName(tag.trim()) //trim off any leading spaces from the tag and get full name.   
+        let mappedFullName = this.owner.getTagMappedFullName(tag.trim()) //trim off any leading spaces from the tag and get full name.
         if (mappedFullName !== undefined){
             foundMatch = true
             this.currentLanguage = mappedFullName
         } else if (!foundMatch)
         this.currentLanguage = ""
-        
+
       });
     }
 
@@ -323,11 +319,11 @@ class TrackedSpot {
     { // (sender.fullName ? sender.fullName + "/" : "")
         log("Got some navigation data " + message.foundPath)
         let trackedPath = settings.TRACKED_URL + "/" + sender.fullName + "/" + this.trackedSpot.playingBlock + "/" + (this.currentLanguage ? this.currentLanguage : "") + replaceDoubleSlashWSingle(message.foundPath)
-        //If we have a language selected we syntesize it into the full path. 
-        let actionName = this.trackedSpot.playingBlock + replaceDoubleSlashWSingle(message.foundPath) 
+        //If we have a language selected we syntesize it into the full path.
+        let actionName = this.trackedSpot.playingBlock + replaceDoubleSlashWSingle(message.foundPath)
         this.owner.createMatomoMsg(actionName,trackedPath , this.userID)
     }
-         
+
     private onConnectChanged(sender:DisplaySpot,message:any):void{
         log("Connection changed");
     }
@@ -343,16 +339,16 @@ class TrackedSpot {
         this.trackedSpot.subscribe('spot', (sender, message) => this.onPropChanged(sender,message));
         this.trackedSpot.subscribe('connect', (sender, message) => this.onConnectChanged(sender,message));
         this.trackedSpot.subscribe('finish', () => this.trackedSpotFinished());
-    }  
-     
- 
+    }
+
+
 }
 /**https://developer.matomo.org/api-reference/tracking-api*/
 interface MatomoMessage {
 idsite?:number
 rec?:number
 action_name:string
-url?:string 
+url?:string
 _id?:string //hexadecimal string 16 chars
 cid?:string //defined the Visitor ID for this request
 rand?:number //random number for cache busting
