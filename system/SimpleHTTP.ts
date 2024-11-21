@@ -18,16 +18,36 @@ export var SimpleHTTP: {
  finished.
  */
 export interface Request {
-	setTimeout(seconds: number): Request;	// Maximum time the request may take
-	header(headerName:string, headerValue:string): Request; // Additional header sent with request
+	/*	Time the request is allowed to take to complete.
+		If not specified, a default timeout will be applied, suitable
+		for most operations. For operations that may take a while,
+		such as downloading a large file, you should
+		consider setting the timeout explicitly to a reasonable
+		maximum time.
+	 */
+	setTimeout(seconds: number): Request;
 
-	get<RetType>(): Promise<Response<RetType>>;	// GET request, expected to return RetType (if interpreted)
+	// Add a header to be sent with request.
+	header(headerName:string, headerValue:string): Request;
+
+	// GET request, expected to return RetType (if interpreted)
+	get<RetType>(): Promise<Response<RetType>>;
 
 	// Default mediaType (aka "Content-Type") is "application/json" unless explicitly specified below
-	put<RetType>(dataToSend: string,  mediaType?: string): Promise<Response<RetType>>;	// PUT request with supplied data
-	post<RetType>(dataToSend: string,  mediaType?: string): Promise<Response<RetType>>;	// POST request with supplied data
+	put<RetType>(dataToSend: string, mediaType?: string): Promise<Response<RetType>>;	// PUT request with supplied data
+	post<RetType>(dataToSend: string, mediaType?: string): Promise<Response<RetType>>;	// POST request with supplied data
 
 	delete(): Promise<Response<void>>;	// DELETE request, passing and returning no data
+
+	head(): Promise<Response<void>>;	// Get just response headers. Sometimes useful for preflighting.
+
+	/*	Do a GET request, writing response data toFile. Promise resolved once download complete.
+		See SimpleFile for file path syntax and restrictions.
+		Downloading a large file may take a while, so you may want to call setTimeout prior
+		to calling download on this request, ensuring that the timeout is long enough to
+		complete the download.
+	 */
+	download(toFile:string): Promise<Response<void>>;
 }
 
 interface ReqOpts {

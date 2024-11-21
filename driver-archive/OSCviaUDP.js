@@ -230,8 +230,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Metadata", "../
         ], OSCviaUDP.prototype, "connected", null);
         __decorate([
             Meta.callable('send OSC message'),
-            __param(0, Meta.parameter('OSC address')),
-            __param(1, Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)),
+            __param(0, Meta.parameter('OSC address (path)')),
+            __param(1, Meta.parameter('Comma separated value list. E.g., to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String]),
             __metadata("design:returntype", void 0)

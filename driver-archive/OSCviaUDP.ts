@@ -70,9 +70,9 @@ export class OSCviaUDP extends NetworkDriver {
 
     @Meta.callable('send OSC message')
     public sendMessage(
-        @Meta.parameter('OSC address')
+        @Meta.parameter('OSC address (path)')
         address: string,
-        @Meta.parameter('Comma separated value list. fx to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)
+        @Meta.parameter('Comma separated value list. E.g., to send the values 1 (int), 2.0 (float), and "hello" (string) "1, 2.0, \'hello\'".', true)
         valueList?: string,
     ) {
         var tagsAndBytes: TnB =
