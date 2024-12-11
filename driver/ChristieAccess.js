@@ -34,6 +34,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this.addState(_this._power);
             _this._input = new NetworkProjector_1.NumState('SELECTSOURCE', 'input', ChristieAccess_1.kMinInput, ChristieAccess_1.kMaxInput);
             _this.addState(_this._input);
+            _this.setKeepAlive(false);
+            _this.setPollFrequency(60000);
             _this.poll();
             _this.attemptConnect();
             return _this;
@@ -56,7 +58,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         };
         ChristieAccess.prototype.getInitialState = function () {
             var _this = this;
-            this.connected = false;
+            if (this.keepAlive)
+                this.connected = false;
             this.request('GETQUICKSTANDBY').then(function (reply) {
                 console.info("getInitialState GETQUICKSTANDBY", reply);
                 if (reply)
@@ -97,6 +100,9 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             return '\r\n';
         };
         ChristieAccess.prototype.textReceived = function (text) {
+            if (!this.keepAlive) {
+                this.resetTimeout();
+            }
             if (text) {
                 console.info("textReceived", text);
                 var parts = ChristieAccess_1.replyParser.exec(text);

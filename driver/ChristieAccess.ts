@@ -38,6 +38,9 @@ export class ChristieAccess extends NetworkProjector {
 		);
 		this.addState(this._input);
 
+		this.setKeepAlive(false);			// Makes the keepAlive false, meaning this runs the new approach
+		this.setPollFrequency(60000)		// Sets the poll frequency to 1 minute (value in milliseconds). To run the keep alive true, we can comment this line (it has a default val)
+
 		this.poll();			// Get polling going
 		this.attemptConnect();	// Attempt initial connection
 	}
@@ -72,7 +75,8 @@ export class ChristieAccess extends NetworkProjector {
 	 Send queries to obtain the initial state of the projector.
 	 */
 	private getInitialState() {
-		this.connected = false;	// Mark me as not yet fully awake, to hold off commands
+		if(this.keepAlive)
+			this.connected = false;	// Mark me as not yet fully awake, to hold off commands
 		this.request('GETQUICKSTANDBY').then(
 			reply => {
 				console.info("getInitialState GETQUICKSTANDBY", reply);
@@ -131,6 +135,10 @@ export class ChristieAccess extends NetworkProjector {
 	 Got data from peer. Handle responses to requests.
 	 */
 	protected textReceived(text: string): void {
+		if (!this.keepAlive){
+			this.resetTimeout();
+		}
+
 		if (text) {	// Ignore empty string sometimes received frmo projector
 			console.info("textReceived", text);
 
