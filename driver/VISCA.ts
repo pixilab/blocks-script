@@ -1,6 +1,7 @@
-/*
-	A VISCA PTZ camera driver.
- 	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+/*	VISCA PTZ camera driver.
+
+ 	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se).
+ 	All Rights Reserved.
 
 	On startup, queries the camera for initial status, then tracks
 	status internally (i.e., polls device *once* up front and soon after power up).
@@ -9,7 +10,6 @@
 	detecing lost connection (device unplugged) faster.
 
 	Tested with Minrray UV510AS-12-ST-NDI PTZ 12x zoom
-
  */
 
 import {NetworkTCP} from "system/Network";
@@ -18,9 +18,11 @@ import {driver, parameter, property} from "system_lib/Metadata";
 import * as Meta from "../system_lib/Metadata";
 
 // A simple map-like object type
-interface Dictionary<TElem> { [id: string]: TElem; }
+interface Dictionary<TElem> {
+	[id: string]: TElem;
+}
 
-@driver('NetworkTCP', { port: 1259 })
+@driver('NetworkTCP', {port: 1259})
 export class VISCA extends Driver<NetworkTCP> {
 	readonly props: Dictionary<Property<any>> = {}; // Keyed by prop name
 	readonly informants: Query[] = [];	// All my queries, for initial status poll
@@ -30,10 +32,16 @@ export class VISCA extends Driver<NetworkTCP> {
 
 	readonly retainedStateProps: Dictionary<boolean> = {}; // Props retained across power off, by name
 	private pollStateTimer?: CancelablePromise<any>;
+	private secondAckTimer?: CancelablePromise<any>;		// Make sure we wait 200 milliseconds after the second ACK, before sending a new command. The camera would miss behave otherwise
+	private moveDirection: string; 		// 'Up', 'Left', 'DownRight', etc... for incremental moves
+	readonly joystick: Joystick;
+	public zoomVal: number;			// Slide value for the Adjust Zoom property
+	public focusVal: number;		// Slide value for the Focus Zoom property
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
 		socket.autoConnect(true);
+		this.joystick = new Joystick;
 
 		this.powerQuery = new Query(
 			'PowerQ',
@@ -67,6 +75,11 @@ export class VISCA extends Driver<NetworkTCP> {
 		// The following ones don't seem queryable
 		this.addProp(new PanSpeed(this));
 		this.addProp(new TiltSpeed(this));
+
+		this.addProp(new AdjustPan(this));
+		this.addProp(new AdjustTilt(this));
+		this.addProp(new AdjustZoom(this));
+		this.addProp(new AdjustFocus(this));
 
 		// Listen for connection state change
 		socket.subscribe('connect', (sender, message) => {
@@ -105,6 +118,7 @@ export class VISCA extends Driver<NetworkTCP> {
 	get ready(): boolean {
 		return this.mReady;
 	}
+
 	set ready(value: boolean) {
 		this.mReady = value;
 	}
@@ -117,7 +131,7 @@ export class VISCA extends Driver<NetworkTCP> {
 	@Meta.callable("Recall memory preset")
 	public recallPreset(
 		@parameter("Preset to recall; 0...254")
-		preset: number
+			preset: number
 	): void {
 		this.send(new RecallPresetCmd(preset));
 	}
@@ -175,17 +189,61 @@ export class VISCA extends Driver<NetworkTCP> {
 		return Math.round(this.propValue(propName));
 	}
 
-/**
- * The following was initially in a separate class, but merged in here since
- * the two really were closely related. But kept apart a bit in the code according
- * to the original separation.
- *
- * Keep track of instructions to send to the device. Allow for instruction to be
- * superseded by new one with same name. Also keep track of order to send them in,
- * to be equally fair to all. I will send a command when the device is ready.
- * It's considered ready when connected and the previously sent command has
- * been acked/replied or a reasonable time has elapsed.
- */
+	getMoveDirection(): string {
+		return this.moveDirection;
+	}
+
+	setJoystickPanAxis(val: number) {
+		this.joystick.setPanAxis(val);
+		this.calculateDirection();
+	}
+
+	setJoystickTiltAxis(val: number) {
+		this.joystick.setTiltAxis(val);
+		this.calculateDirection();
+	}
+
+	changeZoom(val: number) {
+		this.zoomVal = val;
+		this.send(new AdjustZoomCmd(this))
+	}
+
+	changeFocus(val: number) {
+		this.focusVal = val;
+		this.send(new AdjustFocusCmd(this))
+	}
+
+	calculateDirection() {
+		if (this.joystick.getPanAxis() === 0 && this.joystick.getTiltAxis() === 0) {              // Only stop if the coords are not 0,0
+			if (this.moveDirection !== "Stop") {
+				this.moveDirection = "Stop";
+				this.send(new MoveDirectionCmd(this));
+			}
+		} else {
+			let jX = this.joystick.getPanAxis()
+			let jY = this.joystick.getTiltAxis()
+
+			let degrees = calculateAngle(jX, jY);
+			let quantizedAngle = quantizeAngle(degrees);
+			let newDirection = angleToDirection(quantizedAngle);	 // Direction to go
+
+			this.moveDirection = newDirection;
+			this.send(new MoveDirectionCmd(this));
+		}
+	}
+
+
+	/**
+	 * The following was initially in a separate class, but merged in here since
+	 * the two really were closely related. But kept apart a bit in the code according
+	 * to the original separation.
+	 *
+	 * Keep track of instructions to send to the device. Allow for instruction to be
+	 * superseded by new one with same name. Also keep track of order to send them in,
+	 * to be equally fair to all. I will send a command when the device is ready.
+	 * It's considered ready when connected and the previously sent command has
+	 * been acked/replied or a reasonable time has elapsed.
+	 */
 	private readonly toSend: Dictionary<Instr> = {}; // Keyed by instruction name
 	private readonly sendQ: Instr[] = [];	// Order in which to send them
 
@@ -237,7 +295,7 @@ export class VISCA extends Driver<NetworkTCP> {
 		if (this.socket.enabled) {	// Only if we're enabled
 			this.pollState();
 			if (!this.pollTimer) {
-				this.pollTimer = wait(1000 * 60);
+				this.pollTimer = wait(10000 * 60);
 				this.pollTimer.then(() => {
 					this.pollTimer = undefined;
 					if (this.socket.connected)
@@ -253,7 +311,7 @@ export class VISCA extends Driver<NetworkTCP> {
 	 * old one then is no longer relevant to send.
 	 */
 	send(instr: Instr) {
-		// console.log("Requested to send", instr.name);
+		//console.log("Requested to send", instr.name, " ", this.sendQ.length);
 		const existing = this.toSend[instr.name]; // Existing one of same type?
 		if (existing) {
 			const qix = this.sendQ.indexOf(existing);
@@ -282,7 +340,6 @@ export class VISCA extends Driver<NetworkTCP> {
 				this.sendTimeout.then(() => {
 					// Timed out - clear and proceed with next anyway
 					const instr = this.currInstr;
-					console.warn("Timed out sending", instr.name, bytesToString(instr.data));
 					this.sendTimeout = undefined;
 					this.currInstr = undefined;
 					this.sendNext();
@@ -296,6 +353,10 @@ export class VISCA extends Driver<NetworkTCP> {
 	 * next instr.
 	 */
 	private instrDone() {
+		if (this.sendTimeout) {
+			this.sendTimeout.cancel();
+			this.sendTimeout = undefined;
+		}
 		this.currInstr = undefined;
 		this.sendNext();
 	}
@@ -311,11 +372,14 @@ export class VISCA extends Driver<NetworkTCP> {
 			const packetEnd = this.fromCam.indexOf(0xff);	// All packets end with ff
 			if (packetEnd >= 2) { 	// Seems like something useful
 				this.processDataFromCam(this.fromCam.splice(0, packetEnd + 1));
-				if (this.sendTimeout) {
+
+				// Now we only consider the instr done when second acked
+				/*if (this.sendTimeout) {
 					this.sendTimeout.cancel();
+					console.log("Canceled timeout")
 					this.sendTimeout = undefined;
-				}
-				this.instrDone();	// Consider current instr acked/answered
+				}*/
+				//this.instrDone();	// Consider current instr acked/answered
 			}
 		}
 
@@ -335,10 +399,11 @@ export class VISCA extends Driver<NetworkTCP> {
 		const msg = packet[1];
 		switch (msg) {
 		case 0x41:	// ACK
-			this.instrDone();
+			//this.instrDone();
 			break;
 		case 0x51:	// EXECUTED TO COMPLETION
-			// Do we need to use this msg at all?
+			this.secondAckTimer = wait(200);
+			this.secondAckTimer.then(() => this.instrDone())		// make sure we wait 200 milliseconds before considering the action done in case of a 51 ack. camera would miss behave otherwise
 			break;
 		case 0x60:	// SYNTAX ERROR
 			this.currInstrFailed("SYNTAX ERROR " + packet[2]);
@@ -430,9 +495,9 @@ class Instr {
 	 * Append nibCOunt nibbles of numeric data from value to data, then terminate
 	 * it with the 0ff command terminator and return the result.
 	 */
-	static pushNibs(data: number[], value: number, nibCount= 4): number[] {
+	static pushNibs(data: number[], value: number, nibCount = 4): number[] {
 		while (nibCount--)
-			data.push((value >> nibCount*4) & 0xf);
+			data.push((value >> nibCount * 4) & 0xf);
 		return data;
 	}
 }
@@ -500,6 +565,77 @@ class PanTiltCmd extends Instr {
 		Instr.pushNibs(data, owner.propValueNum(Pan.propName));
 		Instr.pushNibs(data, owner.propValueNum(Tilt.propName));
 		super('PanTilt', data);
+	}
+}
+
+// 8x 01 06 03 VV WW ...
+class MoveDirectionCmd extends Instr {
+	constructor(owner: VISCA) {
+		const directions: Record<string, number[]> = {
+			"Right": [0x02, 0x03, 0xFF],
+			"UpRight": [0x02, 0x01, 0xFF],
+			"Up": [0x03, 0x01, 0xFF],
+			"UpLeft": [0x01, 0x01, 0xFF],
+			"Left": [0x01, 0x03, 0xFF],
+			"DownLeft": [0x01, 0x02, 0xFF],
+			"Down": [0x03, 0x02, 0xFF],
+			"DownRight": [0x02, 0x02, 0xFF],
+			"Stop": [0x03, 0x03, 0xFF]
+		};
+
+		let direction = owner.getMoveDirection();
+		let directionData = directions[direction];
+		let speedsHex = speedsToHexArray([owner.joystick.getPanSpeed(), owner.joystick.getTiltSpeed()])		// gets the speed (0-24) to number[] like [0x0A, 0x0C]
+
+		let data = [0x81, 0x01, 0x06, 0x01];
+		data = data.concat(speedsHex)
+		data = data.concat(directionData)			// Adds the data regarding the direction of movement
+
+		super("DirectionCmd", data);
+	}
+}
+
+// 8x 01 04 07 2p FF // 8x 01 04 07 3p FF
+class AdjustZoomCmd extends Instr {
+	constructor(owner: VISCA) {
+		let numberHex: number;
+
+		if (owner.zoomVal === 0) {
+			numberHex = 0x00
+		} else {
+			if (owner.zoomVal < 0)
+				numberHex = mapNumber("Wide", Math.abs(owner.zoomVal))
+			else
+				numberHex = mapNumber("Tele", Math.abs(owner.zoomVal))
+		}
+
+		let data = [0x81, 0x01, 0x04, 0x07];
+		data.push(numberHex)
+		data.push(0xFF)			// Adds FF needed for the packet command
+
+		super("AdjustZoomCmd", data);
+	}
+}
+
+// 8x 01 04 07 2p FF // 8x 01 04 07 3p FF
+class AdjustFocusCmd extends Instr {
+	constructor(owner: VISCA) {
+		let numberHex: number;
+
+		if (owner.focusVal === 0) {
+			numberHex = 0x00
+		} else {
+			if (owner.focusVal < 0)
+				numberHex = mapNumber("Far", Math.abs(owner.focusVal))
+			else
+				numberHex = mapNumber("Near", Math.abs(owner.focusVal))
+		}
+
+		let data = [0x81, 0x01, 0x04, 0x08];
+		data.push(numberHex)
+		data.push(0xFF)			// Adds FF needed for the packet command
+
+		super("AdjustFocusCmd", data);
 	}
 }
 
@@ -598,7 +734,7 @@ abstract class NumProp extends Property<number> {
 	 * to negative value. Return undefined if out of range for me (occasionally
 	 * seen crazy answers from device)
 	 */
-	protected collectNibs(reply: number[], nibCount: number, offs = 2): number|undefined {
+	protected collectNibs(reply: number[], nibCount: number, offs = 2): number | undefined {
 		var result = 0;
 
 		for (var nib = nibCount; nib; --nib)
@@ -623,7 +759,7 @@ class Power extends Property<boolean> {
 		owner.addRetainedStateProp(Power.propName);
 		owner.property<boolean>(
 			Power.propName,
-			{ type: Boolean },
+			{type: Boolean},
 			val => this.propGS(val)
 		);
 	}
@@ -658,7 +794,7 @@ class Autofocus extends Property<boolean> {
 		owner.addRetainedStateProp(Autofocus.propName);
 		owner.property<boolean>(
 			Autofocus.propName,
-			{ type: Boolean },
+			{type: Boolean},
 			val => this.propGS(val)
 		);
 	}
@@ -753,6 +889,59 @@ class Tilt extends NumProp {
 	}
 }
 
+class AdjustPan extends NumProp {
+	static readonly propName = "adjustPan";
+
+	constructor(owner: VISCA) {
+		super(owner, AdjustPan.propName, 0, -1, 1);
+		owner.addRetainedStateProp(AdjustPan.propName);
+	}
+
+	protected desiredStateChanged(value: number) {
+		this.owner.setJoystickPanAxis(value);
+	}
+}
+
+class AdjustTilt extends NumProp {
+	static readonly propName = "adjustTilt";
+
+	constructor(owner: VISCA) {
+		super(owner, AdjustTilt.propName, 0, -1, 1);
+		owner.addRetainedStateProp(AdjustTilt.propName);
+	}
+
+	protected desiredStateChanged(value: number) {
+		this.owner.setJoystickTiltAxis(value);
+	}
+}
+
+class AdjustZoom extends NumProp {
+	static readonly propName = "adjustZoom";
+
+	constructor(owner: VISCA) {
+		super(owner, AdjustZoom.propName, 0, -1, 1);
+		owner.addRetainedStateProp(AdjustZoom.propName);
+	}
+
+	protected desiredStateChanged(value: number) {
+		this.owner.changeZoom(value);
+	}
+}
+
+class AdjustFocus extends NumProp {
+	static readonly propName = "adjustFocus";
+
+	constructor(owner: VISCA) {
+		super(owner, AdjustFocus.propName, 0, -1, 1);
+		owner.addRetainedStateProp(AdjustFocus.propName);
+	}
+
+	protected desiredStateChanged(value: number) {
+		this.owner.changeFocus(value);
+	}
+}
+
+
 class PanSpeed extends NumProp {
 	static readonly propName = "panSpeed";
 
@@ -770,4 +959,143 @@ class TiltSpeed extends NumProp {
 		super(owner, TiltSpeed.propName, 24, 1, 20);
 		owner.addRetainedStateProp(TiltSpeed.propName);
 	}
+}
+
+/**
+ * Relevant for Incremental Movement controls.
+ * Class to manage joystick related actions, mapping the values (x,y) it gets from a joystick block, and automatically calculating
+ * the speed vlaue for the pan and tilt, for the incremental movement.
+ */
+class Joystick {
+	private panAxis: number;			// Pan value in the axis for the joystick controller
+	private panSpeed: number;			// Speed we will change the pan value (based on the axis value)
+
+	private tiltAxis: number			// Tilt value in the axis for the joystick controller
+	private tiltSpeed: number; 			// Speed we will change the tilt value (based on the axis value)
+
+	constructor() {
+		this.panAxis = 0;
+		this.panSpeed = 0;
+
+		this.tiltAxis = 0;
+		this.tiltSpeed = 0;
+	}
+
+	public getPanAxis(): number {
+		return this.panAxis;
+	}
+
+	public setPanAxis(newVal: number) {
+		this.panAxis = newVal;
+		this.panSpeed = mapAbsoluteValue(newVal, [1, 24])		// update the pan speed
+
+	}
+
+	public getTiltAxis(): number {
+		return this.tiltAxis;
+	}
+
+	public setTiltAxis(newVal: number) {
+		this.tiltAxis = newVal;
+		this.tiltSpeed = mapAbsoluteValue(newVal, [1, 20])		// update the tilt speed
+	}
+
+	public getPanSpeed(): number {
+		return this.panSpeed;
+	}
+
+	public getTiltSpeed(): number {
+		return this.tiltSpeed;
+	}
+}
+
+function calculateAngle(x: number, y: number): number {
+	if (x < -1 || x > 1 || y < -1 || y > 1) {
+		throw new Error("X and Y values must be between -1 and 1.");
+	}
+	const radians = Math.atan2(y, x); // Get angle in radians
+	let degrees = radians * (180 / Math.PI); // Convert to degrees
+	if (degrees < 0) {
+		degrees += 360; // Normalize to 0-360 degrees
+	}
+	// Reverse direction to make angles clockwise
+	degrees = (360 - degrees) % 360;
+	return degrees;
+}
+
+/**
+ * Quantize the angle to 45 degrees increments
+ */
+function quantizeAngle(angle: number): number {
+	const quantized = Math.round(angle / 45) * 45; // Round to the nearest multiple of 45
+	return quantized % 360; // Ensure the result is within [0...360]
+}
+
+/**
+ * Receives an angles (multiple of 45 degrees) and returns the corrspondent direction
+ * @param angle a certain angles
+ * @returns returns the direction of the angle provided
+ */
+function angleToDirection(angle: number): string {
+	const directions: Record<number, string> = {
+		0: "Right",
+		45: "UpRight",
+		90: "Up",
+		135: "UpLeft",
+		180: "Left",
+		225: "DownLeft",
+		270: "Down",
+		315: "DownRight"
+	};
+
+	return directions[angle];
+}
+
+/**
+ * Makes a number[] with the speed values in hex
+ * @param num1 A certain speed value (number)
+ * @param num2 A certain speed value (number)
+ * @returns a number[] of both speed values in hex
+ */
+function speedsToHexArray([num1, num2]: [number, number]): number[] {
+	let hexVal1 = `0x${num1.toString(16).toUpperCase()}`
+	let hexVal2 = `0x${num2.toString(16).toUpperCase()}`
+
+	return [parseInt(hexVal1), parseInt(hexVal2)];
+}
+
+
+/**
+ * Maps a value from the range [-1, 1] (absolute) to a specified range.
+ * @param value The input value (between -1 and 1).
+ * @param range The target range as [min, max].
+ * @returns The proportional mapped value within the range, or 0 if the input value is 0.
+ */
+function mapAbsoluteValue(value: number, range: [number, number]): number {
+	const [min, max] = range;
+	const absoluteValue = Math.abs(value);		// Take the absolute value of the input
+	const mappedValue = absoluteValue * (max - min) + min;		// Map the absolute value (0 to 1) to the target range
+
+	return Math.round(mappedValue);		// Ensure the result is an integer
+}
+
+
+function mapNumber<T extends 'Wide' | 'Tele' | 'Near' | 'Far'>(type: T, input: number): number {
+	// Ensure input is between 0 and 1
+	if (input < 0 || input > 1) {
+		throw new Error('Input must be between 0 and 1');
+	}
+
+	// Map the input to a range between 0 and 7
+	const mappedNumber = Math.round(input * 7);
+
+	// Determine the base value (0x2 or 0x3) based on the type
+	let baseValue: number;
+	if (type === 'Wide' || type === 'Near') {
+		baseValue = 0x3;
+	} else
+		baseValue = 0x2;
+
+	// Return the combined value
+	return (baseValue << 4) | mappedNumber; // Shift the base value by 4 bits and combine with mappedNumber
 }

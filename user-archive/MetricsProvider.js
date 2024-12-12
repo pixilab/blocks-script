@@ -110,22 +110,18 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
             SimpleFile_1.SimpleFile.readJson(CONFIG_FILE).then(function (data) {
                 try {
                     settings = data;
-                    if (settings) {
+                    if (settings)
                         _this.getAllSpots(Spot_1.Spot);
-                    }
                 }
                 catch (parseError) {
                     console.error("Failed parsing JSON data from file", CONFIG_FILE, parseError);
                 }
             }).catch(function (error) {
                 console.log(error + " Could not find config, trying to write example file to script/files/ " + CONFIG_FILE);
-                SimpleFile_1.SimpleFile.write(CONFIG_FILE + ".example", JSON.stringify(DEFAULT_SETTINGS, null, 2))
-                    .then(function () {
-                    console.log("Example config file with default values written successfully");
-                    _this.readSettingsFromFile();
-                })
-                    .catch(function (error) {
-                    console.error("Failed writing file:", CONFIG_FILE, error);
+                SimpleFile_1.SimpleFile.write(CONFIG_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2)).then(function () {
+                    return console.error("MetricsProvider config file missing. Exemple written to", CONFIG_FILE);
+                }).catch(function (error) {
+                    return console.error("Failed writing to", CONFIG_FILE, error);
                 });
             });
         };
@@ -135,13 +131,13 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
                 var spotGroupItem = spotGroupItems[item];
                 var displaySpot = spotGroupItem.isOfTypeName("DisplaySpot");
                 if (displaySpot) {
-                    log("Found displayspot: " + spotGroupItem.fullName);
+                    log("Found Display Spot: " + spotGroupItem.fullName);
                     new TrackedSpot(spotGroupItem, this);
                 }
                 else {
                     var spotGroup_1 = spotGroupItem.isOfTypeName("SpotGroup");
                     if (spotGroup_1) {
-                        log("Found spotgroup: " + spotGroupItem.fullName + " find spots recursive");
+                        log("Found Spot Group: " + spotGroupItem.fullName + " find spots recursive");
                         this.getAllSpots(spotGroupItem);
                     }
                 }
@@ -212,7 +208,7 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
                     request = SimpleHTTP_1.SimpleHTTP.newRequest(settings.TRACKER_URL);
                     return [2, request.post(JSON.stringify(tempQueue), 'application/json')
                             .catch(function (error) {
-                            console.error("Connection to the tracker failed:", error);
+                            console.error("Matomo connection failed:", error);
                         })];
                 });
             });
@@ -222,15 +218,13 @@ define(["require", "exports", "system/Spot", "system_lib/Script", "system/Simple
         };
         MetricsProvider.prototype.getTagMappedFullName = function (key) {
             var lowercaseKey = key.toLowerCase();
-            if (lowercaseKey in settings.LANGUAGE_TAG_MAPPING) {
+            if (lowercaseKey in settings.LANGUAGE_TAG_MAPPING)
                 return settings.LANGUAGE_TAG_MAPPING[lowercaseKey];
-            }
-            else {
+            else
                 return undefined;
-            }
         };
         __decorate([
-            Meta.callable("Reinitialize script"),
+            Meta.callable("Restart script, reloading its configuration file"),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", []),
             __metadata("design:returntype", void 0)
