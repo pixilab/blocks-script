@@ -8,7 +8,7 @@
 #
 
 if [ ! -d "system_lib" ]; then
-  echo "ABORTING. The current directory doesn't seem to be Blocks' script"
+  echo "ABORTING. The current directory doesn't seem to be Blocks script"
   echo "directory. Use the cd command to move into that directory first."
   exit
 fi
