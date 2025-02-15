@@ -25,7 +25,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1, Meta) {
+define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.VISCA = void 0;
@@ -38,6 +38,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             _this.informants = [];
             _this.mReady = false;
             _this.retainedStateProps = {};
+            _this.lastRecalledPreset = 0;
+            _this.lastStoredPreset = 0;
             _this.toSend = {};
             _this.sendQ = [];
             _this.fromCam = [];
@@ -88,8 +90,42 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             configurable: true
         });
         VISCA.prototype.recallPreset = function (preset) {
-            this.send(new RecallPresetCmd(preset));
+            this.preset = preset + 1;
         };
+        Object.defineProperty(VISCA.prototype, "preset", {
+            get: function () {
+                return this.lastRecalledPreset;
+            },
+            set: function (pres) {
+                this.lastRecalledPreset = pres;
+                if (pres > 0)
+                    this.send(new RecallPresetCmd(pres - 1));
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(VISCA.prototype, "storePreset", {
+            get: function () {
+                return this.lastStoredPreset;
+            },
+            set: function (pres) {
+                var _this = this;
+                this.lastStoredPreset = pres;
+                if (pres > 0) {
+                    this.send(new StorePresetCmd(pres - 1));
+                    if (this.lastStoredPresetTimeout)
+                        this.lastStoredPresetTimeout.cancel();
+                    this.lastStoredPresetTimeout = wait(900);
+                    this.lastStoredPresetTimeout.then(function () {
+                        _this.lastStoredPresetTimeout = undefined;
+                        _this.lastStoredPreset = 0;
+                        _this.changed('lastStoredPreset');
+                    });
+                }
+            },
+            enumerable: false,
+            configurable: true
+        });
         VISCA.prototype.pollState = function () {
             if (!this.initialPollDone) {
                 for (var _i = 0, _a = this.informants; _i < _a.length; _i++) {
@@ -298,12 +334,26 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:paramtypes", [Boolean])
         ], VISCA.prototype, "ready", null);
         __decorate([
-            Meta.callable("Recall memory preset"),
+            (0, Metadata_1.callable)("DEPRECATED - use preset property instead. Recall memory preset (0-based)"),
             __param(0, (0, Metadata_1.parameter)("Preset to recall; 0...254")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
         ], VISCA.prototype, "recallPreset", null);
+        __decorate([
+            (0, Metadata_1.min)(1),
+            (0, Metadata_1.max)(64),
+            (0, Metadata_1.property)("Recall preset (1-based)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], VISCA.prototype, "preset", null);
+        __decorate([
+            (0, Metadata_1.min)(1),
+            (0, Metadata_1.max)(64),
+            (0, Metadata_1.property)("Store preset (1-based)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], VISCA.prototype, "storePreset", null);
         VISCA = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 1259 }),
             __metadata("design:paramtypes", [Object])
@@ -390,6 +440,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _super.call(this, 'Focus', Instr.pushNibs([0x81, 1, 4, 0x48], Math.round(value))) || this;
         }
         return FocusCmd;
+    }(Instr));
+    var StorePresetCmd = (function (_super) {
+        __extends(StorePresetCmd, _super);
+        function StorePresetCmd(presetNumber) {
+            var cmd = [0x81, 1, 4, 0x3f, 1, Math.round(Math.min(254, presetNumber))];
+            return _super.call(this, 'RecallPreset', cmd) || this;
+        }
+        return StorePresetCmd;
     }(Instr));
     var RecallPresetCmd = (function (_super) {
         __extends(RecallPresetCmd, _super);

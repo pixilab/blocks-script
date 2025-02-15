@@ -14,8 +14,7 @@
 
 import {NetworkTCP} from "system/Network";
 import {Driver} from "system_lib/Driver";
-import {driver, parameter, property} from "system_lib/Metadata";
-import * as Meta from "../system_lib/Metadata";
+import {driver, parameter, property, callable, min, max} from "system_lib/Metadata";
 
 // A simple map-like object type
 interface Dictionary<TElem> {
@@ -37,6 +36,10 @@ export class VISCA extends Driver<NetworkTCP> {
 	readonly joystick: Joystick;
 	public zoomVal: number;			// Slide value for the Adjust Zoom property
 	public focusVal: number;		// Slide value for the Focus Zoom property
+
+	private lastRecalledPreset: number = 0;	// Last RECALLED preset, 1-based, 0 indicates NONE
+	private lastStoredPreset: number = 0;	// Last STORED preset, 1-based, 0 indicates NONE
+	private lastStoredPresetTimeout: CancelablePromise<any>;
 
 	public constructor(private socket: NetworkTCP) {
 		super(socket);
@@ -124,16 +127,60 @@ export class VISCA extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 * Recall a preset by number. Note that this doesn't update
-	 * other parameters according to what the preset states,
-	 * so those will likely be out of sync.
+	 * Callable to recall a preset by number.
+	 * DEPRECATED - use the 'preset' property below instead.
 	 */
-	@Meta.callable("Recall memory preset")
+	@callable("DEPRECATED - use preset property instead. Recall memory preset (0-based)")
 	public recallPreset(
 		@parameter("Preset to recall; 0...254")
-			preset: number
+		preset: number
 	): void {
-		this.send(new RecallPresetCmd(preset));
+		this.preset = preset + 1;	// Property is 1-based, while I'm zero based
+	}
+
+	/**
+	 * Property flavor for recalling preset by 1-based number. Note that
+	 * this doesn't update other parameters according to what the preset states,
+	 * so those will likely be out of sync.
+	 */
+	@min(1) @max(64)
+	@property("Recall preset (1-based)")
+	get preset(): number {
+		return this.lastRecalledPreset;
+	}
+	set preset(pres: number) {
+		this.lastRecalledPreset = pres;
+		if (pres > 0)
+			this.send(new RecallPresetCmd(pres-1));
+	}
+
+	/**
+	 * Somewhat strange property for storing preset. You can set this to a 1-based number
+	 * to store a preset under that number. This property value will only remain set
+	 * for a brief time, so this is a somewhat "momentary" property. This allows you
+	 * to change the camera position and then store it into the same preset again,
+	 * which would be a bit strange if this property retained its last store preset
+	 * number indefinitely.
+	 */
+	@min(1) @max(64)
+	@property("Store preset (1-based)")
+	get storePreset(): number {
+		return this.lastStoredPreset;
+	}
+	set storePreset(pres: number) {
+		this.lastStoredPreset = pres;
+		if (pres > 0) {
+			this.send(new StorePresetCmd(pres - 1));
+			// Revert back to 0 after timeout, to allow storing the same preset again
+			if (this.lastStoredPresetTimeout)
+				this.lastStoredPresetTimeout.cancel();
+			this.lastStoredPresetTimeout = wait(900);
+			this.lastStoredPresetTimeout.then(() => {
+				this.lastStoredPresetTimeout = undefined;
+				this.lastStoredPreset = 0;
+				this.changed('lastStoredPreset');
+			});
+		}
 	}
 
 	/**
@@ -546,6 +593,13 @@ class ZoomCmd extends Instr {
 class FocusCmd extends Instr {
 	constructor(value: number) {
 		super('Focus', Instr.pushNibs([0x81, 1, 4, 0x48], Math.round(value)));
+	}
+}
+
+class StorePresetCmd extends Instr {
+	constructor(presetNumber: number) {
+		const cmd = [0x81, 1, 4, 0x3f, 1, Math.round(Math.min(254, presetNumber))];
+		super('RecallPreset', cmd);
 	}
 }
 
