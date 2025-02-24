@@ -88,14 +88,14 @@ export class PJLink extends NetworkProjector {
 	 Send queries to obtain the initial state of the projector.
 	 */
 	private getInitialState() {
-		if(this.keepAlive)
+		if (this.keepAlive)
 			this.connected = false;	// Mark me as not yet fully awake, to hold off commands
 
 		this.request('POWR').then(
 			reply => {
 				if (!this.inCmdHoldoff())
 					this._power.updateCurrent((parseInt(reply) & 1) != 0);
-				
+
 				if (this._power.get()) // Power on - proceed quering input
 					this.getInputState();
 				else {

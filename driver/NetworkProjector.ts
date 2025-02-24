@@ -22,12 +22,12 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected poller: CancelablePromise<void>;	// To poll device status regularly
 	protected connectDly: CancelablePromise<void>; // While connection delay in progress
 	protected correctionRetry: CancelablePromise<void>;	// To retry failed correction
-	protected connectionTimeout: CancelablePromise<void>;	// Auto-close connection after some time
+	private connectionTimeout: CancelablePromise<void>;	// Auto-close connection after some time
 
 	protected keepAlive: boolean = true;  		// Keep the connection alive "forever". Starts true for backward compatibility
 
-	protected connTimeout = 3000; 		// Connection timeout (milliseconds)
-	protected pollFrequency = 21333;	// Default value for the poll frequency (in milliseconds)
+	private connTimeout = 3000; 		// Connection timeout (milliseconds)
+	private pollInterval = 21333;	// Default value for the poll interval, in milliseconds
 
 	// Only relevant when keepAlive is false. If we fail to connect and this var is already true, then the device is down.
 	protected failedToConnect = false;
@@ -73,17 +73,18 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 * Set the keep alive flag
+	 * Set whether to keep conneciton alive continuously (default) or letting
+	 * it drop after some inactivity.
 	 */
 	protected setKeepAlive(value: boolean) {
 		this.keepAlive = value;
 	}
 
 	/**
-	 * Set the poll frequency time (milliseconds) overriding the default values
+	 * Set the poll interval time, overriding the default values
 	 */
-	protected setPollFrequency(frequency: number) {
-		this.pollFrequency = frequency;
+	protected setPollFrequency(millis: number) {
+		this.pollInterval = millis;
 	}
 
 	/**
@@ -395,7 +396,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected poll() {
 		if (this.socket.enabled) {	// Only if we're enabled
-			this.poller = wait(this.pollFrequency);
+			this.poller = wait(this.pollInterval);
 			this.poller.then(() => {
 				var continuePolling = true;
 				if (!this.socket.connected) {
@@ -450,7 +451,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		});
 		this.cmdTimeout = wait(4000);	// Should be ample time to respond
 		this.cmdTimeout.then(() =>
-								 this.requestFailure("Timeout for " + cmd)
+			this.requestFailure("Timeout for " + cmd)
 		);
 		return result;
 	}

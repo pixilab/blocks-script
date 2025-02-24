@@ -36,7 +36,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.socket = socket;
             _this.keepAlive = true;
             _this.connTimeout = 3000;
-            _this.pollFrequency = 21333;
+            _this.pollInterval = 21333;
             _this.failedToConnect = false;
             _this.propList = [];
             _this.awake = false;
@@ -60,8 +60,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NetworkProjector.prototype.setKeepAlive = function (value) {
             this.keepAlive = value;
         };
-        NetworkProjector.prototype.setPollFrequency = function (frequency) {
-            this.pollFrequency = frequency;
+        NetworkProjector.prototype.setPollFrequency = function (millis) {
+            this.pollInterval = millis;
         };
         NetworkProjector.prototype.addState = function (state) {
             this.propList.push(state);
@@ -267,7 +267,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NetworkProjector.prototype.poll = function () {
             var _this = this;
             if (this.socket.enabled) {
-                this.poller = wait(this.pollFrequency);
+                this.poller = wait(this.pollInterval);
                 this.poller.then(function () {
                     var continuePolling = true;
                     if (!_this.socket.connected) {

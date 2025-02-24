@@ -75,7 +75,7 @@ export class ChristieAccess extends NetworkProjector {
 	 Send queries to obtain the initial state of the projector.
 	 */
 	private getInitialState() {
-		if(this.keepAlive)
+		if (this.keepAlive)
 			this.connected = false;	// Mark me as not yet fully awake, to hold off commands
 		this.request('GETQUICKSTANDBY').then(
 			reply => {
