@@ -39,19 +39,20 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             _this.pollFrequency = 21333;
             _this.failedToConnect = false;
             _this.propList = [];
+            _this.awake = false;
             socket.subscribe('connect', function (sender, message) {
                 if (message.type === 'Connection') {
                     if (_this.socket.connected && _this.keepAlive)
                         _this.infoMsg("connected");
-                    else if (!_this.socket.connected && _this.keepAlive)
-                        _this.warnMsg("connection dropped");
+                    else if (!_this.socket.connected && _this.keepAlive && _this.socket.enabled)
+                        _this.warnMsg("connection dropped", message.type);
                     _this.connectStateChanged();
                 }
             });
             socket.subscribe('textReceived', function (sender, msg) {
                 return _this.textReceived(msg.text);
             });
-            socket.subscribe('finish', function (sender) {
+            socket.subscribe('finish', function () {
                 return _this.discard();
             });
             return _this;
@@ -64,7 +65,6 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.addState = function (state) {
             this.propList.push(state);
-            console.log("State added: ");
             state.setDriver(this);
         };
         NetworkProjector.prototype.isOfTypeName = function (typeName) {
@@ -119,6 +119,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             if (this.connectionTimeout) {
                 this.connectionTimeout.cancel();
                 this.connectionTimeout = undefined;
+            }
+            if (this.connectDly) {
+                this.connectDly.cancel();
+                this.connectDly = undefined;
             }
         };
         NetworkProjector.prototype.errorMsg = function () {
@@ -343,7 +347,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             __metadata("design:returntype", Promise)
         ], NetworkProjector.prototype, "sendText", null);
         __decorate([
-            (0, Metadata_1.property)("True if projector is online", true),
+            (0, Metadata_1.property)("True if device is considered to be online", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetworkProjector.prototype, "connected", null);
@@ -434,11 +438,11 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NumState.prototype.set = function (v) {
             if (!(typeof v === 'number') || isNaN(v)) {
-                console.error("Value not numeric", this.baseCmd, v);
+                console.error("NetworkProjector value not numeric", this.baseCmd, v);
                 return false;
             }
             if (v < this.min || v > this.max) {
-                console.error("Value out of range for", this.baseCmd, v);
+                console.error("NetworkProjector value out of range for", this.baseCmd, v);
                 return false;
             }
             return _super.prototype.set.call(this, v);
@@ -446,8 +450,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NumState.prototype.get = function () {
             var result = _super.prototype.get.call(this);
             if (typeof result !== 'number' || isNaN(result)) {
-                console.error("Invalid value for", this.propName, result);
-                result = this.min || 0;
+                console.warn("NetworkProjector unknown/invalid current value for", this.propName, result);
+                result = undefined;
             }
             return result;
         };
