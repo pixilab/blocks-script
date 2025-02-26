@@ -79,14 +79,14 @@ export class ChristieAccess extends NetworkProjector {
 			this.connected = false;	// Mark me as not yet fully awake, to hold off commands
 		this.request('GETQUICKSTANDBY').then(
 			reply => {
-				console.info("getInitialState GETQUICKSTANDBY", reply);
+				// console.info("getInitialState GETQUICKSTANDBY", reply);
 				if (reply)
 					this._power.updateCurrent(reply === 'off');
 				return this.request('GETSOURCE')
 			}
 		).then(
 			reply => {
-				console.info("getInitialState GETSOURCE", reply);
+				// console.info("getInitialState GETSOURCE", reply);
 				if (reply) {
 					// GETSOURCE returns name, but we want input number
 					const inputNum = ChristieAccess.kInputNameToNum[reply];
@@ -97,7 +97,7 @@ export class ChristieAccess extends NetworkProjector {
 				this.sendCorrection();
 			}
 		).catch(error => {
-			console.info("getInitialState error - retry soon", error);
+			console.error("getInitialState error - retry soon", error);
 			this.disconnectAndTryAgainSoon();
 		});
 	}
@@ -135,13 +135,7 @@ export class ChristieAccess extends NetworkProjector {
 	 Got data from peer. Handle responses to requests.
 	 */
 	protected textReceived(text: string): void {
-		if (!this.keepAlive){
-			this.resetTimeout();
-		}
-
 		if (text) {	// Ignore empty string sometimes received frmo projector
-			console.info("textReceived", text);
-
 			const parts = ChristieAccess.replyParser.exec(text);
 			if (parts)
 				this.requestSuccess(parts[1]); // Only "reply" data part

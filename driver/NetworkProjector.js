@@ -50,15 +50,20 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 }
             });
             socket.subscribe('textReceived', function (sender, msg) {
-                return _this.textReceived(msg.text);
+                _this.resetTimeout();
+                _this.textReceived(msg.text);
             });
             socket.subscribe('finish', function () {
                 return _this.discard();
             });
             return _this;
         }
-        NetworkProjector.prototype.setKeepAlive = function (value) {
-            this.keepAlive = value;
+        NetworkProjector.prototype.setKeepAlive = function (newState) {
+            if (newState && !this.keepAlive && this.connectionTimeout) {
+                this.connectionTimeout.cancel();
+                this.connectionTimeout = undefined;
+            }
+            this.keepAlive = newState;
         };
         NetworkProjector.prototype.setPollFrequency = function (millis) {
             this.pollInterval = millis;
@@ -84,6 +89,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NetworkProjector.prototype.sendText = function (text) {
             var _this = this;
             if (this.socket.enabled) {
+                this.resetTimeout();
                 if (this.socket.connected)
                     return this.socket.sendText(text, this.getDefaultEoln());
                 else {
@@ -175,6 +181,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                         this.attemptConnect();
                 }
                 else {
+                    this.resetTimeout();
                     req.correct(this)
                         .then(function () { return _this.sendFailedReported = false; }, function () {
                         if (_this.reqToSend())
@@ -209,19 +216,20 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             if (!this.keepAlive) {
                 this.failedToConnect = false;
                 this.resetTimeout();
-                if (sendCorrection) {
+                if (sendCorrection)
                     this.sendCorrection();
-                }
             }
         };
         NetworkProjector.prototype.resetTimeout = function () {
             var _this = this;
-            if (this.connectionTimeout)
-                this.connectionTimeout.cancel();
-            this.connectionTimeout = wait(this.connTimeout);
-            this.connectionTimeout.then(function () {
-                _this.socket.disconnect();
-            });
+            if (!this.keepAlive) {
+                if (this.connectionTimeout)
+                    this.connectionTimeout.cancel();
+                this.connectionTimeout = wait(this.connTimeout);
+                this.connectionTimeout.then(function () {
+                    _this.socket.disconnect();
+                });
+            }
         };
         NetworkProjector.prototype.connectStateChanged = function () {
             this.connecting = false;

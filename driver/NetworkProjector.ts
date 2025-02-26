@@ -24,7 +24,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected correctionRetry: CancelablePromise<void>;	// To retry failed correction
 	private connectionTimeout: CancelablePromise<void>;	// Auto-close connection after some time
 
-	protected keepAlive: boolean = true;  		// Keep the connection alive "forever". Starts true for backward compatibility
+	protected keepAlive: boolean = true;  	// Hold connection "forever". Default for backward compatibility.
 
 	private connTimeout = 3000; 		// Connection timeout (milliseconds)
 	private pollInterval = 21333;	// Default value for the poll interval, in milliseconds
@@ -63,9 +63,10 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 				this.connectStateChanged();
 			}
 		});
-		socket.subscribe('textReceived', (sender, msg) =>
+		socket.subscribe('textReceived', (sender, msg) => {
+			this.resetTimeout();	// New data keeps ephemeral connection alive
 			this.textReceived(msg.text)
-		);
+		});
 
 		socket.subscribe('finish', () =>
 			this.discard()
@@ -76,8 +77,12 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 * Set whether to keep conneciton alive continuously (default) or letting
 	 * it drop after some inactivity.
 	 */
-	protected setKeepAlive(value: boolean) {
-		this.keepAlive = value;
+	protected setKeepAlive(newState: boolean) {
+		if (newState && !this.keepAlive &&this.connectionTimeout) {
+			this.connectionTimeout.cancel();
+			this.connectionTimeout = undefined;
+		}
+		this.keepAlive = newState;
 	}
 
 	/**
@@ -128,6 +133,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		@parameter("What to send") text: string,
 	): Promise<any> {
 		if (this.socket.enabled) {
+			this.resetTimeout();
 			if (this.socket.connected) // OK to send right away
 				return this.socket.sendText(text, this.getDefaultEoln());
 			else { // Must connect first
@@ -250,7 +256,6 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 			return false;	// No can do
 		}
 
-
 		const req = this.reqToSend();	// Get pending request, if any
 		if (req) {	// Got one - proceed with attempting to send it
 			if (!this.socket.connected) {	// Must connect that first
@@ -259,7 +264,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 				// Else a connection attempt will happen after delay
 			} else {
 				// console.info("req", req.current, req.get());
-
+				this.resetTimeout(); // New data keeps ephemeral connection alive
 				req.correct(this)
 				.then(
 					() => this.sendFailedReported = false,
@@ -312,22 +317,28 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected justConnected(sendCorrection?: boolean): void {
 		if (!this.keepAlive) {
 			this.failedToConnect = false;
-			this.resetTimeout();				// Properly starts the connection timeout
+			this.resetTimeout();		// Start the connection timeout
 
-			if (sendCorrection) {
-				this.sendCorrection();			// Procceed to send the command it was senmding
-			}
+			if (sendCorrection)
+				this.sendCorrection();	// Send any pending commands
 		}
 	}
 
-	protected resetTimeout() {
-		if (this.connectionTimeout) // Cancels any previous timeout
-			this.connectionTimeout.cancel();
+	/**
+	 * Reset connection timeout (unless connection held indefinitely),
+	 * extending it by another connTimeout mS. Call when first
+	 * connects or when sending/receiving more data.
+	 */
+	private resetTimeout() {
+		if (!this.keepAlive) {
+			if (this.connectionTimeout) // Cancels any previous timeout
+				this.connectionTimeout.cancel();
 
-		this.connectionTimeout = wait(this.connTimeout);	// Starts new timeout
-		this.connectionTimeout.then(() => {
-			this.socket.disconnect();	// Closes the connection if nothing was sent through the socket
-		})
+			this.connectionTimeout = wait(this.connTimeout);	// Starts new timeout
+			this.connectionTimeout.then(() => {
+				this.socket.disconnect();	// Closes the connection if nothing was sent through the socket
+			});
+		}
 	}
 
 	/**

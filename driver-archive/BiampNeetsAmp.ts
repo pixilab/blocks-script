@@ -13,7 +13,8 @@ import {BoolState, NetworkProjector, NumState} from "../driver/NetworkProjector"
 import {NetworkTCP} from "../system/Network";
 
 @Meta.driver('NetworkTCP', { port: 5000 })
-export class BiampNeets extends NetworkProjector {
+export class BiampNeetsAmp extends NetworkProjector {
+	private started = false;	// Set after first successful poll
 	protected _input: NumState;
 	protected _volume: NumState;
 
@@ -26,23 +27,26 @@ export class BiampNeets extends NetworkProjector {
 
 	constructor(socket: NetworkTCP) {
 		super(socket);
+		this.setPollFrequency(60000 * 2); // Infrequent polling
+		this.setKeepAlive(false);	// Close connection between messages
+
 		this._power = new OnOffState('POWER', 'power');
 		this.addState(this._power);
 		this._input = new NumState(
 			'INPUT', 'input',
-			BiampNeets.kMinInput, BiampNeets.kMaxInput
+			BiampNeetsAmp.kMinInput, BiampNeetsAmp.kMaxInput
 		);
 		this.addState(this._input);
 
 		this._volume = new DbState(
 			'VOL', 'volume',
-			BiampNeets.kMinVol, BiampNeets.kMaxVol
+			BiampNeetsAmp.kMinVol, BiampNeetsAmp.kMaxVol
 		);
 		this.addState(this._volume);
 
 		if (socket.enabled) {
-			this.poll();			// Get status polling going
 			this.attemptConnect();	// Attempt initial connection
+			this.poll();			// Get status polling going
 		}
 	}
 
@@ -52,15 +56,19 @@ export class BiampNeets extends NetworkProjector {
 	 */
 	protected justConnected(): void {
 		super.justConnected();
-		this.connected = false;	// Mark me as not yet fully awake, to hold off commands
-		this.pollStatus();		// Do initial poll to get us going
+		if (!this.started) {
+			// Mark me as not yet fully awake, to hold off commands until poll is done
+			this.connected = false;
+			this.pollStatus();		// Initial poll to get us going
+		} else
+			this.sendCorrection();	// Just go ahead and send any correction
 	}
 
 	/*
 	 Set desired input source.
 	 */
 	@Meta.property("Desired audio input number")
-	@Meta.min(BiampNeets.kMinInput) @Meta.max(BiampNeets.kMaxInput)
+	@Meta.min(BiampNeetsAmp.kMinInput) @Meta.max(BiampNeetsAmp.kMaxInput)
 	public set input(value: number) {
 		if (this._input.set(value)) {
 			// console.info("set input", value);
@@ -75,7 +83,7 @@ export class BiampNeets extends NetworkProjector {
 	 Set desired input source.
 	 */
 	@Meta.property("Desired output volume")
-	@Meta.min(BiampNeets.kMinVol) @Meta.max(BiampNeets.kMaxVol)
+	@Meta.min(BiampNeetsAmp.kMinVol) @Meta.max(BiampNeetsAmp.kMaxVol)
 	public set volume(value: number) {
 		if (this._volume.set(value)) {
 			this.sendCorrection();
@@ -86,7 +94,7 @@ export class BiampNeets extends NetworkProjector {
 	}
 
 	/*
-	 Send queries to obtain the initial state of the projector.
+	 Send queries to obtain the state of the device.
 	 Ret true if to continue polling
 	 */
 	protected pollStatus(): boolean {
@@ -105,9 +113,9 @@ export class BiampNeets extends NetworkProjector {
 				// console.info("pollStatus volume", reply);
 				this._volume.updateCurrent(parseInt(reply));
 			}).then(() => {
-				if (!this.connected) {
+				if (!this.started) {
 					console.info("Connected (Initial poll complete)")
-					this.connected = true;	// Considered all up now
+					this.connected = this.started = true;	// Considered all up now
 				}
 				this.sendCorrection();
 			}).catch(error => {
@@ -149,7 +157,7 @@ export class BiampNeets extends NetworkProjector {
 			if (text === "NEUNIT=1,OK")
 				this.requestSuccess("");
 			else {
-				const parts = BiampNeets.kReplyRegex.exec(text);
+				const parts = BiampNeetsAmp.kReplyRegex.exec(text);
 				if (parts)
 					this.requestSuccess(parts[2]); // Only "reply" data part
 				else
