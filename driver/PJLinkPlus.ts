@@ -1331,7 +1331,7 @@ export class PJLinkPlus extends NetworkProjector {
     private projectorBusy() {
 		if (!this.busyHoldoff) {
 			this.busyHoldoff = wait(4000);
-			this.busyHoldoff.then(() => this.busyHoldoff = undefined);
+			this.busyHoldoff.then((): CancelablePromise<void> => this.busyHoldoff = undefined);
 		}
 	}
 

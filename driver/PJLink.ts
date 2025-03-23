@@ -141,7 +141,7 @@ export class PJLink extends NetworkProjector {
 			if (this.recentCmdHoldoff)
 				this.recentCmdHoldoff.cancel();
 			this.recentCmdHoldoff = wait(10000);
-			this.recentCmdHoldoff.then(() => this.recentCmdHoldoff = undefined);
+			this.recentCmdHoldoff.then((): CancelablePromise<void> => this.recentCmdHoldoff = undefined);
 		}
 		return didSend;
 	}
@@ -266,7 +266,7 @@ export class PJLink extends NetworkProjector {
 	private projectorBusy() {
 		if (!this.busyHoldoff) {
 			this.busyHoldoff = wait(4000);
-			this.busyHoldoff.then(() => this.busyHoldoff = undefined);
+			this.busyHoldoff.then((): CancelablePromise<void> => this.busyHoldoff = undefined);
 		}
 	}
 
