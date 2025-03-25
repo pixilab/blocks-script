@@ -10,11 +10,21 @@
 if [ ! -d "system_lib" ]; then
   echo "ABORTING. The current directory doesn't seem to be Blocks script"
   echo "directory. Use the cd command to move into that directory first."
-  exit
+  exit 1
 fi
 
-echo "••• Stopping Blocks"
-~/stop.sh
+if [ -f ~/stop.sh ]; then
+  echo "••• Stopping Blocks"
+  ~/stop.sh
+else
+  echo "Info: ~/stop.sh not found - trying to stop using systemctl"
+  systemctl --user stop blocks.service
+fi
+
+if systemctl --user is-active --quiet blocks.service; then
+  echo "Blocks is still running. Aborting."
+  exit 1
+fi
 
 # Name of the zip file based on the current date
 zip_file="backup_$(date +%Y-%m-%d_%H-%M-%S).zip"
@@ -29,6 +39,7 @@ cp -r  blocks-script/* .
 
 #Cleaning up
 rm -r -f blocks-script
-echo "••• DONE."
+echo "••• DONE •••"
+echo "Rembember to start blocks again."
 
 
