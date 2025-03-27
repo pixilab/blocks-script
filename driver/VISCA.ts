@@ -387,6 +387,7 @@ export class VISCA extends Driver<NetworkTCP> {
 				this.sendTimeout.then(() => {
 					// Timed out - clear and proceed with next anyway
 					const instr = this.currInstr;
+					console.warn("Timed out sending", instr.name, bytesToString(instr.data));
 					this.sendTimeout = undefined;
 					this.currInstr = undefined;
 					this.sendNext();
@@ -446,11 +447,12 @@ export class VISCA extends Driver<NetworkTCP> {
 		const msg = packet[1];
 		switch (msg) {
 		case 0x41:	// ACK
-			//this.instrDone();
+			// this.instrDone(); // Not considered "done" until completed and then some below
 			break;
 		case 0x51:	// EXECUTED TO COMPLETION
+			// Wait some more before reaklly considering all done to give camera some breathing room.
 			this.secondAckTimer = wait(200);
-			this.secondAckTimer.then(() => this.instrDone())		// make sure we wait 200 milliseconds before considering the action done in case of a 51 ack. camera would miss behave otherwise
+			this.secondAckTimer.then(() => this.instrDone());
 			break;
 		case 0x60:	// SYNTAX ERROR
 			this.currInstrFailed("SYNTAX ERROR " + packet[2]);

@@ -370,10 +370,10 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	/**
 	 Some comms error happened. Disconnect and re-try from the start soon.
 	 */
-	protected disconnectAndTryAgainSoon() {
+	protected disconnectAndTryAgainSoon(howSoonMillis?: number) {
 		if (this.socket.connected)
 			this.socket.disconnect();
-		this.connectSoon();
+		this.connectSoon(howSoonMillis);
 	}
 
 
@@ -388,10 +388,10 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	/**
 	 Arrange to attempt to connect soon.
 	 */
-	protected connectSoon() {
+	protected connectSoon(howSoonMillis?: number) {
 		if (!this.connectDly) {
 			//console.info("connectSoon");
-			this.connectDly = wait(8000);
+			this.connectDly = wait(howSoonMillis || 8000);
 			this.connectDly.then(
 				() => {
 					this.connectDly = undefined;
