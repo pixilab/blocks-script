@@ -22,7 +22,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
+define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PJLink = void 0;
@@ -31,6 +31,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         function PJLink(socket) {
             var _this = _super.call(this, socket) || this;
             _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
+            _this.addState(_this._mute = new MuteState('AVMT', 'mute'));
             _this.addState(_this._input = new NetworkProjector_1.NumState('INPT', 'input', PJLink_1.kMinInput, PJLink_1.kMaxInput, function () { return _this._power.getCurrent(); }));
             _this.setKeepAlive(false);
             _this.setPollFrequency(60000);
@@ -50,10 +51,10 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                     if (!_this.inCmdHoldoff())
                         _this._power.updateCurrent(on);
                     if (on && _this.okToSendCommand())
-                        _this.getInputState(true);
+                        _this.getMiscState1(true);
                 }).catch(function (error) {
                     _this.warnMsg("pollStatus error", error);
-                    _this.disconnectAndTryAgainSoon();
+                    _this.disconnectAndTryAgainSoon(70);
                 });
             }
             return true;
@@ -72,6 +73,17 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(PJLink.prototype, "mute", {
+            get: function () {
+                return this._mute.get();
+            },
+            set: function (on) {
+                if (this._mute.set(on))
+                    this.sendCorrection();
+            },
+            enumerable: false,
+            configurable: true
+        });
         PJLink.prototype.getInitialState = function () {
             var _this = this;
             if (this.keepAlive)
@@ -80,17 +92,17 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 if (!_this.inCmdHoldoff())
                     _this._power.updateCurrent((parseInt(reply) & 1) != 0);
                 if (_this._power.get())
-                    _this.getInputState();
+                    _this.getMiscState1();
                 else {
                     _this.connected = true;
                     _this.sendCorrection();
                 }
             }, function (error) {
-                _this.warnMsg("getInitialState POWR error - retry soon", error);
+                _this.warnMsg("getInitialState POWR error - retrying", error);
                 _this.disconnectAndTryAgainSoon();
             });
         };
-        PJLink.prototype.getInputState = function (ignoreError) {
+        PJLink.prototype.getMiscState1 = function (ignoreError) {
             var _this = this;
             this.request('INPT').then(function (reply) {
                 var value = parseInt(reply);
@@ -98,10 +110,29 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                     throw "Invalid INPT query response " + reply;
                 if (!_this.inCmdHoldoff())
                     _this._input.updateCurrent(value);
+                _this.getMiscState2();
+            }, function (error) {
+                _this.warnMsg("INPT query error", error);
+                if (ignoreError)
+                    _this.getMiscState2();
+                else {
+                    _this.connected = true;
+                    _this.sendCorrection();
+                }
+            });
+        };
+        PJLink.prototype.getMiscState2 = function (ignoreError) {
+            var _this = this;
+            this.request('AVMT').then(function (reply) {
+                var value = parseInt(reply);
+                if (typeof value !== 'number')
+                    throw "Invalid AVMT query response " + reply;
+                if (!_this.inCmdHoldoff())
+                    _this._mute.updateCurrent(value === 31);
                 _this.connected = true;
                 _this.sendCorrection();
             }, function (error) {
-                _this.warnMsg("getInitialState INPT error", error);
+                _this.warnMsg("AVMT query error", error);
                 if (!ignoreError) {
                     _this.connected = true;
                     _this.sendCorrection();
@@ -114,7 +145,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             if (didSend) {
                 if (this.recentCmdHoldoff)
                     this.recentCmdHoldoff.cancel();
-                this.recentCmdHoldoff = wait(10000);
+                this.recentCmdHoldoff = wait(5000);
                 this.recentCmdHoldoff.then(function () { return _this.recentCmdHoldoff = undefined; });
             }
             return didSend;
@@ -159,6 +190,10 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 if (text.indexOf(expectedResponse) === 0) {
                     text = text.substr(expectedResponse.length);
                     var treatAsOk = text.indexOf('ERR') !== 0;
+                    if (treatAsOk && this.recentCmdHoldoff) {
+                        this.recentCmdHoldoff.cancel();
+                        this.recentCmdHoldoff = undefined;
+                    }
                     if (!treatAsOk) {
                         switch (text) {
                             case 'ERR1':
@@ -170,9 +205,12 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                                 treatAsOk = true;
                                 break;
                             case 'ERR3':
+                                treatAsOk = true;
                                 this.projectorBusy();
+                                this.warnMsg("PJLink projector BUSY for command", currCmd, text);
+                                break;
                             default:
-                                this.warnMsg("PJLink response", currCmd, text);
+                                this.warnMsg("PJLink unexpected response", currCmd, text);
                                 break;
                         }
                         if (!treatAsOk)
@@ -202,16 +240,31 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         PJLink.kMinInput = 11;
         PJLink.kMaxInput = 59;
         __decorate([
-            Meta.property("Desired input source number"),
+            Meta.property("Desired input source number; 11…59"),
             Meta.min(PJLink_1.kMinInput),
             Meta.max(PJLink_1.kMaxInput),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], PJLink.prototype, "input", null);
+        __decorate([
+            (0, Metadata_1.property)("A/V Muted"),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], PJLink.prototype, "mute", null);
         PJLink = PJLink_1 = __decorate([
             Meta.driver('NetworkTCP', { port: 4352 }),
             __metadata("design:paramtypes", [Object])
         ], PJLink);
         return PJLink;
     }(NetworkProjector_1.NetworkProjector));
+    var MuteState = (function (_super) {
+        __extends(MuteState, _super);
+        function MuteState() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        MuteState.prototype.correct = function (drvr) {
+            return this.correct2(drvr, this.wanted ? '31' : '30');
+        };
+        return MuteState;
+    }(NetworkProjector_1.BoolState));
 });

@@ -253,19 +253,19 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                     this.connectSoon();
             }
         };
-        NetworkProjector.prototype.disconnectAndTryAgainSoon = function () {
+        NetworkProjector.prototype.disconnectAndTryAgainSoon = function (howSoonMillis) {
             if (this.socket.connected)
                 this.socket.disconnect();
-            this.connectSoon();
+            this.connectSoon(howSoonMillis);
         };
         NetworkProjector.prototype.disconnect = function () {
             if (this.socket.connected)
                 this.socket.disconnect();
         };
-        NetworkProjector.prototype.connectSoon = function () {
+        NetworkProjector.prototype.connectSoon = function (howSoonMillis) {
             var _this = this;
             if (!this.connectDly) {
-                this.connectDly = wait(8000);
+                this.connectDly = wait(howSoonMillis || 8000);
                 this.connectDly.then(function () {
                     _this.connectDly = undefined;
                     _this.attemptConnect();

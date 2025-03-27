@@ -61,7 +61,7 @@ export class OSCviaUDP extends NetworkDriver {
 		return typeName === "OSCviaUDP" ? this : null;
 	}
 
-	@property("True if driver is enabled")
+    @property("True if driver is enabled")
 	public get connected(): boolean {
 		return this.socket.enabled;
 	}

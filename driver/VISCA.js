@@ -256,6 +256,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                     this.sendTimeout = wait(3000);
                     this.sendTimeout.then(function () {
                         var instr = _this.currInstr;
+                        console.warn("Timed out sending", instr.name, bytesToString(instr.data));
                         _this.sendTimeout = undefined;
                         _this.currInstr = undefined;
                         _this.sendNext();
