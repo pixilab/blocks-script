@@ -39,7 +39,7 @@ Created 2021 by Mattias Andersson.
 
 import { NetworkTCP, SerialPort } from "system/Network";
 import { Driver } from "system_lib/Driver";
-import { callable, driver, max, min, property } from "system_lib/Metadata";
+import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
 import { AggregateElem } from "../system_lib/ScriptBase";
 
 // Parse RFID tag detection from XR-DR01 Rfid element
@@ -774,6 +774,177 @@ class GenderInterface extends BaseInterface {
 	}
 }
 Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
+
+/**
+ * Lidar Sensor
+ */
+class LidarInterface extends BaseInterface {
+	private static readonly kParser = /^ZONE(\d{2})=(ENTER|EXIT):(\d{2})$/;
+	private static readonly kParserWithoutCount = /^ZONE(\d{2})=(ENTER|EXIT)$/;
+
+	private mZone: number[] = [
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0,
+	];
+
+	@property(kZoneDescr, true)
+	get zone01(): number { return this.mZone[0]; }
+	set zone01(value: number) { this.mZone[0] = value; }
+	@property(kZoneDescr, true)
+	get zone02(): number { return this.mZone[1]; }
+	set zone02(value: number) { this.mZone[1] = value; }
+	@property(kZoneDescr, true)
+	get zone03(): number { return this.mZone[2]; }
+	set zone03(value: number) { this.mZone[2] = value; }
+	@property(kZoneDescr, true)
+	get zone04(): number { return this.mZone[3]; }
+	set zone04(value: number) { this.mZone[3] = value; }
+	@property(kZoneDescr, true)
+	get zone05(): number { return this.mZone[4]; }
+	set zone05(value: number) { this.mZone[4] = value; }
+	@property(kZoneDescr, true)
+	get zone06(): number { return this.mZone[5]; }
+	set zone06(value: number) { this.mZone[5] = value; }
+	@property(kZoneDescr, true)
+	get zone07(): number { return this.mZone[6]; }
+	set zone07(value: number) { this.mZone[6] = value; }
+	@property(kZoneDescr, true)
+	get zone08(): number { return this.mZone[7]; }
+	set zone08(value: number) { this.mZone[7] = value; }
+	@property(kZoneDescr, true)
+	get zone09(): number { return this.mZone[8]; }
+	set zone09(value: number) { this.mZone[8] = value; }
+	@property(kZoneDescr, true)
+	get zone10(): number { return this.mZone[9]; }
+	set zone10(value: number) { this.mZone[9] = value; }
+	@property(kZoneDescr, true)
+	get zone11(): number { return this.mZone[10]; }
+	set zone11(value: number) { this.mZone[10] = value; }
+	@property(kZoneDescr, true)
+	get zone12(): number { return this.mZone[11]; }
+	set zone12(value: number) { this.mZone[11] = value; }
+	@property(kZoneDescr, true)
+	get zone13(): number { return this.mZone[12]; }
+	set zone13(value: number) { this.mZone[12] = value; }
+	@property(kZoneDescr, true)
+	get zone14(): number { return this.mZone[13]; }
+	set zone14(value: number) { this.mZone[13] = value; }
+	@property(kZoneDescr, true)
+	get zone15(): number { return this.mZone[14]; }
+	set zone15(value: number) { this.mZone[14] = value; }
+	@property(kZoneDescr, true)
+	get zone16(): number { return this.mZone[15]; }
+	set zone16(value: number) { this.mZone[15] = value; }
+	@property(kZoneDescr, true)
+	get zone17(): number { return this.mZone[16]; }
+	set zone17(value: number) { this.mZone[16] = value; }
+	@property(kZoneDescr, true)
+	get zone18(): number { return this.mZone[17]; }
+	set zone18(value: number) { this.mZone[17] = value; }
+	@property(kZoneDescr, true)
+	get zone19(): number { return this.mZone[18]; }
+	set zone19(value: number) { this.mZone[18] = value; }
+	@property(kZoneDescr, true)
+	get zone20(): number { return this.mZone[19]; }
+	set zone20(value: number) { this.mZone[19] = value; }
+	@property(kZoneDescr, true)
+	get zone21(): number { return this.mZone[20]; }
+	set zone21(value: number) { this.mZone[20] = value; }
+	@property(kZoneDescr, true)
+	get zone22(): number { return this.mZone[21]; }
+	set zone22(value: number) { this.mZone[21] = value; }
+	@property(kZoneDescr, true)
+	get zone23(): number { return this.mZone[22]; }
+	set zone23(value: number) { this.mZone[22] = value; }
+	@property(kZoneDescr, true)
+	get zone24(): number { return this.mZone[23]; }
+	set zone24(value: number) { this.mZone[23] = value; }
+
+	@callable("define activation zone")
+	defZone(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("X in cm") x: number,
+		@parameter("Y in cm") y: number,
+		@parameter("width in cm") width: number,
+		@parameter("height in cm") height: number,
+	) {
+		const raw = this.packageB(this.cmdActivationZone(zoneId, x, y, width, height))
+		this.driver.send(raw);
+		console.log(raw);
+	}
+
+	constructor(
+		driver: Nexmosphere,
+		index: number
+	) {
+		super(driver, index);
+		const command = "X" + this.pad(index + 1, 3) + "S[4:3]";
+		driver.send(command);
+	}
+
+	receiveData(data: string, tag?: TagInfo) {
+		const parseResult = LidarInterface.kParser.exec(data);
+		if (parseResult) {
+			const zoneId = parseInt(parseResult[1]);
+			const enterOrExit: EnterExit = parseResult[2] as EnterExit;
+			const zoneObjectCount = parseInt(parseResult[3]);
+
+			this.mZone[zoneId - 1] = zoneObjectCount;
+			this.changed("zone" + this.pad(zoneId, 2));
+			console.log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
+			return;
+		}
+		const parseResultWithoutCount = LidarInterface.kParserWithoutCount.exec(data);
+		if (parseResultWithoutCount) {
+			const zoneId = parseInt(parseResultWithoutCount[1]);
+			const enterOrExit: EnterExit = parseResultWithoutCount[2] as EnterExit;
+
+			this.mZone[zoneId - 1] += enterOrExit === "ENTER" ? 1 : -1;
+			const label = "zone" + this.pad(zoneId, 2);
+			this.changed(label);
+			return;
+		}
+	}
+	userFriendlyName(): string {
+		return "Lidar";
+	}
+
+
+	private cmdActivationZone(zoneId: number, x: number, y: number, width: number, height: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "=" +
+			this.signedPad(x, 3) + "," +
+			this.signedPad(y, 3) + "," +
+			this.pad(width, 3) + "," +
+			this.pad(height, 3);
+	}
+	private packageB(command: string): string {
+		return "X" + this.pad(this.index + 1, 3) + "B[" + command + "]";
+	}
+	/**
+	 * Pads a given number with leading zeroes to match the specified length
+	 * without using `padStart`.
+	 *
+	 * @param num - The number to be padded.
+	 * @param length - The desired total length of the resulting string.
+	 * @param padChar - defaults to "0"
+	 * @returns The number as a string, padded with leading zeroes.
+	 */
+	private pad(num: number, length: number, padChar: string = "0"): string {
+		let numStr = num.toString();
+		while (numStr.length < length) numStr = padChar + numStr;
+		return numStr;
+	}
+	private signedPad(num: number, length: number): string {
+		const isPositive = num >= 0;
+		return (isPositive ? "+" : "-") + this.pad(Math.abs(num), length);
+	}
+
+}
+const kZoneDescr = "Zone occupied";
+type EnterExit = "ENTER" | "EXIT";
+Nexmosphere.registerInterface(LidarInterface, "XQL2", "XQL5");
+
 
 
 /**

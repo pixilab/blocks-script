@@ -22,6 +22,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../system_lib/ScriptBase"], function (require, exports, Driver_1, Metadata_1, ScriptBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -29,7 +32,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var kRfidPacketParser = /^XR\[P(.)(\d+)]$/;
     var kPortPacketParser = /^X(\d+)([AB])\[(.+)]$/;
     var kProductCodeParser = /D(\d+)B\[\w+=(.+)]$/;
-    var Nexmosphere = exports.Nexmosphere = (function (_super) {
+    var Nexmosphere = (function (_super) {
         __extends(Nexmosphere, _super);
         function Nexmosphere(connection) {
             var _this = _super.call(this, connection) || this;
@@ -225,6 +228,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], Nexmosphere);
         return Nexmosphere;
     }(Driver_1.Driver));
+    exports.Nexmosphere = Nexmosphere;
     var BaseInterface = (function (_super) {
         __extends(BaseInterface, _super);
         function BaseInterface(driver, index) {
@@ -924,6 +928,350 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         return GenderInterface;
     }(BaseInterface));
     Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
+    var LidarInterface = (function (_super) {
+        __extends(LidarInterface, _super);
+        function LidarInterface(driver, index) {
+            var _this = _super.call(this, driver, index) || this;
+            _this.mZone = [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ];
+            var command = "X" + _this.pad(index + 1, 3) + "S[4:3]";
+            driver.send(command);
+            return _this;
+        }
+        Object.defineProperty(LidarInterface.prototype, "zone01", {
+            get: function () { return this.mZone[0]; },
+            set: function (value) { this.mZone[0] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone02", {
+            get: function () { return this.mZone[1]; },
+            set: function (value) { this.mZone[1] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone03", {
+            get: function () { return this.mZone[2]; },
+            set: function (value) { this.mZone[2] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone04", {
+            get: function () { return this.mZone[3]; },
+            set: function (value) { this.mZone[3] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone05", {
+            get: function () { return this.mZone[4]; },
+            set: function (value) { this.mZone[4] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone06", {
+            get: function () { return this.mZone[5]; },
+            set: function (value) { this.mZone[5] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone07", {
+            get: function () { return this.mZone[6]; },
+            set: function (value) { this.mZone[6] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone08", {
+            get: function () { return this.mZone[7]; },
+            set: function (value) { this.mZone[7] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone09", {
+            get: function () { return this.mZone[8]; },
+            set: function (value) { this.mZone[8] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone10", {
+            get: function () { return this.mZone[9]; },
+            set: function (value) { this.mZone[9] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone11", {
+            get: function () { return this.mZone[10]; },
+            set: function (value) { this.mZone[10] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone12", {
+            get: function () { return this.mZone[11]; },
+            set: function (value) { this.mZone[11] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone13", {
+            get: function () { return this.mZone[12]; },
+            set: function (value) { this.mZone[12] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone14", {
+            get: function () { return this.mZone[13]; },
+            set: function (value) { this.mZone[13] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone15", {
+            get: function () { return this.mZone[14]; },
+            set: function (value) { this.mZone[14] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone16", {
+            get: function () { return this.mZone[15]; },
+            set: function (value) { this.mZone[15] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone17", {
+            get: function () { return this.mZone[16]; },
+            set: function (value) { this.mZone[16] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone18", {
+            get: function () { return this.mZone[17]; },
+            set: function (value) { this.mZone[17] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone19", {
+            get: function () { return this.mZone[18]; },
+            set: function (value) { this.mZone[18] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone20", {
+            get: function () { return this.mZone[19]; },
+            set: function (value) { this.mZone[19] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone21", {
+            get: function () { return this.mZone[20]; },
+            set: function (value) { this.mZone[20] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone22", {
+            get: function () { return this.mZone[21]; },
+            set: function (value) { this.mZone[21] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone23", {
+            get: function () { return this.mZone[22]; },
+            set: function (value) { this.mZone[22] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(LidarInterface.prototype, "zone24", {
+            get: function () { return this.mZone[23]; },
+            set: function (value) { this.mZone[23] = value; },
+            enumerable: false,
+            configurable: true
+        });
+        LidarInterface.prototype.defZone = function (zoneId, x, y, width, height) {
+            var raw = this.packageB(this.cmdActivationZone(zoneId, x, y, width, height));
+            this.driver.send(raw);
+            console.log(raw);
+        };
+        LidarInterface.prototype.receiveData = function (data, tag) {
+            var parseResult = LidarInterface.kParser.exec(data);
+            if (parseResult) {
+                var zoneId = parseInt(parseResult[1]);
+                var enterOrExit = parseResult[2];
+                var zoneObjectCount = parseInt(parseResult[3]);
+                this.mZone[zoneId - 1] = zoneObjectCount;
+                this.changed("zone" + this.pad(zoneId, 2));
+                console.log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
+                return;
+            }
+            var parseResultWithoutCount = LidarInterface.kParserWithoutCount.exec(data);
+            if (parseResultWithoutCount) {
+                var zoneId = parseInt(parseResultWithoutCount[1]);
+                var enterOrExit = parseResultWithoutCount[2];
+                this.mZone[zoneId - 1] += enterOrExit === "ENTER" ? 1 : -1;
+                var label = "zone" + this.pad(zoneId, 2);
+                this.changed(label);
+                return;
+            }
+        };
+        LidarInterface.prototype.userFriendlyName = function () {
+            return "Lidar";
+        };
+        LidarInterface.prototype.cmdActivationZone = function (zoneId, x, y, width, height) {
+            return "ZONE" + this.pad(zoneId, 2) + "=" +
+                this.signedPad(x, 3) + "," +
+                this.signedPad(y, 3) + "," +
+                this.pad(width, 3) + "," +
+                this.pad(height, 3);
+        };
+        LidarInterface.prototype.packageB = function (command) {
+            return "X" + this.pad(this.index + 1, 3) + "B[" + command + "]";
+        };
+        LidarInterface.prototype.pad = function (num, length, padChar) {
+            if (padChar === void 0) { padChar = "0"; }
+            var numStr = num.toString();
+            while (numStr.length < length)
+                numStr = padChar + numStr;
+            return numStr;
+        };
+        LidarInterface.prototype.signedPad = function (num, length) {
+            var isPositive = num >= 0;
+            return (isPositive ? "+" : "-") + this.pad(Math.abs(num), length);
+        };
+        LidarInterface.kParser = /^ZONE(\d{2})=(ENTER|EXIT):(\d{2})$/;
+        LidarInterface.kParserWithoutCount = /^ZONE(\d{2})=(ENTER|EXIT)$/;
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone01", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone02", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone03", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone04", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone05", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone06", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone07", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone08", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone09", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone10", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone11", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone12", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone13", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone14", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone15", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone16", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone17", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone18", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone19", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone20", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone21", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone22", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone23", null);
+        __decorate([
+            (0, Metadata_1.property)(kZoneDescr, true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], LidarInterface.prototype, "zone24", null);
+        __decorate([
+            (0, Metadata_1.callable)("define activation zone"),
+            __param(0, (0, Metadata_1.parameter)("Zone ID (1-24)")),
+            __param(1, (0, Metadata_1.parameter)("X in cm")),
+            __param(2, (0, Metadata_1.parameter)("Y in cm")),
+            __param(3, (0, Metadata_1.parameter)("width in cm")),
+            __param(4, (0, Metadata_1.parameter)("height in cm")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], LidarInterface.prototype, "defZone", null);
+        return LidarInterface;
+    }(BaseInterface));
+    var kZoneDescr = "Zone occupied";
+    Nexmosphere.registerInterface(LidarInterface, "XQL2", "XQL5");
     var DEBUG = false;
     function log() {
         var messages = [];
