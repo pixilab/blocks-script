@@ -861,6 +861,14 @@ class LidarInterface extends BaseInterface {
 	get zone24(): number { return this.mZone[23]; }
 	set zone24(value: number) { this.mZone[23] = value; }
 
+	@callable("define field of interest")
+	defField(
+		@parameter("list of 3 to 10 corner coordinates in cm - e.g. '[0,10], [22,300], [-22,400]'") corners: string,
+	): Promise<void> {
+		const coordinates = this.parseAndValidateCoordinates(corners);
+		return this.defineFieldOfInterest(coordinates);
+	}
+
 	@callable("define activation zone")
 	defZone(
 		@parameter("Zone ID (1-24)") zoneId: number,
@@ -868,19 +876,67 @@ class LidarInterface extends BaseInterface {
 		@parameter("Y in cm") y: number,
 		@parameter("width in cm") width: number,
 		@parameter("height in cm") height: number,
-	) {
-		const raw = this.packageB(this.cmdActivationZone(zoneId, x, y, width, height))
-		this.driver.send(raw);
-		console.log(raw);
+	): Promise<void> {
+		return this.sendCmdB(this.cmdActivationZone(zoneId, x, y, width, height));
 	}
+
+	@callable("set zone delay")
+	setZoneDelay(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("delay in frames\n(XQ-L2: 1 frame = ~140 ms XQ-L5: 1 frame = ~100 ms)") delay: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdSetZoneDelay(zoneId, delay));
+	}
+
+	@callable("set zone min object size")
+	setZoneMinSize(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("min object size in cm") size: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdSetZoneMinObjectSize(zoneId, size));
+	}
+
+	@callable("set zone max object size")
+	setZoneMaxSize(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("max object size in cm") size: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdSetZoneMaxObjectSize(zoneId, size));
+	}
+
+	@callable("clear zone parameters (delay, min/max object size)")
+	clearZone(
+		@parameter("Zone ID (1-24)") zoneId: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdClearZone(zoneId));
+	}
+
+	@callable("clear parameters for all zones (delay, min/max object size)")
+	clearAllZones(): Promise<void> {
+		return this.sendCmdB(this.cmdClearAllZones());
+	}
+
+
+	@callable("set detection / output mode (see sensor manual)")
+	setDetectionMode(
+		@parameter("1=single detection, 2=multi detection (equals mode 3 from manual!)") mode: number,
+	): Promise<void> {
+		switch (mode) {
+			case 1:
+				return this.sendCmdS("4:1");
+			case 2:
+				return this.sendCmdS("4:3");
+			default:
+				throw new Error("Invalid detection mode");
+		}
+	}
+
 
 	constructor(
 		driver: Nexmosphere,
 		index: number
 	) {
 		super(driver, index);
-		const command = "X" + this.pad(index + 1, 3) + "S[4:3]";
-		driver.send(command);
 	}
 
 	receiveData(data: string, tag?: TagInfo) {
@@ -892,7 +948,7 @@ class LidarInterface extends BaseInterface {
 
 			this.mZone[zoneId - 1] = zoneObjectCount;
 			this.changed("zone" + this.pad(zoneId, 2));
-			console.log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
+			log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
 			return;
 		}
 		const parseResultWithoutCount = LidarInterface.kParserWithoutCount.exec(data);
@@ -910,7 +966,28 @@ class LidarInterface extends BaseInterface {
 		return "Lidar";
 	}
 
+	private async defineFieldOfInterest(coordinates: number[][]): Promise<void> {
+		for (let i = 0; i < coordinates.length; ++i) {
+			await this.sendCmdB(this.cmdFieldOfInterestCorner(i + 1, coordinates[i][0], coordinates[i][1]));
+		}
+		await this.sendCmdB(this.cmdRecalculateFieldOfInterest());
+	}
 
+	private async sendCmdS(command: string): Promise<void> { await this.sendCmd(command, "S"); }
+	private async sendCmdB(command: string): Promise<void> { await this.sendCmd(command, "B"); }
+	private async sendCmd(command: string, prefix: "B" | "S"): Promise<void> {
+		const raw = this.package(command, prefix);
+		this.driver.send(raw);
+		log(raw);
+		await commandDelay();
+	}
+
+	private cmdFieldOfInterestCorner(i: number, x: number, y: number): string {
+		return "FOICORNER" + this.pad(i, 2) + "=" + this.signedPad(x, 3) + "," + this.signedPad(y, 3);
+	}
+	private cmdRecalculateFieldOfInterest(): string {
+		return "RECALCULATEFOI";
+	}
 	private cmdActivationZone(zoneId: number, x: number, y: number, width: number, height: number): string {
 		return "ZONE" + this.pad(zoneId, 2) + "=" +
 			this.signedPad(x, 3) + "," +
@@ -918,9 +995,61 @@ class LidarInterface extends BaseInterface {
 			this.pad(width, 3) + "," +
 			this.pad(height, 3);
 	}
-	private packageB(command: string): string {
-		return "X" + this.pad(this.index + 1, 3) + "B[" + command + "]";
+
+	private cmdSetZoneDelay(zoneId: number, delay: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "DELAY=" + this.pad(delay, 2);
 	}
+	private cmdSetZoneMinObjectSize(zoneId: number, minObjectSize: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "MINSIZE=" + this.pad(minObjectSize, 2);
+	}
+	private cmdSetZoneMaxObjectSize(zoneId: number, maxObjectSize: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "MAXSIZE=" + this.pad(maxObjectSize, 2);
+	}
+	private cmdClearZone(zoneId: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "=CLEAR";
+	}
+	private cmdClearAllZones(): string {
+		return "CLEARALLZONES";
+	}
+	private cmdAskZones(): string {
+		return "ZONES?";
+	}
+	private packageB(command: string): string { return this.package(command, "B"); }
+	private packageS(command: string): string { return this.package(command, "S"); }
+	private package(command: string, prefix: "B" | "S"): string {
+		return "X" + this.pad(this.index + 1, 3) + prefix + "[" + command + "]";
+	}
+
+	private parseAndValidateCoordinates(input: string): number[][] {
+		// Match array-like groups of two numbers `[num1,num2]`
+		const coordinateRegex = /\[(-?\d+),\s*(-?\d+)]/g;
+		const coordinatePartsRegex = /\[(-?\d+),\s*(-?\d+)]/;
+
+		// Extracting matches into an array
+		const matches = [...input.match(coordinateRegex)];
+
+		// Check the number of coordinate pairs (must be 3-10)
+		if (matches.length < 3 || matches.length > 10) {
+			throw new Error("Input must contain 3 to 10 coordinate pairs.");
+		}
+
+		// Map the matches into number arrays and validate each value's range
+		const coordinates = matches.map(match => {
+			const reMatch = coordinatePartsRegex.exec(match);
+			const x = parseInt(reMatch[1]);
+			const y = parseInt(reMatch[2]);
+
+			if (x < -999 || x > 999 || y < -999 || y > 999) {
+				throw new Error("Coordinates must have x and y values between -999 and 999.");
+			}
+
+			return [x, y];
+		});
+
+		return coordinates;
+	}
+
+
 	/**
 	 * Pads a given number with leading zeroes to match the specified length
 	 * without using `padStart`.
@@ -943,6 +1072,18 @@ class LidarInterface extends BaseInterface {
 }
 const kZoneDescr = "Zone occupied";
 type EnterExit = "ENTER" | "EXIT";
+/**
+ * Nexmosphere requires >= 50 ms delay after each command
+ * (in practice the needed delay seems to be longer)
+ */
+const NEXMOSPHERE_COMMAND_DELAY_MS = 280;
+function commandDelay(): Promise<void> {
+	return new Promise<void>((resolve) => {
+		wait(NEXMOSPHERE_COMMAND_DELAY_MS).then(() => {
+			resolve();
+		});
+	});
+}
 Nexmosphere.registerInterface(LidarInterface, "XQL2", "XQL5");
 
 
