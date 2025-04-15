@@ -787,6 +787,12 @@ class LidarInterface extends BaseInterface {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0,
 	];
+	private _ready = false;
+	private _cmdResponseWaiter: CmdResponseWaiter;
+
+	@property("Ready for setup (e.g. use this as trigger for a setup Task)", true)
+	get ready(): boolean { return this._ready; }
+	set ready(value: boolean) { this._ready = value; }
 
 	@property(kZoneDescr, true)
 	get zone01(): number { return this.mZone[0]; }
@@ -868,6 +874,23 @@ class LidarInterface extends BaseInterface {
 		const coordinates = this.parseAndValidateCoordinates(corners);
 		return this.defineFieldOfInterest(coordinates);
 	}
+	@callable("define field of interest as rectangle")
+	defFieldAsRect(
+		@parameter("min x in cm") minX: number,
+		@parameter("min y in cm") minY: number,
+		@parameter("max x in cm") maxX: number,
+		@parameter("max y in cm") maxY: number,
+	): Promise<void> {
+		const x1 = Math.min(minX, maxX);
+		const x2 = Math.max(minX, maxX);
+		const y1 = Math.min(minY, maxY);
+		const y2 = Math.max(minY, maxY);
+		const coordinates = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]];
+		if (x1 < -999 || x2 > 999 || y1 < -999 || y2 > 999) {
+			throw new Error("x and y values must be between -999 and 999.");
+		}
+		return this.defineFieldOfInterest(coordinates);
+	}
 
 	@callable("define activation zone")
 	defZone(
@@ -877,7 +900,10 @@ class LidarInterface extends BaseInterface {
 		@parameter("width in cm") width: number,
 		@parameter("height in cm") height: number,
 	): Promise<void> {
-		return this.sendCmdB(this.cmdActivationZone(zoneId, x, y, width, height));
+		return this.sendCmdB(
+			this.cmdActivationZone(zoneId, x, y, width, height),
+			RESPONSE_SETTINGS_STORED
+		);
 	}
 
 	@callable("set zone delay")
@@ -937,9 +963,17 @@ class LidarInterface extends BaseInterface {
 		index: number
 	) {
 		super(driver, index);
+		wait(2300).then(() => {
+			this.ready = true;
+		})
 	}
 
 	receiveData(data: string, tag?: TagInfo) {
+		if (this._cmdResponseWaiter && this._cmdResponseWaiter.expectedResponse == data) {
+			this._cmdResponseWaiter.register(data);
+			this._cmdResponseWaiter = null;
+			return;
+		}
 		const parseResult = LidarInterface.kParser.exec(data);
 		if (parseResult) {
 			const zoneId = parseInt(parseResult[1]);
@@ -968,18 +1002,43 @@ class LidarInterface extends BaseInterface {
 
 	private async defineFieldOfInterest(coordinates: number[][]): Promise<void> {
 		for (let i = 0; i < coordinates.length; ++i) {
-			await this.sendCmdB(this.cmdFieldOfInterestCorner(i + 1, coordinates[i][0], coordinates[i][1]));
+			await this.sendCmdB(
+				this.cmdFieldOfInterestCorner(i + 1, coordinates[i][0], coordinates[i][1]),
+				RESPONSE_SETTINGS_STORED
+			);
 		}
 		await this.sendCmdB(this.cmdRecalculateFieldOfInterest());
 	}
 
-	private async sendCmdS(command: string): Promise<void> { await this.sendCmd(command, "S"); }
-	private async sendCmdB(command: string): Promise<void> { await this.sendCmd(command, "B"); }
-	private async sendCmd(command: string, prefix: "B" | "S"): Promise<void> {
+	private async sendCmdS(command: string, expectedResponse: string = null): Promise<void> {
+		await this.sendCmd(command, expectedResponse, "S");
+	}
+	private async sendCmdB(command: string, expectedResponse: string = null): Promise<void> {
+		await this.sendCmd(command, expectedResponse, "B");
+	}
+	private async sendCmd(command: string, expectedResponse: string = null, prefix: "B" | "S"): Promise<void> {
 		const raw = this.package(command, prefix);
 		this.driver.send(raw);
-		log(raw);
-		await commandDelay();
+		log("sending command: '" + raw + "'");
+		if (expectedResponse) {
+			return new Promise<void>((resolve, reject) => {
+				this._cmdResponseWaiter = new CmdResponseWaiter(
+					command, expectedResponse,
+					result => {
+						log("resolved via response");
+						resolve();
+						this._cmdResponseWaiter = null;
+					},
+					reason => {
+						this._cmdResponseWaiter = null;
+						reject("Timeout waiting for response ... !");
+					}
+				);
+			});
+		} else {
+			await commandDelay();
+			log("resolved via timeout");
+		}
 	}
 
 	private cmdFieldOfInterestCorner(i: number, x: number, y: number): string {
@@ -1071,6 +1130,7 @@ class LidarInterface extends BaseInterface {
 
 }
 const kZoneDescr = "Zone occupied";
+const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
 type EnterExit = "ENTER" | "EXIT";
 /**
  * Nexmosphere requires >= 50 ms delay after each command
@@ -1083,6 +1143,38 @@ function commandDelay(): Promise<void> {
 			resolve();
 		});
 	});
+}
+class CmdResponseWaiter {
+	private _done = false;
+
+	constructor(
+		public readonly cmd: string,
+		public readonly expectedResponse: string,
+		private readonly _resolve: (result: ICmdResult) => void,
+		private readonly _reject: (reason: any) => void,
+		_timeoutMs: number = 1000,
+	) {
+		wait(_timeoutMs).then(() => {
+			if (this._done) return;
+			this._done = true;
+			this._reject(new Error("Timeout"));
+		});
+
+	}
+	public register(response: string): void {
+		if (response === this.expectedResponse) {
+			if (this._done) return;
+			this._done = true;
+			this._resolve({
+				response: response,
+				sender: this,
+			});
+		}
+	}
+}
+interface ICmdResult {
+	response: string,
+	sender: CmdResponseWaiter,
 }
 Nexmosphere.registerInterface(LidarInterface, "XQL2", "XQL5");
 

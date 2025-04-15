@@ -982,8 +982,18 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0,
             ];
+            _this._ready = false;
+            wait(2300).then(function () {
+                _this.ready = true;
+            });
             return _this;
         }
+        Object.defineProperty(LidarInterface.prototype, "ready", {
+            get: function () { return this._ready; },
+            set: function (value) { this._ready = value; },
+            enumerable: false,
+            configurable: true
+        });
         Object.defineProperty(LidarInterface.prototype, "zone01", {
             get: function () { return this.mZone[0]; },
             set: function (value) { this.mZone[0] = value; },
@@ -1132,8 +1142,19 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             var coordinates = this.parseAndValidateCoordinates(corners);
             return this.defineFieldOfInterest(coordinates);
         };
+        LidarInterface.prototype.defFieldAsRect = function (minX, minY, maxX, maxY) {
+            var x1 = Math.min(minX, maxX);
+            var x2 = Math.max(minX, maxX);
+            var y1 = Math.min(minY, maxY);
+            var y2 = Math.max(minY, maxY);
+            var coordinates = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]];
+            if (x1 < -999 || x2 > 999 || y1 < -999 || y2 > 999) {
+                throw new Error("x and y values must be between -999 and 999.");
+            }
+            return this.defineFieldOfInterest(coordinates);
+        };
         LidarInterface.prototype.defZone = function (zoneId, x, y, width, height) {
-            return this.sendCmdB(this.cmdActivationZone(zoneId, x, y, width, height));
+            return this.sendCmdB(this.cmdActivationZone(zoneId, x, y, width, height), RESPONSE_SETTINGS_STORED);
         };
         LidarInterface.prototype.setZoneDelay = function (zoneId, delay) {
             return this.sendCmdB(this.cmdSetZoneDelay(zoneId, delay));
@@ -1161,6 +1182,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             }
         };
         LidarInterface.prototype.receiveData = function (data, tag) {
+            if (this._cmdResponseWaiter && this._cmdResponseWaiter.expectedResponse == data) {
+                this._cmdResponseWaiter.register(data);
+                this._cmdResponseWaiter = null;
+                return;
+            }
             var parseResult = LidarInterface.kParser.exec(data);
             if (parseResult) {
                 var zoneId = parseInt(parseResult[1]);
@@ -1194,7 +1220,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                             _a.label = 1;
                         case 1:
                             if (!(i < coordinates.length)) return [3, 4];
-                            return [4, this.sendCmdB(this.cmdFieldOfInterestCorner(i + 1, coordinates[i][0], coordinates[i][1]))];
+                            return [4, this.sendCmdB(this.cmdFieldOfInterestCorner(i + 1, coordinates[i][0], coordinates[i][1]), RESPONSE_SETTINGS_STORED)];
                         case 2:
                             _a.sent();
                             _a.label = 3;
@@ -1209,39 +1235,60 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 });
             });
         };
-        LidarInterface.prototype.sendCmdS = function (command) {
-            return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4, this.sendCmd(command, "S")];
-                    case 1:
-                        _a.sent();
-                        return [2];
-                }
-            }); });
+        LidarInterface.prototype.sendCmdS = function (command, expectedResponse) {
+            if (expectedResponse === void 0) { expectedResponse = null; }
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4, this.sendCmd(command, expectedResponse, "S")];
+                        case 1:
+                            _a.sent();
+                            return [2];
+                    }
+                });
+            });
         };
-        LidarInterface.prototype.sendCmdB = function (command) {
-            return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4, this.sendCmd(command, "B")];
-                    case 1:
-                        _a.sent();
-                        return [2];
-                }
-            }); });
+        LidarInterface.prototype.sendCmdB = function (command, expectedResponse) {
+            if (expectedResponse === void 0) { expectedResponse = null; }
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4, this.sendCmd(command, expectedResponse, "B")];
+                        case 1:
+                            _a.sent();
+                            return [2];
+                    }
+                });
+            });
         };
-        LidarInterface.prototype.sendCmd = function (command, prefix) {
+        LidarInterface.prototype.sendCmd = function (command, expectedResponse, prefix) {
+            if (expectedResponse === void 0) { expectedResponse = null; }
             return __awaiter(this, void 0, void 0, function () {
                 var raw;
+                var _this = this;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
                             raw = this.package(command, prefix);
                             this.driver.send(raw);
-                            log(raw);
-                            return [4, commandDelay()];
-                        case 1:
+                            log("sending command: '" + raw + "'");
+                            if (!expectedResponse) return [3, 1];
+                            return [2, new Promise(function (resolve, reject) {
+                                    _this._cmdResponseWaiter = new CmdResponseWaiter(command, expectedResponse, function (result) {
+                                        log("resolved via response");
+                                        resolve();
+                                        _this._cmdResponseWaiter = null;
+                                    }, function (reason) {
+                                        _this._cmdResponseWaiter = null;
+                                        reject("Timeout waiting for response ... !");
+                                    });
+                                })];
+                        case 1: return [4, commandDelay()];
+                        case 2:
                             _a.sent();
-                            return [2];
+                            log("resolved via timeout");
+                            _a.label = 3;
+                        case 3: return [2];
                     }
                 });
             });
@@ -1313,6 +1360,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         LidarInterface.kParser = /^ZONE(\d{2})=(ENTER|EXIT):(\d{2})$/;
         LidarInterface.kParserWithoutCount = /^ZONE(\d{2})=(ENTER|EXIT)$/;
+        __decorate([
+            (0, Metadata_1.property)("Ready for setup (e.g. use this as trigger for a setup Task)", true),
+            __metadata("design:type", Boolean),
+            __metadata("design:paramtypes", [Boolean])
+        ], LidarInterface.prototype, "ready", null);
         __decorate([
             (0, Metadata_1.property)(kZoneDescr, true),
             __metadata("design:type", Number),
@@ -1441,6 +1493,16 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:returntype", Promise)
         ], LidarInterface.prototype, "defField", null);
         __decorate([
+            (0, Metadata_1.callable)("define field of interest as rectangle"),
+            __param(0, (0, Metadata_1.parameter)("min x in cm")),
+            __param(1, (0, Metadata_1.parameter)("min y in cm")),
+            __param(2, (0, Metadata_1.parameter)("max x in cm")),
+            __param(3, (0, Metadata_1.parameter)("max y in cm")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, Number, Number, Number]),
+            __metadata("design:returntype", Promise)
+        ], LidarInterface.prototype, "defFieldAsRect", null);
+        __decorate([
             (0, Metadata_1.callable)("define activation zone"),
             __param(0, (0, Metadata_1.parameter)("Zone ID (1-24)")),
             __param(1, (0, Metadata_1.parameter)("X in cm")),
@@ -1498,6 +1560,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         return LidarInterface;
     }(BaseInterface));
     var kZoneDescr = "Zone occupied";
+    var RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
     var NEXMOSPHERE_COMMAND_DELAY_MS = 280;
     function commandDelay() {
         return new Promise(function (resolve) {
@@ -1506,6 +1569,35 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             });
         });
     }
+    var CmdResponseWaiter = (function () {
+        function CmdResponseWaiter(cmd, expectedResponse, _resolve, _reject, _timeoutMs) {
+            if (_timeoutMs === void 0) { _timeoutMs = 1000; }
+            var _this = this;
+            this.cmd = cmd;
+            this.expectedResponse = expectedResponse;
+            this._resolve = _resolve;
+            this._reject = _reject;
+            this._done = false;
+            wait(_timeoutMs).then(function () {
+                if (_this._done)
+                    return;
+                _this._done = true;
+                _this._reject(new Error("Timeout"));
+            });
+        }
+        CmdResponseWaiter.prototype.register = function (response) {
+            if (response === this.expectedResponse) {
+                if (this._done)
+                    return;
+                this._done = true;
+                this._resolve({
+                    response: response,
+                    sender: this,
+                });
+            }
+        };
+        return CmdResponseWaiter;
+    }());
     Nexmosphere.registerInterface(LidarInterface, "XQL2", "XQL5");
     var DEBUG = false;
     function log() {
