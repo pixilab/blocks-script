@@ -39,7 +39,7 @@ Created 2021 by Mattias Andersson.
 
 import { NetworkTCP, SerialPort } from "system/Network";
 import { Driver } from "system_lib/Driver";
-import { callable, driver, max, min, property } from "system_lib/Metadata";
+import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
 import { AggregateElem } from "../system_lib/ScriptBase";
 
 // Parse RFID tag detection from XR-DR01 Rfid element
@@ -774,6 +774,410 @@ class GenderInterface extends BaseInterface {
 	}
 }
 Nexmosphere.registerInterface(GenderInterface, "XY510", "XY520");
+
+/**
+ * Lidar Sensor
+ */
+class LidarInterface extends BaseInterface {
+	private static readonly kParser = /^ZONE(\d{2})=(ENTER|EXIT):(\d{2})$/;
+	private static readonly kParserWithoutCount = /^ZONE(\d{2})=(ENTER|EXIT)$/;
+
+	private mZone: number[] = [
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0,
+	];
+	private _ready = false;
+	private _cmdResponseWaiter: CmdResponseWaiter;
+
+	@property("Ready for setup (e.g. use this as trigger for a setup Task)", true)
+	get ready(): boolean { return this._ready; }
+	set ready(value: boolean) { this._ready = value; }
+
+	@property(kZoneDescr, true)
+	get zone01(): number { return this.mZone[0]; }
+	set zone01(value: number) { this.mZone[0] = value; }
+	@property(kZoneDescr, true)
+	get zone02(): number { return this.mZone[1]; }
+	set zone02(value: number) { this.mZone[1] = value; }
+	@property(kZoneDescr, true)
+	get zone03(): number { return this.mZone[2]; }
+	set zone03(value: number) { this.mZone[2] = value; }
+	@property(kZoneDescr, true)
+	get zone04(): number { return this.mZone[3]; }
+	set zone04(value: number) { this.mZone[3] = value; }
+	@property(kZoneDescr, true)
+	get zone05(): number { return this.mZone[4]; }
+	set zone05(value: number) { this.mZone[4] = value; }
+	@property(kZoneDescr, true)
+	get zone06(): number { return this.mZone[5]; }
+	set zone06(value: number) { this.mZone[5] = value; }
+	@property(kZoneDescr, true)
+	get zone07(): number { return this.mZone[6]; }
+	set zone07(value: number) { this.mZone[6] = value; }
+	@property(kZoneDescr, true)
+	get zone08(): number { return this.mZone[7]; }
+	set zone08(value: number) { this.mZone[7] = value; }
+	@property(kZoneDescr, true)
+	get zone09(): number { return this.mZone[8]; }
+	set zone09(value: number) { this.mZone[8] = value; }
+	@property(kZoneDescr, true)
+	get zone10(): number { return this.mZone[9]; }
+	set zone10(value: number) { this.mZone[9] = value; }
+	@property(kZoneDescr, true)
+	get zone11(): number { return this.mZone[10]; }
+	set zone11(value: number) { this.mZone[10] = value; }
+	@property(kZoneDescr, true)
+	get zone12(): number { return this.mZone[11]; }
+	set zone12(value: number) { this.mZone[11] = value; }
+	@property(kZoneDescr, true)
+	get zone13(): number { return this.mZone[12]; }
+	set zone13(value: number) { this.mZone[12] = value; }
+	@property(kZoneDescr, true)
+	get zone14(): number { return this.mZone[13]; }
+	set zone14(value: number) { this.mZone[13] = value; }
+	@property(kZoneDescr, true)
+	get zone15(): number { return this.mZone[14]; }
+	set zone15(value: number) { this.mZone[14] = value; }
+	@property(kZoneDescr, true)
+	get zone16(): number { return this.mZone[15]; }
+	set zone16(value: number) { this.mZone[15] = value; }
+	@property(kZoneDescr, true)
+	get zone17(): number { return this.mZone[16]; }
+	set zone17(value: number) { this.mZone[16] = value; }
+	@property(kZoneDescr, true)
+	get zone18(): number { return this.mZone[17]; }
+	set zone18(value: number) { this.mZone[17] = value; }
+	@property(kZoneDescr, true)
+	get zone19(): number { return this.mZone[18]; }
+	set zone19(value: number) { this.mZone[18] = value; }
+	@property(kZoneDescr, true)
+	get zone20(): number { return this.mZone[19]; }
+	set zone20(value: number) { this.mZone[19] = value; }
+	@property(kZoneDescr, true)
+	get zone21(): number { return this.mZone[20]; }
+	set zone21(value: number) { this.mZone[20] = value; }
+	@property(kZoneDescr, true)
+	get zone22(): number { return this.mZone[21]; }
+	set zone22(value: number) { this.mZone[21] = value; }
+	@property(kZoneDescr, true)
+	get zone23(): number { return this.mZone[22]; }
+	set zone23(value: number) { this.mZone[22] = value; }
+	@property(kZoneDescr, true)
+	get zone24(): number { return this.mZone[23]; }
+	set zone24(value: number) { this.mZone[23] = value; }
+
+	@callable("define field of interest")
+	defField(
+		@parameter("list of 3 to 10 corner coordinates in cm - e.g. '[0,10], [22,300], [-22,400]'") corners: string,
+	): Promise<void> {
+		const coordinates = this.parseAndValidateCoordinates(corners);
+		return this.defineFieldOfInterest(coordinates);
+	}
+	@callable("define field of interest as rectangle")
+	defFieldAsRect(
+		@parameter("min x in cm") minX: number,
+		@parameter("min y in cm") minY: number,
+		@parameter("max x in cm") maxX: number,
+		@parameter("max y in cm") maxY: number,
+	): Promise<void> {
+		const x1 = Math.min(minX, maxX);
+		const x2 = Math.max(minX, maxX);
+		const y1 = Math.min(minY, maxY);
+		const y2 = Math.max(minY, maxY);
+		const coordinates = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]];
+		if (x1 < -999 || x2 > 999 || y1 < -999 || y2 > 999) {
+			throw new Error("x and y values must be between -999 and 999.");
+		}
+		return this.defineFieldOfInterest(coordinates);
+	}
+
+	@callable("define activation zone")
+	defZone(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("X in cm") x: number,
+		@parameter("Y in cm") y: number,
+		@parameter("width in cm") width: number,
+		@parameter("height in cm") height: number,
+	): Promise<void> {
+		return this.sendCmdB(
+			this.cmdActivationZone(zoneId, x, y, width, height),
+			RESPONSE_SETTINGS_STORED
+		);
+	}
+
+	@callable("set zone delay")
+	setZoneDelay(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("delay in frames\n(XQ-L2: 1 frame = ~140 ms XQ-L5: 1 frame = ~100 ms)") delay: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdSetZoneDelay(zoneId, delay));
+	}
+
+	@callable("set zone min object size")
+	setZoneMinSize(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("min object size in cm") size: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdSetZoneMinObjectSize(zoneId, size));
+	}
+
+	@callable("set zone max object size")
+	setZoneMaxSize(
+		@parameter("Zone ID (1-24)") zoneId: number,
+		@parameter("max object size in cm") size: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdSetZoneMaxObjectSize(zoneId, size));
+	}
+
+	@callable("clear zone parameters (delay, min/max object size)")
+	clearZone(
+		@parameter("Zone ID (1-24)") zoneId: number,
+	): Promise<void> {
+		return this.sendCmdB(this.cmdClearZone(zoneId));
+	}
+
+	@callable("clear parameters for all zones (delay, min/max object size)")
+	clearAllZones(): Promise<void> {
+		return this.sendCmdB(this.cmdClearAllZones());
+	}
+
+
+	@callable("set detection / output mode (see sensor manual)")
+	setDetectionMode(
+		@parameter("1=single detection, 2=multi detection (equals mode 3 from manual!)") mode: number,
+	): Promise<void> {
+		switch (mode) {
+			case 1:
+				return this.sendCmdS("4:1");
+			case 2:
+				return this.sendCmdS("4:3");
+			default:
+				throw new Error("Invalid detection mode");
+		}
+	}
+
+
+	constructor(
+		driver: Nexmosphere,
+		index: number
+	) {
+		super(driver, index);
+		wait(2300).then(() => {
+			this.ready = true;
+		})
+	}
+
+	receiveData(data: string, tag?: TagInfo) {
+		if (this._cmdResponseWaiter && this._cmdResponseWaiter.expectedResponse == data) {
+			this._cmdResponseWaiter.register(data);
+			this._cmdResponseWaiter = null;
+			return;
+		}
+		const parseResult = LidarInterface.kParser.exec(data);
+		if (parseResult) {
+			const zoneId = parseInt(parseResult[1]);
+			const enterOrExit: EnterExit = parseResult[2] as EnterExit;
+			const zoneObjectCount = parseInt(parseResult[3]);
+
+			this.mZone[zoneId - 1] = zoneObjectCount;
+			this.changed("zone" + this.pad(zoneId, 2));
+			log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
+			return;
+		}
+		const parseResultWithoutCount = LidarInterface.kParserWithoutCount.exec(data);
+		if (parseResultWithoutCount) {
+			const zoneId = parseInt(parseResultWithoutCount[1]);
+			const enterOrExit: EnterExit = parseResultWithoutCount[2] as EnterExit;
+
+			this.mZone[zoneId - 1] += enterOrExit === "ENTER" ? 1 : -1;
+			const label = "zone" + this.pad(zoneId, 2);
+			this.changed(label);
+			return;
+		}
+	}
+	userFriendlyName(): string {
+		return "Lidar";
+	}
+
+	private async defineFieldOfInterest(coordinates: number[][]): Promise<void> {
+		for (let i = 0; i < coordinates.length; ++i) {
+			await this.sendCmdB(
+				this.cmdFieldOfInterestCorner(i + 1, coordinates[i][0], coordinates[i][1]),
+				RESPONSE_SETTINGS_STORED
+			);
+		}
+		await this.sendCmdB(this.cmdRecalculateFieldOfInterest());
+	}
+
+	private async sendCmdS(command: string, expectedResponse: string = null): Promise<void> {
+		await this.sendCmd(command, expectedResponse, "S");
+	}
+	private async sendCmdB(command: string, expectedResponse: string = null): Promise<void> {
+		await this.sendCmd(command, expectedResponse, "B");
+	}
+	private async sendCmd(command: string, expectedResponse: string = null, prefix: "B" | "S"): Promise<void> {
+		const raw = this.package(command, prefix);
+		this.driver.send(raw);
+		log("sending command: '" + raw + "'");
+		if (expectedResponse) {
+			return new Promise<void>((resolve, reject) => {
+				this._cmdResponseWaiter = new CmdResponseWaiter(
+					command, expectedResponse,
+					result => {
+						log("resolved via response");
+						resolve();
+						this._cmdResponseWaiter = null;
+					},
+					reason => {
+						this._cmdResponseWaiter = null;
+						reject("Timeout waiting for response ... !");
+					}
+				);
+			});
+		} else {
+			await commandDelay();
+			log("resolved via timeout");
+		}
+	}
+
+	private cmdFieldOfInterestCorner(i: number, x: number, y: number): string {
+		return "FOICORNER" + this.pad(i, 2) + "=" + this.signedPad(x, 3) + "," + this.signedPad(y, 3);
+	}
+	private cmdRecalculateFieldOfInterest(): string {
+		return "RECALCULATEFOI";
+	}
+	private cmdActivationZone(zoneId: number, x: number, y: number, width: number, height: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "=" +
+			this.signedPad(x, 3) + "," +
+			this.signedPad(y, 3) + "," +
+			this.pad(width, 3) + "," +
+			this.pad(height, 3);
+	}
+
+	private cmdSetZoneDelay(zoneId: number, delay: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "DELAY=" + this.pad(delay, 2);
+	}
+	private cmdSetZoneMinObjectSize(zoneId: number, minObjectSize: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "MINSIZE=" + this.pad(minObjectSize, 2);
+	}
+	private cmdSetZoneMaxObjectSize(zoneId: number, maxObjectSize: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "MAXSIZE=" + this.pad(maxObjectSize, 2);
+	}
+	private cmdClearZone(zoneId: number): string {
+		return "ZONE" + this.pad(zoneId, 2) + "=CLEAR";
+	}
+	private cmdClearAllZones(): string {
+		return "CLEARALLZONES";
+	}
+	private cmdAskZones(): string {
+		return "ZONES?";
+	}
+	private packageB(command: string): string { return this.package(command, "B"); }
+	private packageS(command: string): string { return this.package(command, "S"); }
+	private package(command: string, prefix: "B" | "S"): string {
+		return "X" + this.pad(this.index + 1, 3) + prefix + "[" + command + "]";
+	}
+
+	private parseAndValidateCoordinates(input: string): number[][] {
+		// Match array-like groups of two numbers `[num1,num2]`
+		const coordinateRegex = /\[(-?\d+),\s*(-?\d+)]/g;
+		const coordinatePartsRegex = /\[(-?\d+),\s*(-?\d+)]/;
+
+		// Extracting matches into an array
+		const matches = [...input.match(coordinateRegex)];
+
+		// Check the number of coordinate pairs (must be 3-10)
+		if (matches.length < 3 || matches.length > 10) {
+			throw new Error("Input must contain 3 to 10 coordinate pairs.");
+		}
+
+		// Map the matches into number arrays and validate each value's range
+		const coordinates = matches.map(match => {
+			const reMatch = coordinatePartsRegex.exec(match);
+			const x = parseInt(reMatch[1]);
+			const y = parseInt(reMatch[2]);
+
+			if (x < -999 || x > 999 || y < -999 || y > 999) {
+				throw new Error("Coordinates must have x and y values between -999 and 999.");
+			}
+
+			return [x, y];
+		});
+
+		return coordinates;
+	}
+
+
+	/**
+	 * Pads a given number with leading zeroes to match the specified length
+	 * without using `padStart`.
+	 *
+	 * @param num - The number to be padded.
+	 * @param length - The desired total length of the resulting string.
+	 * @param padChar - defaults to "0"
+	 * @returns The number as a string, padded with leading zeroes.
+	 */
+	private pad(num: number, length: number, padChar: string = "0"): string {
+		let numStr = num.toString();
+		while (numStr.length < length) numStr = padChar + numStr;
+		return numStr;
+	}
+	private signedPad(num: number, length: number): string {
+		const isPositive = num >= 0;
+		return (isPositive ? "+" : "-") + this.pad(Math.abs(num), length);
+	}
+
+}
+const kZoneDescr = "Zone occupied";
+const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
+type EnterExit = "ENTER" | "EXIT";
+/**
+ * Nexmosphere requires >= 50 ms delay after each command
+ * (in practice the needed delay seems to be longer)
+ */
+const NEXMOSPHERE_COMMAND_DELAY_MS = 280;
+function commandDelay(): Promise<void> {
+	return new Promise<void>((resolve) => {
+		wait(NEXMOSPHERE_COMMAND_DELAY_MS).then(() => {
+			resolve();
+		});
+	});
+}
+class CmdResponseWaiter {
+	private _done = false;
+
+	constructor(
+		public readonly cmd: string,
+		public readonly expectedResponse: string,
+		private readonly _resolve: (result: ICmdResult) => void,
+		private readonly _reject: (reason: any) => void,
+		_timeoutMs: number = 1000,
+	) {
+		wait(_timeoutMs).then(() => {
+			if (this._done) return;
+			this._done = true;
+			this._reject(new Error("Timeout"));
+		});
+
+	}
+	public register(response: string): void {
+		if (response === this.expectedResponse) {
+			if (this._done) return;
+			this._done = true;
+			this._resolve({
+				response: response,
+				sender: this,
+			});
+		}
+	}
+}
+interface ICmdResult {
+	response: string,
+	sender: CmdResponseWaiter,
+}
+Nexmosphere.registerInterface(LidarInterface, "XQL2", "XQL5");
+
 
 
 /**
