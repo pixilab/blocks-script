@@ -1,22 +1,36 @@
 /*
- * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * Created 2018 by Mike Fahl.
+ Common functionality needed by displays, projectors and possibly other devices
+ controlled over the network.
+
+ NOTE: Althhough this base class is named "NetworkProjector" for historical
+ reasons, it may also be used by other device types with similar functional
+ needs.
+
+ Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ Created 2018 by Mike Fahl.
  */
 
 import {NetworkTCP} from "system/Network";
 import {callable, parameter, property} from "system_lib/Metadata";
 import {Driver} from "system_lib/Driver";
 
-/**
- Common functionality needed by projectors controlled over the network.
- */
 export abstract class NetworkProjector extends Driver<NetworkTCP> {
-	private awake: boolean;					// Initialization queries are done
+	private awake: boolean;						// Initialization queries are done successfully
 	protected discarded: boolean;				// Set once I've been discarded
-	protected poller: CancelablePromise<void>;	// To poll projector status regularly
 	protected connecting: boolean;				// Has initiated a connection attempt
+
+	protected poller: CancelablePromise<void>;	// To poll device status regularly
 	protected connectDly: CancelablePromise<void>; // While connection delay in progress
 	protected correctionRetry: CancelablePromise<void>;	// To retry failed correction
+	private connectionTimeout: CancelablePromise<void>;	// Auto-close connection after some time
+
+	protected keepAlive: boolean = true;  	// Hold connection "forever". Default for backward compatibility.
+
+	private connTimeout = 3000; 		// Connection timeout (milliseconds)
+	private pollInterval = 21333;	// Default value for the poll interval, in milliseconds
+
+	// Only relevant when keepAlive is false. If we fail to connect and this var is already true, then the device is down.
+	protected failedToConnect = false;
 
 	// Basic states (presumably) supported by all projectors.
 	protected _power: BoolState;					// Set in subclass ctor
@@ -38,23 +52,44 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected constructor(protected socket: NetworkTCP) {
 		super(socket);
 		this.propList = [];
-		this.awake = false;	// Until we know
-		socket.subscribe('connect', (sender, message)=> {
+		this.awake = false;
+
+		socket.subscribe('connect', (sender, message) => {
 			if (message.type === 'Connection') {
-				if (this.socket.connected)
+				if (this.socket.connected && this.keepAlive)
 					this.infoMsg("connected");
-				else
-					this.warnMsg("connection dropped");
+				else if (!this.socket.connected && this.keepAlive && this.socket.enabled)
+					this.warnMsg("connection dropped", message.type);
 				this.connectStateChanged();
 			}
 		});
-		socket.subscribe('textReceived', (sender, msg)=>
+		socket.subscribe('textReceived', (sender, msg) => {
+			this.resetTimeout();	// New data keeps ephemeral connection alive
 			this.textReceived(msg.text)
-		);
+		});
 
-		socket.subscribe('finish', (sender)=>
-			this.discard()	// Shut me down if socket is discarded (e.g., was disabled)
+		socket.subscribe('finish', () =>
+			this.discard()
 		);
+	}
+
+	/**
+	 * Set whether to keep conneciton alive continuously (default) or letting
+	 * it drop after some inactivity.
+	 */
+	protected setKeepAlive(newState: boolean) {
+		if (newState && !this.keepAlive &&this.connectionTimeout) {
+			this.connectionTimeout.cancel();
+			this.connectionTimeout = undefined;
+		}
+		this.keepAlive = newState;
+	}
+
+	/**
+	 * Set the poll interval time, overriding the default values
+	 */
+	protected setPollFrequency(millis: number) {
+		this.pollInterval = millis;
 	}
 
 	/**
@@ -62,6 +97,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 */
 	protected addState(state: State<any>) {
 		this.propList.push(state);
+		// console.log("State added: ")
 		state.setDriver(this);	// Allowing it to fire notifications through me
 	}
 
@@ -80,6 +116,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		if (this._power.set(on))
 			this.sendCorrection();
 	}
+
 	/**
 	 Get current power state, if known, else undefined.
 	 */
@@ -95,7 +132,16 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	public sendText(
 		@parameter("What to send") text: string,
 	): Promise<any> {
-		return this.socket.sendText(text, this.getDefaultEoln());
+		if (this.socket.enabled) {
+			this.resetTimeout();
+			if (this.socket.connected) // OK to send right away
+				return this.socket.sendText(text, this.getDefaultEoln());
+			else { // Must connect first
+				return this.attemptConnect().then(() =>
+					this.socket.sendText(text, this.getDefaultEoln())
+				);
+			}
+		}
 	}
 
 	/**
@@ -106,16 +152,17 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 Return true if I'm currently online to the projector. Note that
-	 this may change at any time, as the projector disconnects 30 seconds
+	 Return true if I'm currently online to the device. Note that
+	 this may change at any time, as the device disconnects 30 seconds
 	 after last command. You don't need to connect explicitly before
 	 calling one of the public setXxx to change the state, as I connect
 	 on demand.
 	 */
-	@property("True if projector is online", true)
+	@property("True if device is considered to be online", true)
 	public get connected(): boolean {
 		return this.awake;
 	}
+
 	public set connected(conn: boolean) {
 		this.awake = conn;
 	}
@@ -127,12 +174,15 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected abstract textReceived(text: string): void;
 
 	/**
-	 Send a question or command to the projector, and wait for the response. The response
+	 Send a question or command to the device, and wait for the response. The response
 	 will be provided in the resolved promise. An error response will cause it to be rejected
 	 with that error code.
 	 */
 	abstract request(question: string, param?: string): Promise<string>;
 
+	/**
+	 * I'm going away. Shut down all timer callbacks and such.
+	 */
 	protected discard() {
 		this.discarded = true;
 		if (this.poller) {
@@ -142,6 +192,14 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		if (this.correctionRetry) {
 			this.correctionRetry.cancel();
 			this.correctionRetry = undefined;
+		}
+		if (this.connectionTimeout) {
+			this.connectionTimeout.cancel();
+			this.connectionTimeout = undefined;
+		}
+		if (this.connectDly) {
+			this.connectDly.cancel();
+			this.connectDly = undefined;
 		}
 	}
 
@@ -171,7 +229,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 
 	/*	Get first state that wants to send a request, else undefined.
 	 */
-	protected reqToSend(): State<any>|undefined {
+	protected reqToSend(): State<any> | undefined {
 		for (var p of this.propList)
 			if (p.needsCorrection())
 				return p;
@@ -186,12 +244,15 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 
 	/**
 	 If at all possible, and any pending, attempt to send a single correction command.
-	 Ret true if actually sent a correction command this time.
+	 Return true if actually sent a correction command this time.
 	 */
 	protected sendCorrection(): boolean {
+		if (!this.keepAlive && !this.awake) {
+			this.attemptConnect(true);	// sends true to attempt connect, to eventually come to sendCorrection() again if connection was made
+			return false;
+		}
 		// Don't even try if there's any command in flight or we're not yet fully awake
 		if (!this.okToSendCommand() || !this.awake) {
-			// console.info("sendCorrection NOT", this.currCmd, this.awake);
 			return false;	// No can do
 		}
 
@@ -203,6 +264,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 				// Else a connection attempt will happen after delay
 			} else {
 				// console.info("req", req.current, req.get());
+				this.resetTimeout(); // New data keeps ephemeral connection alive
 				req.correct(this)
 				.then(
 					() => this.sendFailedReported = false,
@@ -231,24 +293,52 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 Attempt to connect now.
+	 Attempt to connect now. Ret reolved promise once succeeds.
 	 */
-	protected attemptConnect() {
+	protected attemptConnect(sendCorrection?: boolean) {
 		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-			// this.infoMsg("attemptConnect");
-			this.socket.connect().then(
-				() => this.justConnected(),
+			const connPromise = this.socket.connect();
+			connPromise.then(
+				() => this.justConnected(sendCorrection),
 				error => this.connectStateChanged()
 			);
 			this.connecting = true;
+			return connPromise;
 		}
+		return Promise.resolve();
 	}
 
 	/**
 	 Override if you want to do something once connection has been established
 	 successfully.
+
+	 sendCorrection true expresses that there is a command to send, the one that triggered the connection to be established to begin with
 	 */
-	protected justConnected(): void {
+	protected justConnected(sendCorrection?: boolean): void {
+		if (!this.keepAlive) {
+			this.failedToConnect = false;
+			this.resetTimeout();		// Start the connection timeout
+
+			if (sendCorrection)
+				this.sendCorrection();	// Send any pending commands
+		}
+	}
+
+	/**
+	 * Reset connection timeout (unless connection held indefinitely),
+	 * extending it by another connTimeout mS. Call when first
+	 * connects or when sending/receiving more data.
+	 */
+	private resetTimeout() {
+		if (!this.keepAlive) {
+			if (this.connectionTimeout) // Cancels any previous timeout
+				this.connectionTimeout.cancel();
+
+			this.connectionTimeout = wait(this.connTimeout);	// Starts new timeout
+			this.connectionTimeout.then(() => {
+				this.socket.disconnect();	// Closes the connection if nothing was sent through the socket
+			});
+		}
 	}
 
 	/**
@@ -257,10 +347,21 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	protected connectStateChanged() {
 		this.connecting = false;
 		if (!this.socket.connected) {
-			this.connected = false;		// Tell clients connection dropped
-			this.currCmd = undefined;	// No longer pertinent
+			if (this.keepAlive) {
+				this.connected = false;	// Tell clients connection dropped
+				this.connectSoon();
+			} else {
+				if (this.failedToConnect) {
+					this.warnMsg("connection dropped");
+					this.connected = false;		// Failed for the second time to connect to the device
+					this.connectSoon();			// Try to reconnect soon
+				} else
+					this.failedToConnect = true; // This is one 'strike'. Second strike means the device not reachable
+			}
+
 			if (this.correctionRetry)
 				this.correctionRetry.cancel();
+
 			if (this.reqToSend())
 				this.connectSoon();	// Got data to send - attempt to re-connect soon
 		}
@@ -275,12 +376,21 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 		this.connectSoon(howSoonMillis);
 	}
 
+
+	/**
+	 Disconnect function
+	 */
+	protected disconnect() {
+		if (this.socket.connected)
+			this.socket.disconnect();
+	}
+
 	/**
 	 Arrange to attempt to connect soon.
 	 */
 	protected connectSoon(howSoonMillis?: number) {
 		if (!this.connectDly) {
-			// console.info("connectSoon");
+			//console.info("connectSoon");
 			this.connectDly = wait(howSoonMillis || 8000);
 			this.connectDly.then(
 				() => {
@@ -292,17 +402,17 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 Poll the projector's status with some regularity, to not get out
+	 Poll the device's status with some regularity, to not get out
 	 of sync if status changed behind our back.
 	 */
 	protected poll() {
 		if (this.socket.enabled) {	// Only if we're enabled
-			this.poller = wait(21333);
+			this.poller = wait(this.pollInterval);
 			this.poller.then(() => {
 				var continuePolling = true;
 				if (!this.socket.connected) {
 					if (!this.connecting && !this.connectDly)
-						this.attemptConnect();	// Status retrieved once connected
+						this.attemptConnect();	// Status retieved once connected
 				} else  // I'm connected - move ahead to poll for current status
 					continuePolling = this.pollStatus();
 				if (continuePolling && !this.discarded)	// Keep polling
@@ -370,7 +480,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 * Call to indicate that the current command failed.
 	 */
 	protected requestFailure(msg?: string) {
-		// Suppress warning if power is off. Many projectors behave erratic then.
+		// Suppress warning if power is off. Many devices behave erratic then.
 		if (this.power)
 			this.warnMsg("Request failed", msg);
 		const rejector = this.currRejector;
@@ -407,15 +517,16 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
  for desired-state-tracking behavior in the driver, rather than command queueing.
  */
 export abstract class State<T> {
-	protected current: T;		// Current state of projector, if known
+	protected current: T;		// Current state of device, if known
 	protected wanted: T;		// Desired (set by user) state, if any
 	private driver: Driver<any>;		// Associated driver
 
 	constructor(
 		protected baseCmd: string, 	// Base part of command to send
 		protected propName: string, 	// Name of associated property
-		private correctionApprover?: ()=>boolean // If specified, do NOT attempt to correct if returns false
-	) {}
+		private correctionApprover?: () => boolean // If specified, do NOT attempt to correct if returns false
+	) {
+	}
 
 	/**
 	 * Set the driver I'm associated with, allowing me to fire property changes when
@@ -446,13 +557,13 @@ export abstract class State<T> {
 	 A "current state" update received from the device. Store it as current. Also,
 	 let the tail wag the dog under the right circumstances. Without this mechanism,
 	 you may not be able to control the device if it has changed state "behind our
-	 back". E.g., if the projector has powered itself down due to "no signal", we
+	 back". E.g., if the device has powered itself down due to "no signal", we
 	 would still think it is ON if that's the last state set, and since there's then
 	 no change in the "wanted" value when attempting to turn it on, it won't send the
-	 command, and the projector can not be turned on from the user's point of view.
+	 command, and the device can not be turned on from the user's point of view.
 
 	 Note that for this to work with changes done "behind our back", someone must
-	 poll the projector with some regularity to learn about its actual status, and
+	 poll the device with some regularity to learn about its actual status, and
 	 then call this function with the result.
 	 */
 	updateCurrent(newState: T) {
@@ -486,9 +597,9 @@ export abstract class State<T> {
 	 Return true if I have pending correction to send.
 	 */
 	needsCorrection(): boolean {
-		return	this.wanted !== undefined &&
-				this.current !== this.wanted &&
-				(!this.correctionApprover || this.correctionApprover());
+		return this.wanted !== undefined &&
+			this.current !== this.wanted &&
+			(!this.correctionApprover || this.correctionApprover());
 	}
 
 	abstract correct(drvr: NetworkProjector): Promise<string>;	// Make current desired
@@ -497,7 +608,7 @@ export abstract class State<T> {
 		// Hold on to wanted in case it changes before reply
 		const wanted = this.wanted;
 		const result = drvr.request(this.baseCmd, arg);
-		result.then(()=> {
+		result.then(() => {
 			this.current = wanted;	// Now consider set
 			// console.info("correct2 succeeded", this.baseCmd, wanted);
 		});
@@ -525,7 +636,7 @@ export class NumState extends State<number> {
 		propName: string,
 		private readonly min: number,
 		private readonly max: number,
-		correctionApprover?: ()=>boolean
+		correctionApprover?: () => boolean
 	) {
 		super(baseCmd, propName, correctionApprover);
 	}
@@ -551,11 +662,11 @@ export class NumState extends State<number> {
 	 */
 	set(v: number): boolean {
 		if (!(typeof v === 'number') || isNaN(v)) {
-			console.error("Value not numeric", this.baseCmd, v);
+			console.error("NetworkProjector value not numeric", this.baseCmd, v);
 			return false;
 		}
 		if (v < this.min || v > this.max) {
-			console.error("Value out of range for", this.baseCmd, v);
+			console.error("NetworkProjector value out of range for", this.baseCmd, v);
 			return false;
 		}
 		return super.set(v);
@@ -563,10 +674,9 @@ export class NumState extends State<number> {
 
 	get(): number {
 		var result = super.get();
-		// Better return min/0 than undefined, NaN or some invalid type of data
 		if (typeof result !== 'number' || isNaN(result)) {
-			console.error("Invalid value for", this.propName, result);
-			result = this.min || 0;
+			console.warn("NetworkProjector unknown/invalid current value for", this.propName, result);
+			result = undefined;
 		}
 		return result;
 	}

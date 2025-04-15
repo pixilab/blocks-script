@@ -34,25 +34,40 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         function NetworkProjector(socket) {
             var _this = _super.call(this, socket) || this;
             _this.socket = socket;
+            _this.keepAlive = true;
+            _this.connTimeout = 3000;
+            _this.pollInterval = 21333;
+            _this.failedToConnect = false;
             _this.propList = [];
             _this.awake = false;
             socket.subscribe('connect', function (sender, message) {
                 if (message.type === 'Connection') {
-                    if (_this.socket.connected)
+                    if (_this.socket.connected && _this.keepAlive)
                         _this.infoMsg("connected");
-                    else
-                        _this.warnMsg("connection dropped");
+                    else if (!_this.socket.connected && _this.keepAlive && _this.socket.enabled)
+                        _this.warnMsg("connection dropped", message.type);
                     _this.connectStateChanged();
                 }
             });
             socket.subscribe('textReceived', function (sender, msg) {
-                return _this.textReceived(msg.text);
+                _this.resetTimeout();
+                _this.textReceived(msg.text);
             });
-            socket.subscribe('finish', function (sender) {
+            socket.subscribe('finish', function () {
                 return _this.discard();
             });
             return _this;
         }
+        NetworkProjector.prototype.setKeepAlive = function (newState) {
+            if (newState && !this.keepAlive && this.connectionTimeout) {
+                this.connectionTimeout.cancel();
+                this.connectionTimeout = undefined;
+            }
+            this.keepAlive = newState;
+        };
+        NetworkProjector.prototype.setPollFrequency = function (millis) {
+            this.pollInterval = millis;
+        };
         NetworkProjector.prototype.addState = function (state) {
             this.propList.push(state);
             state.setDriver(this);
@@ -72,7 +87,17 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             configurable: true
         });
         NetworkProjector.prototype.sendText = function (text) {
-            return this.socket.sendText(text, this.getDefaultEoln());
+            var _this = this;
+            if (this.socket.enabled) {
+                this.resetTimeout();
+                if (this.socket.connected)
+                    return this.socket.sendText(text, this.getDefaultEoln());
+                else {
+                    return this.attemptConnect().then(function () {
+                        return _this.socket.sendText(text, _this.getDefaultEoln());
+                    });
+                }
+            }
         };
         NetworkProjector.prototype.getDefaultEoln = function () {
             return undefined;
@@ -96,6 +121,14 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             if (this.correctionRetry) {
                 this.correctionRetry.cancel();
                 this.correctionRetry = undefined;
+            }
+            if (this.connectionTimeout) {
+                this.connectionTimeout.cancel();
+                this.connectionTimeout = undefined;
+            }
+            if (this.connectDly) {
+                this.connectDly.cancel();
+                this.connectDly = undefined;
             }
         };
         NetworkProjector.prototype.errorMsg = function () {
@@ -134,6 +167,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NetworkProjector.prototype.sendCorrection = function () {
             var _this = this;
+            if (!this.keepAlive && !this.awake) {
+                this.attemptConnect(true);
+                return false;
+            }
             if (!this.okToSendCommand() || !this.awake) {
                 return false;
             }
@@ -144,6 +181,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                         this.attemptConnect();
                 }
                 else {
+                    this.resetTimeout();
                     req.correct(this)
                         .then(function () { return _this.sendFailedReported = false; }, function () {
                         if (_this.reqToSend())
@@ -164,20 +202,51 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
                 });
             }
         };
-        NetworkProjector.prototype.attemptConnect = function () {
+        NetworkProjector.prototype.attemptConnect = function (sendCorrection) {
             var _this = this;
             if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-                this.socket.connect().then(function () { return _this.justConnected(); }, function (error) { return _this.connectStateChanged(); });
+                var connPromise = this.socket.connect();
+                connPromise.then(function () { return _this.justConnected(sendCorrection); }, function (error) { return _this.connectStateChanged(); });
                 this.connecting = true;
+                return connPromise;
+            }
+            return Promise.resolve();
+        };
+        NetworkProjector.prototype.justConnected = function (sendCorrection) {
+            if (!this.keepAlive) {
+                this.failedToConnect = false;
+                this.resetTimeout();
+                if (sendCorrection)
+                    this.sendCorrection();
             }
         };
-        NetworkProjector.prototype.justConnected = function () {
+        NetworkProjector.prototype.resetTimeout = function () {
+            var _this = this;
+            if (!this.keepAlive) {
+                if (this.connectionTimeout)
+                    this.connectionTimeout.cancel();
+                this.connectionTimeout = wait(this.connTimeout);
+                this.connectionTimeout.then(function () {
+                    _this.socket.disconnect();
+                });
+            }
         };
         NetworkProjector.prototype.connectStateChanged = function () {
             this.connecting = false;
             if (!this.socket.connected) {
-                this.connected = false;
-                this.currCmd = undefined;
+                if (this.keepAlive) {
+                    this.connected = false;
+                    this.connectSoon();
+                }
+                else {
+                    if (this.failedToConnect) {
+                        this.warnMsg("connection dropped");
+                        this.connected = false;
+                        this.connectSoon();
+                    }
+                    else
+                        this.failedToConnect = true;
+                }
                 if (this.correctionRetry)
                     this.correctionRetry.cancel();
                 if (this.reqToSend())
@@ -188,6 +257,10 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             if (this.socket.connected)
                 this.socket.disconnect();
             this.connectSoon(howSoonMillis);
+        };
+        NetworkProjector.prototype.disconnect = function () {
+            if (this.socket.connected)
+                this.socket.disconnect();
         };
         NetworkProjector.prototype.connectSoon = function (howSoonMillis) {
             var _this = this;
@@ -202,7 +275,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NetworkProjector.prototype.poll = function () {
             var _this = this;
             if (this.socket.enabled) {
-                this.poller = wait(21333);
+                this.poller = wait(this.pollInterval);
                 this.poller.then(function () {
                     var continuePolling = true;
                     if (!_this.socket.connected) {
@@ -282,7 +355,7 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
             __metadata("design:returntype", Promise)
         ], NetworkProjector.prototype, "sendText", null);
         __decorate([
-            (0, Metadata_1.property)("True if projector is online", true),
+            (0, Metadata_1.property)("True if device is considered to be online", true),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
         ], NetworkProjector.prototype, "connected", null);
@@ -373,11 +446,11 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         };
         NumState.prototype.set = function (v) {
             if (!(typeof v === 'number') || isNaN(v)) {
-                console.error("Value not numeric", this.baseCmd, v);
+                console.error("NetworkProjector value not numeric", this.baseCmd, v);
                 return false;
             }
             if (v < this.min || v > this.max) {
-                console.error("Value out of range for", this.baseCmd, v);
+                console.error("NetworkProjector value out of range for", this.baseCmd, v);
                 return false;
             }
             return _super.prototype.set.call(this, v);
@@ -385,8 +458,8 @@ define(["require", "exports", "system_lib/Metadata", "system_lib/Driver"], funct
         NumState.prototype.get = function () {
             var result = _super.prototype.get.call(this);
             if (typeof result !== 'number' || isNaN(result)) {
-                console.error("Invalid value for", this.propName, result);
-                result = this.min || 0;
+                console.warn("NetworkProjector unknown/invalid current value for", this.propName, result);
+                result = undefined;
             }
             return result;
         };

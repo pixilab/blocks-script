@@ -25,7 +25,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1, Meta) {
+define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.VISCA = void 0;
@@ -38,10 +38,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             _this.informants = [];
             _this.mReady = false;
             _this.retainedStateProps = {};
+            _this.lastRecalledPreset = 0;
+            _this.lastStoredPreset = 0;
             _this.toSend = {};
             _this.sendQ = [];
             _this.fromCam = [];
             socket.autoConnect(true);
+            _this.joystick = new Joystick;
             _this.powerQuery = new Query('PowerQ', [0x81, 9, 4, 0], _this.addProp(new Power(_this)));
             _this.informants.push(_this.powerQuery);
             _this.informants.push(new Query('AutofocusQ', [0x81, 9, 4, 0x38], _this.addProp(new Autofocus(_this))));
@@ -50,6 +53,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             _this.informants.push(new Query('PanTiltQ', [0x81, 9, 6, 0x12], _this.addProp(new Pan(_this)), _this.addProp(new Tilt(_this))));
             _this.addProp(new PanSpeed(_this));
             _this.addProp(new TiltSpeed(_this));
+            _this.addProp(new AdjustPan(_this));
+            _this.addProp(new AdjustTilt(_this));
+            _this.addProp(new AdjustZoom(_this));
+            _this.addProp(new AdjustFocus(_this));
             socket.subscribe('connect', function (sender, message) {
                 if (message.type === 'Connection')
                     _this.onConnectStateChanged(sender.connected);
@@ -83,8 +90,42 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             configurable: true
         });
         VISCA.prototype.recallPreset = function (preset) {
-            this.send(new RecallPresetCmd(preset));
+            this.preset = preset + 1;
         };
+        Object.defineProperty(VISCA.prototype, "preset", {
+            get: function () {
+                return this.lastRecalledPreset;
+            },
+            set: function (pres) {
+                this.lastRecalledPreset = pres;
+                if (pres > 0)
+                    this.send(new RecallPresetCmd(pres - 1));
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(VISCA.prototype, "storePreset", {
+            get: function () {
+                return this.lastStoredPreset;
+            },
+            set: function (pres) {
+                var _this = this;
+                this.lastStoredPreset = pres;
+                if (pres > 0) {
+                    this.send(new StorePresetCmd(pres - 1));
+                    if (this.lastStoredPresetTimeout)
+                        this.lastStoredPresetTimeout.cancel();
+                    this.lastStoredPresetTimeout = wait(900);
+                    this.lastStoredPresetTimeout.then(function () {
+                        _this.lastStoredPresetTimeout = undefined;
+                        _this.lastStoredPreset = 0;
+                        _this.changed('lastStoredPreset');
+                    });
+                }
+            },
+            enumerable: false,
+            configurable: true
+        });
         VISCA.prototype.pollState = function () {
             if (!this.initialPollDone) {
                 for (var _i = 0, _a = this.informants; _i < _a.length; _i++) {
@@ -118,6 +159,42 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         VISCA.prototype.propValueNum = function (propName) {
             return Math.round(this.propValue(propName));
         };
+        VISCA.prototype.getMoveDirection = function () {
+            return this.moveDirection;
+        };
+        VISCA.prototype.setJoystickPanAxis = function (val) {
+            this.joystick.setPanAxis(val);
+            this.calculateDirection();
+        };
+        VISCA.prototype.setJoystickTiltAxis = function (val) {
+            this.joystick.setTiltAxis(val);
+            this.calculateDirection();
+        };
+        VISCA.prototype.changeZoom = function (val) {
+            this.zoomVal = val;
+            this.send(new AdjustZoomCmd(this));
+        };
+        VISCA.prototype.changeFocus = function (val) {
+            this.focusVal = val;
+            this.send(new AdjustFocusCmd(this));
+        };
+        VISCA.prototype.calculateDirection = function () {
+            if (this.joystick.getPanAxis() === 0 && this.joystick.getTiltAxis() === 0) {
+                if (this.moveDirection !== "Stop") {
+                    this.moveDirection = "Stop";
+                    this.send(new MoveDirectionCmd(this));
+                }
+            }
+            else {
+                var jX = this.joystick.getPanAxis();
+                var jY = this.joystick.getTiltAxis();
+                var degrees = calculateAngle(jX, jY);
+                var quantizedAngle = quantizeAngle(degrees);
+                var newDirection = angleToDirection(quantizedAngle);
+                this.moveDirection = newDirection;
+                this.send(new MoveDirectionCmd(this));
+            }
+        };
         VISCA.prototype.init = function () {
             if (this.socket.connected && this.socket.enabled)
                 this.poll();
@@ -145,7 +222,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             if (this.socket.enabled) {
                 this.pollState();
                 if (!this.pollTimer) {
-                    this.pollTimer = wait(1000 * 60);
+                    this.pollTimer = wait(10000 * 60);
                     this.pollTimer.then(function () {
                         _this.pollTimer = undefined;
                         if (_this.socket.connected)
@@ -188,6 +265,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             }
         };
         VISCA.prototype.instrDone = function () {
+            if (this.sendTimeout) {
+                this.sendTimeout.cancel();
+                this.sendTimeout = undefined;
+            }
             this.currInstr = undefined;
             this.sendNext();
         };
@@ -198,11 +279,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 var packetEnd = this.fromCam.indexOf(0xff);
                 if (packetEnd >= 2) {
                     this.processDataFromCam(this.fromCam.splice(0, packetEnd + 1));
-                    if (this.sendTimeout) {
-                        this.sendTimeout.cancel();
-                        this.sendTimeout = undefined;
-                    }
-                    this.instrDone();
                 }
             }
             var excess = len - 32;
@@ -212,12 +288,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             }
         };
         VISCA.prototype.processDataFromCam = function (packet) {
+            var _this = this;
             var msg = packet[1];
             switch (msg) {
                 case 0x41:
-                    this.instrDone();
                     break;
                 case 0x51:
+                    this.secondAckTimer = wait(200);
+                    this.secondAckTimer.then(function () { return _this.instrDone(); });
                     break;
                 case 0x60:
                     this.currInstrFailed("SYNTAX ERROR " + packet[2]);
@@ -257,12 +335,26 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:paramtypes", [Boolean])
         ], VISCA.prototype, "ready", null);
         __decorate([
-            Meta.callable("Recall memory preset"),
+            (0, Metadata_1.callable)("DEPRECATED - use preset property instead. Recall memory preset (0-based)"),
             __param(0, (0, Metadata_1.parameter)("Preset to recall; 0...254")),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Number]),
             __metadata("design:returntype", void 0)
         ], VISCA.prototype, "recallPreset", null);
+        __decorate([
+            (0, Metadata_1.min)(1),
+            (0, Metadata_1.max)(64),
+            (0, Metadata_1.property)("Recall preset (1-based)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], VISCA.prototype, "preset", null);
+        __decorate([
+            (0, Metadata_1.min)(1),
+            (0, Metadata_1.max)(64),
+            (0, Metadata_1.property)("Store preset (1-based)"),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], VISCA.prototype, "storePreset", null);
         VISCA = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 1259 }),
             __metadata("design:paramtypes", [Object])
@@ -350,6 +442,14 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         }
         return FocusCmd;
     }(Instr));
+    var StorePresetCmd = (function (_super) {
+        __extends(StorePresetCmd, _super);
+        function StorePresetCmd(presetNumber) {
+            var cmd = [0x81, 1, 4, 0x3f, 1, Math.round(Math.min(254, presetNumber))];
+            return _super.call(this, 'RecallPreset', cmd) || this;
+        }
+        return StorePresetCmd;
+    }(Instr));
     var RecallPresetCmd = (function (_super) {
         __extends(RecallPresetCmd, _super);
         function RecallPresetCmd(presetNumber) {
@@ -369,6 +469,70 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _super.call(this, 'PanTilt', data) || this;
         }
         return PanTiltCmd;
+    }(Instr));
+    var MoveDirectionCmd = (function (_super) {
+        __extends(MoveDirectionCmd, _super);
+        function MoveDirectionCmd(owner) {
+            var directions = {
+                "Right": [0x02, 0x03, 0xFF],
+                "UpRight": [0x02, 0x01, 0xFF],
+                "Up": [0x03, 0x01, 0xFF],
+                "UpLeft": [0x01, 0x01, 0xFF],
+                "Left": [0x01, 0x03, 0xFF],
+                "DownLeft": [0x01, 0x02, 0xFF],
+                "Down": [0x03, 0x02, 0xFF],
+                "DownRight": [0x02, 0x02, 0xFF],
+                "Stop": [0x03, 0x03, 0xFF]
+            };
+            var direction = owner.getMoveDirection();
+            var directionData = directions[direction];
+            var speedsHex = speedsToHexArray([owner.joystick.getPanSpeed(), owner.joystick.getTiltSpeed()]);
+            var data = [0x81, 0x01, 0x06, 0x01];
+            data = data.concat(speedsHex);
+            data = data.concat(directionData);
+            return _super.call(this, "DirectionCmd", data) || this;
+        }
+        return MoveDirectionCmd;
+    }(Instr));
+    var AdjustZoomCmd = (function (_super) {
+        __extends(AdjustZoomCmd, _super);
+        function AdjustZoomCmd(owner) {
+            var numberHex;
+            if (owner.zoomVal === 0) {
+                numberHex = 0x00;
+            }
+            else {
+                if (owner.zoomVal < 0)
+                    numberHex = mapNumber("Wide", Math.abs(owner.zoomVal));
+                else
+                    numberHex = mapNumber("Tele", Math.abs(owner.zoomVal));
+            }
+            var data = [0x81, 0x01, 0x04, 0x07];
+            data.push(numberHex);
+            data.push(0xFF);
+            return _super.call(this, "AdjustZoomCmd", data) || this;
+        }
+        return AdjustZoomCmd;
+    }(Instr));
+    var AdjustFocusCmd = (function (_super) {
+        __extends(AdjustFocusCmd, _super);
+        function AdjustFocusCmd(owner) {
+            var numberHex;
+            if (owner.focusVal === 0) {
+                numberHex = 0x00;
+            }
+            else {
+                if (owner.focusVal < 0)
+                    numberHex = mapNumber("Far", Math.abs(owner.focusVal));
+                else
+                    numberHex = mapNumber("Near", Math.abs(owner.focusVal));
+            }
+            var data = [0x81, 0x01, 0x04, 0x08];
+            data.push(numberHex);
+            data.push(0xFF);
+            return _super.call(this, "AdjustFocusCmd", data) || this;
+        }
+        return AdjustFocusCmd;
     }(Instr));
     var Property = (function () {
         function Property(owner, name, defaultState) {
@@ -545,6 +709,58 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         Tilt.propName = "tilt";
         return Tilt;
     }(NumProp));
+    var AdjustPan = (function (_super) {
+        __extends(AdjustPan, _super);
+        function AdjustPan(owner) {
+            var _this = _super.call(this, owner, AdjustPan.propName, 0, -1, 1) || this;
+            owner.addRetainedStateProp(AdjustPan.propName);
+            return _this;
+        }
+        AdjustPan.prototype.desiredStateChanged = function (value) {
+            this.owner.setJoystickPanAxis(value);
+        };
+        AdjustPan.propName = "adjustPan";
+        return AdjustPan;
+    }(NumProp));
+    var AdjustTilt = (function (_super) {
+        __extends(AdjustTilt, _super);
+        function AdjustTilt(owner) {
+            var _this = _super.call(this, owner, AdjustTilt.propName, 0, -1, 1) || this;
+            owner.addRetainedStateProp(AdjustTilt.propName);
+            return _this;
+        }
+        AdjustTilt.prototype.desiredStateChanged = function (value) {
+            this.owner.setJoystickTiltAxis(value);
+        };
+        AdjustTilt.propName = "adjustTilt";
+        return AdjustTilt;
+    }(NumProp));
+    var AdjustZoom = (function (_super) {
+        __extends(AdjustZoom, _super);
+        function AdjustZoom(owner) {
+            var _this = _super.call(this, owner, AdjustZoom.propName, 0, -1, 1) || this;
+            owner.addRetainedStateProp(AdjustZoom.propName);
+            return _this;
+        }
+        AdjustZoom.prototype.desiredStateChanged = function (value) {
+            this.owner.changeZoom(value);
+        };
+        AdjustZoom.propName = "adjustZoom";
+        return AdjustZoom;
+    }(NumProp));
+    var AdjustFocus = (function (_super) {
+        __extends(AdjustFocus, _super);
+        function AdjustFocus(owner) {
+            var _this = _super.call(this, owner, AdjustFocus.propName, 0, -1, 1) || this;
+            owner.addRetainedStateProp(AdjustFocus.propName);
+            return _this;
+        }
+        AdjustFocus.prototype.desiredStateChanged = function (value) {
+            this.owner.changeFocus(value);
+        };
+        AdjustFocus.propName = "adjustFocus";
+        return AdjustFocus;
+    }(NumProp));
     var PanSpeed = (function (_super) {
         __extends(PanSpeed, _super);
         function PanSpeed(owner) {
@@ -565,4 +781,87 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         TiltSpeed.propName = "tiltSpeed";
         return TiltSpeed;
     }(NumProp));
+    var Joystick = (function () {
+        function Joystick() {
+            this.panAxis = 0;
+            this.panSpeed = 0;
+            this.tiltAxis = 0;
+            this.tiltSpeed = 0;
+        }
+        Joystick.prototype.getPanAxis = function () {
+            return this.panAxis;
+        };
+        Joystick.prototype.setPanAxis = function (newVal) {
+            this.panAxis = newVal;
+            this.panSpeed = mapAbsoluteValue(newVal, [1, 24]);
+        };
+        Joystick.prototype.getTiltAxis = function () {
+            return this.tiltAxis;
+        };
+        Joystick.prototype.setTiltAxis = function (newVal) {
+            this.tiltAxis = newVal;
+            this.tiltSpeed = mapAbsoluteValue(newVal, [1, 20]);
+        };
+        Joystick.prototype.getPanSpeed = function () {
+            return this.panSpeed;
+        };
+        Joystick.prototype.getTiltSpeed = function () {
+            return this.tiltSpeed;
+        };
+        return Joystick;
+    }());
+    function calculateAngle(x, y) {
+        if (x < -1 || x > 1 || y < -1 || y > 1) {
+            throw new Error("X and Y values must be between -1 and 1.");
+        }
+        var radians = Math.atan2(y, x);
+        var degrees = radians * (180 / Math.PI);
+        if (degrees < 0) {
+            degrees += 360;
+        }
+        degrees = (360 - degrees) % 360;
+        return degrees;
+    }
+    function quantizeAngle(angle) {
+        var quantized = Math.round(angle / 45) * 45;
+        return quantized % 360;
+    }
+    function angleToDirection(angle) {
+        var directions = {
+            0: "Right",
+            45: "UpRight",
+            90: "Up",
+            135: "UpLeft",
+            180: "Left",
+            225: "DownLeft",
+            270: "Down",
+            315: "DownRight"
+        };
+        return directions[angle];
+    }
+    function speedsToHexArray(_a) {
+        var num1 = _a[0], num2 = _a[1];
+        var hexVal1 = "0x".concat(num1.toString(16).toUpperCase());
+        var hexVal2 = "0x".concat(num2.toString(16).toUpperCase());
+        return [parseInt(hexVal1), parseInt(hexVal2)];
+    }
+    function mapAbsoluteValue(value, range) {
+        var min = range[0], max = range[1];
+        var absoluteValue = Math.abs(value);
+        var mappedValue = absoluteValue * (max - min) + min;
+        return Math.round(mappedValue);
+    }
+    function mapNumber(type, input) {
+        if (input < 0 || input > 1) {
+            throw new Error('Input must be between 0 and 1');
+        }
+        var mappedNumber = Math.round(input * 7);
+        var baseValue;
+        if (type === 'Wide' || type === 'Near') {
+            baseValue = 0x3;
+        }
+        else
+            baseValue = 0x2;
+        return (baseValue << 4) | mappedNumber;
+    }
 });

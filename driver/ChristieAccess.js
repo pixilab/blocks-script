@@ -34,6 +34,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
             _this.addState(_this._power);
             _this._input = new NetworkProjector_1.NumState('SELECTSOURCE', 'input', ChristieAccess_1.kMinInput, ChristieAccess_1.kMaxInput);
             _this.addState(_this._input);
+            _this.setKeepAlive(false);
+            _this.setPollFrequency(60000);
             _this.poll();
             _this.attemptConnect();
             return _this;
@@ -56,14 +58,13 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         };
         ChristieAccess.prototype.getInitialState = function () {
             var _this = this;
-            this.connected = false;
+            if (this.keepAlive)
+                this.connected = false;
             this.request('GETQUICKSTANDBY').then(function (reply) {
-                console.info("getInitialState GETQUICKSTANDBY", reply);
                 if (reply)
                     _this._power.updateCurrent(reply === 'off');
                 return _this.request('GETSOURCE');
             }).then(function (reply) {
-                console.info("getInitialState GETSOURCE", reply);
                 if (reply) {
                     var inputNum = ChristieAccess_1.kInputNameToNum[reply];
                     if (inputNum)
@@ -72,7 +73,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 _this.connected = true;
                 _this.sendCorrection();
             }).catch(function (error) {
-                console.info("getInitialState error - retry soon", error);
+                console.error("getInitialState error - retry soon", error);
                 _this.disconnectAndTryAgainSoon();
             });
         };
@@ -98,7 +99,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         };
         ChristieAccess.prototype.textReceived = function (text) {
             if (text) {
-                console.info("textReceived", text);
                 var parts = ChristieAccess_1.replyParser.exec(text);
                 if (parts)
                     this.requestSuccess(parts[1]);

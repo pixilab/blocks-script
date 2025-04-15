@@ -33,6 +33,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
             _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
             _this.addState(_this._mute = new MuteState('AVMT', 'mute'));
             _this.addState(_this._input = new NetworkProjector_1.NumState('INPT', 'input', PJLink_1.kMinInput, PJLink_1.kMaxInput, function () { return _this._power.getCurrent(); }));
+            _this.setKeepAlive(false);
+            _this.setPollFrequency(60000);
             _this.poll();
             _this.attemptConnect();
             return _this;
@@ -84,7 +86,8 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
         });
         PJLink.prototype.getInitialState = function () {
             var _this = this;
-            this.connected = false;
+            if (this.keepAlive)
+                this.connected = false;
             this.request('POWR').then(function (reply) {
                 if (!_this.inCmdHoldoff())
                     _this._power.updateCurrent((parseInt(reply) & 1) != 0);
@@ -178,7 +181,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 text = text.substring(msgStart);
             var currCmd = this.currCmd;
             if (!currCmd) {
-                this.warnMsg("Unexpected data from projector", text);
+                this.warnMsg("Unsolicited data", text);
                 return;
             }
             currCmd = currCmd.substring(0, 6);

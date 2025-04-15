@@ -328,16 +328,7 @@ export class PJLinkPlus extends NetworkProjector {
     }
 
 	private connectionAttemptCount: number = 0;
-	// override in order to count connection attempts
-	attemptConnect() {
-		if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-			this.socket.connect().then(
-				() => this.justConnected(),
-				error => this.connectStateChanged()
-			);
-			this.connecting = true;
-		}
-	}
+
 	connectStateChanged() {
 		this.connecting = false;
 		// this.infoMsg("connectStateChanged", this.socket.connected);
@@ -1340,7 +1331,7 @@ export class PJLinkPlus extends NetworkProjector {
     private projectorBusy() {
 		if (!this.busyHoldoff) {
 			this.busyHoldoff = wait(4000);
-			this.busyHoldoff.then(() => this.busyHoldoff = undefined);
+			this.busyHoldoff.then((): CancelablePromise<void> => this.busyHoldoff = undefined);
 		}
 	}
 

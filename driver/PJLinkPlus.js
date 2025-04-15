@@ -267,13 +267,6 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                 cfg = this.configuration;
             return SimpleFile_1.SimpleFile.write(this.configurationFilePath, cfg.toJSON());
         };
-        PJLinkPlus.prototype.attemptConnect = function () {
-            var _this = this;
-            if (!this.socket.connected && !this.connecting && this.socket.enabled) {
-                this.socket.connect().then(function () { return _this.justConnected(); }, function (error) { return _this.connectStateChanged(); });
-                this.connecting = true;
-            }
-        };
         PJLinkPlus.prototype.connectStateChanged = function () {
             this.connecting = false;
             if (!this.socket.connected) {

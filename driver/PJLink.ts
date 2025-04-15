@@ -29,6 +29,9 @@ export class PJLink extends NetworkProjector {
 			PJLink.kMinInput, PJLink.kMaxInput, () => this._power.getCurrent()
 		));
 
+		this.setKeepAlive(false);			// Makes the keepAlive false, meaning this runs the new approach
+		this.setPollFrequency(60000)		// Sets the poll frequency to 1 minute (value in milliseconds). To run the keep alive true, we can comment this line (it has a default val)
+
 		this.poll();	// Get polling going
 		this.attemptConnect();	// Attempt initial connection
 		// console.info("inited");
@@ -100,7 +103,9 @@ export class PJLink extends NetworkProjector {
 	 Send queries to obtain the initial state of the projector.
 	 */
 	private getInitialState() {
-		this.connected = false;	// Mark me as not yet fully awake, to hold off commands
+		if (this.keepAlive)
+			this.connected = false;	// Mark me as not yet fully awake, to hold off commands
+
 		this.request('POWR').then(
 			reply => {
 				if (!this.inCmdHoldoff())
@@ -165,7 +170,6 @@ export class PJLink extends NetworkProjector {
 				}
 			}
 		);
-
 	}
 
 	protected sendCorrection(): boolean {
@@ -174,7 +178,7 @@ export class PJLink extends NetworkProjector {
 			if (this.recentCmdHoldoff)
 				this.recentCmdHoldoff.cancel();
 			this.recentCmdHoldoff = wait(5000);
-			this.recentCmdHoldoff.then(() => this.recentCmdHoldoff = undefined);
+			this.recentCmdHoldoff.then((): CancelablePromise<void> => this.recentCmdHoldoff = undefined);
 		}
 		return didSend;
 	}
@@ -229,7 +233,7 @@ export class PJLink extends NetworkProjector {
 
 		// console.info("textReceived", text);
 
-		// Strip off any leading garbage characters seen occasionally, up to expected %
+		// Strip ogg any leading garbage characters seen occasionally, up to expected %
 		const msgStart = text.indexOf('%');
 		if (msgStart > 0)
 			text = text.substring(msgStart);
@@ -237,7 +241,7 @@ export class PJLink extends NetworkProjector {
 		// If no query in flight - log a warning and ignore data
 		let currCmd = this.currCmd;
 		if (!currCmd) {
-			this.warnMsg("Unexpected data from projector", text);
+			this.warnMsg("Unsolicited data", text);
 			return;
 		}
 
@@ -305,7 +309,7 @@ export class PJLink extends NetworkProjector {
 	private projectorBusy() {
 		if (!this.busyHoldoff) {
 			this.busyHoldoff = wait(4000);
-			this.busyHoldoff.then(() => this.busyHoldoff = undefined);
+			this.busyHoldoff.then((): CancelablePromise<void>  => this.busyHoldoff = undefined);
 		}
 	}
 
