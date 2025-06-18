@@ -9,7 +9,7 @@
  * then under its individual name (e.g., using dot notation or
  * array-style notation).
  */
-export var Timeline: { [timelineName: string]: Group; };
+export var Timeline: { [groupName: string]: Group; };
 
 // Group level, accessed by name from the global Timeline root above.
 export interface Group {
