@@ -38,8 +38,8 @@ export class ChristieAccess extends NetworkProjector {
 		);
 		this.addState(this._input);
 
-		this.setKeepAlive(false);			// Makes the keepAlive false, meaning this runs the new approach
-		this.setPollFrequency(60000)		// Sets the poll frequency to 1 minute (value in milliseconds). To run the keep alive true, we can comment this line (it has a default val)
+		this.setKeepAlive(false);		// Let connection drop when not needed
+		this.setPollFrequency(60000);	// Connect and check device at this interval, mS
 
 		this.poll();			// Get polling going
 		this.attemptConnect();	// Attempt initial connection
