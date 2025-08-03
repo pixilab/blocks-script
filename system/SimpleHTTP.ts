@@ -50,7 +50,7 @@ export interface Request {
 	download(toFile:string): Promise<Response<void>>;
 }
 
-interface ReqOpts {
+export interface ReqOpts {
 	/*	If possible, interpret known response types, and store the result in
 		Response#interpreted. Currently supported response types are:
 
