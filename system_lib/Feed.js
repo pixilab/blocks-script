@@ -25,6 +25,9 @@ define(["require", "exports", "./ScriptBase"], function (require, exports, Scrip
         Feed.prototype.establishFeed = function (feed) {
             this.__scriptFacade.establishFeed(feed);
         };
+        Feed.prototype.refreshFeed = function (instanceName) {
+            this.__scriptFacade.refreshFeed(instanceName);
+        };
         return Feed;
     }(ScriptBase_1.ScriptBase));
     exports.Feed = Feed;

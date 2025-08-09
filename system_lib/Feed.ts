@@ -19,6 +19,14 @@ export abstract class Feed  extends ScriptBase<FeedEnv>{
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>) {
 		this.__scriptFacade.establishFeed(feed);
 	}
+
+	/**
+	 * Tell all Spots currently showing this feed to reload its data. You may want to
+	 * call this if the underlying data changes in order to expidite its display.
+	 */
+	refreshFeed(instanceName: string) {
+		this.__scriptFacade.refreshFeed(instanceName);
+	}
 }
 
 // An array-like type having "index signature" and a length property
@@ -35,7 +43,7 @@ interface Ctor<T> { new(... args: any[]): T ;}
  * Interface to be implemented by each static feed instance published through establishFeed.
  */
 export interface StaticFeed<ListItem extends Object, DetailsItem extends ListItem> {
-	readonly name: string;	// Internal (brief) name of this feed instance
+	readonly name: string;	// Name of this feed instance
 
 	readonly listType: Ctor<ListItem>;	// Specifies type of items returned by getList
 	readonly itemType: Ctor<DetailsItem>; // Type of items returned by getDetails
@@ -94,4 +102,5 @@ export interface ListData<ListItem> {
 // Internal use only!
 export interface FeedEnv extends ScriptBaseEnv {
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>): void;
+	refreshFeed(instName: string): void;
 }
