@@ -19,10 +19,10 @@ export var Realm: {
 	}
 };
 
-interface TaskGroup {
+export interface TaskGroup {
 	[taskName: string]: Task;
 }
 
-interface Task {
+export interface Task {
 	running: boolean;	// True if the task is running
 }
