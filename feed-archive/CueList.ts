@@ -249,6 +249,7 @@ class List extends AggregateElem implements feed.StaticFeed<Cue, Cue> {
  */
 class Cue {
 	private runningPropAccessor: PropertyAccessor<boolean>;
+	private timelineStopDelay?: CancelablePromise<any>;	// While in deferred timeline stop
 
 	constructor(
 		name: string,
@@ -300,7 +301,12 @@ class Cue {
 		const timeline = this.findTimeline(list);
 		if (timeline) {
 			// console.log("Stopping timeline", this.name);
-			timeline.stopped = true;
+			// Defer stopping to allow for smoother transition away from the timeline block
+			this.timelineStopDelay = wait(1000);
+			this.timelineStopDelay.then(() => {
+				timeline.stopped = true;
+				this.timelineStopDelay = undefined;
+			});
 		}
 		const task = this.findTask(list);
 		if (task)
@@ -320,8 +326,14 @@ class Cue {
 		if (task)
 			task.running = true;
 		const timeline = this.findTimeline(list);
-		if (timeline)
+		if (timeline) {
+			if (this.timelineStopDelay) {
+				// Cancel any deferred stop as timeline got started again
+				this.timelineStopDelay.cancel();
+				this.timelineStopDelay = undefined;
+			}
 			timeline.playing = true;
+		}
 		if (!task && !timeline)
 			console.warn("Neither task nor timeline found for cue", this.name, "of CueList", list.name);
 		else {

@@ -267,9 +267,14 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
                 return timelineGroup[this.timeline || this.name];
         };
         Cue.prototype.kill = function (list) {
+            var _this = this;
             var timeline = this.findTimeline(list);
             if (timeline) {
-                timeline.stopped = true;
+                this.timelineStopDelay = wait(1000);
+                this.timelineStopDelay.then(function () {
+                    timeline.stopped = true;
+                    _this.timelineStopDelay = undefined;
+                });
             }
             var task = this.findTask(list);
             if (task)
@@ -285,8 +290,13 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
             if (task)
                 task.running = true;
             var timeline = this.findTimeline(list);
-            if (timeline)
+            if (timeline) {
+                if (this.timelineStopDelay) {
+                    this.timelineStopDelay.cancel();
+                    this.timelineStopDelay = undefined;
+                }
                 timeline.playing = true;
+            }
             if (!task && !timeline)
                 console.warn("Neither task nor timeline found for cue", this.name, "of CueList", list.name);
             else {
