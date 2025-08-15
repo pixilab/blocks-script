@@ -197,8 +197,7 @@ class List extends AggregateElem implements feed.StaticFeed<Cue, Cue> {
 	 * no timeline or timeline stopped (presumably due to reaching its
 	 * end) then proceed with next cue in list instead
 	 */
-	@callable("Proceed with next marker on timeline or cue in list")
-	proceed() {
+	private proceed() {
 		const cue = this.cues[this.index-1];
 		if (!cue || !cue.proceedWithTimeline(this))	// Timeline didn't proceed
 			this.cueIndex = this.index + 1; 	// Step to next cue instead

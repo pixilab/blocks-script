@@ -229,12 +229,6 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
             __metadata("design:paramtypes", [])
         ], List.prototype, "cuePrevious", null);
         __decorate([
-            (0, Metadata_1.callable)("Proceed with next marker on timeline or cue in list"),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", []),
-            __metadata("design:returntype", void 0)
-        ], List.prototype, "proceed", null);
-        __decorate([
             (0, Metadata_1.property)("True while timeline or task is running"),
             __metadata("design:type", Boolean),
             __metadata("design:paramtypes", [Boolean])
