@@ -82,9 +82,10 @@ export class ListOfImages {
 					maybeSpot.isOfTypeName("DisplaySpot") as DisplaySpot ||
 					maybeSpot.isOfTypeName("MobileSpot") as MobileSpot;
 				if (imageProvider) {
-					imageProvider.subscribe('image', (sender, message) =>
-						this.acceptImage(message.filePath)
-					);
+					imageProvider.subscribe('image', (sender, message) => {
+						log("acceptImage", message.filePath);
+						this.acceptImage(message.filePath);
+					});
 
 					// If subscribed-to Spot dies, attempt to re-subscribe (happens if reconfigured while running)
 					imageProvider.subscribe('finish', () => this.subscribeToImages());
@@ -102,6 +103,7 @@ export class ListOfImages {
 	 * public path, with the value being that path.
 	 */
 	public async acceptImage(filePath: string): Promise<string> {
+		log("acceptImage 2", filePath);
 		// Scale to this width or height (whichever is longest)
 		const maxImgSideLength = this.options.maxImageSideLength || ListOfImages.kMaxImgSize;
 		const publicImageLocation = this.publicPath + fileName(filePath);
@@ -134,6 +136,7 @@ export class ListOfImages {
 			// Then remove those excessive list items
 			this.list.remove(maxImageCount, excess);
 		}
+		log('Persisting image list');
 		return this.persistor.persist(); // Write to disk, to resurrect on server restart
 	}
 
@@ -151,6 +154,23 @@ export class ListOfImages {
 			}
 		}
 	}
+
+	/**
+	 * Replaces the old path with the new one and persists the list
+	 * @param oldPhotoPath photo path to look for in the list
+	 * @param newPhotoPath replacement path
+	 */
+	replacePhoto(oldPhotoPath: string, newPhotoPath: string){
+		const numPhotosInStream = this.list.length;
+		// Crummy linear search OK here given reasonable kMaxPdisahotoCount
+		for (let ix = 0; ix < numPhotosInStream; ++ix) {
+			if (this.list[ix].path === oldPhotoPath) {
+				this.list[ix].path = newPhotoPath;
+				this.persistor.persist();
+				break;
+			}
+		}
+	}
 }
 
 
@@ -158,7 +178,7 @@ export class ListOfImages {
  * Items provided as indexed property elements.
  */
 export class ImageListItem {
-	private readonly mPath: string; // Path where image can be accessed
+	private mPath: string; // Path where image can be accessed
 
 	constructor(path: string) {
 		this.mPath = path;
@@ -173,9 +193,12 @@ export class ImageListItem {
 		return new ImageListItem(source.mPath);
 	}
 
-	@property('Path to picture on the server, usable from a Media URL block')
+	@property('Path to picture on the server, usable from a Media URL block', true)
 	get path(): string {
 		return this.mPath;
+	}
+	set path(newPath: string) {
+		this.mPath = newPath;
 	}
 }
 
@@ -209,3 +232,13 @@ function fileName(path: string) {
 	const whereSlash = path.lastIndexOf('/');
 	return path.substring(whereSlash + 1);
 }
+
+/**
+ Log messages, allowing my logging to be easily disabled in one place.
+ */
+const DEBUG = false;
+function log(...messages: any[]) {
+	if (DEBUG)	// Set to false to disable my logging
+		console.info(messages);
+}
+

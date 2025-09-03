@@ -247,12 +247,16 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
         Cue.prototype.timelineRunningPath = function (list) {
             return "Timeline.".concat(list.timelineGroup || list.name, ".").concat(this.timeline || this.name, ".playing");
         };
-        Cue.prototype.findTask = function (list) {
+        Cue.prototype.findTask = function (list, suffix) {
             var realm = Realm_1.Realm[list.taskRealm || kDefaultRealm];
             if (realm) {
                 var group = realm.group[list.taskGroup || list.name];
-                if (group)
-                    return group[this.task || this.name];
+                if (group) {
+                    var name_1 = this.task || this.name;
+                    if (suffix)
+                        name_1 = name_1 + suffix;
+                    return group[name_1];
+                }
             }
         };
         Cue.prototype.findTimeline = function (list) {
@@ -273,6 +277,9 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
             var task = this.findTask(list);
             if (task)
                 task.running = false;
+            task = this.findTask(list, "_exit");
+            if (task)
+                task.running = true;
             if (this.runningPropAccessor) {
                 list.tellRunning(false);
                 this.runningPropAccessor.close();

@@ -4,13 +4,14 @@
 
 	Each such cue then controls corresponding task and/or timeline, activating the
 	task/timeline when the cue becomes active and killing those when it is no
-	longer the current cue.
+	longer the current cue (then also triggering any associated XXX_exit task).
 
-	Each cue list also has a "nextCue" callable, which will tell any associated
-	timeline to skip ahead to its next marker unless timeline has already died
-	in which case it instead advances to the next name cue.
+	Each cue list also has a running, which (when set) tells any associated, live
+	timeline to proceed (letting it run until paused or ended). If the timeline is
+	dead (stopped) it instead advances to the next named cue in the list.
 
- 	Copyright (c) 2025 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ 	Copyright (c) 2025 PIXILAB Technologies AB, Sweden (http://pixilab.se).
+ 	All Rights Reserved.
  */
 
 import * as feed from "../system_lib/Feed";
@@ -274,12 +275,16 @@ class Cue {
 	/**
 	 * Find my associated task, if any.
 	 */
-	private findTask(list: List): Task | undefined {
+	private findTask(list: List, suffix?: string): Task | undefined {
 		const realm = Realm[list.taskRealm || kDefaultRealm];
 		if (realm) {
 			const group = realm.group[list.taskGroup || list.name];
-			if (group)
-				return group[this.task || this.name];
+			if (group) {
+				let name = this.task || this.name;
+				if (suffix)
+					name = name + suffix;
+				return group[name];
+			}
 		}
 	}
 
@@ -296,7 +301,7 @@ class Cue {
 	 * Stop any task and timeline associated with me.
 	 */
 	kill(list: List) {
-		// console.log("Killing cue", this.name);
+		// Stop any associated timeline
 		const timeline = this.findTimeline(list);
 		if (timeline) {
 			// console.log("Stopping timeline", this.name);
@@ -307,9 +312,18 @@ class Cue {
 				this.timelineStopDelay = undefined;
 			});
 		}
-		const task = this.findTask(list);
+
+		// Stop any associated task in case it's still doing things
+		let task = this.findTask(list);
 		if (task)
 			task.running = false;
+
+		// Run any associated xxx_exit task
+		task = this.findTask(list, "_exit");
+		if (task)
+			task.running = true;
+
+		// Shut down any child-is-running state accessor
 		if (this.runningPropAccessor) {
 			list.tellRunning(false);
 			this.runningPropAccessor.close();
