@@ -63,30 +63,30 @@ export class ChristieAccess extends NetworkProjector {
 	}
 
 	/*
-	 Override to call getInitialState on connection, as this protocol has
+	 Override to call getState on connection, as this protocol has
 	 no initial handshake from projector.
 	 */
 	protected justConnected(): void {
 		super.justConnected();
-		this.getInitialState();
+		this.getState();
 	}
 
 	/*
 	 Send queries to obtain the initial state of the projector.
 	 */
-	private getInitialState() {
+	private getState() {
 		if (this.keepAlive)
 			this.connected = false;	// Mark me as not yet fully awake, to hold off commands
 		this.request('GETQUICKSTANDBY').then(
 			reply => {
-				// console.info("getInitialState GETQUICKSTANDBY", reply);
+				log("getState GETQUICKSTANDBY", reply);
 				if (reply)
 					this._power.updateCurrent(reply === 'off');
 				return this.request('GETSOURCE')
 			}
 		).then(
 			reply => {
-				// console.info("getInitialState GETSOURCE", reply);
+				log("getState GETSOURCE", reply);
 				if (reply) {
 					// GETSOURCE returns name, but we want input number
 					const inputNum = ChristieAccess.kInputNameToNum[reply];
@@ -97,7 +97,7 @@ export class ChristieAccess extends NetworkProjector {
 				this.sendCorrection();
 			}
 		).catch(error => {
-			console.error("getInitialState error - retry soon", error);
+			console.error("getState error - retry soon", error);
 			this.disconnectAndTryAgainSoon();
 		});
 	}
@@ -110,7 +110,7 @@ export class ChristieAccess extends NetworkProjector {
 		var toSend = question;
 		if (param !== undefined)
 			toSend += ' ' + param;
-		// console.info("request", toSend);
+		// log("request", toSend);
 		this.socket.sendText(toSend, this.getDefaultEoln())
 		.catch(err=>
 			this.sendFailed(err)
@@ -120,7 +120,7 @@ export class ChristieAccess extends NetworkProjector {
 			// Send further corrections soon, with some delay between each as
 			// display isn't always happy with commands sent back to back
 			wait(600).then(()=> {
-				// console.info("request finally sendCorrection");
+				// log("request finally sendCorrection");
 				this.sendCorrection();
 			});
 		});
@@ -158,4 +158,14 @@ export class PowerState extends State<boolean> {
 	correct(drvr: NetworkProjector): Promise<string> {
 		return this.correct2(drvr, this.wanted ? 'off' : 'on');
 	}
+}
+
+
+/**
+ Log messages, allowing my logging to be easily disabled in one place.
+ */
+const DEBUG = false;	// Set to false to disable verbose logging
+function log(...messages: any[]) {
+	if (DEBUG)
+		console.info(messages);
 }

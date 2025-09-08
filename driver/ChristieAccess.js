@@ -54,17 +54,19 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         });
         ChristieAccess.prototype.justConnected = function () {
             _super.prototype.justConnected.call(this);
-            this.getInitialState();
+            this.getState();
         };
-        ChristieAccess.prototype.getInitialState = function () {
+        ChristieAccess.prototype.getState = function () {
             var _this = this;
             if (this.keepAlive)
                 this.connected = false;
             this.request('GETQUICKSTANDBY').then(function (reply) {
+                log("getState GETQUICKSTANDBY", reply);
                 if (reply)
                     _this._power.updateCurrent(reply === 'off');
                 return _this.request('GETSOURCE');
             }).then(function (reply) {
+                log("getState GETSOURCE", reply);
                 if (reply) {
                     var inputNum = ChristieAccess_1.kInputNameToNum[reply];
                     if (inputNum)
@@ -73,7 +75,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
                 _this.connected = true;
                 _this.sendCorrection();
             }).catch(function (error) {
-                console.error("getInitialState error - retry soon", error);
+                console.error("getState error - retry soon", error);
                 _this.disconnectAndTryAgainSoon();
             });
         };
@@ -145,4 +147,13 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"],
         return PowerState;
     }(NetworkProjector_1.State));
     exports.PowerState = PowerState;
+    var DEBUG = false;
+    function log() {
+        var messages = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            messages[_i] = arguments[_i];
+        }
+        if (DEBUG)
+            console.info(messages);
+    }
 });

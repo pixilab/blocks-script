@@ -282,7 +282,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         BaseInterface.prototype.receiveData = function (data, tag) {
-            console.log("Unexpected data recieved on interface " + this.index + " " + data);
+            console.warn("Unexpected data recieved on interface " + this.index + " " + data);
         };
         BaseInterface.prototype.userFriendlyName = function () {
             return "Unknown";
@@ -380,7 +380,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             configurable: true
         });
         NfcInterface.prototype.receiveData = function (data) {
-            console.log(data);
+            log(data);
             var splitData = data.split(":");
             var newTagData = splitData[1];
             var newTagEvent = splitData[0];
@@ -792,7 +792,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             var myIfaceNo = (("000" + (this.index + 1)).slice(-3));
             var command = "X" + myIfaceNo + "A[" + data + "]";
             this.driver.send(command);
-            console.log(command);
         };
         QuadButtonInterface.prototype.userFriendlyName = function () {
             return "Btn";

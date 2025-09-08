@@ -296,7 +296,7 @@ class BaseInterface extends AggregateElem {
 	}
 
 	receiveData(data: string, tag?: TagInfo): void {
-		console.log("Unexpected data recieved on interface " + this.index + " " + data);
+		console.warn("Unexpected data recieved on interface " + this.index + " " + data);
 	}
 
 	userFriendlyName() {
@@ -370,7 +370,7 @@ class NfcInterface extends BaseInterface {
 
 
 	receiveData(data: string) {
-		console.log(data);
+		log(data);
 		let splitData = data.split(":");
 		const newTagData = splitData[1];
 		const newTagEvent = splitData[0];
@@ -679,7 +679,7 @@ class QuadButtonInterface extends BaseInterface {
 		let myIfaceNo = (("000" + (this.index + 1)).slice(-3));
 		let command = "X" + myIfaceNo + "A[" + data + "]";
 		this.driver.send(command);
-		console.log(command);
+		// log(command);
 	}
 
 	userFriendlyName() {
