@@ -207,7 +207,7 @@ define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata", 
                             case 'ERR3':
                                 treatAsOk = true;
                                 this.projectorBusy();
-                                this.warnMsg("PJLink projector BUSY for command", currCmd, text);
+                                this.warnMsg("PJLink projector BUSY", currCmd, text);
                                 break;
                             default:
                                 this.warnMsg("PJLink unexpected response", currCmd, text);

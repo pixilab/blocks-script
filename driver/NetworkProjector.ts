@@ -26,8 +26,8 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 
 	protected keepAlive: boolean = true;  	// Hold connection "forever". Default for backward compatibility.
 
-	private connTimeout = 3000; 		// Connection timeout (milliseconds)
-	private pollInterval = 21333;	// Default value for the poll interval, in milliseconds
+	private connTimeout = 3000; 	// Connection timeout, mS
+	private pollInterval = 21333;	// Default device polling interval, in mS
 
 	// Only relevant when keepAlive is false. If we fail to connect and this var is already true, then the device is down.
 	protected failedToConnect = false;
@@ -86,7 +86,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	}
 
 	/**
-	 * Set the poll interval time, overriding the default values
+	 * Set the poll interval, overriding the default value.
 	 */
 	protected setPollFrequency(millis: number) {
 		this.pollInterval = millis;

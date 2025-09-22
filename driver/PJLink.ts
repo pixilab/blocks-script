@@ -29,17 +29,16 @@ export class PJLink extends NetworkProjector {
 			PJLink.kMinInput, PJLink.kMaxInput, () => this._power.getCurrent()
 		));
 
-		this.setKeepAlive(false);			// Makes the keepAlive false, meaning this runs the new approach
-		this.setPollFrequency(60000)		// Sets the poll frequency to 1 minute (value in milliseconds). To run the keep alive true, we can comment this line (it has a default val)
+		this.setKeepAlive(false);		// Let connection drop when not needed
+		this.setPollFrequency(60000);	// Connect and check device at this interval, mS
 
-		this.poll();	// Get polling going
+		this.poll();			// Get polling going
 		this.attemptConnect();	// Attempt initial connection
-		// console.info("inited");
 	}
 
     /**
 	 	Poll for status regularly. This keeps me somewhat in the loop with manual control
-	 	of projector. It also helps with detecting projector unplugged.
+	 	of projector. Also helps detecting connection loss.
 	 */
     protected pollStatus(): boolean {
 		if (this.okToSendCommand()) {	// Don't interfere with command already in flight
@@ -88,7 +87,7 @@ export class PJLink extends NetworkProjector {
 	}
 
 	/**
-	 Mute video & audio..
+	 Mute video & audio.
 	 */
 	@property("A/V Muted")
 	public set mute(on: boolean) {
@@ -185,12 +184,12 @@ export class PJLink extends NetworkProjector {
 
 	/**
 	 * Return truthy if sent a command recently, meaning that any status replies from
-	 * the projector may be unreliable, due to the way the projector
-	 * answers with the "actual" rather than the "wanted" status, e.g., still
+	 * the projector may be unreliable due to how the projector
+	 * answers with "actual" rather than "wanted" status, e.g., still
 	 * saying it's ON even after you asked it to turn OFF.
 	 */
 	private inCmdHoldoff() {
-		return this.recentCmdHoldoff
+		return this.recentCmdHoldoff;
 	}
 
 	/**
@@ -277,7 +276,7 @@ export class PJLink extends NetworkProjector {
 						// console.info("PJLink ERR3");
 						treatAsOk = true;	// Consider OK, but "busy" for a while
 						this.projectorBusy();
-						this.warnMsg("PJLink projector BUSY for command", currCmd, text);
+						this.warnMsg("PJLink projector BUSY", currCmd, text);
 						break;
 					default:
 						this.warnMsg("PJLink unexpected response", currCmd, text);

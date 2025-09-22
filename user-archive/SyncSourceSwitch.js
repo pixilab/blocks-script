@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata", "syste
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SyncSourceSwitch = void 0;
-    var SyncSourceSwitch = (function (_super) {
+    var SyncSourceSwitch = exports.SyncSourceSwitch = (function (_super) {
         __extends(SyncSourceSwitch, _super);
         function SyncSourceSwitch(env) {
             var _this = _super.call(this, env) || this;
@@ -60,7 +60,6 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata", "syste
         ], SyncSourceSwitch.prototype, "CreateNewSwitch", null);
         return SyncSourceSwitch;
     }(Script_1.Script));
-    exports.SyncSourceSwitch = SyncSourceSwitch;
     var Switch = (function (_super) {
         __extends(Switch, _super);
         function Switch(owner, sourceProp) {
