@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NetioPowerBox = void 0;
-    var NetioPowerBox = exports.NetioPowerBox = (function (_super) {
+    var NetioPowerBox = (function (_super) {
         __extends(NetioPowerBox, _super);
         function NetioPowerBox(socket) {
             var _this = _super.call(this, socket) || this;
@@ -39,7 +39,8 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
                 var parsedResponse = JSON.parse(result.data);
                 _this.outputs = parsedResponse.Outputs;
             }).catch(function (error) { return _this.requestFailed(error); });
-            for (var i = 1; i <= 3; i++)
+            var noOfOutlets = parseInt(socket.options) | 2;
+            for (var i = 1; i <= noOfOutlets; i++)
                 _this.createOutlets(i);
             return _this;
         }
@@ -87,4 +88,5 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
         ], NetioPowerBox);
         return NetioPowerBox;
     }(Driver_1.Driver));
+    exports.NetioPowerBox = NetioPowerBox;
 });
