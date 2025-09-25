@@ -10,7 +10,10 @@
 
  	Copyright (c) 2020 VICREO BV, the Netherlands (https://vicreo.eu). All Rights Reserved.
 	Created by: Jeffrey Davidsz <jeffrey.davidsz@vicreo.eu>
-  	Version: 1.0.0
+  	
+	Modified by Mattias Andersson <mattias@pixilab.se> to be able to configure number of relays by typing number of outlets in custom options in the editor.
+	e.g. 4 for 4 sockets, 8 for 8 sockets and so on.  
+	Version 1.0.1
  */
 
 import { NetworkTCP } from "system/Network";
@@ -52,8 +55,8 @@ export class NetioPowerBox extends Driver<NetworkTCP> {
 			const parsedResponse = JSON.parse(result.data);
 			this.outputs = parsedResponse.Outputs;
 		}).catch(error => this.requestFailed(error));
-
-		for (let i = 1; i <= 3; i++)
+		let noOfOutlets = parseInt(socket.options) | 2; //Default to 2
+		for (let i = 1; i <= noOfOutlets; i++)
 			this.createOutlets(i);
 	}
 
