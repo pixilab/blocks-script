@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NetioPowerBox = void 0;
-    var NetioPowerBox = (function (_super) {
+    var NetioPowerBox = exports.NetioPowerBox = (function (_super) {
         __extends(NetioPowerBox, _super);
         function NetioPowerBox(socket) {
             var _this = _super.call(this, socket) || this;
@@ -88,5 +88,4 @@ define(["require", "exports", "system_lib/Driver", "system/SimpleHTTP", "system_
         ], NetioPowerBox);
         return NetioPowerBox;
     }(Driver_1.Driver));
-    exports.NetioPowerBox = NetioPowerBox;
 });

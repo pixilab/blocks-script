@@ -62,7 +62,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GenelecSmartIP = void 0;
-    var GenelecSmartIP = (function (_super) {
+    var GenelecSmartIP = exports.GenelecSmartIP = (function (_super) {
         __extends(GenelecSmartIP, _super);
         function GenelecSmartIP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -562,5 +562,4 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
         ], GenelecSmartIP);
         return GenelecSmartIP;
     }(Driver_1.Driver));
-    exports.GenelecSmartIP = GenelecSmartIP;
 });
