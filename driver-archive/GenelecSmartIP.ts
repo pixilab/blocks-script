@@ -7,7 +7,9 @@
  * please set sleep delay to 0 to disable this in Smart IP manager.
  * The driver will always make any profile it sets also the selected startup profile.
  * At Blocks server restart the current settings will be read back from the speaker.
- * @version 1.0
+ * Credential is added as a driver options e.g. admin:admin
+ * @version 1.01
+ * 
  */
 
 import { NetworkTCP } from "../system/Network";
@@ -39,13 +41,17 @@ export class GenelecSmartIP extends Driver<NetworkTCP> {
     ){
             super(socket)
             
-       if (socket.enabled){
-            if(socket.options != ""){
-                this.auth = "Basic" + this.toBase64(socket.options);
-            } else {
-                console.warn("No credentials in driver options, trying default")
-                this.auth = "BasicYWRtaW46YWRtaW4=" //Try default admin:admin
-            } 
+     if (socket.enabled) {
+        if (socket.options && socket.options.trim() !== "") {
+            // Always include a space after "Basic"
+            this.auth = "Basic " + this.toBase64(socket.options);
+        } else {
+            console.warn("No credentials in driver options, trying default");
+            // Make sure to include the space after "Basic"
+            this.auth = "Basic YWRtaW46YWRtaW4="; // default admin:admin
+        }
+
+
         this.initStatus();  
         
         }

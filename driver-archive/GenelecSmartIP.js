@@ -79,12 +79,12 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
             _this._enableAnalog = false;
             _this._hasAnalog = false;
             if (socket.enabled) {
-                if (socket.options != "") {
-                    _this.auth = "Basic" + _this.toBase64(socket.options);
+                if (socket.options && socket.options.trim() !== "") {
+                    _this.auth = "Basic " + _this.toBase64(socket.options);
                 }
                 else {
                     console.warn("No credentials in driver options, trying default");
-                    _this.auth = "BasicYWRtaW46YWRtaW4=";
+                    _this.auth = "Basic YWRtaW46YWRtaW4=";
                 }
                 _this.initStatus();
             }
