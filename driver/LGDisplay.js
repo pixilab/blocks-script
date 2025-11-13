@@ -33,8 +33,8 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.socket = socket;
             socket.enableWakeOnLAN();
             socket.autoConnect(true);
-            socket.subscribe("textReceived", function (sender, message) {
-                console.info("Data received", message.text);
+            socket.subscribe("bytesReceived", function (sender, message) {
+                console.info("Unexpected data received", message.rawData.length);
             });
             return _this;
         }

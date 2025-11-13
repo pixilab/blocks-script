@@ -26,10 +26,14 @@ export class MedialonAppLauncher extends NetworkDriver {
         socket.enableWakeOnLAN();
         socket.autoConnect(true);
 
-        socket.subscribe("textReceived", (sender, message) => {
-            console.info("Data received", message.text);
-        });
-        socket.subscribe('connect', ((sender, message) => {
+		/*	No data expected from subsystem, but log it in case we get something.
+			This also prevents any incoming data from clogging up the data receive buffer.
+		 */
+		socket.subscribe("bytesReceived", (sender, message) => {
+			console.info("Unexpected data received", message.rawData.length);
+		});
+
+       socket.subscribe('connect', ((sender, message) => {
             if (this._shuttingDown) return;
             switch (message.type) {
                 case "Connection":

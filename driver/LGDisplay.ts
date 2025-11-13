@@ -43,11 +43,11 @@ export class LGDisplay extends Driver<NetworkTCP> {
 		socket.enableWakeOnLAN();
 		socket.autoConnect(true); // The param here specifies "binary" mode
 
-		/*	No data expected from TV, but log it in case it says something.
+		/*	No data expected from TV, but log it in case we get something.
 			This also prevents any incoming data from clogging up the data receive buffer.
 		 */
-		socket.subscribe("textReceived", (sender, message) => {
-			console.info("Data received", message.text);
+		socket.subscribe("bytesReceived", (sender, message) => {
+			console.info("Unexpected data received", message.rawData.length);
 		});
 	}
 

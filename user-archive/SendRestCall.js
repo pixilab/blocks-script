@@ -65,7 +65,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SendRestCall = void 0;
-    var SendRestCall = (function (_super) {
+    var SendRestCall = exports.SendRestCall = (function (_super) {
         __extends(SendRestCall, _super);
         function SendRestCall(env) {
             return _super.call(this, env) || this;
@@ -176,5 +176,4 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Metadata", 
         ], SendRestCall.prototype, "sendPost", null);
         return SendRestCall;
     }(Script_1.Script));
-    exports.SendRestCall = SendRestCall;
 });

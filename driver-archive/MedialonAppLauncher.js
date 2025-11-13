@@ -37,8 +37,8 @@ define(["require", "exports", "system_lib/NetworkDriver", "system_lib/Metadata"]
             _this._socket = socket;
             socket.enableWakeOnLAN();
             socket.autoConnect(true);
-            socket.subscribe("textReceived", function (sender, message) {
-                console.info("Data received", message.text);
+            socket.subscribe("bytesReceived", function (sender, message) {
+                console.info("Unexpected data received", message.rawData.length);
             });
             socket.subscribe('connect', (function (sender, message) {
                 if (_this._shuttingDown)

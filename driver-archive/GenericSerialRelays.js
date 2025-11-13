@@ -26,7 +26,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GenericSerialRelays = void 0;
-    var GenericSerialRelays = (function (_super) {
+    var GenericSerialRelays = exports.GenericSerialRelays = (function (_super) {
         __extends(GenericSerialRelays, _super);
         function GenericSerialRelays(connection) {
             var _this = _super.call(this, connection) || this;
@@ -62,7 +62,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], GenericSerialRelays);
         return GenericSerialRelays;
     }(Driver_1.Driver));
-    exports.GenericSerialRelays = GenericSerialRelays;
     var Relay = (function () {
         function Relay(ix, owner, name) {
             this.id = ix;
