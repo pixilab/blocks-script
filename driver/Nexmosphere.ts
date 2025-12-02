@@ -1,4 +1,6 @@
-/*	PIXILAB Blocks driver for the Nexmosphere line of controllers and elements:
+/*	
+THIS DRIVER IS DEPRICASTED AND NO LONGER MAINTAINED. PLEASE USE THE NEW CONTROLLER SPECIFIC DRIVERS and NexmosphereBase instead.
+PIXILAB Blocks driver for the Nexmosphere line of controllers and elements:
 https://nexmosphere.com/technology/xperience-platform/
 
 Note: This driver will work with Blocks 6.1 and later. It uses new capabilities in Blocks, resulting
