@@ -4031,7 +4031,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         for (var _i = 0; _i < arguments.length; _i++) {
             messages[_i] = arguments[_i];
         }
-        if (true)
+        if (_debugLogging)
             console.log(messages);
     }
     exports.log = log;

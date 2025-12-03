@@ -3170,7 +3170,7 @@ export function normalize(value:number, inMin:number, inMax:number, outMin?:numb
  Log messages, allowing my logging to be easily disabled in one place.
  */
 export function log(...messages: any[]) {
-	if (true)
+	if (_debugLogging)
 		// Set to false to disable verbose logging
 		console.log(messages);
 }
