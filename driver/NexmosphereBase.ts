@@ -123,7 +123,6 @@ import {NetworkTCP, NetworkUDP, SerialPort} from "system/Network";
 import { Driver } from "system_lib/Driver";
 import { callable, driver, max, min, parameter, property } from "system_lib/Metadata";
 import { AggregateElem } from "../system_lib/ScriptBase";
-import { isPrivateIdentifier } from "../node_modules/typescript/lib/typescript";
 
 
 // Parse RFID tag detection from XR-DR01 Rfid element
@@ -142,7 +141,7 @@ const kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
 const kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
 const NEXMOSPHERE_COMMAND_DELAY_MS = 280;
 
-let  _debugLogging = true;	// Controls verbose logging
+let  _debugLogging = false;	// Controls verbose logging
 
 // A simple map-like object type
 export interface Dictionary<TElem> { [id: string]: TElem; }
