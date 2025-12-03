@@ -81,7 +81,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
     var kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
     var NEXMOSPHERE_COMMAND_DELAY_MS = 280;
-    var _debugLogging = true;
+    var _debugLogging = false;
     var NexmosphereBase = (function (_super) {
         __extends(NexmosphereBase, _super);
         function NexmosphereBase(port, numbOfInterfaces) {
