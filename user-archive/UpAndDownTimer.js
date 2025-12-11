@@ -257,7 +257,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [])
         ], UpAndDownTimer.prototype, "time", null);
         __decorate([
-            (0, Metadata_1.property)("Number of ticks"),
+            (0, Metadata_1.property)("Number of ticks", true),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], UpAndDownTimer.prototype, "ticks", null);

@@ -31,7 +31,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
     exports.Nexmosphere_NEO = void 0;
     var kNumInterfaces = 4;
     var kNumOutputs = 4;
-    var Nexmosphere_NEO = (function (_super) {
+    var Nexmosphere_NEO = exports.Nexmosphere_NEO = (function (_super) {
         __extends(Nexmosphere_NEO, _super);
         function Nexmosphere_NEO(port) {
             var _this = _super.call(this, port, kNumInterfaces) || this;
@@ -188,6 +188,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
                 this.send("P000B[AUTOSEND=INPUT:ALL:OFF]");
             }
         };
+        var _a;
         __decorate([
             (0, Metadata_1.callable)("Enable continious updates of output metrics"),
             __param(0, (0, Metadata_1.parameter)("Enable continious update at interval 0 or no value for off", true)),
@@ -205,11 +206,10 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
         Nexmosphere_NEO = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
-            __metadata("design:paramtypes", [Object])
+            __metadata("design:paramtypes", [typeof (_a = typeof NexmosphereBase_1.ConnType !== "undefined" && NexmosphereBase_1.ConnType) === "function" ? _a : Object])
         ], Nexmosphere_NEO);
         return Nexmosphere_NEO;
     }(NexmosphereBase_1.NexmosphereBase));
-    exports.Nexmosphere_NEO = Nexmosphere_NEO;
     var NeoBaseClass = (function (_super) {
         __extends(NeoBaseClass, _super);
         function NeoBaseClass(driver, ix) {

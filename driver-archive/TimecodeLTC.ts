@@ -1,6 +1,7 @@
 /** Blocks driver for providing time from an LTC (SMPTE or EBU) timecode source.
+	Version 251211
 
-	There are two options for receiving the LTC audio-level timecode signal:
+	There are two methods for receiving the LTC audio-level timecode signal:
 
 	1. Using the audio input of a Linux computer, such as a our Linux based
 	server image, running our 'timecode-reader' program. This program is located
@@ -19,7 +20,7 @@
  	https://youtube.com/playlist?list=PLC8ugsKcEiLSQ4Uh95o6x1U41qk1aHBuH
  	https://youtu.be/VY9kEkZim_k?si=a6x0Ltv8wJJObBlS
 
-	Finally, you must configure the driver for the expected timecode type. This
+	You must configure the driver for the expected timecode type. This
 	can be done in either of the following ways:
 
  	A. Set the 'type' property of this Network Device to the expected type.
@@ -29,6 +30,7 @@
 
  	B. Set options using JSON data in the "Custom Options" field of the Network
  	Device, like this: {"type": "29.97_drop", "offset": 0.0}
+ 	where "offset" is in seconds of real time (with fractions), not timecode time.
  	See kTypeMap below for valid type names.
 
  	Copyright (c) 2024 PIXILAB Technologies AB, Sweden (http://pixilab.se).
@@ -59,9 +61,12 @@ const kTypeMap: Dictionary<TypeInfo> = {
 interface Config {
 	type?: string;		// One of the kTypeMap keys above
 	offset?: number;	// Added to timecode received, in seconds (with fractions)
+	debug?: boolean;	// Enable debug logging in driver
 }
 
 type ConnType = NetworkUDP | SerialPort;
+
+let DEBUG = false;	// Set to true to enable verbose logging
 
 @driver('NetworkUDP', { port: 1632, rcvPort: 1633 })
 @driver('SerialPort', {baudRate: 115200})
@@ -90,6 +95,8 @@ export class TimecodeLTC extends Driver<ConnType> {
 		super(connection);
 		if (connection.options) {	// Set initial state from options
 			let config = JSON.parse(connection.options) as Config;
+			DEBUG = !!config.debug;
+
 			if (config.type) {
 				// toString in case user passed a number
 				const sType = config.type.toString();
@@ -152,7 +159,7 @@ export class TimecodeLTC extends Driver<ConnType> {
 	get connected(): boolean { return this.mConnected;}
 	set connected(value: boolean) { this.mConnected = value;}
 
-	@property("Offset added to timecode received, in seconds. May be negative.")
+	@property("Added to time. May be negative. Expressed in seconds of real time.")
 	get offset(): number { return this.mOffset; }
 	set offset(value: number) {
 		this.mOffset = value;
@@ -209,7 +216,6 @@ export class TimecodeLTC extends Driver<ConnType> {
 	 * Got a new message from peer. Publish as TimeFlow
 	 */
 	private dataReceived(msg: string) {
-		// console.log(msg);
 		const itemPairs = msg.split('/');
 		const pieceCount = itemPairs.length;
 		if (pieceCount % 2 || pieceCount < 8) // must be even and hold enough data
@@ -283,9 +289,10 @@ export class TimecodeLTC extends Driver<ConnType> {
 
 		var elapsedDelta = 0;
 		if (abrupt || !playing) {
+			millis += this.mOffsetMs;
 			if (this.time.rate !== speed || this.time.position !== millis) { // This is news
-				this.time = new TimeFlow(millis, speed, undefined, false /*	, serverTime*/);
-				// console.log("abrupt millis", millis, "speed", speed);
+				this.time = new TimeFlow(millis, speed, undefined, false);
+				log("abrupt millis", millis, "speed", speed);
 			}
 		} else {
 			/*	Presumably continuous playback - adjust for elapsed time delta
@@ -294,25 +301,24 @@ export class TimecodeLTC extends Driver<ConnType> {
 			const elapsedServerTime = (serverTime - this.lastServerTime) * this.speed;
 			const elapsedSampleTime = sampleTime - this.lastSampleTime;
 			elapsedDelta = elapsedServerTime - elapsedSampleTime;
-			// const rawMillis = millis;
+			const rawMillis = millis;
 			millis += elapsedDelta + this.mOffsetMs;
 
-			/*
-			const extrapolated = this.time.currentTime;
-			const extrapolated = this.time.extrapolate(serverTime);
-			console.log(
-				// "serverTime", serverTime,
-				"elapsedServerTime", elapsedServerTime,
-				"elapsedSampleTime", elapsedSampleTime,
-				"elapsedDelta", elapsedDelta,
-				"rawMillis", rawMillis,
-				"millis", millis,
-				"extrapolated", extrapolated,
-				"millisExtrDelta", millis - extrapolated,
-				// "speed", speed
-			);
-			 */
-			this.time = new TimeFlow(millis, speed, undefined, false /*	, serverTime*/);
+			if (DEBUG) {
+				const extrapolated = this.time.extrapolate(serverTime);
+				log(
+					// "serverTime", serverTime,
+					"elapsedServerTime", elapsedServerTime,
+					"elapsedSampleTime", elapsedSampleTime,
+					"elapsedDelta", elapsedDelta,
+					"rawMillis", rawMillis,
+					"millis", millis,
+					"extrapolated", extrapolated,
+					"millisExtrDelta", millis - extrapolated,
+					"speed", speed
+				);
+			}
+			this.time = new TimeFlow(millis, speed, undefined, false);
 		}
 
 		// On stop/start, handle any reset-on-stop functionality
@@ -347,3 +353,10 @@ interface TypeInfo {
 	fps: number;		// Expected, nominal frames per second
 }
 
+/**
+ Log messages, allowing my logging to be easily disabled in one place.
+ */
+function log(...messages: any[]) {
+	if (DEBUG)
+		console.info(messages);
+}

@@ -33,6 +33,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         "29.97_nondrop": { parName: "ndf", fps: 29.97 },
         "30": { parName: "30", fps: 30 }
     };
+    var DEBUG = false;
     var TimecodeLTC = exports.TimecodeLTC = (function (_super) {
         __extends(TimecodeLTC, _super);
         function TimecodeLTC(connection) {
@@ -50,6 +51,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.isReset = false;
             if (connection.options) {
                 var config = JSON.parse(connection.options);
+                DEBUG = !!config.debug;
                 if (config.type) {
                     var sType = config.type.toString();
                     if (kTypeMap[sType])
@@ -195,15 +197,22 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 abrupt = true;
             var elapsedDelta = 0;
             if (abrupt || !playing) {
+                millis += this.mOffsetMs;
                 if (this.time.rate !== speed || this.time.position !== millis) {
                     this.time = new TimeFlow(millis, speed, undefined, false);
+                    log("abrupt millis", millis, "speed", speed);
                 }
             }
             else {
                 var elapsedServerTime = (serverTime - this.lastServerTime) * this.speed;
                 var elapsedSampleTime = sampleTime - this.lastSampleTime;
                 elapsedDelta = elapsedServerTime - elapsedSampleTime;
+                var rawMillis = millis;
                 millis += elapsedDelta + this.mOffsetMs;
+                if (DEBUG) {
+                    var extrapolated = this.time.extrapolate(serverTime);
+                    log("elapsedServerTime", elapsedServerTime, "elapsedSampleTime", elapsedSampleTime, "elapsedDelta", elapsedDelta, "rawMillis", rawMillis, "millis", millis, "extrapolated", extrapolated, "millisExtrDelta", millis - extrapolated, "speed", speed);
+                }
                 this.time = new TimeFlow(millis, speed, undefined, false);
             }
             if (playingStateChanged) {
@@ -248,7 +257,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:paramtypes", [Boolean])
         ], TimecodeLTC.prototype, "connected", null);
         __decorate([
-            (0, Metadata_1.property)("Offset added to timecode received, in seconds. May be negative."),
+            (0, Metadata_1.property)("Added to time. May be negative. Expressed in seconds of real time."),
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], TimecodeLTC.prototype, "offset", null);
@@ -264,4 +273,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
         ], TimecodeLTC);
         return TimecodeLTC;
     }(Driver_1.Driver));
+    function log() {
+        var messages = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            messages[_i] = arguments[_i];
+        }
+        if (DEBUG)
+            console.info(messages);
+    }
 });

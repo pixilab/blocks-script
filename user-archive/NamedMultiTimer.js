@@ -29,7 +29,7 @@ define(["require", "exports", "system_lib/Script", "system_lib/ScriptBase", "sys
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NamedMultiTimer = void 0;
-    var NamedMultiTimer = (function (_super) {
+    var NamedMultiTimer = exports.NamedMultiTimer = (function (_super) {
         __extends(NamedMultiTimer, _super);
         function NamedMultiTimer(scriptFacade) {
             var _this = _super.call(this, scriptFacade) || this;
@@ -67,7 +67,6 @@ define(["require", "exports", "system_lib/Script", "system_lib/ScriptBase", "sys
         ], NamedMultiTimer.prototype, "reinit", null);
         return NamedMultiTimer;
     }(Script_1.Script));
-    exports.NamedMultiTimer = NamedMultiTimer;
     var Timer = (function (_super) {
         __extends(Timer, _super);
         function Timer(name, backwards, startTimeMs) {

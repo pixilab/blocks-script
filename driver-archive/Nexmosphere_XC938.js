@@ -27,7 +27,7 @@ define(["require", "exports", "../system_lib/Metadata", "./NexmosphereBase"], fu
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Nexmosphere_XC938 = void 0;
     var kNumInterfaces = 4;
-    var Nexmosphere_XC938 = (function (_super) {
+    var Nexmosphere_XC938 = exports.Nexmosphere_XC938 = (function (_super) {
         __extends(Nexmosphere_XC938, _super);
         function Nexmosphere_XC938(port) {
             var _this = _super.call(this, port, kNumInterfaces) || this;
@@ -42,12 +42,12 @@ define(["require", "exports", "../system_lib/Metadata", "./NexmosphereBase"], fu
         Nexmosphere_XC938.prototype.considerConnected = function () {
             return this.port.connected;
         };
+        var _a;
         Nexmosphere_XC938 = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
-            __metadata("design:paramtypes", [Object])
+            __metadata("design:paramtypes", [typeof (_a = typeof NexmosphereBase_1.ConnType !== "undefined" && NexmosphereBase_1.ConnType) === "function" ? _a : Object])
         ], Nexmosphere_XC938);
         return Nexmosphere_XC938;
     }(NexmosphereBase_1.NexmosphereBase));
-    exports.Nexmosphere_XC938 = Nexmosphere_XC938;
 });

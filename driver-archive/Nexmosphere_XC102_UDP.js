@@ -27,7 +27,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase"], funct
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Nexmosphere_XC102_UDP = void 0;
     var kNumInterfaces = 12;
-    var Nexmosphere_XC102_UDP = (function (_super) {
+    var Nexmosphere_XC102_UDP = exports.Nexmosphere_XC102_UDP = (function (_super) {
         __extends(Nexmosphere_XC102_UDP, _super);
         function Nexmosphere_XC102_UDP(port) {
             var _this = _super.call(this, port, kNumInterfaces) || this;
@@ -45,5 +45,4 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase"], funct
         ], Nexmosphere_XC102_UDP);
         return Nexmosphere_XC102_UDP;
     }(NexmosphereBase_1.NexmosphereBase));
-    exports.Nexmosphere_XC102_UDP = Nexmosphere_XC102_UDP;
 });

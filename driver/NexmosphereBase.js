@@ -82,7 +82,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
     var NEXMOSPHERE_COMMAND_DELAY_MS = 280;
     var _debugLogging = false;
-    var NexmosphereBase = (function (_super) {
+    var NexmosphereBase = exports.NexmosphereBase = (function (_super) {
         __extends(NexmosphereBase, _super);
         function NexmosphereBase(port, numbOfInterfaces) {
             var _this = this;
@@ -553,7 +553,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], NexmosphereBase.prototype, "debugLogging", null);
         return NexmosphereBase;
     }(Driver_1.Driver));
-    exports.NexmosphereBase = NexmosphereBase;
     function commandDelay() {
         return new Promise(function (resolve) {
             wait(NEXMOSPHERE_COMMAND_DELAY_MS).then(function () {

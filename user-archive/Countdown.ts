@@ -2,6 +2,9 @@
 	for maximum flexibility in displaying the counter value. Also publishes a "zero" property that's
 	true while the timer is as time 0:00, and can be useful to start whatever is to happen at this time.
 
+	NOTE: The MultiTimer user script provides a more performant alternative to this, and also
+	supports counting up as well as down.
+
  	Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 

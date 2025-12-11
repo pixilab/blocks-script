@@ -27,7 +27,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase"], funct
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Nexmosphere_XN135M3 = void 0;
     var kNumInterfaces = 2;
-    var Nexmosphere_XN135M3 = (function (_super) {
+    var Nexmosphere_XN135M3 = exports.Nexmosphere_XN135M3 = (function (_super) {
         __extends(Nexmosphere_XN135M3, _super);
         function Nexmosphere_XN135M3(port) {
             var _this = _super.call(this, port, kNumInterfaces) || this;
@@ -41,12 +41,12 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase"], funct
             }
             return _this;
         }
+        var _a;
         Nexmosphere_XN135M3 = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
-            __metadata("design:paramtypes", [Object])
+            __metadata("design:paramtypes", [typeof (_a = typeof NexmosphereBase_1.ConnType !== "undefined" && NexmosphereBase_1.ConnType) === "function" ? _a : Object])
         ], Nexmosphere_XN135M3);
         return Nexmosphere_XN135M3;
     }(NexmosphereBase_1.NexmosphereBase));
-    exports.Nexmosphere_XN135M3 = Nexmosphere_XN135M3;
 });

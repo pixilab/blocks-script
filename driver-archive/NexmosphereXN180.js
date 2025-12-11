@@ -27,7 +27,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase"], funct
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NexmosphereXN180 = void 0;
     var kNumInterfaces = 8;
-    var NexmosphereXN180 = (function (_super) {
+    var NexmosphereXN180 = exports.NexmosphereXN180 = (function (_super) {
         __extends(NexmosphereXN180, _super);
         function NexmosphereXN180(port, numInterfaces) {
             var _this = _super.call(this, port, numInterfaces) || this;
@@ -46,5 +46,4 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase"], funct
         ], NexmosphereXN180);
         return NexmosphereXN180;
     }(NexmosphereBase_1.NexmosphereBase));
-    exports.NexmosphereXN180 = NexmosphereXN180;
 });

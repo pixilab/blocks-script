@@ -1,17 +1,16 @@
-/*	
-	A timer with minutes, seconds and tenths. Publishes "minutes", "seconds", "tenths", "time" 
-	and "done" as separate properties, for maximum flexibility in displaying the counter value 
-	and to know when the time is reached. 
-	
+/**	A timer with minutes, seconds and tenths. Publishes "minutes", "seconds", "tenths"
+	and "done" as separate properties, for maximum flexibility in displaying the counter value
+	and to know when the time is reached.
+
 	You can also choose to count up instead of down, by starting with startUp() instead of startDown().
 	The timer will compensate for any time spent in the script, so that the timer will be as accurate as possible.
 	Set the "running" property to true to start the timer, and to false to pause it.
 
-	The script is based on PixiLab's Countdown.ts script, but has been modified to support tenths, count up and to 
+	The script is based on PixiLab's Countdown.ts script, but has been modified to support tenths, count up and to
 	be more accurate.
-	
-	Script made by 
-	Jonas Hjalmarsson, By Jalma AB, Sweden (https://byjalma.se). 
+
+	Script made by
+	Jonas Hjalmarsson, By Jalma AB, Sweden (https://byjalma.se).
 	Petter Feltenstedt, Kalmar Mediespecialist AB, Sweden (http://mediespecialist.se).
 	All Rights Reserved.
 */
@@ -62,7 +61,7 @@ export class UpAndDownTimer extends Script {
 		return this.minutes + ":" + padTwoDigits(this.seconds) + "." + this.tenths;
 	}
 
-	@property("Number of ticks")
+	@property("Number of ticks", true)
 	public get ticks(): number {
 		return this.mCountTicks;
 	}
