@@ -59,7 +59,7 @@ interface IStreamConnection extends DriverFacade {
 	/**
 	 * Close the data stream
 	 */
-	disconnect(): void;			// Disconnect immediately
+	disconnect(): void;
 
 	/*	Send text with a carriage return appended.
 		Returned promise resolved/rejected once sent/failed.
@@ -124,6 +124,13 @@ export interface NetworkTCP extends IStreamConnection, NetworkIPBase {
 		Uses the port specified in the UI unless explicitly overridden.
 	 */
 	connect(rawBytesMode?: boolean, port?:number): Promise<any>;
+
+	/* Disconnect the TCP connection. If forceShut is specified as true, then
+	 * close the connection immediately, without accepting any further data. If unspecified
+	 * or false, then close gracefully, accepting any remaining data the client may have
+	 * sent that's not yet received.
+	 */
+	disconnect(forceShut?: boolean): void;
 }
 
 /**
@@ -134,8 +141,7 @@ interface NetworkTCPDriverMetaData {
 	port: number;	// Default port, selected automatically when driver is chosen
 }
 
-/**
-	A serial port, typically managed through a USB-to-Serial adaptor
+/** A serial port, typically managed through a USB-to-Serial adaptor
 	connected to a PIXILAB Player.
 
 	Note that connect, disconnect and autoConnect, while available, work a bit

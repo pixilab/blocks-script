@@ -32,12 +32,30 @@ export interface ServerListener {
 	subscribe(event: "client", listener: (sender: ServerListener, message:{
 		connection: Connection	// The newly acquired connection
 	})=>void): void;
+
+	/**
+	 * Shut down this listener, accepting no further connections. Note
+	 * that this does not automatically shut down connections that
+	 * have already been established. Added in Blocks 7.5.2.
+	 */
+	close():void;
 }
 
 export interface Connection {
 	id: string;				// Connection identifier (unique within its ServerListener)
 
-	disconnect(): void;		// Disconnect the client from the server side
+	/**
+	 * Connected peer's address in the form "192.168.0.23",
+	 * or empty string if not known.
+	 */
+	readonly address: string;
+
+	/** Disconnect the client from the server side. If forceShut is specified as true, then
+	 * close the connection immediately, without accepting any further data. If unspecified
+	 * or false, then close gracefully, accepting any remaining data the client may have
+	 * sent that's not yet received.
+	 */
+	disconnect(forceShut?: boolean): void;
 
 	/*	Send text with a "carriage return" end of line character automatically appended.
 		Returned promise resolved/rejected once sent/failed.
