@@ -32,8 +32,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -58,11 +58,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", "../system_lib/Metadata"], function (require, exports, SimpleHTTP_1, Driver_1, Metadata_1) {
+define(["require", "exports", "system/SimpleHTTP", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, Driver_1, Metadata_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GenelecSmartIP = void 0;
-    var GenelecSmartIP = exports.GenelecSmartIP = (function (_super) {
+    var GenelecSmartIP = (function (_super) {
         __extends(GenelecSmartIP, _super);
         function GenelecSmartIP(socket) {
             var _this = _super.call(this, socket) || this;
@@ -136,8 +136,10 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                         case 1:
                             response = _a.sent();
                             data = response.interpreted;
-                            this.volume = this.dbToNorm(data.level);
-                            this.mute = data.mute;
+                            this._volume = this.dbToNorm(data.level);
+                            this._mute = data.mute;
+                            this.changed("volume");
+                            this.changed("mute");
                             return [3, 3];
                         case 2:
                             err_1 = _a.sent();
@@ -159,7 +161,8 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                         case 1:
                             response = _a.sent();
                             data = response.interpreted;
-                            this.active = (data.state === "ACTIVE");
+                            this._active = data.state === "ACTIVE";
+                            this.changed("active");
                             return [3, 3];
                         case 2:
                             err_2 = _a.sent();
@@ -181,7 +184,8 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                         case 1:
                             response = _a.sent();
                             data = response.interpreted;
-                            this.profile = data.selected;
+                            this._profile = data.selected;
+                            this.changed("profile");
                             return [3, 3];
                         case 2:
                             err_3 = _a.sent();
@@ -282,8 +286,8 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 if (this._mute !== value && this._active) {
                     var endPoint = "audio/volume";
                     var payload = {
-                        level: this._volume,
-                        mute: value
+                        level: this.normToDb_linearInDb(this._volume),
+                        mute: value,
                     };
                     this.sendCommand(endPoint, payload);
                     this._mute = value;
@@ -299,7 +303,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
             set: function (value) {
                 var endPoint = "device/pwr";
                 var payload = {
-                    state: value ? "ACTIVE" : "STANDBY"
+                    state: value ? "ACTIVE" : "STANDBY",
                 };
                 this.sendCommand(endPoint, payload);
                 this._active = value;
@@ -317,7 +321,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                     var endPoint = "audio/volume";
                     var payload = {
                         level: this.normToDb_linearInDb(value),
-                        mute: this._mute
+                        mute: this._mute,
                     };
                     this.sendCommand(endPoint, payload);
                     this._volume = value;
@@ -335,7 +339,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                     var endPoint = "profile/restore";
                     var payload = {
                         id: value,
-                        startup: true
+                        startup: true,
                     };
                     this.sendCommand(endPoint, payload);
                     this._profile = value;
@@ -417,7 +421,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
         };
         GenelecSmartIP.prototype.sendCommand = function (endPoint, payload) {
             return __awaiter(this, void 0, void 0, function () {
-                var response, err_7;
+                var err_7;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
@@ -428,14 +432,13 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                             _a.label = 1;
                         case 1:
                             _a.trys.push([1, 3, , 4]);
-                            return [4, SimpleHTTP_1.SimpleHTTP
-                                    .newRequest("http://".concat(this.socket.address, ":").concat(this.socket.port, "/public/v1/").concat(endPoint))
+                            return [4, SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(this.socket.address, ":").concat(this.socket.port, "/public/v1/").concat(endPoint))
                                     .header("Authorization", this.auth)
                                     .put(JSON.stringify(payload))];
                         case 2:
-                            response = _a.sent();
+                            _a.sent();
                             this.connected = true;
-                            return [2, response];
+                            return [3, 4];
                         case 3:
                             err_7 = _a.sent();
                             this.connected = false;
@@ -453,13 +456,12 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                         case 0:
                             if (!this.socket.enabled) {
                                 this.connected = false;
-                                return [2];
+                                return [2, undefined];
                             }
                             _a.label = 1;
                         case 1:
                             _a.trys.push([1, 3, , 4]);
-                            return [4, SimpleHTTP_1.SimpleHTTP
-                                    .newRequest("http://".concat(this.socket.address, ":").concat(this.socket.port, "/public/v1/").concat(endPoint), { interpretResponse: true })
+                            return [4, SimpleHTTP_1.SimpleHTTP.newRequest("http://".concat(this.socket.address, ":").concat(this.socket.port, "/public/v1/").concat(endPoint), { interpretResponse: true })
                                     .header("Authorization", this.auth)
                                     .get()];
                         case 2:
@@ -470,7 +472,7 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                             err_8 = _a.sent();
                             console.error("Request failed:", err_8);
                             this.connected = false;
-                            return [3, 4];
+                            return [2, undefined];
                         case 4: return [2];
                     }
                 });
@@ -497,8 +499,12 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
                 var e1 = c1 >> 2;
                 var e2 = ((c1 & 3) << 4) | (c2 >> 4);
                 var e3 = isNaN(c2) ? 64 : ((c2 & 15) << 2) | (c3 >> 6);
-                var e4 = isNaN(c2) || isNaN(c3) ? 64 : (c3 & 63);
-                result += chars.charAt(e1) + chars.charAt(e2) + (e3 === 64 ? "=" : chars.charAt(e3)) + (e4 === 64 ? "=" : chars.charAt(e4));
+                var e4 = isNaN(c2) || isNaN(c3) ? 64 : c3 & 63;
+                result +=
+                    chars.charAt(e1) +
+                        chars.charAt(e2) +
+                        (e3 === 64 ? "=" : chars.charAt(e3)) +
+                        (e4 === 64 ? "=" : chars.charAt(e4));
             }
             return result;
         };
@@ -557,9 +563,10 @@ define(["require", "exports", "../system/SimpleHTTP", "../system_lib/Driver", ".
             __metadata("design:paramtypes", [String])
         ], GenelecSmartIP.prototype, "aoipName", null);
         GenelecSmartIP = __decorate([
-            (0, Metadata_1.driver)('NetworkTCP', { port: 9000 }),
+            (0, Metadata_1.driver)("NetworkTCP", { port: 9000 }),
             __metadata("design:paramtypes", [Object])
         ], GenelecSmartIP);
         return GenelecSmartIP;
     }(Driver_1.Driver));
+    exports.GenelecSmartIP = GenelecSmartIP;
 });

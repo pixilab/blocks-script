@@ -42,24 +42,24 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
                 this.list[name].clear();
             }
             else {
-                var list = new List(this, name, taskRealm, taskGroup, timelineGroup);
+                var list = new List(this, name, taskRealm || kDefaultRealm, taskGroup || name, timelineGroup || name);
                 this.list[name] = list;
                 this.establishFeed(list);
             }
         };
-        CueList.prototype.addCue = function (list, name) {
+        CueList.prototype.addCue = function (list, name, friendlyName) {
             var addToList = this.list[list];
             if (addToList)
-                addToList.addCue(name);
+                addToList.addCue(name, friendlyName);
             else
                 throw "Cue list " + list + " not found. Use defineList first to create it.";
         };
         __decorate([
             (0, Metadata_1.callable)("Create (or clear content of) named cue list"),
             __param(0, (0, Metadata_1.parameter)("Name of cue list to define or clear")),
-            __param(1, (0, Metadata_1.parameter)("Task realm name (defaults to 'CueList'", true)),
-            __param(2, (0, Metadata_1.parameter)("Task group name (defaults to name of this list", true)),
-            __param(3, (0, Metadata_1.parameter)("Task group name (defaults to name of this list", true)),
+            __param(1, (0, Metadata_1.parameter)("Task realm name. Default is 'CueList'.", true)),
+            __param(2, (0, Metadata_1.parameter)("Task group name. Name of this list unless ovrridden by track property.", true)),
+            __param(3, (0, Metadata_1.parameter)("Timeline group name. Default is name of this list.", true)),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [String, String, String, String]),
             __metadata("design:returntype", void 0)
@@ -67,9 +67,10 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
         __decorate([
             (0, Metadata_1.callable)("Append a cue to named list"),
             __param(0, (0, Metadata_1.parameter)("Name of list to add cue to")),
-            __param(1, (0, Metadata_1.parameter)("Name of cue (also task and timeline unless overridden)")),
+            __param(1, (0, Metadata_1.parameter)("Internal name of cue (also task and/or timeline name)")),
+            __param(2, (0, Metadata_1.parameter)("User-friendly name (defaults to name)", true)),
             __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String]),
+            __metadata("design:paramtypes", [String, String, String]),
             __metadata("design:returntype", void 0)
         ], CueList.prototype, "addCue", null);
         return CueList;
@@ -89,6 +90,7 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
             _this.cues = [];
             _this.refreshTimer = undefined;
             _this.mRunning = false;
+            _this.mTrack = '';
             return _this;
         }
         List.prototype.clear = function () {
@@ -99,8 +101,8 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
                 this.refreshSoon();
             }
         };
-        List.prototype.addCue = function (name, task, timeline) {
-            this.cues.push(new Cue(name, task, timeline));
+        List.prototype.addCue = function (name, friendlyName) {
+            this.cues.push(new Cue(name, friendlyName));
             this.refreshSoon();
         };
         List.prototype.refreshSoon = function () {
@@ -116,18 +118,36 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
         List.prototype.getList = function (spec) {
             return Promise.resolve({ items: this.cues });
         };
+        List.prototype.getTaskGroupName = function () {
+            return this.mTrack || this.taskGroup;
+        };
+        Object.defineProperty(List.prototype, "track", {
+            get: function () {
+                return this.mTrack;
+            },
+            set: function (trackName) {
+                this.mTrack = trackName;
+            },
+            enumerable: false,
+            configurable: true
+        });
         Object.defineProperty(List.prototype, "cueIndex", {
             get: function () {
                 return this.index;
             },
             set: function (ix) {
+                var _this = this;
                 if (ix >= 0 && ix <= this.cues.length) {
                     if (this.index !== ix) {
+                        var proceedWhen = void 0;
                         if (this.index)
-                            this.killCueAt(this.index);
+                            proceedWhen = this.killCueAt(this.index);
+                        else
+                            proceedWhen = Promise.resolve();
                         this.index = ix;
-                        if (ix)
-                            this.triggerCueAt(ix);
+                        if (ix) {
+                            proceedWhen.then(function () { return _this.triggerCueAt(ix); });
+                        }
                         this.changed('cueName');
                         this.changed('cueNext');
                         this.changed('cuePrevious');
@@ -182,8 +202,7 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
         };
         List.prototype.killCueAt = function (cueIx) {
             var cue = this.cues[cueIx - 1];
-            if (cue)
-                cue.kill(this);
+            return cue ? cue.kill(this) : Promise.resolve();
         };
         List.prototype.triggerCueAt = function (cueIx) {
             var cue = this.cues[this.index - 1];
@@ -207,6 +226,11 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
                 this.changed('running');
             }
         };
+        __decorate([
+            (0, Metadata_1.property)("Track name. Overrides task group name if specified."),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], List.prototype, "track", null);
         __decorate([
             (0, Metadata_1.property)("Current cue position, where 0 is before first cue"),
             (0, Metadata_1.min)(0),
@@ -236,33 +260,47 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
         return List;
     }(ScriptBase_1.AggregateElem));
     var Cue = (function () {
-        function Cue(name, task, timeline) {
-            this.task = task;
-            this.timeline = timeline;
+        function Cue(name, friendlyName) {
             this.name = name;
+            this.friendlyName = friendlyName ? friendlyName : name;
         }
-        Cue.prototype.taskRunningPath = function (list) {
-            return "Realm.".concat(list.taskRealm || kDefaultRealm, ".group.").concat(list.taskGroup || list.name, ".").concat(this.task || this.name, ".running");
-        };
         Cue.prototype.timelineRunningPath = function (list) {
-            return "Timeline.".concat(list.timelineGroup || list.name, ".").concat(this.timeline || this.name, ".playing");
+            return "Timeline.".concat(list.timelineGroup, ".").concat(this.name, ".playing");
         };
-        Cue.prototype.findTask = function (list, suffix) {
-            var realm = Realm_1.Realm[list.taskRealm || kDefaultRealm];
+        Cue.prototype.taskRunningPath = function (list, suffix) {
+            if (suffix === void 0) { suffix = ''; }
+            var groupName = list.getTaskGroupName();
+            if (!this.findSpecificTask(list, suffix)) {
+                groupName = list.taskGroup;
+                if (!groupName)
+                    throw "No corresponding task and Base Track not specified.";
+            }
+            return "Realm.".concat(list.taskRealm, ".group.").concat(groupName, ".").concat(this.name).concat(suffix, ".running");
+        };
+        Cue.prototype.findSpecificTask = function (list, suffix, useBaseGroup) {
+            var realm = Realm_1.Realm[list.taskRealm];
             if (realm) {
-                var group = realm.group[list.taskGroup || list.name];
+                var group = realm.group[useBaseGroup ? list.taskGroup : list.getTaskGroupName()];
                 if (group) {
-                    var name_1 = this.task || this.name;
+                    var name_1 = this.name;
                     if (suffix)
                         name_1 = name_1 + suffix;
                     return group[name_1];
                 }
             }
         };
+        Cue.prototype.findTask = function (list, suffix) {
+            var task = this.findSpecificTask(list, suffix);
+            if (!task)
+                task = this.findSpecificTask(list, suffix, true);
+            return task;
+        };
         Cue.prototype.findTimeline = function (list) {
-            var timelineGroup = Timeline_1.Timeline[list.timelineGroup || list.name];
-            if (timelineGroup)
-                return timelineGroup[this.timeline || this.name];
+            if (Timeline_1.Timeline) {
+                var timelineGroup = Timeline_1.Timeline[list.timelineGroup];
+                if (timelineGroup)
+                    return timelineGroup[this.name];
+            }
         };
         Cue.prototype.kill = function (list) {
             var _this = this;
@@ -277,14 +315,27 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
             var task = this.findTask(list);
             if (task)
                 task.running = false;
+            var result;
             task = this.findTask(list, "_exit");
-            if (task)
+            if (task) {
                 task.running = true;
+                result = new Promise(function (resolver) {
+                    var exitPropAccessor = list.owner.getProperty(_this.taskRunningPath(list, '_exit'), function (running) {
+                        if (!running) {
+                            exitPropAccessor.close();
+                            resolver();
+                        }
+                    });
+                });
+            }
+            else
+                result = Promise.resolve();
             if (this.runningPropAccessor) {
                 list.tellRunning(false);
                 this.runningPropAccessor.close();
                 this.runningPropAccessor = undefined;
             }
+            return result;
         };
         Cue.prototype.trigger = function (list) {
             var task = this.findTask(list);
@@ -316,9 +367,13 @@ define(["require", "exports", "../system_lib/Feed", "../system_lib/Metadata", ".
             return true;
         };
         __decorate([
-            (0, Metadata_1.field)("Cue name"),
+            (0, Metadata_1.field)("Cue internal name"),
             __metadata("design:type", String)
         ], Cue.prototype, "name", void 0);
+        __decorate([
+            (0, Metadata_1.field)("Cue name shown in UI"),
+            __metadata("design:type", String)
+        ], Cue.prototype, "friendlyName", void 0);
         return Cue;
     }());
 });
