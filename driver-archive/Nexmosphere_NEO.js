@@ -25,7 +25,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "system_lib/ScriptBase"], function (require, exports, Metadata_1, NexmosphereBase_1, ScriptBase_1) {
+define(["require", "exports", "system_lib/Metadata", "../driver/NexmosphereBase", "system_lib/ScriptBase"], function (require, exports, Metadata_1, NexmosphereBase_1, ScriptBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Nexmosphere_NEO = void 0;
@@ -188,7 +188,6 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
                 this.send("P000B[AUTOSEND=INPUT:ALL:OFF]");
             }
         };
-        var _a;
         __decorate([
             (0, Metadata_1.callable)("Enable continious updates of output metrics"),
             __param(0, (0, Metadata_1.parameter)("Enable continious update at interval 0 or no value for off", true)),
@@ -206,7 +205,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
         Nexmosphere_NEO = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
-            __metadata("design:paramtypes", [typeof (_a = typeof NexmosphereBase_1.ConnType !== "undefined" && NexmosphereBase_1.ConnType) === "function" ? _a : Object])
+            __metadata("design:paramtypes", [Object])
         ], Nexmosphere_NEO);
         return Nexmosphere_NEO;
     }(NexmosphereBase_1.NexmosphereBase));

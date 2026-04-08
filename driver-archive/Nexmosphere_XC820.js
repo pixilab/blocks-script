@@ -22,7 +22,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "../system_lib/Metadata", "./NexmosphereBase"], function (require, exports, Metadata_1, NexmosphereBase_1) {
+define(["require", "exports", "../system_lib/Metadata", "../driver/NexmosphereBase"], function (require, exports, Metadata_1, NexmosphereBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Nexmosphere_XC820 = void 0;
@@ -41,11 +41,10 @@ define(["require", "exports", "../system_lib/Metadata", "./NexmosphereBase"], fu
         Nexmosphere_XC820.prototype.considerConnected = function () {
             return this.port.connected;
         };
-        var _a;
         Nexmosphere_XC820 = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
-            __metadata("design:paramtypes", [typeof (_a = typeof NexmosphereBase_1.ConnType !== "undefined" && NexmosphereBase_1.ConnType) === "function" ? _a : Object])
+            __metadata("design:paramtypes", [Object])
         ], Nexmosphere_XC820);
         return Nexmosphere_XC820;
     }(NexmosphereBase_1.NexmosphereBase));

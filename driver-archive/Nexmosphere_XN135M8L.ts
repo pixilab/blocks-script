@@ -6,7 +6,7 @@
  */
 
 import {driver} from "system_lib/Metadata";
-import {NexmosphereBase,ConnType, BuiltInElements} from "./NexmosphereBase";
+import {NexmosphereBase,ConnType, BuiltInElements} from "../driver/NexmosphereBase";
 
 const kNumInterfaces: number = 2;
 

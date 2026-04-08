@@ -7,7 +7,7 @@
 
 import {NetworkUDP} from "system/Network";
 import {driver} from "system_lib/Metadata";
-import {NexmosphereBase,BuiltInElements} from "./NexmosphereBase";
+import {NexmosphereBase,BuiltInElements} from "../driver/NexmosphereBase";
 
 const kNumInterfaces: number = 4;
 
@@ -18,19 +18,19 @@ export class Nexmosphere_XC948_UDP extends NexmosphereBase<NetworkUDP> {
         ["RGBW", 5],
         ["Analogx4", 115]//Bitwice 0-3: Audio Switches
     ]
-	
+
 	public constructor(port: NetworkUDP ) {
 		super(port, kNumInterfaces);
 		if (port.enabled){
 			this.initUdp();
 			this.addBuiltInInterfaces(this.specialInterfaces);
 			this.numInterfaces = kNumInterfaces;
-			
-		
-		} 
-	}	
+
+
+		}
+	}
 
 }
-	
+
 
 

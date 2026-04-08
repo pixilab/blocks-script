@@ -6,7 +6,7 @@
  */
 
 import { callable, driver,parameter,property } from "system_lib/Metadata";
-import { NexmosphereBase,ConnType, log,Dictionary,padVal,normalize } from "./NexmosphereBase";
+import { NexmosphereBase,ConnType, log,Dictionary,padVal,normalize } from "../driver/NexmosphereBase";
 import { AggregateElem } from "system_lib/ScriptBase";
 
 
