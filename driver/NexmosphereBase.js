@@ -80,9 +80,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var kProductCodeParser = /D(\d+)B\[\w+=([^\]]+)]/;
     var kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
     var kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
-    var NEXMOSPHERE_COMMAND_DELAY_MS = 280;
+    var NEXMOSPHERE_COMMAND_DELAY_MS = 100;
     var _debugLogging = false;
-    var NexmosphereBase = exports.NexmosphereBase = (function (_super) {
+    var NexmosphereBase = (function (_super) {
         __extends(NexmosphereBase, _super);
         function NexmosphereBase(port, numbOfInterfaces) {
             var _this = this;
@@ -370,7 +370,6 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     return [2];
                 });
             }); };
-            this.msgQueue.push(task);
             if (priority) {
                 this.msgQueue.unshift(task);
             }
@@ -414,6 +413,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         NexmosphereBase.prototype.reInitialize = function () {
             _super.prototype.reInitialize.call(this);
+        };
+        NexmosphereBase.prototype.setCommandDelay = function (delay) {
+            NEXMOSPHERE_COMMAND_DELAY_MS = limitedVal(delay, 50, 500);
+            console.log("Command delay set to", NEXMOSPHERE_COMMAND_DELAY_MS, "ms");
         };
         NexmosphereBase.prototype.debugLogging = function (value) {
             _debugLogging = value;
@@ -546,6 +549,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             __metadata("design:returntype", void 0)
         ], NexmosphereBase.prototype, "reInitialize", null);
         __decorate([
+            (0, Metadata_1.callable)("Delay between commands in ms (to avoid flooding the controller, defaults to 75ms 50-500ms allowed)"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number]),
+            __metadata("design:returntype", void 0)
+        ], NexmosphereBase.prototype, "setCommandDelay", null);
+        __decorate([
             (0, Metadata_1.callable)("Enable logging "),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Boolean]),
@@ -553,6 +562,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], NexmosphereBase.prototype, "debugLogging", null);
         return NexmosphereBase;
     }(Driver_1.Driver));
+    exports.NexmosphereBase = NexmosphereBase;
     function commandDelay() {
         return new Promise(function (resolve) {
             wait(NEXMOSPHERE_COMMAND_DELAY_MS).then(function () {
@@ -1304,6 +1314,118 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         return MonoLedInterface;
     }(BaseInterface));
     NexmosphereBase.registerInterface(MonoLedInterface, "MonoLed");
+    var DmxRgbwInterface = (function (_super) {
+        __extends(DmxRgbwInterface, _super);
+        function DmxRgbwInterface(driver, index) {
+            return _super.call(this, driver, index) || this;
+        }
+        Object.defineProperty(DmxRgbwInterface.prototype, "command", {
+            get: function () { return this._command; },
+            set: function (cmd) {
+                this.sendCommand(cmd);
+                this._command = cmd;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        DmxRgbwInterface.prototype.setAllToZero = function () {
+            this.command = "DMX ALL OFF";
+        };
+        DmxRgbwInterface.prototype.defineState = function (address, stateId, channel_1, channel_2, channel_3, channel_4) {
+            var a = padVal(limitedVal(address, 1, 512), 3);
+            var sId = stateId.toUpperCase();
+            var parts = [
+                "S".concat(sId),
+                a,
+                padVal(limitedVal(channel_1, 0, 255), 3)
+            ];
+            if (channel_2 !== undefined)
+                parts.push(padVal(limitedVal(channel_2, 0, 255), 3));
+            if (channel_3 !== undefined)
+                parts.push(padVal(limitedVal(channel_3, 0, 255), 3));
+            if (channel_4 !== undefined)
+                parts.push(padVal(limitedVal(channel_4, 0, 255), 3));
+            var cmd = parts.join(" ");
+            this.command = cmd;
+        };
+        DmxRgbwInterface.prototype.recallState = function (stateId, rampId, rampTime) {
+            var cmd = "R".concat(rampId.toUpperCase(), " LIN ").concat(padVal(limitedVal(rampTime, 0, 90), 2), " S").concat(stateId.toUpperCase());
+            this.command = cmd;
+        };
+        DmxRgbwInterface.prototype.directRamp = function (address, rampId, ramp, channel_1, channel_2, channel_3, channel_4) {
+            var a = padVal(limitedVal(address, 1, 512), 3);
+            var rTime = padVal(limitedVal(ramp, 0, 90), 2);
+            var rId = rampId.toUpperCase();
+            var parts = [
+                "R".concat(rId),
+                "LIN",
+                rTime,
+                a,
+                padVal(limitedVal(channel_1, 0, 255), 3)
+            ];
+            if (channel_2 !== undefined)
+                parts.push(padVal(limitedVal(channel_2, 0, 255), 3));
+            if (channel_3 !== undefined)
+                parts.push(padVal(limitedVal(channel_3, 0, 255), 3));
+            if (channel_4 !== undefined)
+                parts.push(padVal(limitedVal(channel_4, 0, 255), 3));
+            var cmd = parts.join(" ");
+            this.command = cmd;
+        };
+        DmxRgbwInterface.prototype.sendCommand = function (cmd) {
+            this.sendData("X" + this.ifaceNo() + "B[" + cmd + "]");
+        };
+        DmxRgbwInterface.prototype.userFriendlyName = function () {
+            return "DmxRGBW";
+        };
+        __decorate([
+            (0, Metadata_1.property)("DMX command to send e.g 'RA LIN 10 001 255 255 255 255' or 'RA LIN 13 SA', if read it will return last sent command."),
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], DmxRgbwInterface.prototype, "command", null);
+        __decorate([
+            (0, Metadata_1.callable)("Set ALL 512 DMX channels to 0"),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", []),
+            __metadata("design:returntype", void 0)
+        ], DmxRgbwInterface.prototype, "setAllToZero", null);
+        __decorate([
+            (0, Metadata_1.callable)("Define a state of up to 4  DMX channels."),
+            __param(0, (0, Metadata_1.parameter)("Starting address 1-512")),
+            __param(1, (0, Metadata_1.parameter)("State identifier A-Z")),
+            __param(2, (0, Metadata_1.parameter)("One/Red 0-255")),
+            __param(3, (0, Metadata_1.parameter)("Two/Green 0-255", true)),
+            __param(4, (0, Metadata_1.parameter)("Three/Blue 0-255", true)),
+            __param(5, (0, Metadata_1.parameter)("Four/White 0-255", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, String, Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], DmxRgbwInterface.prototype, "defineState", null);
+        __decorate([
+            (0, Metadata_1.callable)("Recall a state transition as defined by 'Define state' callables"),
+            __param(0, (0, Metadata_1.parameter)("State identifier A-Z")),
+            __param(1, (0, Metadata_1.parameter)("Ramp identifier A-Z")),
+            __param(2, (0, Metadata_1.parameter)("Ramp time 0-90(x0.1s)")),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [String, String, Number]),
+            __metadata("design:returntype", void 0)
+        ], DmxRgbwInterface.prototype, "recallState", null);
+        __decorate([
+            (0, Metadata_1.callable)("Direct ramp on up to 4 DMX channels"),
+            __param(0, (0, Metadata_1.parameter)("Starting address 1-512")),
+            __param(1, (0, Metadata_1.parameter)("Ramp identifier A-Z")),
+            __param(2, (0, Metadata_1.parameter)("Ramp time 0-90(x0.1s)")),
+            __param(3, (0, Metadata_1.parameter)("One/Red 0-255")),
+            __param(4, (0, Metadata_1.parameter)("Two/Green 0-255", true)),
+            __param(5, (0, Metadata_1.parameter)("Three/Blue 0-255", true)),
+            __param(6, (0, Metadata_1.parameter)("Four/White 0-255", true)),
+            __metadata("design:type", Function),
+            __metadata("design:paramtypes", [Number, String, Number, Number, Number, Number, Number]),
+            __metadata("design:returntype", void 0)
+        ], DmxRgbwInterface.prototype, "directRamp", null);
+        return DmxRgbwInterface;
+    }(BaseInterface));
+    NexmosphereBase.registerInterface(DmxRgbwInterface, "DMXRGBW", "IXDM3");
     var QuadAudioSwitch = (function (_super) {
         __extends(QuadAudioSwitch, _super);
         function QuadAudioSwitch(driver, index) {
