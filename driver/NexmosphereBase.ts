@@ -42,7 +42,8 @@ Configuration option examples:
 }]
 
 A more future proof configuration scheme is implemented, use this for any new setups:
-	"interfaces": [
+{
+"interfaces": [
 		{
 			"modelCode": "XTB4N",
 			"ifaceNo": 1,
@@ -90,7 +91,7 @@ readable and independent of which port the element is connected to on the contro
 If specified, names MUST be unique within the controller.
 
 Currently supported Interface Types (Elements):
-- RFID/NFC readers (XRDR1, XRDW2)
+- RFID/NFC readers (XRDR1, XRDW2)S
 - LED controllers (XWC56, XWL56, LightMark, X-Wave, RGBW, MonoLed) 
 - Proximity sensors (XY116, XY146, XY176, XY240, XY241)
 - Button interfaces (XTB4N, XTB4N6, XT4FW6)
@@ -103,7 +104,8 @@ Currently supported Interface Types (Elements):
 - Wired pickup sensors ("DOTWIREPICKUP","XSNAPPER","XDWX16", "XDWX26", "XDWX36", "XDWX36C", "XDBX16", "XDBX26", "XDBX36", "XDBX36C",
 	"XSWX16", "XSWX26", "XSWX36", "XSBX16", "XSBX26", "XSBX36", "XLFWX16", "XLFWX26","XLFWX36", "XLFBX16", "XLFBX26", "XLFBX36"
 	"XLCWX16", "XLCWX26", "XLCWX36","XLCBX16", "XLCBX26", "XLCBX36"
--Wireless pickup sensors ("WIRELESSPICKUP"," XFP3W", "XF-P3B", "XF-P3N")
+- Wireless pickup sensors ("WIRELESSPICKUP"," XFP3W", "XF-P3B", "XF-P3N")
+- DMX controllers ("IX-DM3")
 - And a generic UnknownInterface for unsupported types
 
 Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
@@ -116,6 +118,10 @@ v.1.1:
 - enhanceds support for LightMark, RGB, RGBW, X-Wave, MonoLed built-in interfaces.
 - added support more interfaces.
 - added send queue to avoid message loss. (Nexmocontrollera can be quite sensitive to message floods)
+v.1.2:
+- Fixed bug where messages was sent out twice
+- Added support for DMX device IX-DM3 
+- Lowered default command delay to 75ms and made it adjustable by callable method for fine tuning in different setups.
 */
 
 
@@ -139,7 +145,7 @@ const kCtrlPacketParser = /^([PS])(\d+)([AB])\[(.+)]/;
 const kProductCodeParser = /D(\d+)B\[\w+=([^\]]+)]/;
 const kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
 const kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
-const NEXMOSPHERE_COMMAND_DELAY_MS = 280;
+let NEXMOSPHERE_COMMAND_DELAY_MS = 100; //used to be 280
 
 let  _debugLogging = false;	// Controls verbose logging
 
@@ -496,7 +502,7 @@ send(rawData: string, priority: boolean = false) {
 		this.port.sendText(rawData , "\r\n");	
         log("Send msg: ", rawData);
     };
-this.msgQueue.push(task)
+
     if (priority) {
         // ⭐ Insert at front of queue
         this.msgQueue.unshift(task);
@@ -533,7 +539,12 @@ this.msgQueue.push(task)
 		super.reInitialize();
 	}
 
-	// Expose reInitialize to tasks to re-build set of dynamic properties
+	@callable("Delay between commands in ms (to avoid flooding the controller, defaults to 75ms 50-500ms allowed)")
+	setCommandDelay(
+		delay:number) {
+		NEXMOSPHERE_COMMAND_DELAY_MS = limitedVal(delay, 50, 500); // Limit to reasonable range
+		console.log("Command delay set to", NEXMOSPHERE_COMMAND_DELAY_MS, "ms");
+	}
 	@callable("Enable logging ")
 	debugLogging(value: boolean) {
 		_debugLogging = value;
@@ -1313,7 +1324,7 @@ NexmosphereBase.registerInterface(RGBWInterface, "RGBW");
 class MonoLedInterface extends BaseInterface {
 
 	constructor(driver: NexmosphereBase<PortType>, index: number) {
-		super(driver, index,undefined);
+		super(driver, index, undefined);
 	
 	}
 	@property("Monoled command to send e.g '384' or '13823' consult API manual, if read it will return last sent command.")
@@ -1348,6 +1359,114 @@ class MonoLedInterface extends BaseInterface {
 }
 
 NexmosphereBase.registerInterface(MonoLedInterface, "MonoLed");
+
+class DmxRgbwInterface extends BaseInterface {
+	
+	constructor(driver: NexmosphereBase<PortType>, index: number) {
+		super(driver, index);
+	}
+
+	@property("DMX command to send e.g 'RA LIN 10 001 255 255 255 255' or 'RA LIN 13 SA', if read it will return last sent command.")
+	get command(): string { return this._command; }
+	set command(cmd: string) {
+		this.sendCommand(cmd); 
+		this._command = cmd;
+	}
+	@callable("Set ALL 512 DMX channels to 0")
+	setAllToZero() {
+		this.command = "DMX ALL OFF";
+	}
+
+	@callable("Define a state of up to 4  DMX channels.")
+	defineState(
+		@parameter("Starting address 1-512") address: number,
+		@parameter("State identifier A-Z") stateId: string,
+		@parameter("One/Red 0-255") channel_1: number, 
+		@parameter("Two/Green 0-255",true) channel_2: number,
+		@parameter("Three/Blue 0-255",true) channel_3: number,
+		@parameter("Four/White 0-255",true ) channel_4: number,
+	)
+	{
+		const a = padVal(limitedVal(address, 1,512),3);
+		const sId = stateId.toUpperCase()
+		
+    const parts = [
+        `S${sId}`,
+        a,
+        padVal(limitedVal(channel_1, 0, 255), 3)
+    ];
+		// Only add optional values if they exist
+		if (channel_2 !== undefined)
+			parts.push(padVal(limitedVal(channel_2, 0, 255), 3));
+
+		if (channel_3 !== undefined)
+			parts.push(padVal(limitedVal(channel_3, 0, 255), 3));
+
+		if (channel_4 !== undefined)
+			parts.push(padVal(limitedVal(channel_4, 0, 255), 3));
+
+		const cmd = parts.join(" ");
+		this.command = cmd;
+	}
+
+	@callable("Recall a state transition as defined by 'Define state' callables")
+	recallState(
+		@parameter("State identifier A-Z") stateId: string,
+		@parameter("Ramp identifier A-Z") rampId: string,
+		@parameter("Ramp time 0-90(x0.1s)") rampTime: number,
+	)
+	{
+		const cmd = `R${rampId.toUpperCase()} LIN ${padVal(limitedVal(rampTime, 0, 90),2)} S${stateId.toUpperCase()}`;
+		this.command = cmd;
+	}
+	
+	@callable("Direct ramp on up to 4 DMX channels")
+	directRamp(
+		@parameter("Starting address 1-512") address: number,
+		@parameter("Ramp identifier A-Z") rampId: string,
+		@parameter("Ramp time 0-90(x0.1s)") ramp: number,
+		@parameter("One/Red 0-255") channel_1: number, 
+		@parameter("Two/Green 0-255",true) channel_2: number,
+		@parameter("Three/Blue 0-255",true) channel_3: number,
+		@parameter("Four/White 0-255",true ) channel_4: number,
+	)
+	{
+		const a = padVal(limitedVal(address, 1,512),3);
+		const rTime = padVal(limitedVal(ramp, 0, 90),2);
+		const rId = rampId.toUpperCase()
+		
+		const parts = [
+			`R${rId}`,
+			"LIN",
+			rTime,
+			a,
+			padVal(limitedVal(channel_1, 0, 255), 3)
+    ];
+
+		// Only add optional values if they exist
+		if (channel_2 !== undefined)
+			parts.push(padVal(limitedVal(channel_2, 0, 255), 3));
+
+		if (channel_3 !== undefined)
+			parts.push(padVal(limitedVal(channel_3, 0, 255), 3));
+
+		if (channel_4 !== undefined)
+			parts.push(padVal(limitedVal(channel_4, 0, 255), 3));
+
+		const cmd = parts.join(" ");
+		this.command = cmd;
+	}
+	
+	sendCommand(cmd: string) {
+		this.sendData("X" + this.ifaceNo() + "B[" + cmd + "]")
+	}
+
+	userFriendlyName() {
+		return "DmxRGBW";
+	}
+}	
+
+NexmosphereBase.registerInterface(DmxRgbwInterface, "DMXRGBW","IXDM3");
 
 
 class QuadAudioSwitch extends BaseInterface {
