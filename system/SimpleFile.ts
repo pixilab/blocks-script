@@ -43,7 +43,7 @@ export var SimpleFile: {
 	 * in the column for that row. The first line of the CSV file is assumed
 	 * to contain the column names.
 	 */
-	readCsv(fileName:string, options?: CsvOptions): Promise<any[]>;
+	readCsv<T = any>(fileName:string, options?: CsvOptions): Promise<T[]>;
 
 
 	/**

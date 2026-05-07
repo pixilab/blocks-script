@@ -25,13 +25,16 @@ export var SimpleServer: {
 	): ServerListener;
 };
 
+type ClientListener = (sender: ServerListener, message:{
+	connection: Connection	// The newly acquired connection
+})=>void;
+
 /*
  * The listener that listens for connections on the specified port
  */
 export interface ServerListener {
-	subscribe(event: "client", listener: (sender: ServerListener, message:{
-		connection: Connection	// The newly acquired connection
-	})=>void): void;
+	// Start listening for clients
+	subscribe(event: "client", listener: ClientListener): void;
 
 	/**
 	 * Shut down this listener, accepting no further connections. Note
