@@ -5,7 +5,7 @@
 	field in the driver's settings. This must be specified as JSON-formatted data, corresponding
 	to the IsaacConfig interface below.
 
- 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
+ 	Copyright (c) 2026 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
 import {SimpleHTTP} from "../system/SimpleHTTP";
@@ -14,6 +14,11 @@ import {PropertyAccessor} from "../system_lib/Script";
 import {Realm} from "../system/Realm"
 import {NetworkTCP} from "../system/Network";
 import {Driver} from "../system_lib/Driver";
+import {DisplaySpot, Spot, SpotGroup, SpotGroupItem} from "system/Spot";
+import {SimpleFile} from "../system/SimpleFile";
+
+// "special" blocks group, designed to store ISAAC related Blocks
+const ISAAC_BLOCKGROUP_PATH = "$$isaac/";
 
 // Configuration provided as JSON through driver's Custom Options
 interface IsaacConfig {
@@ -22,7 +27,9 @@ interface IsaacConfig {
 	heartbeatInterval?: number, // How often to send "heartbeats" to Isaac, in mS
 	variables?: string[];	// Full path to properties exposed as Isaac variables
 	events?: string[];		// Realm.Group.Name of tasks exposed as Isaac events
-	subsystemExternalId?: string;	// ID identifying Blocks to Isaac. Defaults to "blocks".
+	playersWhiteList?: string[];
+	playersBlackList?: string[];
+	playables?: string[];
 }
 
 
@@ -36,16 +43,11 @@ interface LogData {
 	createdByType: string;	// "subsystem"
 }
 
-type VarValue = string|number|boolean;
+type VarValue = string | number | boolean;
 
 // For updating a variable value
 interface VarData {
 	value: VarValue;
-}
-
-// Data passed to PUT /{id}/variables/_available
-interface VarsAvailable {
-	externalRefs: string[];	// Names of variables to be established on Isaac side
 }
 
 interface VarAvailable {
@@ -57,10 +59,10 @@ interface VarAvailable {
  * Registration response, from variable and event registrations.
  */
 interface RegResponse {
-  "_id": string,			// Used to subsequently identify the object
-  "displayName": string,
-  "description": string,
-  "externalRef": string,
+	"_id": string,			// Used to subsequently identify the object
+	"displayName": string,
+	"description": string,
+	"externalRef": string,
 }
 
 interface EstabEventData {
@@ -72,13 +74,6 @@ interface EstabEventData {
 	subsystemExternalId: string;
 	active: boolean;
 	availableInSubsystem: boolean
-}
-
-
-// Data passed to PUT /{id}/events/_available
-interface TasksAvailable {
-  commands: string[];	// Names of variables to be established on Isaac side
-  ids?: number[];		// Do we need those at all? What are they for?
 }
 
 interface TaskAvailable {
@@ -96,7 +91,6 @@ interface TaskAvailable {
 abstract class Talker {
 	protected constructor(protected owner: Isaac) {
 	}
-
 
 	/**
 	 * Subclass calls me when it has something to say, if it didn't before.
@@ -131,7 +125,7 @@ class Logger extends Talker {
 	}
 
 	logInfo(message: string) {
-		this.logMsg({ message: message, severity: 'info'});
+		this.logMsg({message: message, severity: 'info'});
 	}
 
 	logMsg(message: LogMsg) {
@@ -142,7 +136,6 @@ class Logger extends Talker {
 				this.letsTalk();
 		} else
 			console.error("Logging can't keep up - dropping messages");
-
 	}
 
 	needsToTalk(): boolean {
@@ -207,8 +200,8 @@ class VarSnitch extends Talker {
 	}
 }
 
-@driver('NetworkTCP', { port: 8099 })
-export class Isaac extends Driver<NetworkTCP>  {
+@driver('NetworkTCP', {port: 8099})
+export class Isaac extends Driver<NetworkTCP> {
 	private configuration: IsaacConfig;	// Held here once configured OK
 	private origin: string;				// Protocol and address
 	private readonly accessors: PropertyAccessor<any>[]; // Open property accessors
@@ -226,13 +219,17 @@ export class Isaac extends Driver<NetworkTCP>  {
 	private keepAliveTimer?: CancelablePromise<any>;	// For RPC pings
 	private waitingToTalk?: Promise<any>;	// What we're waiting for to talk next
 
+	private subsystemExternalId: string;
+	private spots: Player[] = [];
+	private idToSpots: Dictionary<number> = {};		// maps the spot's Isaac name to the correspondent index in the spots array
+
 	/**
 	 * The socket passed in is used for the RPC connection, while
 	 * separate SimpleHTTP requests are used for other messages.
 	 */
 	constructor(private socket: NetworkTCP) {
 		super(socket);
-		socket.setMaxLineLength(1024);	// Hopefully long enough (?)
+		socket.setMaxLineLength(3024);	// Hopefully long enough (?)
 		socket.autoConnect();
 
 		this.varIds = {};
@@ -244,9 +241,108 @@ export class Isaac extends Driver<NetworkTCP>  {
 		this.logger = new Logger(this);
 		this.talkers.push(this.logger);
 		this.accessors = [];
+		this.checkIfTheresIsaacBlckGroup();
+
 		this.init()
-			.then(() => log("Started"))
-			.catch(error => console.error("Startup failed", error));
+		.then(() => log("Isaac driver initialized."))
+		.catch(error => console.error("Startup failed", error));
+	}
+
+	/**
+	 * Checks if there's a block group named $$Isaac used to store
+	 * all the blocks needed for media playback
+	 */
+	async checkIfTheresIsaacBlckGroup() {
+		let result = await SimpleFile.exists(ISAAC_BLOCKGROUP_PATH);
+
+		if (result === 0) {
+			await SimpleFile.write(
+				ISAAC_BLOCKGROUP_PATH + "README.txt",
+				"This folder/group holds blocks generated for use by ISAAC."
+			);
+		}
+	}
+
+	/**
+	 * Scans only the white and black listed spots to check if they exist, avoiding the need to scan the whole root.
+	 */
+	async setupWhiteListedSpots() {
+		for (let i = 0; i < this.configuration.playersWhiteList.length; i++) {
+			let displaySpotPath = this.configuration.playersWhiteList[i].replace("-", ".");
+			if (Spot[displaySpotPath] && Spot[displaySpotPath].isOfTypeName('DisplaySpot'))
+				this.addPlayer(displaySpotPath);
+			else
+				console.warn("White listed spot not found: " + displaySpotPath)
+		}
+	}
+
+	/**
+	 * Scans the root Spot, for all its respective spots.
+	 * If any spot group, calls the iterateSpotGroups to continue recursively
+	 * searching for all the spots
+	 */
+	async setupAllSpots() {
+		let subSpotGroups: string[] = [];
+		let blackListExists = false;
+
+		if (this.configuration.playersBlackList && this.configuration.playersBlackList.length !== 0)
+			blackListExists = true;				// flag to simplify checking if a black list exists
+
+		for (const spotGroupItemName in Spot) {
+			if (Spot[spotGroupItemName].isOfTypeName('SpotGroup'))
+				subSpotGroups.push(Spot[spotGroupItemName].fullName.substring(5));
+
+			if (Spot[spotGroupItemName].isOfTypeName('DisplaySpot')) {
+				if (blackListExists) {
+					if (this.configuration.playersBlackList.indexOf(
+						(Spot[spotGroupItemName].fullName).slice(5).replace(/\./g, "-")) === -1) {			// black list contains spot paths without Spot. prefix
+						this.addPlayer(spotGroupItemName);
+					}
+				} else
+					this.addPlayer(spotGroupItemName);
+			}
+		}
+		this.iterateSpotGroups(subSpotGroups)
+	}
+
+	/**
+	 * Recursivelly obtains all the spots in a Blocks Server
+	 * @param spotGroupsToSearch Spot groups to search for the existence of
+	 * spots, crucial parameter for the recursive to work
+	 * @returns true, once its concluded
+	 */
+	iterateSpotGroups(spotGroupsToSearch?: string[]) {
+		let newSubGroupsToSearch: string[] = [];
+		if (spotGroupsToSearch && spotGroupsToSearch.length > 0) {
+			for (let i = 0; i < spotGroupsToSearch.length; i++) {
+				let spotGroup = Spot[spotGroupsToSearch[i]] as SpotGroup;
+				for (const spotGroupItemName in spotGroup) {
+					const displaySpot = spotGroup[spotGroupItemName].isOfTypeName('DisplaySpot') as DisplaySpot;
+					const isSpotGroup = spotGroup[spotGroupItemName].isOfTypeName('SpotGroup') as SpotGroup;
+					if (displaySpot)
+						this.addPlayer(spotGroupItemName);
+					if (isSpotGroup)
+						newSubGroupsToSearch.push(isSpotGroup.fullName.substring(5));
+				}
+			}
+
+			this.iterateSpotGroups(newSubGroupsToSearch);
+		} else {
+			log("ISAAC (driver): Finished adding Spots: " + this.spots.length + " added!");
+			return true;
+		}
+	}
+
+	/**
+	 * Creates a player obj, once the proper full name and name are provided
+	 * @param spotFullName Spot full name "Spot.group.displaySpotName"
+	 * @param spotName simply the display spot's name
+	 */
+	public addPlayer(displaySpotPath: string) {
+		let isaacPlayerId = Spot[displaySpotPath].fullName.slice(5).replace(/\./g, "-");				// slice away the "Spot." prefix
+		let player = new Player(isaacPlayerId, Spot[displaySpotPath].name);
+		this.spots.push(player);
+		this.idToSpots[isaacPlayerId] = this.spots.length - 1;			// adds the spot isaac id to the dictionary as a key. value is the element index on the spot array
 	}
 
 	/**
@@ -254,6 +350,7 @@ export class Isaac extends Driver<NetworkTCP>  {
 	 */
 	private async init(): Promise<any> {
 		await this.config();
+
 		if (this.socket.enabled)
 			this.heartBeat();
 	}
@@ -274,17 +371,51 @@ export class Isaac extends Driver<NetworkTCP>  {
 			throw "Configuration options not set";
 		const config = <IsaacConfig>JSON.parse(this.socket.options);
 		if (typeof config === 'object') {
-			if (!config.subsystemExternalId) // Apply default ID
-				config.subsystemExternalId = "blocks";
 			this.configuration = config;
 			this.origin = (config.protocol || 'http') + '://' + this.socket.addressString;
 			log("Origin", this.origin);
-			if (this.socket.enabled) {
+
+			// Setup the spots so we have access to them in the hookupVars
+			if (this.configuration.playersWhiteList && this.configuration.playersWhiteList.length !== 0) {
+				await this.setupWhiteListedSpots()
+			} else {
+				await this.setupAllSpots();
+			}
+
+			await this.obtainSubsystemExternalId();
+
+			if (this.socket.enabled && this.subsystemExternalId) {
 				await this.hookupVars(config);
 				await this.hookupEvents(config);
 			}
 		} else
 			throw "Invalid configuration";
+	}
+
+	private async obtainSubsystemExternalId() {
+		try {
+			const containerEndpoint = "/api/v1/players/"
+
+			let containerResponse = await this
+				.newRequest(containerEndpoint + this.spots[0].spotIsaacId, false)
+				.get<RegResponse[]>();
+
+			let containerId = JSON.parse(containerResponse.data)["container"];		//obtain the fleed container id
+
+			let subsystemIDEndpoint = "/api/v1/subsystems/"
+
+			let subsystemExternalIdResponse = await this
+				.newRequest(subsystemIDEndpoint + containerId, false)
+				.get<RegResponse[]>();
+
+			let subsystemID = JSON.parse(subsystemExternalIdResponse.data)["externalId"];
+
+			if (subsystemID)
+				this.subsystemExternalId = subsystemID;
+
+		} catch (error) {
+			console.warn("Error while fetching Blocks subsystem ID!");
+		}
 	}
 
 	/*	Hook up all properties to be exposed as Isaac variables.
@@ -295,7 +426,7 @@ export class Isaac extends Driver<NetworkTCP>  {
 
 			// Get list of my variables already in Isaac into a set
 			const existingVars = await this
-			.newRequest(endpoint + '?subsystemExternalId=' + config.subsystemExternalId)
+			.newRequest(endpoint + '?subsystemExternalId=' + this.subsystemExternalId)
 			.get<RegResponse[]>();
 			const setOfKnownVars: Dictionary<string> = {}	// Maps to the _id of the var
 			for (const xv of existingVars.interpreted) {
@@ -309,7 +440,7 @@ export class Isaac extends Driver<NetworkTCP>  {
 			delete setOfKnownVars["is_alive"];
 
 			const spec: VarAvailable = {
-				subsystemExternalId: config.subsystemExternalId,
+				subsystemExternalId: this.subsystemExternalId,
 				externalRef: null	// tbd
 			}
 			for (let varName of config.variables) {
@@ -341,19 +472,18 @@ export class Isaac extends Driver<NetworkTCP>  {
 	private async hookupEvents(config: IsaacConfig) {
 		if (config.events) {
 			const endpoint = '/api/v1/events';
-
 			const existingVars = await this
-			.newRequest(endpoint + '?subsystemExternalId=' + config.subsystemExternalId)
-			.get<RegResponse[]>();
+				.newRequest(endpoint + '?subsystemExternalId=' + this.subsystemExternalId)
+				.get<RegResponse[]>();
 			const knownTasks: Dictionary<string> = {}	// Maps to the _id
 			for (const xv of existingVars.interpreted) {
 				knownTasks[xv.externalRef] = xv._id;
 				this.taskIds[xv.externalRef] = xv._id;
-				// log("Known task", xv.externalRef);
+				log("Known task", xv.externalRef);
 			}
 
 			const spec: TaskAvailable = {
-				subsystemExternalId: config.subsystemExternalId,
+				subsystemExternalId: this.subsystemExternalId,
 				active: true,
 				availableInSubsystem: true,
 				externalRef: null,	// tbd
@@ -381,7 +511,6 @@ export class Isaac extends Driver<NetworkTCP>  {
 				log("Removing event", unwanted, "with ID", id);
 				await this.newRequest(endpoint + '/' + id).delete();
 			}
-
 		}
 	}
 
@@ -397,11 +526,10 @@ export class Isaac extends Driver<NetworkTCP>  {
 				command: path,
 				displayName: path,
 				externalRef: path,
-				subsystemExternalId: this.configuration.subsystemExternalId,
+				subsystemExternalId: this.subsystemExternalId,
 				active: true,
 				availableInSubsystem: true
 			}
-
 			this.newRequest('/api/v1/events')
 			.post(JSON.stringify(eventSpec))
 			.then(result => {
@@ -442,22 +570,39 @@ export class Isaac extends Driver<NetworkTCP>  {
 	private initRpc(socket: NetworkTCP) {
 		if (socket.connected) {
 			log("RPC socket connected");
-			const subscribe = {
+			/*const subscribe = {
 				"jsonrpc": "2.0",
 				"method": "subscriptions.add",
 				"params": [
 					this.configuration.subsystemExternalId
 				],
+			};*/
+
+			let paramsArray = [this.subsystemExternalId];
+
+			for (let i = 0; i < this.spots.length; i++) {
+				paramsArray.push(this.spots[i].spotIsaacId);
+			}
+
+			const subscribe = {
+				"jsonrpc": "2.0",
+				"method": "subscriptions.add",
+				"params": paramsArray,
 			};
 			const textMsg = JSON.stringify(subscribe);
 			socket.sendText(textMsg, '\r\n');
 			log("initRpc subscriptions.add", textMsg);
 
+			//const textMsg2 = JSON.stringify(subscribe2);
+			//socket.sendText(textMsg2, '\r\n');
+
 			socket.subscribe('textReceived', (sender, message) => {
 				try {
 					try {
+						log("Sender: " + sender.fullName);
 						log("RPC message", message.text);
 						const jsonData = JSON.parse(message.text) as JsonRpcMsg;
+						log("JSON: " + jsonData.params)
 						if (jsonData.jsonrpc === '2.0' && jsonData.method) {
 							log("JSON-RPC data", message.text);
 							this.handleJsonRpcMsg(jsonData);
@@ -488,12 +633,11 @@ export class Isaac extends Driver<NetworkTCP>  {
 		}
 	}
 
-
 	/**
 	 * Send a "ping" message at least once per minute to keep connection alive.
 	 */
 	private jsonRpcKeepAlive() {
-		this.keepAliveTimer = wait(1000*59);
+		this.keepAliveTimer = wait(1000 * 59);
 		this.keepAliveTimer.then(() => {
 			const pingMsg = '{"jsonrpc":"2.0","method":"ping"}';
 			log("rpc sent", pingMsg);
@@ -507,9 +651,55 @@ export class Isaac extends Driver<NetworkTCP>  {
 
 	private handleJsonRpcMsg(msg: JsonRpcMsg) {
 		if (msg.method === "schedule.item.start" && msg.params && msg.params.command) {
-			this.startTask(msg.params.command as string);
+			if (msg.params.itemType === "EVENT")
+				this.startTask(msg.params.command as string);
+			else if (msg.params.itemType === "PLAYABLE")
+				this.handleScheduleStart(msg.params.subsystemExternalId as string, msg.params)
+		} else if (msg.method === "schedule.item.end" && msg.params && msg.params.command) {
+			if (msg.params.itemType === "PLAYABLE")
+				this.handleScheduleEnd(msg.params.subsystemExternalId as string, msg.params);
 		} else
 			log("rpc message", msg.method);
+	}
+
+	private async handleScheduleStart(spotIsaac: string, params: Dictionary<string | number | boolean>) {
+		this.getMediaUrl(params.command as string, spotIsaac, false);
+	}
+
+	/**
+	 * Redirecting the media url received to the designated player
+	 * Priority is set to true if it is an instant play. if its scheduled media, priority
+	 * should be set to false
+	 */
+	async redirectingMediaUrl(mediaResult: string, spotIsaac: string, priority: boolean) {
+		let spotIdx: number = this.idToSpots[spotIsaac];
+		this.spots[spotIdx].handleGettingMediaUrl(mediaResult, priority);
+	}
+
+	/**
+	 * Function to easily check if a certain block exists
+	 * @param blockPath Path to the desired block
+	 * @param mediaType Video or Image
+	 * @param localParameter
+	 * @param width Width (px) of the Block
+	 * @param height Height (px) of the block
+	 * @returns If the desired Block exists
+	 */
+	static async checkIfBlockExists(
+		blockPath: string, mediaType: string, localParameter: string, width: string, height: string) {
+		let blockDir = "/public/block/" + blockPath + "/";
+		let exists = await SimpleFile.exists(blockDir);
+		if (exists === 0) {
+			await SimpleFile.write(blockDir + "Spec.pixi", getSpecJson(mediaType, localParameter, width, height));
+			await SimpleFile.write(blockDir + "Meta.json", getMetaJson(width, height));
+		}
+
+		return true;
+	}
+
+	private handleScheduleEnd(spotIsaac: string, params: Dictionary<string | number | boolean>) {
+		let spotIdx: number = this.idToSpots[spotIsaac];
+		this.spots[spotIdx].scheduleEnd();
 	}
 
 	private establishVariable(path: string) {
@@ -549,11 +739,55 @@ export class Isaac extends Driver<NetworkTCP>  {
 	 * Send a heartbeat message to Isaac
 	 */
 	private sendHeartBeat() {
-		const result = this
-			.newRequest(`/api/v1/subsystems/${this.configuration.subsystemExternalId}/heartbeat`)
-			.put('');
-		result.catch(error => console.warn("Heartbeat failure", error));
-		return result;
+		for (let i = 0; i < this.spots.length; i++) {
+			let spotName = this.spots[i].spotIsaacId.replace(".", "-")
+			let isConnected: boolean = Spot[spotName].connected;
+
+			if (isConnected) {							// only sending heartbeat if spot is connected
+				const result = this
+					.newRequest(`/api/v1/subsystems/${spotName}/heartbeat`, false)
+					.put('');
+				result.catch(error => console.warn("Heartbeat failure", error));
+				result.then(result =>
+					this.handleHearBeatResponse(result.data, this.spots[i].spotIsaacId)
+				);
+			}
+		}
+
+		return false;    // return false, indicating it failed
+	}
+
+	/**
+	 * Handles the heartbeat's response for the specific player
+	 * @param response Response for the heartbeat sent
+	 * @param spotIsaac Spot id (isaac) for the player heartbeat
+	 */
+	handleHearBeatResponse(response: string, spotIsaac: string) {
+		let res = JSON.parse(response);
+		if (res.message[0]) {
+			let payloadStr = JSON.stringify(res.message[0].payload);
+			if (payloadStr !== "{}") {			// if payload not empty
+				let playable = res.message[0].payload.playable
+				this.getMediaUrl(playable.command, spotIsaac, true);
+			} else {
+				if (res.message[0].type === "forceStop")
+					Spot[spotIsaac.replace("-", ".")].priorityBlock = "";
+			}
+		}
+	}
+
+	/**
+	 * Handling the media URL received
+	 * @param request request containing the media url
+	 * @param spotIsaac spot to play the url received
+	 * @param priority is it a priority block or not
+	 */
+	getMediaUrl(request: string, spotIsaac: string, priority: boolean) {
+		let cmd = JSON.parse(request);
+		let mediaPath = cmd.data.video.self;
+
+		SimpleHTTP.newRequest(`${this.origin}/${mediaPath}`).get().then(
+			(result) => this.redirectingMediaUrl(result.data, spotIsaac, priority));		// its priority block since it is instant play (heartbead response)
 	}
 
 	/**
@@ -597,7 +831,7 @@ export class Isaac extends Driver<NetworkTCP>  {
 	 * Find next talker with something to say in a round-robin fashion.
 	 * Returns null if no more talker ready to speak up.
 	 */
-	private findTalker(): Talker|null {
+	private findTalker(): Talker | null {
 		let ix = this.nextTalkerIx;
 		const wasTalkerIx = ix;
 		let talker: Talker = null;
@@ -623,7 +857,7 @@ export class Isaac extends Driver<NetworkTCP>  {
 			key: "general",
 			createdByType: "subsystem",
 			value: message.message,
-			createdBy: this.configuration.subsystemExternalId
+			createdBy: this.subsystemExternalId
 		};
 
 		return SimpleHTTP
@@ -642,20 +876,32 @@ export class Isaac extends Driver<NetworkTCP>  {
 		};
 
 		return this.newRequest(`/api/v1/variables/${id}/value`)
-			.post(JSON.stringify(varData));
+		.post(JSON.stringify(varData));
 	}
 
 	/**
 	 * Make a new request to my origin and specified path. Adds isaac-token if one specified.
+	 * interpretRes was added so we can remove this field in the heartbeat, as it was not working with it
 	 */
-	private newRequest(path: string) {
-		const request = SimpleHTTP.newRequest(
-			this.origin + path,
-			{interpretResponse: true}	// Should be OK for all requests, I guess
-		);
+	private newRequest(path: string, interpretRes: boolean = true) {
+		let request;
+
+		if (interpretRes) {
+			request = SimpleHTTP.newRequest(
+				this.origin + path,
+				{interpretResponse: true}				// needed for heartbeat to work properly
+			);
+		} else {
+			request = SimpleHTTP.newRequest(
+				this.origin + path
+			);
+		}
+
 		const token = this.configuration.token;
-		if (token)
-			request.header('isaac-token', token);
+		if (token) {
+			request.header("isaac-token", token);
+		}
+
 		return request;
 	}
 
@@ -681,8 +927,6 @@ export class Isaac extends Driver<NetworkTCP>  {
 	}
 }
 
-
-
 // A simple typed dictionary type, always using string as key
 export interface Dictionary<TElem> {
 	[id: string]: TElem;
@@ -691,7 +935,7 @@ export interface Dictionary<TElem> {
 /**
  Log messages, allowing my logging to be easily disabled in one place.
  */
-const DEBUG = true;	// Set to false to disable verbose logging
+const DEBUG = false;	// Set to true to enable verbose logging
 function log(...messages: any[]) {
 	if (DEBUG)
 		console.info(messages);
@@ -701,6 +945,198 @@ interface JsonRpcMsg {
 	jsonrpc: string;
 	method: string;
 	result?: any;		// Response only
-	params?: Dictionary<string|boolean|number>;	// Command only (?)
+	params?: Dictionary<string | boolean | number>;	// Command only (?)
 	id?: string | number
+}
+
+class Player {
+	public blockUrl: string;
+	public priorityBlock: string;
+	private removeMedia?: CancelablePromise<any>;
+
+	public constructor(
+		public spotIsaacId: string,
+		public spotName: string
+	) {
+	}
+
+	async handleGettingMediaUrl(mediaResult: string, priority: boolean) {
+		try {
+
+			let mediaJson = JSON.parse(mediaResult);
+			let mediaUrl = mediaJson["_links"]["get"];
+
+			let mediaType = mediaJson["metadata"]["mediaInfo"]["@type"] as string;
+
+			let mediaWidth = mediaJson["metadata"]["mediaInfo"]["width"];
+			let mediaHeight = mediaJson["metadata"]["mediaInfo"]["height"];
+
+			let spotRef = this.spotIsaacId.replace("-", ".");				// remove "Spot-" prefix
+
+			let parameterName: string;
+			let blockPrefix: string;		// 1- or 2-, for block transitions
+			let blockSuffix: string = "";		// -priority-width x height or simply -widht x height
+
+			if (priority) {
+				if (Spot[spotRef].priorityBlock !==
+					ISAAC_BLOCKGROUP_PATH + "1-" + mediaType + "-priority-" + mediaWidth + "x" + mediaHeight
+				) 		// 1-Video or 1-Image.
+					blockPrefix = "1-";
+				else 	// else use the 2-Video/2-Image
+					blockPrefix = "2-";
+
+				parameterName = "priorityMediaUrl";
+				blockSuffix += "-priority";
+			} else {
+				if (Spot[spotRef].block !==
+					ISAAC_BLOCKGROUP_PATH + "1-" + mediaType
+				)		// 1-Video or 1-Image.
+					blockPrefix = "1-";
+				else 	// else 2-Video or 2-Image instead
+					blockPrefix = "2-";
+
+				parameterName = "mediaUrl";
+			}
+
+			blockSuffix += "-" + mediaWidth + "x" + mediaHeight;
+			let blockPath = ISAAC_BLOCKGROUP_PATH + blockPrefix + mediaType + blockSuffix;
+			await Isaac.checkIfBlockExists(blockPath, mediaType.toLowerCase(), parameterName, mediaWidth, mediaHeight);
+			this.cancelRemovePromise();				// prevents playlists to remove the blocks between block changes
+
+			if (priority)
+				Spot[spotRef].priorityBlock = blockPath;
+			else
+				Spot[spotRef].block = blockPath;
+
+			await wait(100);												// avoid instant parameter change
+			Spot[spotRef].parameter[parameterName] = mediaUrl;				// make spot parameter the received URL
+
+		} catch (error) {
+			console.error(error);
+		}
+	}
+
+	/**
+	 * Starts a timer to then remove the current block in a spot.
+	 */
+	scheduleEnd() {
+		this.cancelRemovePromise();
+
+		this.removeMedia = wait(2000);
+		this.removeMedia.then(() => {
+			Spot[this.spotIsaacId.replace("-", ".")].block = "";
+		});
+	}
+
+	cancelRemovePromise() {
+		if (this.removeMedia)
+			this.removeMedia.cancel();
+	}
+}
+
+function getMetaJson(width: string, height: string): string {
+	return `{
+		"width": ${width},
+		"height": ${height},
+		"duration": 0,
+		"fingerprint": 1763720504639,
+		"poster": {
+		"mimeType": "image/png",
+		"path": "$_BlkSnap.png",
+		"width": ${width},
+		"height": ${height},
+		"thumbnails": [
+		{
+			"width": -200,
+			"height": -200,
+			"@cls": ".Dimensions"
+		},
+		{
+			"width": -100,
+			"height": -100,
+			"@cls": ".Dimensions"
+		}
+		],
+		"@cls": ".PosterMediaInfo"
+		},
+		"type": "Layered"
+	}`
+}
+
+/**
+ * Intended to get a spec file, in order to create a block on the fly
+ * @param mediaType lower case "image" or "video"
+ * @param localParameter "mediaUrl" or "priorityMediaUrl"
+ * @returns the spec file for the block
+ */
+function getSpecJson(mediaType: string, localParameter: string, width: string, height: string) {
+	return `{
+	"width": ${width},
+	"height": ${height},
+	"root": {
+	"cssUrl": "",
+	"mNextID": 6,
+	"blocks": [
+	{
+		"containerData": {
+		"kAARect": {
+		"x": 0,
+		"y": 0,
+		"width": ${width},
+		"height": ${height},
+		"@cls": ".AARect"
+		}
+		},
+		"htmlClass": "",
+		"behaviors": [],
+		"localSync": false,
+		"excludeFromSync": false,
+		"allowPause": false,
+		"autoPlay": true,
+		"playInline": true,
+		"forceControls": "none",
+		"pauseToStopDelay": 900000,
+		"fitting": "fill",
+		"mediaType": "${mediaType}",
+		"imageProp": {
+		"propPath": ${mediaType === "image" ? `"Local.parameter.${localParameter}"` : `""`},
+		"type": 2,
+		"@cls": ".PropSpec"
+		},
+		"playerProp": {
+		"propPath": "Local.parameter.${localParameter}",
+		"type": 2,
+		"@cls": ".PropSpec"
+		},
+		"id": 5,
+		"loop": true,
+		"enclosing": "root",
+		"@cls": ".MediaURL"
+	}
+	],
+	"checkerboard": "medium",
+	"snapToGrid": true,
+	"gridSize": 10,
+	"keepInside": true,
+	"scale": "auto",
+	"autoHideDelay": 4000,
+	"enclosing": "",
+	"id": 1,
+	"afterDelay": 0,
+	"timestamp": 1763720504630,
+	"bgColor": "",
+	"@cls": ".Layered"
+	},
+	"params": {
+	"${localParameter}": {
+	"id": 2,
+	"name": "${localParameter}",
+	"value": "",
+	"type": 1,
+	"comment": ""
+	}
+	},
+	"@cls": ".RootBlock"
+}
+`
 }
