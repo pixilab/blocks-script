@@ -73,16 +73,16 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../system_lib/ScriptBase"], function (require, exports, Driver_1, Metadata_1, ScriptBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.log = exports.normalize = exports.limitedVal = exports.toHex = exports.padVal = exports.NexmosphereBase = void 0;
+    exports.normalize = exports.limitedVal = exports.toHex = exports.padVal = exports.NexmosphereBase = void 0;
     var kRfidPacketParser = /^XR\[P(.)(\d+)]/;
     var kXTalkPacketParser = /^X(\d+)([AB])\[(.+)]/;
     var kCtrlPacketParser = /^([PS])(\d+)([AB])\[(.+)]/;
     var kProductCodeParser = /D(\d+)B\[\w+=([^\]]+)]/;
     var kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
     var kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
+    var kUdpHartbeatEchoParser = /N000B\[RUNTIME\?\]/;
     var NEXMOSPHERE_COMMAND_DELAY_MS = 100;
-    var _debugLogging = false;
-    var NexmosphereBase = exports.NexmosphereBase = (function (_super) {
+    var NexmosphereBase = (function (_super) {
         __extends(NexmosphereBase, _super);
         function NexmosphereBase(port, numbOfInterfaces) {
             var _this = this;
@@ -102,6 +102,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             _this.myDeviceID = "";
             _this.msgQueue = [];
             _this.isBusyProcessingQueue = false;
+            _this._debugLogging = false;
             _this.element = _this.namedAggregateProperty("element", BaseInterface);
             _this.interface = [];
             if (port.enabled) {
@@ -114,7 +115,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     if (typeof options === "object") {
                         if ((_a = options.device) === null || _a === void 0 ? void 0 : _a.udpDeviceID) {
                             _this.myDeviceID = options.device.udpDeviceID;
-                            log("Using hardcoded device ID for UDP:", _this.myDeviceID);
+                            _this.log("Using hardcoded device ID for UDP:", _this.myDeviceID);
                         }
                         if (((_b = options.interfaces) === null || _b === void 0 ? void 0 : _b.length) > 0) {
                             _this.addInterfaces(options.interfaces);
@@ -126,7 +127,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 }
                 console.log("Driver enabled");
                 if (numbOfInterfaces) {
-                    log("Subclass has number of  ports: " + numbOfInterfaces);
+                    _this.log("Subclass has number of  ports: " + numbOfInterfaces);
                     _this.numInterfaces = numbOfInterfaces;
                 }
             }
@@ -136,7 +137,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.pollEnabled = false;
             for (var _i = 0, ifaces_1 = ifaces; _i < ifaces_1.length; _i++) {
                 var iface = ifaces_1[_i];
-                log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
+                this.log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
                 this.addInterface(iface.ifaceNo, iface.modelCode, iface.name);
             }
         };
@@ -157,11 +158,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             if (this.udpConnected === val)
                 return;
             var prev = this.udpConnected;
-            log("Setting UDP connected to", val);
+            this.log("Setting UDP connected to", val);
             this.udpConnected = val;
             this.changed("connected");
             if (val && !prev && this.pollStopped) {
-                log("UDP reconnected - resetting polling");
+                this.log("UDP reconnected - resetting polling");
                 this.pollStopped = false;
                 this.pollQueryCount = 0;
                 this.pollIndex = 0;
@@ -194,9 +195,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.port.autoConnect();
             port.subscribe('connect', function (sender, message) {
                 if (message.type === 'Connection' && port.connected) {
-                    log("Connected", _this.pollEnabled);
+                    _this.log("Connected", _this.pollEnabled);
                     if (_this.pollStopped) {
-                        log("Reconnected - resetting polling");
+                        _this.log("Reconnected - resetting polling");
                         _this.pollStopped = false;
                         _this.pollQueryCount = 0;
                         _this.pollIndex = 0;
@@ -205,7 +206,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                         _this.pollNext();
                 }
                 else {
-                    log("Disconnected");
+                    _this.log("Disconnected");
                     if (!_this.interface.length)
                         _this.pollIndex = 0;
                 }
@@ -225,7 +226,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.port.subscribe('textReceived', function (sender, message) {
                 if (!message.text)
                     return;
-                log("Incoming data in subscription", message.text);
+                _this.log("Incoming data in subscription", message.text);
                 _this.setUdpConnected(true);
                 if (!_this.awake) {
                     _this.awake = true;
@@ -267,20 +268,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         NexmosphereBase.prototype.sendUdpHartbeat = function () {
             var _this = this;
-            log("Scheduling next UDP hartbeat poll", this.port.enabled);
+            this.log("Scheduling next UDP hartbeat poll", this.port.enabled);
             this.send("N000B[RUNTIME?]");
             this.waitingForUdpHartbeat = true;
-            this.udpResponsTestInterval = wait(5000);
+            this.udpResponsTestInterval = wait(10000);
             this.udpResponsTestInterval.then(function () {
                 if (_this.waitingForUdpHartbeat && _this.considerConnected()) {
-                    console.log(" UDP hartbeat reply missing, change connected status false");
+                    _this.log(" UDP hartbeat reply missing, change connected status false");
                     _this.setUdpConnected(false);
                 }
                 _this.sendUdpHartbeat();
             });
         };
         NexmosphereBase.prototype.stopUdpHartbeat = function () {
-            log("Stopping UDP hartbeat polling");
+            this.log("Stopping UDP hartbeat polling");
             if (this.udpResponsTestInterval) {
                 this.udpResponsTestInterval.cancel();
                 this.udpResponsTestInterval = undefined;
@@ -296,7 +297,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 return;
             var fullRounds = Math.floor(this.pollQueryCount / this.numInterfaces);
             if (fullRounds >= this.maxPollRounds && !this.interface.length) {
-                log("Polling timeout after", fullRounds, "rounds - stopping");
+                this.log("Polling timeout after", fullRounds, "rounds - stopping");
                 this.pollStopped = true;
                 return;
             }
@@ -340,7 +341,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.queryPortConfig(ix);
             this.pollQueryCount++;
             var pollAgain = false;
-            log("Poll again?:" + pollAgain, this.pollIndex, this.numInterfaces, this.considerConnected());
+            this.log("Poll again?:" + pollAgain, this.pollIndex, this.numInterfaces, this.considerConnected());
             if (this.pollIndex < this.numInterfaces)
                 pollAgain = true;
             else if (!this.interface.length) {
@@ -353,20 +354,20 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         NexmosphereBase.prototype.queryPortConfig = function (portNumber) {
             var typeQuery = padVal(portNumber, 3);
             typeQuery = "D" + typeQuery + "B[TYPE]";
-            log("Query ", typeQuery);
+            this.log("Query ", typeQuery);
             this.send(typeQuery, true);
         };
         NexmosphereBase.prototype.send = function (rawData, priority) {
             var _this = this;
             if (priority === void 0) { priority = false; }
-            log("Queue msg: ", rawData);
+            this.log("Queue msg: ", rawData);
             var task = function () { return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
                     if (this.isUDP())
                         this.port.sendText(rawData + "\r\n");
                     else
                         this.port.sendText(rawData, "\r\n");
-                    log("Send msg: ", rawData);
+                    this.log("Send msg: ", rawData);
                     return [2];
                 });
             }); };
@@ -390,7 +391,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                             _a.label = 1;
                         case 1:
                             if (!(this.msgQueue.length > 0)) return [3, 5];
-                            log("Processing queue, length:", this.msgQueue.length);
+                            this.log("Processing queue, length:", this.msgQueue.length);
                             if (this.msgQueue.length > 20) {
                                 console.warn("Nexmosphere command queue is growing! Current size: ".concat(this.msgQueue.length));
                             }
@@ -419,15 +420,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             console.log("Command delay set to", NEXMOSPHERE_COMMAND_DELAY_MS, "ms");
         };
         NexmosphereBase.prototype.debugLogging = function (value) {
-            _debugLogging = value;
-            console.log("Nexmosphere debug logging enabled:", _debugLogging);
+            if (value === this._debugLogging)
+                return;
+            this._debugLogging = value;
+            console.log("Nexmosphere debug logging changed:", this._debugLogging);
         };
         NexmosphereBase.prototype.handleMessage = function (msg) {
             var _this = this;
-            log("Raw data recieved in handleMessage", msg);
+            this.log("Raw data recieved in handleMessage", msg);
             var handlers = [
                 [kUdpPacketParser, function (parseResult) {
-                        log("UDP Packet parsed in handler", msg);
+                        _this.log("UDP Packet parsed in handler", msg);
                         var innerMsg = parseResult[2];
                         var id = parseResult[1];
                         if (!_this.dynProps["deviceID"]) {
@@ -441,13 +444,13 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                             }
                         }
                         if (_this.dynProps["deviceID"] !== id) {
-                            log("Ignoring UDP message from other device", id, "expected", _this.dynProps["deviceID"]);
+                            _this.log("Ignoring UDP message from other device", id, "expected", _this.dynProps["deviceID"]);
                             return;
                         }
                         _this.handleMessage(innerMsg);
                     }],
                 [kRfidPacketParser, function (parseResult) {
-                        log("RFID tag event parsed in handler", msg);
+                        _this.log("RFID tag event parsed in handler", msg);
                         _this.lastTag = {
                             isPlaced: parseResult[1] === "B",
                             tagNumber: parseInt(parseResult[2])
@@ -456,7 +459,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 [kXTalkPacketParser, function (parseResult) {
                         var portNumber = parseInt(parseResult[1]);
                         var dataReceived = parseResult[3];
-                        log("Xtalk data parsed in handler from port", portNumber, "Data", dataReceived);
+                        _this.log("Xtalk data parsed in handler from port", portNumber, "Data", dataReceived);
                         var interfacePort = _this.interface[portNumber - 1];
                         if (interfacePort) {
                             interfacePort.receiveData(dataReceived, _this.lastTag);
@@ -469,25 +472,31 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                         var msgType = parseResult[1];
                         var portNumber = parseInt(parseResult[2]);
                         var dataReceived = parseResult[4];
-                        log("Controller message of type", msgType, "parsed in handler from port", portNumber, "Data", dataReceived);
+                        _this.log("Controller message of type", msgType, "parsed in handler from port", portNumber, "Data", dataReceived);
                         _this.handleControllerMessage(dataReceived);
                     }],
                 [kProductCodeParser, function (parseResult) {
-                        log("TypeQReply parsed in handler", msg);
+                        _this.log("TypeQReply parsed in handler", msg);
                         var modelCode = parseResult[2].trim();
                         var portNumber = parseInt(parseResult[1]);
                         _this.addInterface(portNumber, modelCode);
                     }],
                 [kUdpRuntimeParser, function (parseResult) {
-                        log("UDP Hartbeat reply parsed in handler", msg);
-                        if (_this.isUDP() && _this.waitingForUdpHartbeat) {
+                        _this.log("UDP Hartbeat reply parsed in handler", msg);
+                        _this.waitingForUdpHartbeat = false;
+                        if (_this.isUDP()) {
                             var runtimeHours = parseInt(parseResult[1]);
                             if (_this.dynProps["runtime"] === runtimeHours)
                                 return;
                             _this.dynProps["runtime"] = runtimeHours;
                             _this.changed("runtime");
                         }
-                        _this.waitingForUdpHartbeat = false;
+                    }],
+                [kUdpHartbeatEchoParser, function (parseResult) {
+                        _this.log("UDP Hartbeat echo parsed in handler", msg);
+                        if (_this.isUDP()) {
+                            _this.send("N000B[ACK=OFF]");
+                        }
                     }]
             ];
             for (var _i = 0, handlers_1 = handlers; _i < handlers_1.length; _i++) {
@@ -498,7 +507,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                     return;
                 }
             }
-            console.warn("Unknown command received from controller", typeof msg, msg);
+            console.warn(this.port.name, " Unknown command received from controller: ", msg);
         };
         NexmosphereBase.prototype.handleControllerMessage = function (message) {
             return;
@@ -510,7 +519,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 console.warn("Unknown interface model - using generic 'unknown' type", modelCode);
                 ctor = UnknownInterface;
             }
-            log("Adding interface", portNumber, modelCode, name || "", channel || "");
+            this.log("Adding interface", portNumber, modelCode, name || "", channel || "");
             var iface = new ctor(this, ix, channel);
             var ifaceName = name;
             var ifaceChannel = channel;
@@ -527,9 +536,17 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         NexmosphereBase.prototype.addBuiltInInterfaces = function (specialPorts) {
             for (var _i = 0, specialPorts_1 = specialPorts; _i < specialPorts_1.length; _i++) {
                 var specialPort = specialPorts_1[_i];
-                log("Adding controller onboard interface", specialPort[0], specialPort[1], specialPort[2]);
+                this.log("Adding controller onboard interface", specialPort[0], specialPort[1], specialPort[2]);
                 this.addInterface(specialPort[1], specialPort[0], undefined, specialPort[2]);
             }
+        };
+        NexmosphereBase.prototype.log = function () {
+            var messages = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                messages[_i] = arguments[_i];
+            }
+            if (this._debugLogging)
+                console.log(this.port.name, messages);
         };
         __decorate([
             (0, Metadata_1.property)("Connected to Nexmosphere device", true),
@@ -562,6 +579,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], NexmosphereBase.prototype, "debugLogging", null);
         return NexmosphereBase;
     }(Driver_1.Driver));
+    exports.NexmosphereBase = NexmosphereBase;
     function commandDelay() {
         return new Promise(function (resolve) {
             wait(NEXMOSPHERE_COMMAND_DELAY_MS).then(function () {
@@ -579,6 +597,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             _this.channel = channel;
             _this.collectors = {};
             _this._channel = channel;
+            _this.owner = driver;
             return _this;
         }
         BaseInterface.prototype.ifaceNo = function () {
@@ -729,7 +748,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             configurable: true
         });
         NfcInterface.prototype.receiveData = function (data) {
-            console.log(data);
+            this.owner.log("Recieved NFC: ", data);
             var splitData = data.split(":");
             var newTagData = splitData[1];
             var newTagEvent = splitData[0];
@@ -1284,10 +1303,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             configurable: true
         });
         MonoLedInterface.prototype.setOutput = function (brightness, ramp) {
-            log("Setting monoled output", brightness, ramp);
+            this.owner.log("Setting monoled output", brightness, ramp);
             var br = limitedVal(brightness, 0, 100, 2.55);
             var r = (limitedVal(ramp, 0, 15, 1, false));
-            log("Calculated values", br, r, Math.floor(15 / r));
+            this.owner.log("Calculated values", br, r, Math.floor(15 / r));
             var cmd = 256 * Math.floor(15 / r) + br;
             this.command = cmd.toString();
         };
@@ -1496,7 +1515,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         QuadAudioSwitch.prototype.updateAndSend = function () {
             var _a = this.switches, sw1 = _a.sw1, sw2 = _a.sw2, sw3 = _a.sw3, sw4 = _a.sw4;
-            console.log("Updating audio switch states", sw1, sw2, sw3, sw4), this.switches;
+            this.owner.log("Updating audio switch states", sw1, sw2, sw3, sw4), this.switches;
             var data = (sw1 ? 1 : 0) |
                 (sw2 ? 2 : 0) |
                 (sw3 ? 4 : 0) |
@@ -2314,7 +2333,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 var zoneObjectCount = parseInt(parseResult[3]);
                 this.mZone[zoneId - 1] = zoneObjectCount;
                 this.changed("zone" + this.pad(zoneId, 2));
-                log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
+                this.owner.log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
                 return;
             }
             var parseResultWithoutCount = LidarInterface.kParserWithoutCount.exec(data);
@@ -2391,11 +2410,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                         case 0:
                             raw = this.package(command, prefix);
                             this.driver.send(raw);
-                            log("sending command: '" + raw + "'");
+                            this.owner.log("sending command: '" + raw + "'");
                             if (!expectedResponse) return [3, 1];
                             return [2, new Promise(function (resolve, reject) {
                                     _this._cmdResponseWaiter = new CmdResponseWaiter(command, expectedResponse, function (result) {
-                                        log("resolved via response");
+                                        _this.owner.log("resolved via response");
                                         resolve();
                                         _this._cmdResponseWaiter = null;
                                     }, function (reason) {
@@ -2406,7 +2425,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                         case 1: return [4, commandDelay()];
                         case 2:
                             _a.sent();
-                            log("resolved via timeout");
+                            this.owner.log("resolved via timeout");
                             _a.label = 3;
                         case 3: return [2];
                     }
@@ -2745,7 +2764,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         };
         AnalogInputInterface.prototype.receiveData = function (data) {
             var inputVal = Number(data.split("=")[1]);
-            log("Analog input received", inputVal, normalize(inputVal, this.mInMin, this.mInMax, this.mOutMin, this.mOutMax));
+            this.owner.log("Analog input received", inputVal, normalize(inputVal, this.mInMin, this.mInMax, this.mOutMin, this.mOutMax));
             var finalVal = this.mNormalize ? normalize(inputVal, this.mInMin, this.mInMax, this.mOutMin, this.mOutMax) : inputVal;
             this.value = finalVal;
         };
@@ -2807,7 +2826,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.sendData("X" + this.ifaceNo() + "L[" + cmd + "]");
         };
         IoInterface.prototype.receiveData = function (data) {
-            log("IO input received", data);
+            this.owner.log("IO input received", data);
             this.mState = data === "1";
             this.changed("state");
         };
@@ -2860,7 +2879,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.sendData("X" + this.ifaceNo() + "S[" + cmd + "]");
         };
         EncoderInterface.prototype.receiveData = function (data) {
-            log("Encoder input received", data);
+            this.owner.log("Encoder input received", data);
             var splitData = data.split("=");
             var prefix = splitData[0];
             if (prefix === "Av") {
@@ -2873,7 +2892,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                 this.direction = parts[0];
                 var increment = this.direction === "CW";
                 this.value = Number(parts[1]);
-                log("Increment value", this.value, this.value, -this.value);
+                this.owner.log("Increment value", this.value, this.value, -this.value);
                 this.absoluteValue = this.mAbsValue + (increment ? Number(parts[1]) : -Number(parts[1]));
             }
         };
@@ -2916,7 +2935,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         AngleInterface.prototype.receiveData = function (data) {
-            log("Angle input received", data);
+            this.owner.log("Angle input received", data);
             var parts = data.split("=");
             var prefix = parts[0];
             var values = parts[1].split(",");
@@ -3046,7 +3065,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         TemperatureInterface.prototype.receiveData = function (data) {
-            log("Temperature input received", data);
+            this.owner.log("Temperature input received", data);
             var parts = data.split("=");
             var prefix = parts[0];
             var value = parts[1];
@@ -3121,7 +3140,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         AmbientLightInterface.prototype.receiveData = function (data) {
-            log("Ambient light input received", data);
+            this.owner.log("Ambient light input received", data);
             var parts = data.split("=");
             var prefix = parts[0];
             var value = parts[1];
@@ -3174,7 +3193,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         LightInterface.prototype.receiveData = function (data) {
-            log("Ambient light input received", data);
+            this.owner.log("Ambient light input received", data);
             this.light = Number(data);
             return;
         };
@@ -3218,7 +3237,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         ColorInterface.prototype.receiveData = function (data) {
-            log("Ambient light input received", data);
+            this.owner.log("Ambient light input received", data);
             var parts = data.split("=");
             var prefix = parts[0];
             var value = parts[1];
@@ -3485,7 +3504,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.calibrating = true;
         };
         ShelfWeightInterface.prototype.receiveData = function (data) {
-            log("Weight input receivedd", data);
+            this.owner.log("Weight input receivedd", data);
             var parts = data.split("=");
             var prefix = parts[0];
             var value = parts[1];
@@ -3772,7 +3791,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             this.sendData("X" + this.ifaceNo() + "B[FACTORYRESET]");
         };
         BarWeightInterface.prototype.receiveData = function (data) {
-            log("Bar weight input received", data);
+            this.owner.log("Bar weight input received", data);
             var parts = data.split("=");
             var prefix = parts[0];
             var value = parts[1];
@@ -3796,11 +3815,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                         var _a = part.split(":"), key = _a[0], val = _a[1];
                         itemInfo_1[key] = val;
                     });
-                    console.log("Received item info: ", itemInfo_1);
+                    this.owner.log("Received item info: ", itemInfo_1);
                     break;
                 case "PU":
                     var pickItemNo = Number(value);
-                    log(pickItemNo);
+                    this.owner.log(pickItemNo);
                     if (pickItemNo >= 1 && pickItemNo <= 16) {
                         this.mLiftedItems[pickItemNo - 1] = true;
                         this.changed("liftedItem_" + pickItemNo);
@@ -4146,13 +4165,4 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         return outMin + ((value - inMin) * (outMax - outMin)) / (inMax - inMin);
     }
     exports.normalize = normalize;
-    function log() {
-        var messages = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            messages[_i] = arguments[_i];
-        }
-        if (_debugLogging)
-            console.log(messages);
-    }
-    exports.log = log;
 });
