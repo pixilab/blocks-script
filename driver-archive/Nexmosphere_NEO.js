@@ -31,13 +31,13 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
     exports.Nexmosphere_NEO = void 0;
     var kNumInterfaces = 4;
     var kNumOutputs = 4;
-    var Nexmosphere_NEO = exports.Nexmosphere_NEO = (function (_super) {
+    var Nexmosphere_NEO = (function (_super) {
         __extends(Nexmosphere_NEO, _super);
         function Nexmosphere_NEO(port) {
             var _this = _super.call(this, port, kNumInterfaces) || this;
             _this.handlers = {
                 'OUTPUT': function (s) {
-                    (0, NexmosphereBase_1.log)('handle OUTPUT', s);
+                    _this.log('handle OUTPUT', s);
                     var ix = "OUTPUT".length;
                     var numChar = s.charAt(ix);
                     var num = parseInt(numChar, 10);
@@ -49,19 +49,19 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
                     var key = "output".concat(num);
                     _this.messageRouter(key, data);
                 },
-                'TIME': function (s) { (0, NexmosphereBase_1.log)('handle TIME=', s); },
-                'FWVERSION=': function (s) { (0, NexmosphereBase_1.log)('FWVERSION=', s); },
-                'WATCHDOG': function (s) { (0, NexmosphereBase_1.log)('WATCHDOG', s); },
-                'DEVICE': function (s) { (0, NexmosphereBase_1.log)('DEVICEUSAGE=', s); },
+                'TIME': function (s) { _this.log('handle TIME=', s); },
+                'FWVERSION=': function (s) { _this.log('FWVERSION=', s); },
+                'WATCHDOG': function (s) { _this.log('WATCHDOG', s); },
+                'DEVICE': function (s) { _this.log('DEVICEUSAGE=', s); },
                 'INPUT': function (s) {
-                    (0, NexmosphereBase_1.log)('handle INPUT=', s);
+                    _this.log('handle INPUT=', s);
                     _this.messageRouter('input', s);
                 },
-                'SCHED': function (s) { (0, NexmosphereBase_1.log)('SCHED', s); },
-                'RUNTIME': function (s) { (0, NexmosphereBase_1.log)('RUNTIME', s); },
-                'OPERATIONTIME': function (s) { (0, NexmosphereBase_1.log)('OPERATIONTIME', s); },
+                'SCHED': function (s) { _this.log('SCHED', s); },
+                'RUNTIME': function (s) { _this.log('RUNTIME', s); },
+                'OPERATIONTIME': function (s) { _this.log('OPERATIONTIME', s); },
                 'MODEL': function (s) {
-                    (0, NexmosphereBase_1.log)('MODEL', s);
+                    _this.log('MODEL', s);
                     if (_this.outstandingModelQuery) {
                         try {
                             _this.outstandingModelQuery.cancel();
@@ -80,28 +80,28 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
             };
             _this.modelHandlers = {
                 'NEO320': function () {
-                    (0, NexmosphereBase_1.log)('handle NEO320');
+                    _this.log('handle NEO320');
                     _this.setupOutputs(2);
                 },
                 'NEO520': function () {
-                    (0, NexmosphereBase_1.log)('handle NEO520');
+                    _this.log('handle NEO520');
                     _this.setupOutputs(2);
                 },
                 'NEO620': function () {
-                    (0, NexmosphereBase_1.log)('handle NEO620');
+                    _this.log('handle NEO620');
                     _this.setupOutputs(2);
                     _this.neo['sensmi'] = new NeoSensmi(_this);
                 },
                 'NEO340': function () {
-                    (0, NexmosphereBase_1.log)('handle NEO340');
+                    _this.log('handle NEO340');
                     _this.setupOutputs(4);
                 },
                 'NEO540': function () {
-                    (0, NexmosphereBase_1.log)('handle NEO540');
+                    _this.log('handle NEO540');
                     _this.setupOutputs(4);
                 },
                 'NEO640': function () {
-                    (0, NexmosphereBase_1.log)('handle NEO640');
+                    _this.log('handle NEO640');
                     _this.setupOutputs(4);
                     _this.neo['sensmi'] = new NeoSensmi(_this);
                 },
@@ -126,7 +126,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
                 this.outstandingModelQuery = wait(500);
                 this.outstandingModelQuery
                     .then(function () {
-                    (0, NexmosphereBase_1.log)("Model query timed out, setting up default outputs");
+                    _this.log("Model query timed out, setting up default outputs");
                     _this.handleControllerMessage("MODEL=NEO640");
                 }).catch(function () {
                 });
@@ -150,7 +150,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
                 (0, NexmosphereBase_1.padVal)(now.getDate(), 2) + "/" +
                 (0, NexmosphereBase_1.padVal)((now.getMonth() + 1), 2) + "/" +
                 (0, NexmosphereBase_1.padVal)(now.getFullYear(), 4);
-            (0, NexmosphereBase_1.log)("Setting Neo time to servertime:", timeStr);
+            this.log("Setting Neo time to servertime:", timeStr);
             this.send("S000B[TIME=" + timeStr + "]");
         };
         Nexmosphere_NEO.prototype.handleControllerMessage = function (str) {
@@ -188,7 +188,6 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
                 this.send("P000B[AUTOSEND=INPUT:ALL:OFF]");
             }
         };
-        var _a;
         __decorate([
             (0, Metadata_1.callable)("Enable continious updates of output metrics"),
             __param(0, (0, Metadata_1.parameter)("Enable continious update at interval 0 or no value for off", true)),
@@ -206,29 +205,30 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
         Nexmosphere_NEO = __decorate([
             (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
             (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
-            __metadata("design:paramtypes", [typeof (_a = typeof NexmosphereBase_1.ConnType !== "undefined" && NexmosphereBase_1.ConnType) === "function" ? _a : Object])
+            __metadata("design:paramtypes", [Object])
         ], Nexmosphere_NEO);
         return Nexmosphere_NEO;
     }(NexmosphereBase_1.NexmosphereBase));
+    exports.Nexmosphere_NEO = Nexmosphere_NEO;
     var NeoBaseClass = (function (_super) {
         __extends(NeoBaseClass, _super);
         function NeoBaseClass(driver, ix) {
             var _this = _super.call(this) || this;
             _this.index = 0;
             _this.handlers = {};
-            _this.driver = driver;
+            _this.owner = driver;
             if (ix !== undefined)
                 _this.index = ix;
             return _this;
         }
         NeoBaseClass.prototype.sendData = function (data) {
-            this.driver.send(data);
+            this.owner.send(data);
         };
         NeoBaseClass.prototype.recieveData = function (str) {
-            (0, NexmosphereBase_1.log)("Data received in NeoBaseClass reviceData:", str);
+            this.owner.log("Data received in NeoBaseClass reviceData:", str);
             var keyValuePair = str.split("=");
             var keyInStr = keyValuePair[0] || "EMPTY";
-            (0, NexmosphereBase_1.log)("Parsed key:", keyInStr);
+            this.owner.log("Parsed key:", keyInStr);
             var value = keyValuePair[1];
             for (var key in this.handlers) {
                 if (keyInStr.indexOf(key) === 0) {
@@ -250,19 +250,19 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
             _this._usage = 0;
             _this.handlers = {
                 'INPUTCURRENT': function (s) {
-                    (0, NexmosphereBase_1.log)('handle INPUTCURRENT=', s);
+                    _this.owner.log('handle INPUTCURRENT=', s);
                     _this.inputCurrent = parseFloat(s.replace(",", "."));
                 },
                 'INPUTVOLTAGE': function (s) {
-                    (0, NexmosphereBase_1.log)('handle INPUTVOLTAGE=', s);
+                    _this.owner.log('handle INPUTVOLTAGE=', s);
                     _this.inputVoltage = parseFloat(s.replace(",", "."));
                 },
                 'INPUTPOWER': function (s) {
-                    (0, NexmosphereBase_1.log)('handle INPUTPOWER=', s);
+                    _this.owner.log('handle INPUTPOWER=', s);
                     _this.inputPower = parseFloat(s.replace(",", "."));
                 },
                 'INPUTUSAGE': function (s) {
-                    (0, NexmosphereBase_1.log)('handle INPUTUSAGE=', s);
+                    _this.owner.log('handle INPUTUSAGE=', s);
                     _this.inputUsage = parseFloat(s.replace(",", "."));
                 }
             };
@@ -289,7 +289,7 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
         Object.defineProperty(NeoDevice.prototype, "inputCurrent", {
             get: function () { return this._current; },
             set: function (value) {
-                (0, NexmosphereBase_1.log)("Setting input current to:", value);
+                this.owner.log("Setting input current to:", value);
                 if (value != this._current)
                     this._current = value;
             },
@@ -433,24 +433,24 @@ define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "syste
             _this.mVoltage = 0;
             _this.handlers = {
                 'EMPTY': function (s) {
-                    (0, NexmosphereBase_1.log)('handle status (EMPTY)', s);
+                    _this.owner.log('handle status (EMPTY)', s);
                     _this.mRelay = s === "ON";
                     _this.changed("relay");
                 },
                 'USAGE': function (s) {
-                    (0, NexmosphereBase_1.log)('handle USAGE', s);
+                    _this.owner.log('handle USAGE', s);
                     _this.usage = parseFloat(s.replace(",", "."));
                 },
                 'POWER': function (s) {
-                    (0, NexmosphereBase_1.log)('handle POWER', s);
+                    _this.owner.log('handle POWER', s);
                     _this.power = parseFloat(s.replace(",", "."));
                 },
                 'CURRENT': function (s) {
-                    (0, NexmosphereBase_1.log)('handle CURRENT', s);
+                    _this.owner.log('handle CURRENT', s);
                     _this.current = parseFloat(s.replace(",", "."));
                 },
                 'VOLTAGE': function (s) {
-                    (0, NexmosphereBase_1.log)('handle VOLTAGE', s);
+                    _this.owner.log('handle VOLTAGE', s);
                     _this.voltage = parseFloat(s.replace(",", "."));
                 }
             };
