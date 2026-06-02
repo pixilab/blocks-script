@@ -6,7 +6,7 @@
  */
 
 import { callable, driver,parameter,property } from "system_lib/Metadata";
-import { NexmosphereBase,ConnType, log,Dictionary,padVal,normalize } from "./NexmosphereBase";
+import { NexmosphereBase,ConnType,Dictionary,padVal,normalize } from "./NexmosphereBase";
 import { AggregateElem } from "system_lib/ScriptBase";
 
 
@@ -20,7 +20,8 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
    
     protected neo: Dictionary<NeoBaseClass>;
     protected outstandingModelQuery: CancelablePromise<void>;
-
+    
+  
     constructor(port: ConnType) {
         super(port, kNumInterfaces);
         this.initConnection(port)
@@ -31,7 +32,7 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
     initNeo(){
         this.setTime();
         if (this.port.enabled){
-            //this.setupOutputs(kNumOutputs); //TODO: move later to after model query response.
+           
         this.send("P000B[MODEL?]"); //Query model to setup outputs correctly.
           if (this.outstandingModelQuery) {
                 try { this.outstandingModelQuery.cancel(); } catch(_) {}
@@ -40,7 +41,7 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
             this.outstandingModelQuery = wait(500);
             this.outstandingModelQuery
                 .then(() => {
-                    log("Model query timed out, setting up default outputs");
+                    this.log("Model query timed out, setting up default outputs");
                     this.handleControllerMessage("MODEL=NEO640"); //Default to NEO520
             })  .catch(() => {
                 // cancelled — normal flow, nothing to do
@@ -68,7 +69,7 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
             padVal(now.getDate(),2) + "/" +
             padVal((now.getMonth() + 1),2) + "/" +
             padVal(now.getFullYear(),4);
-            log("Setting Neo time to servertime:", timeStr);
+            this.log("Setting Neo time to servertime:", timeStr);
         this.send("S000B[TIME=" + timeStr + "]");  
     }
 
@@ -76,7 +77,7 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
     private handlers: { [key: string]: (s: string) => void } = {
     /* Handle data for outputs */ 
     'OUTPUT': (s: string) => { 
-        log('handle OUTPUT', s);
+        this.log('handle OUTPUT', s);
         // Get the character immediately after "OUTPUT"
         const ix = "OUTPUT".length
         const numChar = s.charAt(ix); // e.g. "1", "2", "3", "4"
@@ -93,18 +94,18 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
         this.messageRouter(key, data);
         
     },
-    'TIME': (s: string) => { log('handle TIME=', s); },
-    'FWVERSION=': (s: string) => { log('FWVERSION=', s); },
-    'WATCHDOG': (s: string) => { log('WATCHDOG', s); },
-    'DEVICE': (s: string) => { log('DEVICEUSAGE=', s); },
+    'TIME': (s: string) => { this.log('handle TIME=', s); },
+    'FWVERSION=': (s: string) => { this.log('FWVERSION=', s); },
+    'WATCHDOG': (s: string) => { this.log('WATCHDOG', s); },
+    'DEVICE': (s: string) => { this.log('DEVICEUSAGE=', s); },
     'INPUT': (s: string) => {
-        log('handle INPUT=', s);
+        this.log('handle INPUT=', s);
         this.messageRouter('input', s);},
-    'SCHED': (s: string) => { log('SCHED', s); },
-    'RUNTIME': (s: string) => { log('RUNTIME', s); },
-    'OPERATIONTIME': (s: string) => { log('OPERATIONTIME', s); },
+    'SCHED': (s: string) => { this.log('SCHED', s); },
+    'RUNTIME': (s: string) => { this.log('RUNTIME', s); },
+    'OPERATIONTIME': (s: string) => { this.log('OPERATIONTIME', s); },
     'MODEL': (s: string) => { 
-        log('MODEL', s);
+        this.log('MODEL', s);
         //Cancel any pending model query timeout
         if (this.outstandingModelQuery) {
             try { this.outstandingModelQuery.cancel(); } catch(_) {}
@@ -123,25 +124,25 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
   /* Handle specifics for various models */
   private modelHandlers: { [key: string]: () => void } = {
     'NEO320': () => { 
-        log('handle NEO320');
+        this.log('handle NEO320');
         this.setupOutputs(2);},
     'NEO520': () => {
-        log('handle NEO520');
+        this.log('handle NEO520');
         this.setupOutputs(2);},
     'NEO620': () => { 
-        log('handle NEO620');
+        this.log('handle NEO620');
         this.setupOutputs(2);
         this.neo['sensmi'] = new NeoSensmi(this);
     },
 
     'NEO340': () => {
-        log('handle NEO340');
+        this.log('handle NEO340');
         this.setupOutputs(4);},
     'NEO540': () => {
-        log('handle NEO540');
+        this.log('handle NEO540');
         this.setupOutputs(4);},
     'NEO640': () => {
-        log('handle NEO640');
+        this.log('handle NEO640');
         this.setupOutputs(4);
         this.neo['sensmi'] = new NeoSensmi(this);},
   }
@@ -185,16 +186,17 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
     this.send("P000B[AUTOSEND=INPUT:ALL:OFF]");
         }
     }
+    
 }
 
 
 
 class NeoBaseClass extends AggregateElem  {
     protected index: number = 0;
-    protected driver: NexmosphereBase<ConnType>;
+    public owner: NexmosphereBase<ConnType>;
     constructor(driver: NexmosphereBase<ConnType>,ix?:number) {
             super();
-            this.driver = driver;
+            this.owner = driver;
             if (ix !== undefined) this.index = ix;
         }
 
@@ -202,14 +204,14 @@ class NeoBaseClass extends AggregateElem  {
     protected handlers: { [key: string]: (s: string) => void } = {};
 
     protected sendData(data: string) { 
-            this.driver.send(data);
+            this.owner.send(data);
         }
     recieveData(str: string): void {
-        log("Data received in NeoBaseClass reviceData:", str);
+        this.owner.log("Data received in NeoBaseClass reviceData:", str);
 
         const keyValuePair = str.split("=");
         const keyInStr = keyValuePair[0] || "EMPTY";
-        log("Parsed key:", keyInStr);
+        this.owner.log("Parsed key:", keyInStr);
         const value = keyValuePair[1];
 
         for (const key in this.handlers) {
@@ -236,16 +238,16 @@ class NeoDevice extends NeoBaseClass  {
 
     protected handlers: { [key: string]: (s: string) => void } = {
     'INPUTCURRENT': (s: string) => {
-        log('handle INPUTCURRENT=', s);
+        this.owner.log('handle INPUTCURRENT=', s);
         this.inputCurrent = parseFloat(s.replace(",", "."));}, //Replace comma is not neccesary in production devices.
     'INPUTVOLTAGE': (s: string) => {
-        log('handle INPUTVOLTAGE=', s);
+        this.owner.log('handle INPUTVOLTAGE=', s);
         this.inputVoltage = parseFloat(s.replace(",", "."));},
     'INPUTPOWER': (s: string) => {
-        log('handle INPUTPOWER=', s);
+        this.owner.log('handle INPUTPOWER=', s);
         this.inputPower = parseFloat(s.replace(",", "."));},
     'INPUTUSAGE': (s: string) => {
-        log('handle INPUTUSAGE=', s);
+        this.owner.log('handle INPUTUSAGE=', s);
         this.inputUsage = parseFloat(s.replace(",", "."));}
     };
 
@@ -271,7 +273,7 @@ class NeoDevice extends NeoBaseClass  {
     get inputCurrent(): number { return this._current; }
     set inputCurrent(value: number) { 
 
-    log("Setting input current to:", value);
+    this.owner.log("Setting input current to:", value);
         if (value != this._current)
             this._current = value;
         }
@@ -341,7 +343,7 @@ class NeoSensmi extends NeoBaseClass  {
 
 
 class NeoOutput extends NeoBaseClass  {
-    private owner:Nexmosphere_NEO
+   
     private mIx = 0 
     private mRelay =  true
     private mCurrent = 0
@@ -361,24 +363,24 @@ class NeoOutput extends NeoBaseClass  {
     /* Handle data for outputs */ 
        
         'EMPTY': (s: string) => { //Handle the case of no data after OUTPUTn
-            log('handle status (EMPTY)', s);
+            this.owner.log('handle status (EMPTY)', s);
             this.mRelay = s === "ON";
             this.changed("relay"); 
         },
         'USAGE': (s: string) => { 
-            log('handle USAGE', s);
+            this.owner.log('handle USAGE', s);
             this.usage = parseFloat(s.replace(",", "."));
         },    
         'POWER': (s: string) => { 
-            log('handle POWER', s);
+            this.owner.log('handle POWER', s);
             this.power = parseFloat(s.replace(",", "."));
         },
         'CURRENT': (s: string) => { 
-            log('handle CURRENT', s);
+            this.owner.log('handle CURRENT', s);
             this.current = parseFloat(s.replace(",", "."));
         },
         'VOLTAGE': (s: string) => { 
-            log('handle VOLTAGE', s);
+            this.owner.log('handle VOLTAGE', s);
             this.voltage = parseFloat(s.replace(",", "."));
         }
       

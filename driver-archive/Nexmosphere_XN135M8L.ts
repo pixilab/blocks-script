@@ -3,6 +3,7 @@
  * Documentation in ./NexmosphereBase.ts
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * version 1.0
+ * version 1.1 Fixed bug in constructor where initConnection was not called for SerialPort driver.
  */
 
 import {driver} from "system_lib/Metadata";
@@ -21,7 +22,7 @@ export class Nexmosphere_XN135M8L extends NexmosphereBase<ConnType> {
 	public constructor(port: ConnType ) {
 		super(port, kNumInterfaces);
 		if (port.enabled){
-			this.initUdp();
+			this.initConnection(port);
 			this.addBuiltInInterfaces(this.specialInterfaces);
 			this.numInterfaces = kNumInterfaces;
 			

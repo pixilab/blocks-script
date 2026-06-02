@@ -122,7 +122,12 @@ v.1.2:
 - Fixed bug where messages was sent out twice
 - Added support for DMX device IX-DM3 
 - Lowered default command delay to 75ms and made it adjustable by callable method for fine tuning in different setups.
+v.1.2.1:
+- Automatically tell remote device to turn off UDP echo if we see an echoed hartbeat message as we currently do not use them.
+- Now logs per device and include the port name for easier debugging in multi-device setups if debug logging is turned on
+- Fixed bug in "connection" status where it flashed briefly to false for every hartbeat.
 */
+
 
 
 import {NetworkTCP, NetworkUDP, SerialPort} from "system/Network";
@@ -145,9 +150,12 @@ const kCtrlPacketParser = /^([PS])(\d+)([AB])\[(.+)]/;
 const kProductCodeParser = /D(\d+)B\[\w+=([^\]]+)]/;
 const kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
 const kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
+
+// UDP controllers hartbeat if echo is on. We use runtime to infer if the device is alive or not, since UDP has no underlying connection. The driver sends out hartbeat messages and expects a reply within a certain time, if the reply is missing we set the connected status to false until we get a reply again.
+const kUdpHartbeatEchoParser = /N000B\[RUNTIME\?\]/;
 let NEXMOSPHERE_COMMAND_DELAY_MS = 100; //used to be 280
 
-let  _debugLogging = false;	// Controls verbose logging
+
 
 // A simple map-like object type
 export interface Dictionary<TElem> { [id: string]: TElem; }
@@ -189,7 +197,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 	private	myDeviceID: string = "";
 	private msgQueue: Array<() => Promise<void>> = [];
 	private isBusyProcessingQueue = false;
-	
+	private _debugLogging = false;	// Controls verbose logging
 	
 
 	protected constructor(protected port: P, numbOfInterfaces?: number) {
@@ -207,7 +215,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 				if (typeof options === "object") {
 					if (options.device?.udpDeviceID){  //Has device ID for UDP alternative options configuration scheme.
 						 this.myDeviceID = options.device.udpDeviceID;		
-						 log("Using hardcoded device ID for UDP:", this.myDeviceID);
+						 this.log("Using hardcoded device ID for UDP:", this.myDeviceID);
 					}
 					if (options.interfaces?.length > 0) {
 						this.addInterfaces(options.interfaces);
@@ -218,7 +226,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 			}	
 		console.log("Driver enabled");
 		if (numbOfInterfaces){	// for subclasses to override the number of port
-			log("Subclass has number of  ports: " + numbOfInterfaces)
+			this.log("Subclass has number of  ports: " + numbOfInterfaces)
 			this.numInterfaces = numbOfInterfaces;
 		}	
 		}
@@ -226,7 +234,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 	private addInterfaces(ifaces: IfaceInfo[]){
 		this.pollEnabled = false;
 					for (let iface of ifaces) {
-						log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
+						this.log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);
 						this.addInterface(iface.ifaceNo, iface.modelCode, iface.name);
 					}
 	}
@@ -257,12 +265,12 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 	protected setUdpConnected(val:boolean){
         if (this.udpConnected === val) return;
         const prev = this.udpConnected;
-        log("Setting UDP connected to", val);
+        this.log("Setting UDP connected to", val);
         this.udpConnected = val;
         this.changed("connected");
         // On first transition to connected, restart polling if previously stopped
         if (val && !prev && this.pollStopped) {
-            log("UDP reconnected - resetting polling");
+            this.log("UDP reconnected - resetting polling");
             this.pollStopped = false;
             this.pollQueryCount = 0;
             this.pollIndex = 0;
@@ -285,7 +293,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 	 * there's no underlying connetion, but the state here may need to be inferred
 	 * from the most recent response from the device or similar.
 	 */
-	protected considerConnected(): boolean {
+	protected considerConnected(): boolean {  // TODO: Remove from subclasses and use condition here instead based on transport type and state
 		return this.udpConnected;
 	}
 
@@ -308,10 +316,10 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 			port.subscribe('connect', (sender, message) => {
 			// Initiate polling once connected and only first time (may reconnect several times)
 			if (message.type === 'Connection' && port.connected) { // Just connected
-				log("Connected", this.pollEnabled)
+				this.log("Connected", this.pollEnabled)
 				 // Reset polling after (re)connect
                 if (this.pollStopped) {
-                    log("Reconnected - resetting polling");
+                    this.log("Reconnected - resetting polling");
                     this.pollStopped = false;
                     this.pollQueryCount = 0;
                     this.pollIndex = 0;
@@ -319,7 +327,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 				if (!this.pollIndex && this.pollEnabled)	// Not yet polled for interfaces and polling is enabled
 					this.pollNext();	// Get started
 			} else {	// Connection failed or disconnected
-				log("Disconnected")
+				this.log("Disconnected")
 				if (!this.interface.length)	// Got NO interfaces - re-start polling on next connect
 					this.pollIndex = 0;
 			}
@@ -339,7 +347,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 		// Fix initUdp subscription
 	(<any>this.port).subscribe('textReceived', (sender: P, message: IncomingTextMsg) => {
 		if (!message.text) return;
-		log("Incoming data in subscription", message.text);
+		this.log("Incoming data in subscription", message.text);
 		this.setUdpConnected(true);
 		if (!this.awake) {
 			this.awake = true;
@@ -387,13 +395,13 @@ private initDynamicProp(
 
 	private sendUdpHartbeat() {
 		// Send immediately, then every X seconds (adjust as needed)
-		log("Scheduling next UDP hartbeat poll", this.port.enabled);
+		this.log("Scheduling next UDP hartbeat poll", this.port.enabled);
 		this.send("N000B[RUNTIME?]");
 		this.waitingForUdpHartbeat = true;
-		this.udpResponsTestInterval = wait(5000);
+		this.udpResponsTestInterval = wait(10000);
 		this.udpResponsTestInterval.then(()=> {
 		if (this.waitingForUdpHartbeat && this.considerConnected()){ //We have not seen devivce for X sec, set status to false
-			console.log(" UDP hartbeat reply missing, change connected status false");
+			this.log(" UDP hartbeat reply missing, change connected status false");
 			this.setUdpConnected(false);
 		}
 		this.sendUdpHartbeat();
@@ -403,7 +411,7 @@ private initDynamicProp(
 
 	
 	private stopUdpHartbeat() {
-		log("Stopping UDP hartbeat polling");
+		this.log("Stopping UDP hartbeat polling");
 		if (this.udpResponsTestInterval) {
 				this.udpResponsTestInterval.cancel();
 				this.udpResponsTestInterval = undefined;
@@ -421,7 +429,7 @@ private initDynamicProp(
         // Timeout check (no interfaces found after maxPollRounds full cycles)
         const fullRounds = Math.floor(this.pollQueryCount / this.numInterfaces);
         if (fullRounds >= this.maxPollRounds && !this.interface.length) {
-            log("Polling timeout after", fullRounds, "rounds - stopping");
+            this.log("Polling timeout after", fullRounds, "rounds - stopping");
             this.pollStopped = true;
             return;
         }
@@ -466,7 +474,7 @@ private initDynamicProp(
 		this.queryPortConfig(ix);
 		this.pollQueryCount++;
 		let pollAgain = false;
-		log("Poll again?:" + pollAgain, this.pollIndex, this.numInterfaces, this.considerConnected())
+		this.log("Poll again?:" + pollAgain, this.pollIndex, this.numInterfaces, this.considerConnected())
 		if (this.pollIndex < this.numInterfaces) // Poll next one soon
 			pollAgain = true;
 		else if (!this.interface.length) {	// Restart poll if no fish so far
@@ -484,7 +492,7 @@ private initDynamicProp(
 	private queryPortConfig(portNumber: number) {
 		let typeQuery = padVal(portNumber,3) // Pad index with leading zeroes
 		typeQuery = "D" + typeQuery + "B[TYPE]";
-		log("Query ", typeQuery);
+		this.log("Query ", typeQuery);
 		this.send(typeQuery,true); //Send with priority
 	}
 
@@ -493,14 +501,14 @@ private initDynamicProp(
 	*/
 @callable("Send raw string data to the Nexmosphere controller")
 send(rawData: string, priority: boolean = false) {
-    log("Queue msg: ", rawData);
+    this.log("Queue msg: ", rawData);
 
     const task = async () => {
 		if (this.isUDP())
         this.port.sendText(rawData + "\r\n");
 		else
 		this.port.sendText(rawData , "\r\n");	
-        log("Send msg: ", rawData);
+        this.log("Send msg: ", rawData);
     };
 
     if (priority) {
@@ -519,7 +527,7 @@ send(rawData: string, priority: boolean = false) {
 		this.isBusyProcessingQueue= true;
 
 		while (this.msgQueue.length > 0) {
-			log("Processing queue, length:", this.msgQueue.length);
+			this.log("Processing queue, length:", this.msgQueue.length);
 			if (this.msgQueue.length > 20) {
             console.warn(
                 `Nexmosphere command queue is growing! Current size: ${this.msgQueue.length}`
@@ -547,19 +555,20 @@ send(rawData: string, priority: boolean = false) {
 	}
 	@callable("Enable logging ")
 	debugLogging(value: boolean) {
-		_debugLogging = value;
-		console.log("Nexmosphere debug logging enabled:", _debugLogging);
+		if (value === this._debugLogging) return; // No change
+		this._debugLogging = value;
+		console.log("Nexmosphere debug logging changed:",this._debugLogging);
 	}
 
 
 	protected handleMessage(msg: string) {
-		log("Raw data recieved in handleMessage", msg);
+		this.log("Raw data recieved in handleMessage", msg);
 
 
 		// Map of regex → handler
 		const handlers: [RegExp, PacketHandler][] = [
 			[kUdpPacketParser, (parseResult) => {
-				log("UDP Packet parsed in handler", msg);
+				this.log("UDP Packet parsed in handler", msg);
 				const innerMsg = parseResult[2];
 				const id = parseResult[1];
 
@@ -573,7 +582,7 @@ send(rawData: string, priority: boolean = false) {
 					}
 				}
 				if (this.dynProps["deviceID"] !== id) {
-					log("Ignoring UDP message from other device", id, "expected", this.dynProps["deviceID"]);
+					this.log("Ignoring UDP message from other device", id, "expected", this.dynProps["deviceID"]);
 					return; //Early out - not my device
     }
 				this.handleMessage(innerMsg); // Recursive handling of inner message if from known deviceID	
@@ -581,7 +590,7 @@ send(rawData: string, priority: boolean = false) {
 				
 			}],
 			[kRfidPacketParser, (parseResult) => {
-				log("RFID tag event parsed in handler", msg);
+				this.log("RFID tag event parsed in handler", msg);
 				this.lastTag = {
 					isPlaced: parseResult[1] === "B",
 					tagNumber: parseInt(parseResult[2])
@@ -590,7 +599,7 @@ send(rawData: string, priority: boolean = false) {
 			[kXTalkPacketParser, (parseResult) => {
 				const portNumber = parseInt(parseResult[1]);
 				const dataReceived = parseResult[3];
-				log("Xtalk data parsed in handler from port", portNumber, "Data", dataReceived);
+				this.log("Xtalk data parsed in handler from port", portNumber, "Data", dataReceived);
 				const interfacePort = this.interface[portNumber - 1];
 				if (interfacePort) {
 					interfacePort.receiveData(dataReceived, this.lastTag);
@@ -602,27 +611,35 @@ send(rawData: string, priority: boolean = false) {
 				const msgType = parseResult[1];
 				const portNumber = parseInt(parseResult[2]);
 				const dataReceived = parseResult[4];
-				log("Controller message of type",msgType,"parsed in handler from port", portNumber, "Data", dataReceived);
+				this.log("Controller message of type",msgType,"parsed in handler from port", portNumber, "Data", dataReceived);
 				//We pass those messages to the general controller message handler defined in sublass
 				this.handleControllerMessage(dataReceived);
 			
 				
 			}],
 			[kProductCodeParser, (parseResult) => {
-				log("TypeQReply parsed in handler", msg);
+				this.log("TypeQReply parsed in handler", msg);
 				const modelCode = parseResult[2].trim();
 				const portNumber = parseInt(parseResult[1]);
 				this.addInterface(portNumber, modelCode);
 			}],
 			[kUdpRuntimeParser, (parseResult) => {
-			log("UDP Hartbeat reply parsed in handler", msg);
-				if (this.isUDP() && this.waitingForUdpHartbeat) {
+			this.log("UDP Hartbeat reply parsed in handler", msg);
+				this.waitingForUdpHartbeat = false;
+				if (this.isUDP()) {
 					const runtimeHours = parseInt(parseResult[1]);
 					if (this.dynProps["runtime"] === runtimeHours) return; // No change
 					this.dynProps["runtime"] = runtimeHours;
 					this.changed("runtime");
 				}
-				this.waitingForUdpHartbeat = false;    
+			}],
+			[kUdpHartbeatEchoParser, (parseResult) => {
+				this.log("UDP Hartbeat echo parsed in handler", msg);
+				if (this.isUDP()) {
+
+					this.send("N000B[ACK=OFF]"); // Send ACK back to stop the echo loop
+				}
+
 			}]
 		];
 
@@ -635,7 +652,7 @@ send(rawData: string, priority: boolean = false) {
 			}
 		}
 		// If no handlers matched
-		console.warn("Unknown command received from controller", typeof msg, msg);
+		console.warn(this.port.name," Unknown command received from controller: ", msg);
 	}
 
 	protected handleControllerMessage(message: string) {
@@ -659,7 +676,7 @@ send(rawData: string, priority: boolean = false) {
 			ctor = UnknownInterface;
 		}
 		// Make it accessible both by name and 0-based interface index
-		log("Adding interface", portNumber, modelCode, name || "", channel ||  "");
+		this.log("Adding interface", portNumber, modelCode, name || "", channel ||  "");
 		const iface = new ctor(this, ix, channel);
 		let ifaceName = name;
 		let ifaceChannel = channel;
@@ -677,11 +694,20 @@ send(rawData: string, priority: boolean = false) {
 
 	protected addBuiltInInterfaces(specialPorts: BuiltInElements){
 		for (const specialPort of specialPorts){
-            log("Adding controller onboard interface", specialPort[0], specialPort[1], specialPort[2]);
+            this.log("Adding controller onboard interface", specialPort[0], specialPort[1], specialPort[2]);
 			this.addInterface(specialPort[1], specialPort[0],undefined, specialPort[2]);
         }
 	}
+	/**
+	 this.log messages, allowing my logging to be easily disabled in one place.
+	*/
+	public log(...messages: any[]) {
+		if (this._debugLogging)
+			console.log(this.port.name,  messages);
+		}
+
 }
+
 /**
  * Nexmosphere requires >= 50 ms delay after each command
  * (in practice the needed delay seems to be longer)
@@ -701,7 +727,7 @@ class BaseInterface extends AggregateElem {
 	protected _channel: string;
 	protected _command: string;
 	protected readonly collectors: Dictionary<{ buffer: string; timer: CancelablePromise<void>,blocked:boolean | null }> = {};
-
+	protected owner: NexmosphereBase<PortType>;
 	constructor(
 		protected readonly driver: NexmosphereBase<PortType>,
 		protected readonly index: number,
@@ -710,6 +736,7 @@ class BaseInterface extends AggregateElem {
 	) {
 		super();
 		this._channel = channel;
+		this.owner = driver;
 	}
 	/* Returns 1-based interface number as string, padded to 3 digits */
 	protected ifaceNo(): string {
@@ -850,7 +877,7 @@ class NfcInterface extends BaseInterface {
 
 
 	receiveData(data: string) {
-		console.log(data);
+		this.owner.log("Recieved NFC: ", data);
 		let splitData = data.split(":");
 		const newTagData = splitData[1];
 		const newTagEvent = splitData[0];
@@ -1340,10 +1367,10 @@ class MonoLedInterface extends BaseInterface {
 		@parameter("ramptime 0-15(seconds) automatically limited by fixed ramp steps in device, consult API manual") ramp: number,
 	)
 	{
-		log("Setting monoled output", brightness, ramp);
+		this.owner.log("Setting monoled output", brightness, ramp);
 		const br = limitedVal(brightness, 0,100,2.55);
 		const r = (limitedVal(ramp, 0, 15,1,false));
-		log("Calculated values", br, r, Math.floor(15/r));
+		this.owner.log("Calculated values", br, r, Math.floor(15/r));
 		const cmd = 256 * Math.floor(15/r)+ br; 
 		this.command = cmd.toString();
 			
@@ -1530,7 +1557,7 @@ class QuadAudioSwitch extends BaseInterface {
 	/* Update the bitmask and send new command */
 	updateAndSend(){
 	const { sw1, sw2, sw3, sw4 } = this.switches;
-	console.log("Updating audio switch states", sw1, sw2, sw3, sw4), this.switches;
+	this.owner.log("Updating audio switch states", sw1, sw2, sw3, sw4), this.switches;
 	const data =
 		(sw1 ? 1 : 0) |
 		(sw2 ? 2 : 0) |
@@ -2134,7 +2161,7 @@ class LidarInterface extends BaseInterface {
 
 			this.mZone[zoneId - 1] = zoneObjectCount;
 			this.changed("zone" + this.pad(zoneId, 2));
-			log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
+			this.owner.log("Zone " + zoneId + " " + enterOrExit + " " + zoneObjectCount);
 			return;
 		}
 		const parseResultWithoutCount = LidarInterface.kParserWithoutCount.exec(data);
@@ -2171,13 +2198,13 @@ class LidarInterface extends BaseInterface {
 	private async sendCmd(command: string, expectedResponse: string = null, prefix: "B" | "S"): Promise<void> {
 		const raw = this.package(command, prefix);
 		this.driver.send(raw);
-		log("sending command: '" + raw + "'");
+		this.owner.log("sending command: '" + raw + "'");
 		if (expectedResponse) {
 			return new Promise<void>((resolve, reject) => {
 				this._cmdResponseWaiter = new CmdResponseWaiter(
 					command, expectedResponse,
 					result => {
-						log("resolved via response");
+						this.owner.log("resolved via response");
 						resolve();
 						this._cmdResponseWaiter = null;
 					},
@@ -2189,7 +2216,7 @@ class LidarInterface extends BaseInterface {
 			});
 		} else {
 			await commandDelay();
-			log("resolved via timeout");
+			this.owner.log("resolved via timeout");
 		}
 	}
 
@@ -2363,7 +2390,7 @@ class AnalogInputInterface extends BaseInterface {
 	
 	receiveData(data: string) {
 		const inputVal = Number(data.split("=")[1]);
-		log("Analog input received", inputVal, normalize(inputVal, this.mInMin, this.mInMax, this.mOutMin, this.mOutMax));
+		this.owner.log("Analog input received", inputVal, normalize(inputVal, this.mInMin, this.mInMax, this.mOutMin, this.mOutMax));
 		const finalVal = this.mNormalize ? normalize(inputVal, this.mInMin, this.mInMax, this.mOutMin, this.mOutMax) : inputVal;
 		this.value = finalVal;
 	}
@@ -2392,7 +2419,7 @@ class IoInterface extends BaseInterface {
 	}
 
 	receiveData(data: string) {
-		log("IO input received", data);
+		this.owner.log("IO input received", data);
 		this.mState = data === "1";
 		this.changed("state");
 	}
@@ -2427,7 +2454,7 @@ class EncoderInterface extends BaseInterface {
 	}
 
 	receiveData(data: string) {
-		log("Encoder input received", data);
+		this.owner.log("Encoder input received", data);
 		const splitData = data.split("=");
 		const prefix = splitData[0];
 		if (prefix === "Av") {
@@ -2441,7 +2468,7 @@ class EncoderInterface extends BaseInterface {
 			this.direction = parts[0];// Direction CW or CCW
 			const increment = this.direction === "CW"
 			this.value = Number(parts[1])
-			log("Increment value", this.value, this.value, -this.value);
+			this.owner.log("Increment value", this.value, this.value, -this.value);
 			this.absoluteValue = this.mAbsValue + (increment ? Number(parts[1]): -Number(parts[1]));
 		}
 	}
@@ -2458,7 +2485,7 @@ class AngleInterface extends BaseInterface {
 	private mTriggerFromPosition: number = 0;
 
 	receiveData(data: string) {
-			log("Angle input received", data);
+			this.owner.log("Angle input received", data);
 			const parts = data.split("=");
 			const prefix = parts[0]
 			const values = parts[1].split(",");
@@ -2545,7 +2572,7 @@ class TemperatureInterface extends BaseInterface {
 
 
 	receiveData(data: string) {
-			log("Temperature input received", data);
+			this.owner.log("Temperature input received", data);
 			const parts = data.split("=");
 			const prefix = parts[0]
 			const value = parts[1]
@@ -2599,7 +2626,7 @@ class AmbientLightInterface extends BaseInterface {
 
 
 	receiveData(data: string) {
-			log("Ambient light input received", data);
+			this.owner.log("Ambient light input received", data);
 			const parts = data.split("=");
 			const prefix = parts[0]
 			const value = parts[1]
@@ -2641,7 +2668,7 @@ class LightInterface extends BaseInterface {
 
 
 	receiveData(data: string) {
-			log("Ambient light input received", data);
+			this.owner.log("Ambient light input received", data);
 	this.light = Number(data);
 	return
 	}
@@ -2675,7 +2702,7 @@ class ColorInterface extends BaseInterface {
 
 
 	receiveData(data: string) {
-			log("Ambient light input received", data);
+			this.owner.log("Ambient light input received", data);
 	const parts = data.split("=");
 	const prefix = parts[0]
 	const value = parts[1]
@@ -2873,7 +2900,7 @@ class ShelfWeightInterface extends BaseInterface {
 	}
 
 	receiveData(data: string) {
-		log("Weight input receivedd", data);
+		this.owner.log("Weight input receivedd", data);
 		const parts = data.split("=");
 		const prefix = parts[0]
 		const value = parts[1]
@@ -3056,7 +3083,7 @@ class BarWeightInterface extends BaseInterface {
 
 
 	receiveData(data: string) {	
-		log("Bar weight input received", data);
+		this.owner.log("Bar weight input received", data);
 		const parts = data.split("=");
 		const prefix = parts[0]
 		const value = parts[1]
@@ -3081,13 +3108,13 @@ class BarWeightInterface extends BaseInterface {
 					const [key, val] = part.split(":");
 					itemInfo[key] = val;
 				});
-				// Here you can store or process itemInfo as needed
-				console.log("Received item info: ", itemInfo);
+				
+				this.owner.log("Received item info: ", itemInfo);
 				break;
 			case"PU":
 				// Pickup trigger for item number
 				const pickItemNo = Number(value);
-				log(pickItemNo)
+				this.owner.log(pickItemNo)
 				if (pickItemNo >= 1 && pickItemNo <= 16) {
 					this.mLiftedItems[pickItemNo - 1] = true;
 					this.changed("liftedItem_" + pickItemNo);
@@ -3285,11 +3312,4 @@ export function normalize(value:number, inMin:number, inMax:number, outMin?:numb
     return outMin + ((value - inMin) * (outMax - outMin)) / (inMax - inMin);
 }
 
-/**
- Log messages, allowing my logging to be easily disabled in one place.
- */
-export function log(...messages: any[]) {
-	if (_debugLogging)
-		// Set to false to disable verbose logging
-		console.log(messages);
-}
+
