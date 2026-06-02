@@ -31,12 +31,20 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
         function BarcoPW392(socket) {
             var _this = _super.call(this, socket) || this;
             _this.addState(_this._power = new NetworkProjector_1.BoolState('POWR', 'power'));
-            _this.addState(_this._input = new NetworkProjector_1.NumState('IABS', 'input', 0, 25, function () { return _this._power.getCurrent(); }));
+            _this.addState(_this._input = new NetworkProjector_1.NumState('IABS', 'input', BarcoPW392_1.kMinInput, BarcoPW392_1.kMaxInput, function () { return _this._power.getCurrent(); }));
             _this.poll();
             _this.attemptConnect();
             return _this;
         }
         BarcoPW392_1 = BarcoPW392;
+        Object.defineProperty(BarcoPW392.prototype, "input", {
+            set: function (value) {
+                if (this._input.set(value))
+                    this.sendCorrection();
+            },
+            enumerable: false,
+            configurable: true
+        });
         BarcoPW392.prototype.justConnected = function () {
             _super.prototype.justConnected.call(this);
             this.getInitialState();
@@ -86,7 +94,16 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
             }
         };
         var BarcoPW392_1;
+        BarcoPW392.kMinInput = 0;
+        BarcoPW392.kMaxInput = 25;
         BarcoPW392.replyParser = /%\d* (\S*) (!?)(\d*)/;
+        __decorate([
+            Meta.property("Desired input source number"),
+            Meta.min(BarcoPW392_1.kMinInput),
+            Meta.max(BarcoPW392_1.kMaxInput),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], BarcoPW392.prototype, "input", null);
         BarcoPW392 = BarcoPW392_1 = __decorate([
             Meta.driver('NetworkTCP', { port: 1025 }),
             __metadata("design:paramtypes", [Object])

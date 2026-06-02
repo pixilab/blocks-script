@@ -12,6 +12,10 @@ import {NetworkTCP} from "system/Network";
  */
 @Meta.driver('NetworkTCP', { port: 1025 })
 export class BarcoPW392 extends NetworkProjector {
+	private static kMinInput = 0;				// Allowable input range
+	private static kMaxInput = 25;
+
+
 	protected _input: NumState;
 	private static replyParser = /%\d* (\S*) (!?)(\d*)/;
 
@@ -20,12 +24,24 @@ export class BarcoPW392 extends NetworkProjector {
 		this.addState(this._power = new BoolState('POWR', 'power'));
 		this.addState(this._input = new NumState(
 			'IABS', 'input',
-			0, 25, () => this._power.getCurrent()
+			BarcoPW392.kMinInput, BarcoPW392.kMaxInput,
+			() => this._power.getCurrent()
 		));
 
 		this.poll();	// Get polling going
 		this.attemptConnect();	// Attempt initial connection
 		// console.info("inited");
+	}
+
+
+	/*
+	 Set desired input source.
+	 */
+	@Meta.property("Desired input source number")
+	@Meta.min(BarcoPW392.kMinInput) @Meta.max(BarcoPW392.kMaxInput)
+	public set input(value: number) {
+		if (this._input.set(value))
+			this.sendCorrection();
 	}
 
 	/**
