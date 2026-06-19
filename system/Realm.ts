@@ -24,5 +24,7 @@ export interface TaskGroup {
 }
 
 export interface Task {
+	readonly name: string;		// Task name
+	readonly fullName: string;	// Full path to this system object
 	running: boolean;	// True if the task is running
 }

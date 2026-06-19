@@ -6,7 +6,7 @@
  */
 
 import { callable, driver,parameter,property } from "system_lib/Metadata";
-import { NexmosphereBase,ConnType,Dictionary,padVal,normalize } from "./NexmosphereBase";
+import { NexmosphereBase,ConnType,Dictionary,padVal} from "../driver/NexmosphereBase";
 import { AggregateElem } from "system_lib/ScriptBase";
 
 
@@ -17,22 +17,22 @@ const kNumOutputs: number = 4;	// Number of relay outputs on this device
 @driver('NetworkTCP', { port: 4001 })
 @driver('SerialPort', { baudRate: 115200 })
 export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
-   
+
     protected neo: Dictionary<NeoBaseClass>;
     protected outstandingModelQuery: CancelablePromise<void>;
-    
-  
+
+
     constructor(port: ConnType) {
         super(port, kNumInterfaces);
         this.initConnection(port)
         this.neo = this.namedAggregateProperty("neo",NeoOutput || NeoDevice || NeoRuntime || NeoDiagnostic || NeoSoftfuse || NeoWatchdog || NeoSchedule || NeoPwrXtalk || NeoSensmi);
         this.initNeo();
     }
-    
+
     initNeo(){
         this.setTime();
         if (this.port.enabled){
-           
+
         this.send("P000B[MODEL?]"); //Query model to setup outputs correctly.
           if (this.outstandingModelQuery) {
                 try { this.outstandingModelQuery.cancel(); } catch(_) {}
@@ -70,13 +70,13 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
             padVal((now.getMonth() + 1),2) + "/" +
             padVal(now.getFullYear(),4);
             this.log("Setting Neo time to servertime:", timeStr);
-        this.send("S000B[TIME=" + timeStr + "]");  
+        this.send("S000B[TIME=" + timeStr + "]");
     }
 
 
     private handlers: { [key: string]: (s: string) => void } = {
-    /* Handle data for outputs */ 
-    'OUTPUT': (s: string) => { 
+    /* Handle data for outputs */
+    'OUTPUT': (s: string) => {
         this.log('handle OUTPUT', s);
         // Get the character immediately after "OUTPUT"
         const ix = "OUTPUT".length
@@ -92,7 +92,7 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
         //Find the right NeoOutput instance
         const key = `output${num}`;
         this.messageRouter(key, data);
-        
+
     },
     'TIME': (s: string) => { this.log('handle TIME=', s); },
     'FWVERSION=': (s: string) => { this.log('FWVERSION=', s); },
@@ -104,18 +104,18 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
     'SCHED': (s: string) => { this.log('SCHED', s); },
     'RUNTIME': (s: string) => { this.log('RUNTIME', s); },
     'OPERATIONTIME': (s: string) => { this.log('OPERATIONTIME', s); },
-    'MODEL': (s: string) => { 
+    'MODEL': (s: string) => {
         this.log('MODEL', s);
         //Cancel any pending model query timeout
         if (this.outstandingModelQuery) {
             try { this.outstandingModelQuery.cancel(); } catch(_) {}
             this.outstandingModelQuery = undefined;}
-        //Extract model code    
+        //Extract model code
         let command = s.split('=')[1]
         //Find handler for model
         for (const key in this.modelHandlers) {
             if (key === command) {
-                this.modelHandlers[key](); 
+                this.modelHandlers[key]();
                 return; // explicitly return void
             }
         }
@@ -123,13 +123,13 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
 }
   /* Handle specifics for various models */
   private modelHandlers: { [key: string]: () => void } = {
-    'NEO320': () => { 
+    'NEO320': () => {
         this.log('handle NEO320');
         this.setupOutputs(2);},
     'NEO520': () => {
         this.log('handle NEO520');
         this.setupOutputs(2);},
-    'NEO620': () => { 
+    'NEO620': () => {
         this.log('handle NEO620');
         this.setupOutputs(2);
         this.neo['sensmi'] = new NeoSensmi(this);
@@ -149,7 +149,7 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
   protected handleControllerMessage(str: string): void {
     for (const key in this.handlers) {
       if (str.indexOf(key) === 0) {
-        this.handlers[key](str); 
+        this.handlers[key](str);
         return; // explicitly return void
       }
     }
@@ -186,7 +186,7 @@ export class Nexmosphere_NEO extends NexmosphereBase<ConnType> {
     this.send("P000B[AUTOSEND=INPUT:ALL:OFF]");
         }
     }
-    
+
 }
 
 
@@ -203,7 +203,7 @@ class NeoBaseClass extends AggregateElem  {
     // Declare handlers here so base class code can use subclass handlers safely
     protected handlers: { [key: string]: (s: string) => void } = {};
 
-    protected sendData(data: string) { 
+    protected sendData(data: string) {
             this.owner.send(data);
         }
     recieveData(str: string): void {
@@ -225,16 +225,16 @@ class NeoBaseClass extends AggregateElem  {
     }
 }
 class NeoDevice extends NeoBaseClass  {
-	
+
 	private _voltage = 0
 	private _current = 0
 	private _power = 0
     private _usage = 0
-	
+
 
  	constructor(owner: NexmosphereBase<ConnType>,ix?:number) {
 		super(owner,ix);
-	}	
+	}
 
     protected handlers: { [key: string]: (s: string) => void } = {
     'INPUTCURRENT': (s: string) => {
@@ -266,26 +266,26 @@ class NeoDevice extends NeoBaseClass  {
 
     @property("Input Voltage", true)
     get inputVoltage(): number { return this._voltage; }
-    set inputVoltage(value: number) { 
+    set inputVoltage(value: number) {
         if (value != this._voltage)
             this._voltage = value; }
     @property("Input Current", true)
     get inputCurrent(): number { return this._current; }
-    set inputCurrent(value: number) { 
+    set inputCurrent(value: number) {
 
     this.owner.log("Setting input current to:", value);
         if (value != this._current)
             this._current = value;
         }
     @property("Input Power", true)
-    get inputPower(): number { return this._power;} 
-    set inputPower(value: number) { 
+    get inputPower(): number { return this._power;}
+    set inputPower(value: number) {
         if (value != this._power)
-            this._power = value;        
+            this._power = value;
     }
     @property("Input Energy Usage", true)
     get inputUsage(): number { return this._power; }
-    set inputUsage(value: number) { 
+    set inputUsage(value: number) {
         if (value != this._usage)
             this._usage = value;
     }
@@ -333,7 +333,7 @@ class NeoSensmi extends NeoBaseClass  {
         if (country)
             this.sendData("SENSMI[COUNTRY=" + country + "]");
         if (area)
-            this.sendData("SENSMI[AREA=" + area + "]");     
+            this.sendData("SENSMI[AREA=" + area + "]");
         if (city)
             this.sendData("SENSMI[CITY=" + city + "]");
         this.sendData("SENSMI[PROV=SAVE]");
@@ -343,15 +343,15 @@ class NeoSensmi extends NeoBaseClass  {
 
 
 class NeoOutput extends NeoBaseClass  {
-   
-    private mIx = 0 
+
+    private mIx = 0
     private mRelay =  true
     private mCurrent = 0
     private mPower = 0
-    private mUsage = 0  
+    private mUsage = 0
     private mVoltage = 0
-    
- 
+
+
 
     constructor(owner:Nexmosphere_NEO, ix: number) {
         super(owner,ix);
@@ -360,30 +360,30 @@ class NeoOutput extends NeoBaseClass  {
     }
 
     protected handlers: { [key: string]: (s: string) => void } = {
-    /* Handle data for outputs */ 
-       
+    /* Handle data for outputs */
+
         'EMPTY': (s: string) => { //Handle the case of no data after OUTPUTn
             this.owner.log('handle status (EMPTY)', s);
             this.mRelay = s === "ON";
-            this.changed("relay"); 
+            this.changed("relay");
         },
-        'USAGE': (s: string) => { 
+        'USAGE': (s: string) => {
             this.owner.log('handle USAGE', s);
             this.usage = parseFloat(s.replace(",", "."));
-        },    
-        'POWER': (s: string) => { 
+        },
+        'POWER': (s: string) => {
             this.owner.log('handle POWER', s);
             this.power = parseFloat(s.replace(",", "."));
         },
-        'CURRENT': (s: string) => { 
+        'CURRENT': (s: string) => {
             this.owner.log('handle CURRENT', s);
             this.current = parseFloat(s.replace(",", "."));
         },
-        'VOLTAGE': (s: string) => { 
+        'VOLTAGE': (s: string) => {
             this.owner.log('handle VOLTAGE', s);
             this.voltage = parseFloat(s.replace(",", "."));
         }
-      
+
     };
 
 
@@ -398,7 +398,7 @@ class NeoOutput extends NeoBaseClass  {
     }
     @property("Output voltage", true)
     get voltage(): number { return this.mVoltage; }
-    set voltage(value: number) { 
+    set voltage(value: number) {
         if (value != this.mVoltage)
             this.mVoltage = value;}
     @property("Output current", true)
@@ -409,13 +409,13 @@ class NeoOutput extends NeoBaseClass  {
 
     @property("Output power", true)
     get power(): number { return this.mPower; }
-    set power(value: number) { 
+    set power(value: number) {
         if (value != this.mPower)
             this.mPower = value; }
 
     @property("Output energy usage", true)
     get usage(): number { return this.mUsage; }
-    set usage(value: number) { 
+    set usage(value: number) {
         if (value != this.mUsage)
             this.mUsage = value; }
 
@@ -423,11 +423,11 @@ class NeoOutput extends NeoBaseClass  {
     resetUsage() {
         this.usage = 0;
         this.sendData("P000B[OUTPUT" + this.mIx +"USAGERESET]")
-        
+
     }
     @callable("Update output metrics properties")
     updateMetrics(
-       
+
     ) {
             this.sendData("P000B[OUTPUT" + this.mIx +"CURRENT?]")
             this.sendData("P000B[OUTPUT" + this.mIx +"POWER?]")
@@ -435,6 +435,6 @@ class NeoOutput extends NeoBaseClass  {
             this.sendData("P000B[OUTPUT" + this.mIx +"VOLTAGE?]")
     }
 
-}  
-       
-    
+}
+
+

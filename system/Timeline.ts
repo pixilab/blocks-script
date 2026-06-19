@@ -21,6 +21,8 @@ export interface Group {
  */
 export interface Timeline {
 	readonly duration: number;	// Timeline's duration, in mS
+	readonly name: string;		// Timeline name
+	readonly fullName: string;	// Full path to this system object
 	playing: boolean;			// Timeline is playing
 	stopped: boolean;			// Timeline is stopped
 	time: TimeFlow;				// Time position, rate, etc.

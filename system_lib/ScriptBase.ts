@@ -47,9 +47,9 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 	 * Expose a named and indexed property of object type T.
 	 *
 	 * IMPORTANT: The name specified  MUST be identical to
-	 * the instance variable name used to hold this indexed
-	 * property, or the property won't be found by task
-	 * expressions or other scripts.
+	 * the direct instance variable name used to hold this indexed
+	 * property on the script/driver, or the property won't be found
+	 * by task expressions or other scripts.
 	 *
 	 * NOTE: T should normally extend AggregateElem, allowing
 	 * you to use explicit change notification. Not enforced
@@ -243,6 +243,13 @@ export interface IndexedProperty<T> extends IndexedAny<T> {
 	 * A return value === 0 keeps the original order of lhs and rhs.
 	 */
 	sort(compareFn: (lhs: T, rhs: T) => number): void;
+
+	/**
+	 * Shut down this indexed property, releasing any resources used by it.
+	 * NOTE: This is an advanced operation, normally not required if you
+	 * use IndexedProperty as recommended.
+	 */
+	kill(): void;
 }
 
 /**

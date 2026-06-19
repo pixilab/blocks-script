@@ -25,7 +25,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Metadata", "./NexmosphereBase", "system_lib/ScriptBase"], function (require, exports, Metadata_1, NexmosphereBase_1, ScriptBase_1) {
+define(["require", "exports", "system_lib/Metadata", "../driver/NexmosphereBase", "system_lib/ScriptBase"], function (require, exports, Metadata_1, NexmosphereBase_1, ScriptBase_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Nexmosphere_NEO = void 0;
