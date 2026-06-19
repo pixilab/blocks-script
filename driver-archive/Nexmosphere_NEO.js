@@ -31,7 +31,7 @@ define(["require", "exports", "system_lib/Metadata", "../driver/NexmosphereBase"
     exports.Nexmosphere_NEO = void 0;
     var kNumInterfaces = 4;
     var kNumOutputs = 4;
-    var Nexmosphere_NEO = (function (_super) {
+    var Nexmosphere_NEO = exports.Nexmosphere_NEO = (function (_super) {
         __extends(Nexmosphere_NEO, _super);
         function Nexmosphere_NEO(port) {
             var _this = _super.call(this, port, kNumInterfaces) || this;
@@ -209,7 +209,6 @@ define(["require", "exports", "system_lib/Metadata", "../driver/NexmosphereBase"
         ], Nexmosphere_NEO);
         return Nexmosphere_NEO;
     }(NexmosphereBase_1.NexmosphereBase));
-    exports.Nexmosphere_NEO = Nexmosphere_NEO;
     var NeoBaseClass = (function (_super) {
         __extends(NeoBaseClass, _super);
         function NeoBaseClass(driver, ix) {

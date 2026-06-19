@@ -38,6 +38,9 @@ define(["require", "exports", "system_lib/Metadata", "driver/NetworkProjector"],
         }
         BarcoPW392_1 = BarcoPW392;
         Object.defineProperty(BarcoPW392.prototype, "input", {
+            get: function () {
+                return this._input.get();
+            },
             set: function (value) {
                 if (this._input.set(value))
                     this.sendCorrection();

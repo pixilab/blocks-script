@@ -35,13 +35,16 @@ export class BarcoPW392 extends NetworkProjector {
 
 
 	/*
-	 Set desired input source.
+	 Set/get desired input source.
 	 */
 	@Meta.property("Desired input source number")
 	@Meta.min(BarcoPW392.kMinInput) @Meta.max(BarcoPW392.kMaxInput)
 	public set input(value: number) {
 		if (this._input.set(value))
 			this.sendCorrection();
+	}
+	public get input(): number {
+		return this._input.get();
 	}
 
 	/**

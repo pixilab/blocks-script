@@ -27,7 +27,7 @@ define(["require", "exports", "system_lib/Metadata", "../driver/NexmosphereBase"
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Nexmosphere_XN135M3 = void 0;
     var kNumInterfaces = 2;
-    var Nexmosphere_XN135M3 = (function (_super) {
+    var Nexmosphere_XN135M3 = exports.Nexmosphere_XN135M3 = (function (_super) {
         __extends(Nexmosphere_XN135M3, _super);
         function Nexmosphere_XN135M3(port) {
             var _this = _super.call(this, port, kNumInterfaces) || this;
@@ -48,5 +48,4 @@ define(["require", "exports", "system_lib/Metadata", "../driver/NexmosphereBase"
         ], Nexmosphere_XN135M3);
         return Nexmosphere_XN135M3;
     }(NexmosphereBase_1.NexmosphereBase));
-    exports.Nexmosphere_XN135M3 = Nexmosphere_XN135M3;
 });
