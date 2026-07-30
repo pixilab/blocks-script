@@ -3,8 +3,7 @@ https://nexmosphere.com/technology/xperience-platform/
 
 Base driver for the various kinds of Nexmosphere interfaces, collecting the
 common functionality. Note that this isn't the driver the user sees. If you're
-looking for that, you probably want the Nexmosphere.ts file instead, or one
-of the other subclasses.
+looking for that, you probably want the controller specific driver. e.g  NexmosphereXN180.ts
 
 This base class provides:
 - Unified message parsing and handling for all Nexmosphere protocols
@@ -15,8 +14,8 @@ This base class provides:
 - Common interface implementations for various Nexmosphere elements
 
 Transport Support:
-- NetworkTCP: Connection-oriented with autoConnect and lifecycle events
-- SerialPort: Connection-oriented with autoConnect and lifecycle events  
+- NetworkTCP: Connection-oriented with autoConnect and lifecycle events (via serial server such as MOXA Nport or similar)
+- SerialPort: Connection-oriented with autoConnect and lifecycle events (Connected via USB to PIXILAB PLAYER) 
 - NetworkUDP: Connectionless transport use unique listening port for each device and configure the device respectively.
 
 Interface Discovery:
@@ -24,7 +23,7 @@ The driver can operate in two modes:
 1. Automatic Discovery: Polls interface ports to detect connected elements
 2. Manual Configuration: Uses JSON configuration to specify exact interfaces
 
-Configuration option examples:
+Manual configuration option examples:
 - Number only: 8 (sets number of ports to poll, just type the number og ports to poll in Driver Options)
 - Interface array json (depricated but available for backwards compatibility): 
 [{
@@ -63,7 +62,7 @@ A more future proof configuration scheme is implemented, use this for any new se
 }
 
 This allows extending the options for future use, device is implemented as an example, 
-it will filter UDP messages based on device ID in cases UDP is forced to use same listeningport:
+it will filter UDP messages based on device ID in cases UDP is forced to use same listeningport (SAME LISTENER PORT IS CURRENTLY NOT SUPPORTED IN BLOCKS, but may be in future)):
 {
 	"device": {
 		"udpDeviceID": "00:08:DC:74:B0:2E"
@@ -112,6 +111,7 @@ Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Re
 Created 2021 by Mattias Andersson.
 Contributors:Samuel Waltz, NoParking (Added Lidar support. Thanks!)
 
+Changelog:
 v.1.1: 
 - Added UDP support. 
 - Split into baseclass and subclasses for allowing different transport and controller configurations.
@@ -126,6 +126,10 @@ v.1.2.1:
 - Automatically tell remote device to turn off UDP echo if we see an echoed hartbeat message as we currently do not use them.
 - Now logs per device and include the port name for easier debugging in multi-device setups if debug logging is turned on
 - Fixed bug in "connection" status where it flashed briefly to false for every hartbeat.
+v.1.2.2:
+- Accepting user-selected device ID in FROMID (in addition to MAC address). Device ID can now be 1-24 ASCII characters.
+- Accepting optional message index prefix (#XXXXX:) in UDP packets for compatibility with devices that have message numbering enabled (we currently ignores the index).
+- Small bugfix in options allowing for device id to be specified and still poll for interfaces if no interfaces are specified in the options.
 */
 
 
@@ -148,7 +152,7 @@ const kCtrlPacketParser = /^([PS])(\d+)([AB])\[(.+)]/;
 // Controllers response to a product code request (D003B[TYPE]) controller response D001B[TYPE=XRDR1  ]
 
 const kProductCodeParser = /D(\d+)B\[\w+=([^\]]+)]/;
-const kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
+const kUdpPacketParser = /^(?:#\d+:)?FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}|[^:]{1,24}):(.+)/; // Accepts optional message ix (we do not use it) and matches either a MAC address (6 pairs of hex digits separated by colons) or a 1-24 character ASCII string for device ID, followed by a colon and the rest of the message
 const kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
 
 // UDP controllers hartbeat if echo is on. We use runtime to infer if the device is alive or not, since UDP has no underlying connection. The driver sends out hartbeat messages and expects a reply within a certain time, if the reply is missing we set the connected status to false until we get a reply again.
@@ -217,10 +221,10 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 						 this.myDeviceID = options.device.udpDeviceID;		
 						 this.log("Using hardcoded device ID for UDP:", this.myDeviceID);
 					}
-					if (options.interfaces?.length > 0) {
+					if (Array.isArray(options.interfaces) && options.interfaces.length > 0) {
 						this.addInterfaces(options.interfaces);
-					} else {
-						this.addInterfaces(options); //Assume options is the interfaces array
+					} else if (Array.isArray(options)) {
+						this.addInterfaces(options); //Legacy: options is directly an interfaces array
 					}
 				}
 			}	
@@ -231,7 +235,11 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 		}	
 		}
 	}
-	private addInterfaces(ifaces: IfaceInfo[]){
+	private addInterfaces(ifaces: IfaceInfo[] | undefined){
+		if (!Array.isArray(ifaces) || ifaces.length === 0) {
+			this.pollEnabled = true;
+			return;
+		}
 		this.pollEnabled = false;
 					for (let iface of ifaces) {
 						this.log("Specified interfaces", iface.ifaceNo, iface.modelCode, iface.name);

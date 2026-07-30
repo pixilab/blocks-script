@@ -78,15 +78,15 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
     var kXTalkPacketParser = /^X(\d+)([AB])\[(.+)]/;
     var kCtrlPacketParser = /^([PS])(\d+)([AB])\[(.+)]/;
     var kProductCodeParser = /D(\d+)B\[\w+=([^\]]+)]/;
-    var kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
+    var kUdpPacketParser = /^(?:#\d+:)?FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}|[^:]{1,24}):(.+)/;
     var kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
     var kUdpHartbeatEchoParser = /N000B\[RUNTIME\?\]/;
     var NEXMOSPHERE_COMMAND_DELAY_MS = 100;
-    var NexmosphereBase = exports.NexmosphereBase = (function (_super) {
+    var NexmosphereBase = (function (_super) {
         __extends(NexmosphereBase, _super);
         function NexmosphereBase(port, numbOfInterfaces) {
             var _this = this;
-            var _a, _b;
+            var _a;
             _this = _super.call(this, port) || this;
             _this.port = port;
             _this.pollEnabled = true;
@@ -117,10 +117,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
                             _this.myDeviceID = options.device.udpDeviceID;
                             _this.log("Using hardcoded device ID for UDP:", _this.myDeviceID);
                         }
-                        if (((_b = options.interfaces) === null || _b === void 0 ? void 0 : _b.length) > 0) {
+                        if (Array.isArray(options.interfaces) && options.interfaces.length > 0) {
                             _this.addInterfaces(options.interfaces);
                         }
-                        else {
+                        else if (Array.isArray(options)) {
                             _this.addInterfaces(options);
                         }
                     }
@@ -134,6 +134,10 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             return _this;
         }
         NexmosphereBase.prototype.addInterfaces = function (ifaces) {
+            if (!Array.isArray(ifaces) || ifaces.length === 0) {
+                this.pollEnabled = true;
+                return;
+            }
             this.pollEnabled = false;
             for (var _i = 0, ifaces_1 = ifaces; _i < ifaces_1.length; _i++) {
                 var iface = ifaces_1[_i];
@@ -579,6 +583,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
         ], NexmosphereBase.prototype, "debugLogging", null);
         return NexmosphereBase;
     }(Driver_1.Driver));
+    exports.NexmosphereBase = NexmosphereBase;
     function commandDelay() {
         return new Promise(function (resolve) {
             wait(NEXMOSPHERE_COMMAND_DELAY_MS).then(function () {
