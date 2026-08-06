@@ -1,0 +1,13 @@
+# Normalize line endings: text files are stored with LF in the repository
+# regardless of the committer's OS, so line endings never show up as diffs.
+* text=auto
+
+# Mark checked in compiled .js-files as generated: GitHub then collapse
+# those files in merge request diff UI and exclude them from language
+# statistics.
+*.js linguist-generated=true
+
+# Except these, which are vendored third-party libraries (no .ts sibling)
+lib/split-string.js linguist-vendored -linguist-generated
+lib-archive/papaparse.js linguist-vendored -linguist-generated
+lib-archive/suncalc.js linguist-vendored -linguist-generated
