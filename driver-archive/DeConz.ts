@@ -14,12 +14,12 @@
  */
 
 
-import {NetworkTCP} from "system/Network";
-import {SimpleFile} from "system/SimpleFile";
-import {SimpleHTTP} from "system/SimpleHTTP";
-import {Driver} from "system_lib/Driver";
+import { NetworkTCP } from "system/Network";
+import { SimpleFile } from "system/SimpleFile";
+import { SimpleHTTP } from "system/SimpleHTTP";
+import { Driver } from "system_lib/Driver";
 import * as Meta from "system_lib/Metadata";
-import {callable, driver, parameter} from "system_lib/Metadata";
+import { callable, driver, parameter } from "system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 8080 })
 export class DeConz extends Driver<NetworkTCP> {
@@ -201,7 +201,7 @@ export class DeConz extends Driver<NetworkTCP> {
 	private authenticationPoll() {
 		SimpleHTTP.newRequest(this.baseUrl).post(
 			'{"devicetype": "pixilab-blocks" }'
-		).then(response=> {
+		).then(response => {
 			this.connected = true;
 			if (response.status === 200) {
 				var authResponse: AuthResponse[] = JSON.parse(response.data);
@@ -227,7 +227,7 @@ export class DeConz extends Driver<NetworkTCP> {
 	 * and persist config to file.
 	 */
 	private gotAuthCode(authCode: string) {
-		this.config = {authCode: authCode};
+		this.config = { authCode: authCode };
 		this.keyedBasedUrl = undefined;	// Must be recomputed
 		SimpleFile.write(this.configFileName, JSON.stringify(this.config));
 		this.authorized = true;
@@ -313,6 +313,13 @@ export class DeConz extends Driver<NetworkTCP> {
 			this.pendingCommands = {};	// Just discard all commands
 			return;
 		}
+		/*      Devices and groups are fetched on separate poll ticks, so there's a window
+				after startup where devices exist but groups don't. Commands arriving in
+				that window used to reach the lookups below and throw. Leave them queued;
+				checkReadyToSend flushes them once both lists are in.
+			*/
+		if (!this.devices || !this.groups)
+			return;
 		for (var dest in this.pendingCommands) {
 			if (this.pendingCommands.hasOwnProperty(dest)) {
 				// console.info("Sending to", dest);
@@ -394,7 +401,7 @@ export class DeConz extends Driver<NetworkTCP> {
 	/**
 	 * Publish props for all groups not in oldGroups.
 	 */
-	private publishGroupPropsForNew(oldGroups : Dictionary<Group>) {
+	private publishGroupPropsForNew(oldGroups: Dictionary<Group>) {
 		for (const newGroupName in this.groups.byName) {
 			if (!oldGroups[newGroupName])
 				this.publishGroupProps(newGroupName);
@@ -405,19 +412,19 @@ export class DeConz extends Driver<NetworkTCP> {
 	 * Make composite name for each group property
 	 */
 	private static grpPropNameBrightness(groupName: string) {
-		return groupName+'_brt';
+		return groupName + '_brt';
 	}
 
 	private static grpPropNameOn(groupName: string) {
-		return groupName+'_on';
+		return groupName + '_on';
 	}
 
 	private static grpPropNameHue(groupName: string) {
-		return groupName+'_hue';
+		return groupName + '_hue';
 	}
 
 	private static grpPropNameSaturation(groupName: string) {
-		return groupName+'_sat';
+		return groupName + '_sat';
 	}
 
 	/**
@@ -436,7 +443,7 @@ export class DeConz extends Driver<NetworkTCP> {
 		var hue = 1;
 		var saturation = 0;
 
-		this.property<number>(DeConz.grpPropNameBrightness(newGroupName), {type: Number, description: "Group Brightness"}, setValue => {
+		this.property<number>(DeConz.grpPropNameBrightness(newGroupName), { type: Number, description: "Group Brightness" }, setValue => {
 			if (setValue !== undefined) {
 				brightess = setValue;
 				this.setBrightness(newGroupName, setValue, 0.2)
@@ -444,7 +451,7 @@ export class DeConz extends Driver<NetworkTCP> {
 			return brightess;
 		});
 
-		this.property<boolean>(DeConz.grpPropNameOn(newGroupName), {type: Boolean, description: "Group On"}, setValue => {
+		this.property<boolean>(DeConz.grpPropNameOn(newGroupName), { type: Boolean, description: "Group On" }, setValue => {
 			if (setValue !== undefined) {
 				on = setValue;
 				this.setOn(newGroupName, on);
@@ -452,7 +459,7 @@ export class DeConz extends Driver<NetworkTCP> {
 			return on;
 		});
 
-		this.property<number>(DeConz.grpPropNameHue(newGroupName), {type: Number, description: "Group Hue"}, setValue => {
+		this.property<number>(DeConz.grpPropNameHue(newGroupName), { type: Number, description: "Group Hue" }, setValue => {
 			if (setValue !== undefined) {
 				hue = setValue;
 				this.setHueState(newGroupName, setValue);
@@ -460,7 +467,7 @@ export class DeConz extends Driver<NetworkTCP> {
 			return hue;
 		});
 
-		this.property<number>(DeConz.grpPropNameSaturation(newGroupName), {type: Number, description: "Group Saturation"}, setValue => {
+		this.property<number>(DeConz.grpPropNameSaturation(newGroupName), { type: Number, description: "Group Saturation" }, setValue => {
 			if (setValue !== undefined) {
 				saturation = setValue;
 				this.setSaturationState(newGroupName, setValue);
@@ -481,7 +488,7 @@ export class DeConz extends Driver<NetworkTCP> {
 	/*	Get the request URI base, including the authorization code, with a terminating
 		slash.
 	 */
-	private getKeyedUrlBase(): string|undefined {
+	private getKeyedUrlBase(): string | undefined {
 		if (!this.keyedBasedUrl && this.config)
 			this.keyedBasedUrl = this.baseUrl + '/' + this.config.authCode + '/';
 		return this.keyedBasedUrl;
@@ -575,22 +582,22 @@ interface Group {
 	name: string,		// Given name of this group
 	id: string;
 	devicemembership: any[],
- 	etag: string,
+	etag: string,
 	type: string,
 	lights: string[],	// IDs of devices in group
- 	scenes: any[],
+	scenes: any[],
 	action: Action
 }
 
 interface Action {
-    bri: number,
-    colormode: string,
-    ct: number,
-    effect: string,
-    hue: number,
-    on: boolean,
-    sat: number,
-    scene: any,
-    xy: number[]	// 2 elements, X and Y
+	bri: number,
+	colormode: string,
+	ct: number,
+	effect: string,
+	hue: number,
+	on: boolean,
+	sat: number,
+	scene: any,
+	xy: number[]	// 2 elements, X and Y
 }
 
