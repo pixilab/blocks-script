@@ -29,7 +29,7 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DeConz = void 0;
-    var DeConz = exports.DeConz = (function (_super) {
+    var DeConz = (function (_super) {
         __extends(DeConz, _super);
         function DeConz(socket) {
             var _this = _super.call(this, socket) || this;
@@ -228,6 +228,8 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 this.pendingCommands = {};
                 return;
             }
+            if (!this.devices || !this.groups)
+                return;
             var _loop_1 = function () {
                 if (this_1.pendingCommands.hasOwnProperty(dest)) {
                     var cmd = this_1.pendingCommands[dest];
@@ -431,6 +433,7 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
         ], DeConz);
         return DeConz;
     }(Driver_1.Driver));
+    exports.DeConz = DeConz;
     function clip(value) {
         value = value || 0;
         return Math.max(0, Math.min(1, value));
