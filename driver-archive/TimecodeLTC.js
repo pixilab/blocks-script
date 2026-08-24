@@ -46,6 +46,7 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             _this.mOffset = 0;
             _this.mOffsetMs = 0;
             _this.mResetOnStop = false;
+            _this.mUserBits = 0;
             _this.mConnected = false;
             _this.lastDataTime = 0;
             _this.isReset = false;
@@ -120,6 +121,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(TimecodeLTC.prototype, "userBits", {
+            get: function () { return this.mUserBits; },
+            set: function (value) { this.mUserBits = value; },
+            enumerable: false,
+            configurable: true
+        });
         Object.defineProperty(TimecodeLTC.prototype, "resetOnStop", {
             get: function () { return this.mResetOnStop; },
             set: function (value) {
@@ -164,9 +171,12 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             for (var ix = 0; ix < pieceCount; ix += 2)
                 item[itemPairs[ix]] = itemPairs[ix + 1];
             var version = parseFloat(item['v']);
-            if (version < 1.1) {
+            if (version < 1.4) {
                 if (!this.toldOldversion) {
-                    console.error("Requires version 1.1 or later of the timecode-reader program");
+                    if (version < 1.1)
+                        console.error("Requires version 1.1 or later of the timecode-reader program");
+                    else
+                        console.warn("The userBits property requires version 1.4 or later of the timecode-reader program");
                     this.toldOldversion = true;
                 }
                 return;
@@ -177,6 +187,9 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
                 var val = ((parseFloat(sigLevel) + 64) / 64);
                 this.volume = Math.max(0, Math.min(1, val));
             }
+            var userBitsStr = item['u'];
+            if (userBitsStr)
+                this.userBits = parseFloat(userBitsStr);
             var now = this.getMonotonousMillis();
             var frameNum = item['n'];
             if (frameNum) {
@@ -261,6 +274,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], funct
             __metadata("design:type", Number),
             __metadata("design:paramtypes", [Number])
         ], TimecodeLTC.prototype, "offset", null);
+        __decorate([
+            (0, Metadata_1.property)("User bits data, where least significant bit is the first user bit in the timecode frame.", true),
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], TimecodeLTC.prototype, "userBits", null);
         __decorate([
             (0, Metadata_1.property)("Auto reset time position to 0 when timecode stops"),
             __metadata("design:type", Boolean),

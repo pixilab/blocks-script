@@ -150,10 +150,11 @@ define(["require", "exports", "system_lib/Driver", "system_lib/Metadata", "../sy
             get: function () {
                 return this._timeFlow;
             },
-            set: function (pos) {
-                var frame = this.convertMillisecondsToFrame(pos.position);
+            set: function (timeFlow) {
+                var frame = this.convertMillisecondsToFrame(timeFlow.position);
                 this.frame = frame;
                 this._driver.queryHandler.tell("Timelines.Timeline.setCurrentTime", { "handle": this.handle, "time": frame });
+                this.playing = (timeFlow.rate > 0);
             },
             enumerable: false,
             configurable: true

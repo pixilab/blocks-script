@@ -181,11 +181,12 @@ class TimelineAggregateElem extends AggregateElem {
 	get time(): TimeFlow {
 		return this._timeFlow;
 	}
-	set time(pos: TimeFlow) {
-		let frame = this.convertMillisecondsToFrame(pos.position);
+	set time(timeFlow: TimeFlow) {
+		let frame = this.convertMillisecondsToFrame(timeFlow.position);
 
 		this.frame = frame;
 		this._driver.queryHandler.tell("Timelines.Timeline.setCurrentTime", {"handle": this.handle, "time": frame });
+		this.playing = (timeFlow.rate > 0);	// Also track desired play state
 	}
 
 	private isPlaying(): boolean {

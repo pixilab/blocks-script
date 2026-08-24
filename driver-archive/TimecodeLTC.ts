@@ -1,5 +1,5 @@
 /** Blocks driver for providing time from an LTC (SMPTE or EBU) timecode source.
-	Version 251211
+	Version 260623
 
 	There are two methods for receiving the LTC audio-level timecode signal:
 
@@ -78,6 +78,7 @@ export class TimecodeLTC extends Driver<ConnType> {
 	private mOffset = 0;
 	private mOffsetMs = 0;
 	private mResetOnStop = false;
+	private mUserBits = 0;		// User bits, as 32 bit int
 
 	private mConnected = false;
 	private lastDataTime = 0;	// Timestamp when data last received
@@ -166,6 +167,11 @@ export class TimecodeLTC extends Driver<ConnType> {
 		this.mOffsetMs = Math.round(value * 1000);
 	}
 
+	@property("User bits data, where least significant bit is the first user bit in the timecode frame.", true)
+	get userBits(): number { return this.mUserBits; }
+	set userBits(value: number) { this.mUserBits = value; }
+
+
 	@property("Auto reset time position to 0 when timecode stops")
 	get resetOnStop(): boolean { return this.mResetOnStop; }
 	set resetOnStop(value: boolean) {
@@ -225,9 +231,12 @@ export class TimecodeLTC extends Driver<ConnType> {
 			item[itemPairs[ix]] = itemPairs[ix + 1];
 
 		const version = parseFloat( item['v']);
-		if (version < 1.1) {
+		if (version < 1.4) {
 			if (!this.toldOldversion) {
-				console.error("Requires version 1.1 or later of the timecode-reader program");
+				if (version < 1.1)
+					console.error("Requires version 1.1 or later of the timecode-reader program");
+				else
+					console.warn("The userBits property requires version 1.4 or later of the timecode-reader program");
 				this.toldOldversion = true;	// Only say so once
 			}
 			return;	// Do nothing - remains disconnected
@@ -240,6 +249,10 @@ export class TimecodeLTC extends Driver<ConnType> {
 			var val = ((parseFloat(sigLevel) + 64) / 64);
 			this.volume = Math.max(0, Math.min(1, val)); // Clip to 0...1
 		}
+
+		const userBitsStr = item['u'];
+		if (userBitsStr)
+			this.userBits = parseFloat(userBitsStr);
 
 		const now = this.getMonotonousMillis();
 		const frameNum = item['n'];
