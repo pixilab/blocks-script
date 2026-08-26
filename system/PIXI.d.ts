@@ -120,6 +120,16 @@ interface promiseCallback<T> {
 declare function require(name: string): any;
 
 /**
+ * Global API for encoding/decoding strings to/from Base64.
+ */
+interface Base64EncoderDecoder {
+	encode(str: string): string;
+	decode(str: string): string;
+}
+declare var base64: Base64EncoderDecoder;
+
+
+/**
  * Data indicating a time position and rate. Used for playback,
  * timing and synchronization purposes. All time valus in mS. The rate
  * is in seconds per second (nominally 1 if time is moving normally, or 0 if

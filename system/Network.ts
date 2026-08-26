@@ -75,6 +75,7 @@ interface IStreamConnection extends DriverFacade {
 		Returned promise resolved/rejected once sent/failed.
 	 */
 	sendBytes(rawData: number[]): Promise<any>;
+	sendBytes(bytes:Uint8Array): Promise<any>;
 
 	// // // // Notification subscription management // // // //
 
@@ -203,6 +204,7 @@ export interface NetworkUDP extends NetworkIPBase {
 
 	// Send raw data bytes
 	sendBytes(data: number[]): void;
+	sendBytes(bytes:Uint8Array): void;
 
 	// // // // Notification subscription management // // // //
 

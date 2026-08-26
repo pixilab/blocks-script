@@ -28,18 +28,30 @@ export interface TextMessage {
 	text:string;				// The text string that was received
 }
 
+export interface BytesMessage {
+	rawData:number[];			// The data that was received
+}
+
+
 export interface WebsocketConnection {
 	/*	Send text string (append \r or other framing before calling, if needed).
 	 */
 	sendText(text:string): void;
+
+	sendBytes(bytes:Uint8Array): void;	// Most efficient way to send data
+	sendBytes(bytes:number[]): void;	// For compatibility
 
 	// Close websocket gracefully from client end.
 	disconnect(): void;
 
 	// // // // Notifications // // // //
 
-	// Receive text data, interpreted as ASCII/UTF-8 from the full UDP packet.
+	// Receive text data, interpreted as ASCII/UTF-8 from the full websocket frame.
 	subscribe(event: 'textReceived', listener: (sender: WebsocketConnection, message:TextMessage)=>void): void;
+
+	// Receive text data, interpreted as ASCII/UTF-8 from the full websocket frame.
+	subscribe(event: 'bytesReceived', listener: (sender: WebsocketConnection, message:BytesMessage)=>void): void;
+
 
 	/*	Connection was closed (by server or due to error, which then is logged).
 		Release any connections to it immediately. It can no longer be used
