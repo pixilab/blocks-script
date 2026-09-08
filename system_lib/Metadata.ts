@@ -7,6 +7,7 @@
 declare global {
 	var $metaSupport$: {	// From $core
 		property(description ?: string, readOnly ?: boolean): any;
+		enumerated(allowedValues: string[]): any,
 		driverInfo(baseDriverType: string, typeSpecificMeta?: any): any;
 		callable(description ?: string): any;
 		fieldMetadata(metadataValue: any): {
@@ -66,6 +67,14 @@ export function roleRequired(role: RoleRequired) {
  */
 export function property(description?: string, readOnly?: boolean) {
 	return $metaSupport$.property(description, readOnly);
+}
+
+/**
+ Decorator declaring enumerated values, for use alongside property decorator
+ for a string prroperty.
+ */
+export function enumerated(...args: string[]) {
+	return $metaSupport$.enumerated(args);
 }
 
 /**
