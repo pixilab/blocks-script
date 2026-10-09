@@ -20,6 +20,8 @@ const ScriptBase_1 = require("../system_lib/ScriptBase");
 const kRfidPacketParser = /^XR\[P(.)(\d+)]$/;
 const kPortPacketParser = /^X(\d+)([AB])\[(.+)]$/;
 const kProductCodeParser = /D(\d+)B\[\w+=(.+)]$/;
+const kZoneDescr = "Zone occupied";
+const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
 let Nexmosphere = class Nexmosphere extends Driver_1.Driver {
     static { Nexmosphere_1 = this; }
     connection;
@@ -1147,8 +1149,6 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], LidarInterface.prototype, "setDetectionMode", null);
-const kZoneDescr = "Zone occupied";
-const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
 const NEXMOSPHERE_COMMAND_DELAY_MS = 280;
 function commandDelay() {
     return new Promise((resolve) => {

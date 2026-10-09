@@ -16,7 +16,7 @@ This base class provides:
 
 Transport Support:
 - NetworkTCP: Connection-oriented with autoConnect and lifecycle events
-- SerialPort: Connection-oriented with autoConnect and lifecycle events  
+- SerialPort: Connection-oriented with autoConnect and lifecycle events
 - NetworkUDP: Connectionless transport use unique listening port for each device and configure the device respectively.
 
 Interface Discovery:
@@ -26,7 +26,7 @@ The driver can operate in two modes:
 
 Configuration option examples:
 - Number only: 8 (sets number of ports to poll, just type the number og ports to poll in Driver Options)
-- Interface array json (depricated but available for backwards compatibility): 
+- Interface array json (depricated but available for backwards compatibility):
 [{
 	"modelCode": "XTB4N",
 	"ifaceNo": 1,
@@ -62,7 +62,7 @@ A more future proof configuration scheme is implemented, use this for any new se
 	]
 }
 
-This allows extending the options for future use, device is implemented as an example, 
+This allows extending the options for future use, device is implemented as an example,
 it will filter UDP messages based on device ID in cases UDP is forced to use same listeningport:
 {
 	"device": {
@@ -92,7 +92,7 @@ If specified, names MUST be unique within the controller.
 
 Currently supported Interface Types (Elements):
 - RFID/NFC readers (XRDR1, XRDW2)S
-- LED controllers (XWC56, XWL56, LightMark, X-Wave, RGBW, MonoLed) 
+- LED controllers (XWC56, XWL56, LightMark, X-Wave, RGBW, MonoLed)
 - Proximity sensors (XY116, XY146, XY176, XY240, XY241)
 - Button interfaces (XTB4N, XTB4N6, XT4FW6)
 - Motion detectors (XY320)
@@ -112,15 +112,15 @@ Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Re
 Created 2021 by Mattias Andersson.
 Contributors:Samuel Waltz, NoParking (Added Lidar support. Thanks!)
 
-v.1.1: 
-- Added UDP support. 
+v.1.1:
+- Added UDP support.
 - Split into baseclass and subclasses for allowing different transport and controller configurations.
 - enhanceds support for LightMark, RGB, RGBW, X-Wave, MonoLed built-in interfaces.
 - added support more interfaces.
 - added send queue to avoid message loss. (Nexmocontrollera can be quite sensitive to message floods)
 v.1.2:
 - Fixed bug where messages was sent out twice
-- Added support for DMX device IX-DM3 
+- Added support for DMX device IX-DM3
 - Lowered default command delay to 75ms and made it adjustable by callable method for fine tuning in different setups.
 v.1.2.1:
 - Automatically tell remote device to turn off UDP echo if we see an echoed hartbeat message as we currently do not use them.
@@ -155,7 +155,9 @@ const kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
 const kUdpHartbeatEchoParser = /N000B\[RUNTIME\?\]/;
 let NEXMOSPHERE_COMMAND_DELAY_MS = 100; //used to be 280
 
-
+const kZoneDescr = "Zone occupied";
+const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
+type EnterExit = "ENTER" | "EXIT";
 
 // A simple map-like object type
 export interface Dictionary<TElem> { [id: string]: TElem; }
@@ -191,14 +193,14 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 	protected udpConnected:boolean = false; // Connection status, as determined by subclass
 	protected readonly interface: BaseInterface[]; // Interfaces discovered, keyed by 0-based index
 	private readonly element: Dictionary<BaseInterface>; // Named aggregate properties for each interface
-	private udpResponsTestInterval: CancelablePromise<void>; // Holds the interval timer 
+	private udpResponsTestInterval: CancelablePromise<void>; // Holds the interval timer
 	private waitingForUdpHartbeat = false;
 	private dynProps: Record<string, any> = {};
 	private	myDeviceID: string = "";
 	private msgQueue: Array<() => Promise<void>> = [];
 	private isBusyProcessingQueue = false;
 	private _debugLogging = false;	// Controls verbose logging
-	
+
 
 	protected constructor(protected port: P, numbOfInterfaces?: number) {
 		super(port);
@@ -208,13 +210,13 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 		// Check if the driver has been configured with any options, and if so, parse them.
 			if (port.options ) {
 				const options = JSON.parse(port.options);
-				if (typeof options === "number") {	
+				if (typeof options === "number") {
 					this.numInterfaces = options;	// overrides number of interfaces since it is specified in the json obj
 					this.pollEnabled = true;
 				}
 				if (typeof options === "object") {
 					if (options.device?.udpDeviceID){  //Has device ID for UDP alternative options configuration scheme.
-						 this.myDeviceID = options.device.udpDeviceID;		
+						 this.myDeviceID = options.device.udpDeviceID;
 						 this.log("Using hardcoded device ID for UDP:", this.myDeviceID);
 					}
 					if (options.interfaces?.length > 0) {
@@ -223,12 +225,12 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 						this.addInterfaces(options); //Assume options is the interfaces array
 					}
 				}
-			}	
+			}
 		console.log("Driver enabled");
 		if (numbOfInterfaces){	// for subclasses to override the number of port
 			this.log("Subclass has number of  ports: " + numbOfInterfaces)
 			this.numInterfaces = numbOfInterfaces;
-		}	
+		}
 		}
 	}
 	private addInterfaces(ifaces: IfaceInfo[]){
@@ -238,7 +240,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 						this.addInterface(iface.ifaceNo, iface.modelCode, iface.name);
 					}
 	}
-	
+
 	/**
 	 * Connection status, as determined by subclass.
 	 */
@@ -248,7 +250,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 	}
 
 	/** Ret true if using UDP transport.
-	 * 
+	 *
 	*/
 	protected isUDP(){
 		return this.port.isOfTypeName("NetworkUDP")
@@ -277,14 +279,14 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
             if (this.pollEnabled) this.pollNext();
         }
     }
-	
+
 
 	/* Strip off any leading ID info from incoming message in UDP case */
 	protected stripFromId(input:string):string {
 		const lastColonIndex = input.lastIndexOf(":");
 		if (lastColonIndex === -1) return input; // no colon found
 		return input.slice(lastColonIndex + 1);
-	
+
 	}
 
 	/**
@@ -309,9 +311,9 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 	 * Initializes the connection and polling for TCP or Serial transports.
 	 */
 	protected initConnection(port: ConnType) {
-		
+
 		(<any>this.port).autoConnect();
-	
+
 			// Poll for connected interfaces once connected (not if hardcoded by Driver options
 			port.subscribe('connect', (sender, message) => {
 			// Initiate polling once connected and only first time (may reconnect several times)
@@ -332,7 +334,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 					this.pollIndex = 0;
 			}
 		});
-		
+
 		(<any>this.port).subscribe('textReceived', (sender: P, message: IncomingTextMsg) => {
 		if (!message.text) return;
 		if (!this.awake) {
@@ -342,7 +344,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 		this.handleMessage(message.text);
 		});
 	}
-	
+
 	protected initUdp() {
 		// Fix initUdp subscription
 	(<any>this.port).subscribe('textReceived', (sender: P, message: IncomingTextMsg) => {
@@ -365,7 +367,7 @@ export abstract class NexmosphereBase<P extends PortType> extends Driver<P> {
 		this.initDynamicProp("runtime", Number);
 		this.initDynamicProp("deviceID", String);
 		this.sendUdpHartbeat()
-		
+
 	}
 
 private initDynamicProp(
@@ -391,7 +393,7 @@ private initDynamicProp(
 		}
 	);
 }
-	
+
 
 	private sendUdpHartbeat() {
 		// Send immediately, then every X seconds (adjust as needed)
@@ -406,18 +408,18 @@ private initDynamicProp(
 		}
 		this.sendUdpHartbeat();
 		});
-		
+
 	}
 
-	
+
 	private stopUdpHartbeat() {
 		this.log("Stopping UDP hartbeat polling");
 		if (this.udpResponsTestInterval) {
 				this.udpResponsTestInterval.cancel();
 				this.udpResponsTestInterval = undefined;
-		}     
+		}
 	}
-	
+
 
 	/*	Poll next port, then next one (if any) with some delay between each.
 	*/
@@ -507,7 +509,7 @@ send(rawData: string, priority: boolean = false) {
 		if (this.isUDP())
         this.port.sendText(rawData + "\r\n");
 		else
-		this.port.sendText(rawData , "\r\n");	
+		this.port.sendText(rawData , "\r\n");
         this.log("Send msg: ", rawData);
     };
 
@@ -521,7 +523,7 @@ send(rawData: string, priority: boolean = false) {
 
     this.processQueue();
 }
-	
+
 	async processQueue() {
 		if (this.isBusyProcessingQueue) return;
 		this.isBusyProcessingQueue= true;
@@ -573,8 +575,8 @@ send(rawData: string, priority: boolean = false) {
 				const id = parseResult[1];
 
 				if (!this.dynProps["deviceID"]){ // No deviceID set yet
-					if (innerMsg.indexOf("RUNTIME=") && !this.myDeviceID){ //Runtime message and no hardcoded deviceID from options	
-						this.dynProps["deviceID"] = id; //Use senders ID as deviceID when no hardcoded ID set from options	
+					if (innerMsg.indexOf("RUNTIME=") && !this.myDeviceID){ //Runtime message and no hardcoded deviceID from options
+						this.dynProps["deviceID"] = id; //Use senders ID as deviceID when no hardcoded ID set from options
 						console.log("Setting deviceID from UDP sender", id);
 					} else if (this.myDeviceID){
 							this.dynProps["deviceID"] = this.myDeviceID;  //Use the hardcoded deviceID from options
@@ -585,9 +587,9 @@ send(rawData: string, priority: boolean = false) {
 					this.log("Ignoring UDP message from other device", id, "expected", this.dynProps["deviceID"]);
 					return; //Early out - not my device
     }
-				this.handleMessage(innerMsg); // Recursive handling of inner message if from known deviceID	
-				
-				
+				this.handleMessage(innerMsg); // Recursive handling of inner message if from known deviceID
+
+
 			}],
 			[kRfidPacketParser, (parseResult) => {
 				this.log("RFID tag event parsed in handler", msg);
@@ -614,8 +616,8 @@ send(rawData: string, priority: boolean = false) {
 				this.log("Controller message of type",msgType,"parsed in handler from port", portNumber, "Data", dataReceived);
 				//We pass those messages to the general controller message handler defined in sublass
 				this.handleControllerMessage(dataReceived);
-			
-				
+
+
 			}],
 			[kProductCodeParser, (parseResult) => {
 				this.log("TypeQReply parsed in handler", msg);
@@ -746,7 +748,7 @@ class BaseInterface extends AggregateElem {
 
 
 
-	protected sendData(data: string) { 
+	protected sendData(data: string) {
 		this.driver.send(data);
 	}
 	receiveData(data: string, tag?: TagInfo): void {
@@ -904,7 +906,7 @@ class NfcInterface extends BaseInterface {
 NexmosphereBase.registerInterface(NfcInterface, "XRDW2");
 
 class XWaveLedInterface extends BaseInterface {
-	
+
 
 	@property('X-Wave api command to send e.g. "290C99"')
 	get X_Wave_Command(): string { return this._command; }
@@ -912,90 +914,90 @@ class XWaveLedInterface extends BaseInterface {
 		this.sendData("X" + this.ifaceNo() + "B[" + value + "]")
 		this._command = value;
 	}
-	
+
 
 @callable("Define a custom color")
 	defineColor(
 		@parameter("color id 0-15") color: number ,
-		@parameter("red 0-255") red: number, 
+		@parameter("red 0-255") red: number,
 		@parameter("green 0-255") green: number,
 		@parameter("blue 0-255") blue: number){
-			const c = toHex(limitedVal(color, 0, 15), 1);	
+			const c = toHex(limitedVal(color, 0, 15), 1);
 			const rr = toHex(limitedVal(red, 0,255));
 			const gg = toHex(limitedVal(green, 0,255));
 			const bb = toHex(limitedVal(blue, 0,255));
 			const cmd = "1" + c + rr  + gg + bb;
-			this. X_Wave_Command = cmd;	
+			this. X_Wave_Command = cmd;
 	}
 
 	@callable("Set state (single ramp)")
 	setSingleRamp(
-		@parameter("LED Brightness 0-99") brightness: number, 
-		@parameter("color 0-15") color: number,	
+		@parameter("LED Brightness 0-99") brightness: number,
+		@parameter("color 0-15") color: number,
 		@parameter("ramptime 0-99(x0.1s)") ramp: number){
 		const bb = padVal(limitedVal(brightness, 0,99),2);
-		const c = toHex(limitedVal(color, 0, 15),1);	
+		const c = toHex(limitedVal(color, 0, 15),1);
 		const tt = padVal(limitedVal(ramp, 0, 99),2);
-		
+
 		//[2IICTT]
 		let cmd = "2"+ bb + c + tt;
 		this.X_Wave_Command = cmd;
 	}
 
-	
+
 	@callable("Set state (pulsing)")
 	setPulsing(
-		@parameter("State 1 LED Brightness 0-99",) brightness1: number, 
-		@parameter("State 1 color 0-15") color1: number,	
+		@parameter("State 1 LED Brightness 0-99",) brightness1: number,
+		@parameter("State 1 color 0-15") color1: number,
 		@parameter("State 1 time 1-99(x0.1s)") time1: number,
-		@parameter("State 2 LED Brightness 0-99") brightness2: number, 
-		@parameter("State 2 color 0-15") color2: number,	
+		@parameter("State 2 LED Brightness 0-99") brightness2: number,
+		@parameter("State 2 color 0-15") color2: number,
 		@parameter("State 2 time 1-99(x0.1s)") time2: number,
 		@parameter("Number of repeats 0=infinite 0-99") repeats: number = 0,
 		@parameter("Ramp time 2-99 must be smaller than time 1 and time 2") ramp: number,
-		
+
 	){
 		const II1 = padVal(limitedVal(brightness1, 0,99),2);
-		const c1 = toHex(limitedVal(color1, 0, 15), 1);	
+		const c1 = toHex(limitedVal(color1, 0, 15), 1);
 		const tt1 = padVal(limitedVal(time1, 0, 99),2);
 		const II2 = padVal(limitedVal(brightness2, 0,99),2);
-		const c2 = toHex(limitedVal(color2, 0, 15), 1);	
+		const c2 = toHex(limitedVal(color2, 0, 15), 1);
 		const tt2 = padVal(limitedVal(time2, 0, 99),2);
 		const nn = padVal(limitedVal(repeats, 0, 99),2);
 		const rr = padVal(limitedVal(ramp, 2, Math.min(parseInt(tt1), parseInt(tt2), 99)),2); //Max 99 but must be smaller than both times
-		
-		
+
+
 		let cmd = "3" + II1 + c1 + tt1 + "01" + "0" + II2 + c2 + tt2 + nn + rr;;
-		
-		this.X_Wave_Command = cmd;	
+
+		this.X_Wave_Command = cmd;
 	}
 	@callable("Set state (wave)")
 	setWave(
-		@parameter("State 1 LED Brightness 0-99") brightness1: number, 
-		@parameter("State 1 color 0-15") color1: number,	
+		@parameter("State 1 LED Brightness 0-99") brightness1: number,
+		@parameter("State 1 color 0-15") color1: number,
 		@parameter("State 1 animation duration 1-99(x0.1s)") duration: number,
 		@parameter("Program 00-01 (sinewave) or 51-59 (discrete)00 = Symmetrical sinewave   01 = Asymmetrical sinewave51-59 = Discrete running light (1-9 LEDs “running”)") program: number,
 		@parameter("Option  indicates direction  -  01-04 1 = Left   2 = Right   3 = Outwards   4 = Inwards") option: number,
-		@parameter("State 2 LED Brightness 0-99") brightness2: number, 
-		@parameter("State 2 color 0-15") color2: number,		
+		@parameter("State 2 LED Brightness 0-99") brightness2: number,
+		@parameter("State 2 color 0-15") color2: number,
 		@parameter("Numb er of LEDs in animation 1-99") leds: number,
-		
+
 	){
 		const bb1 = padVal(limitedVal(brightness1, 0,99),2);
-		const c1 = toHex(limitedVal(color1, 0, 15), 1);	
+		const c1 = toHex(limitedVal(color1, 0, 15), 1);
 		const dd  = padVal(limitedVal(duration, 1, 99),2);
 		const pp = padVal(limitedVal(program, 0, 59),2);
 		const o = limitedVal(option, 1, 4);
 		const bb2 = padVal(limitedVal(brightness2, 0,99),2);
 		const c2 = toHex(limitedVal(color2, 0, 15), 1);
 		const nn = padVal(limitedVal(leds, 1, 99),2);
-			
+
 		//X002B[45033011506001]
 		//[4IICDDPPOIICUULL]
 		let cmd = "4" + bb1 + c1 + dd + pp + o + bb2 + c2 + "00" + nn;
-	
 
-		this.X_Wave_Command = cmd;	
+
+		this.X_Wave_Command = cmd;
 	}
 
 	userFriendlyName() {
@@ -1011,39 +1013,39 @@ class LightmarkLedInterface extends BaseInterface {
 
 
 @property("Lightmark command to send ('Cc=ARRGGBB]') e.g 'Cc=100FF1F', if read it will return last sent command.")
-	get command(): string { return this._command }		
+	get command(): string { return this._command }
 	set command(cmd: string) {
-		this.sendCommand(cmd); 
+		this.sendCommand(cmd);
 		this._command = cmd;
 	}
-	
+
 
 @callable("Define a custom color")
 	defineColor(
 		@parameter("color id 0-15") color: number ,
-		@parameter("red 0-255") red: number, 
+		@parameter("red 0-255") red: number,
 		@parameter("green 0-255") green: number,
 		@parameter("blue 0-255") blue: number,
 		@parameter("white 0-255") white: number)	 {
-			const c = toHex(limitedVal(color, 0, 15), 1);	
+			const c = toHex(limitedVal(color, 0, 15), 1);
 			const rr = toHex(limitedVal(red, 0,255));
 			const gg = toHex(limitedVal(green, 0,255));
 			const bb = toHex(limitedVal(blue, 0,255));
 			const ww = toHex(limitedVal(white, 0,255));
 			const cmd = "Cc=" + c + rr  + gg + bb + ww;
-			this.command = "B["+ cmd + "]";	
+			this.command = "B["+ cmd + "]";
 	}
-	
+
 @callable("Set state (single ramp)")
 	setSingleRamp(
-		@parameter("LED Brightness 0-99") brightness: number, 
-		@parameter("color 0-15") color: number,	
+		@parameter("LED Brightness 0-99") brightness: number,
+		@parameter("color 0-15") color: number,
 		@parameter("ramptime 0-99(x0.1s)") ramp: number,
 		@parameter(stateTooltip,true) state: number = 0
 
 	){
 		const bb = padVal(limitedVal(brightness, 0, 99),2);
-		const c = toHex(limitedVal(color, 0, 15), 1);	
+		const c = toHex(limitedVal(color, 0, 15), 1);
 		const tt = padVal(limitedVal(ramp, 0, 99),2);
 		const ss = limitedVal(state, 0, 4);
 		//[Lc=RBBCTT]
@@ -1057,28 +1059,28 @@ class LightmarkLedInterface extends BaseInterface {
 	}
 @callable("Set state (pulsing)")
 	setPulsing(
-		@parameter("State 1 LED Brightness 0-99") brightness1: number, 
-		@parameter("State 1 color 0-15") color1: number,	
+		@parameter("State 1 LED Brightness 0-99") brightness1: number,
+		@parameter("State 1 color 0-15") color1: number,
 		@parameter("State 1 time 1-99(x0.1s)") time1: number,
-		@parameter("State 2 LED Brightness 0-99") brightness2: number, 
-		@parameter("State 2 color 0-15") color2: number,	
+		@parameter("State 2 LED Brightness 0-99") brightness2: number,
+		@parameter("State 2 color 0-15") color2: number,
 		@parameter("State 2 time 1-99(x0.1s)") time2: number,
 		@parameter("Number of repeats 0=infinite 0-99") repeats: number = 0,
 		@parameter("Ramp time 2-99 must be smaller than time 1 and time 2") ramp: number,
 		@parameter(stateTooltip,true) state: number = 0
 	){
 		const bb1 = padVal(limitedVal(brightness1, 0, 99),2);
-		const c1 = toHex(limitedVal(color1, 0, 15), 1);	
+		const c1 = toHex(limitedVal(color1, 0, 15), 1);
 		const tt1 = padVal(limitedVal(time1, 0, 99),2);
 		const bb2 = padVal(limitedVal(brightness2, 0, 99),2);
-		const c2 = toHex(limitedVal(color2, 0, 15), 1);	
+		const c2 = toHex(limitedVal(color2, 0, 15), 1);
 		const tt2 = padVal(limitedVal(time2, 0, 99),2);
 		const nn = padVal(limitedVal(repeats, 0, 99),2);
 		const rr = padVal(limitedVal(ramp, 2, Math.min(parseInt(tt1), parseInt(tt2), 99)),2); //Max 99 but must be smaller than both times
 		const ss = limitedVal(state, 0, 4);
 		//Lc=PBBCTTPPOBBCTTNNRR
 		let cmd = "P" + bb1 + c1 + tt1 + "01" + "0" + bb2 + c2 + tt2 + nn + rr;;
-		
+
 		if (ss)
 			cmd = "Ss=" + segmentStateDesignator[state]  + cmd;
 		else
@@ -1089,26 +1091,26 @@ class LightmarkLedInterface extends BaseInterface {
 
 	@callable("Set state (wave)")
 	setWave(
-		@parameter("State 1 LED Brightness 0-99") brightness1: number, 
-		@parameter("State 1 color 0-15") color1: number,	
+		@parameter("State 1 LED Brightness 0-99") brightness1: number,
+		@parameter("State 1 color 0-15") color1: number,
 		@parameter("State 1 animation duration 1-99(x0.1s)") duration: number,
 		@parameter("Program 00-01 (sinewave) or 51-59 (discrete)00 = Symmetrical sinewave   01 = Asymmetrical sinewave51-59 = Discrete running light (1-9 LEDs “running”)") program: number,
 		@parameter("Option  indicates direction  -  01-04 1 = Left   2 = Right   3 = Outwards   4 = Inwards") option: number,
-		@parameter("State 2 LED Brightness 0-99") brightness2: number, 
-		@parameter("State 2 color 0-15") color2: number,		
+		@parameter("State 2 LED Brightness 0-99") brightness2: number,
+		@parameter("State 2 color 0-15") color2: number,
 		@parameter("Number of LEDs in animation 1-99") leds: number,
 		@parameter(stateTooltip,true) state: number = 0
 	){
 		const bb1 = padVal(limitedVal(brightness1, 0, 99),2);
-		const c1 = toHex(limitedVal(color1, 0, 15), 1);	
+		const c1 = toHex(limitedVal(color1, 0, 15), 1);
 		const d  = padVal(limitedVal(duration, 1, 99),2);
 		const pp = padVal(limitedVal(program, 0, 59),2);
 		const o = limitedVal(option, 1, 4);
 		const bb2 = padVal(limitedVal(brightness2, 0, 99),2);
 		const c2 = toHex(limitedVal(color2, 0, 15), 1);
 		const nn = padVal(limitedVal(leds, 1, 99),2);
-		const ss = limitedVal(state, 0, 4);	
-		
+		const ss = limitedVal(state, 0, 4);
+
 		//Lc=WBBCDDPPOBBCRRNN
 		let cmd = "W" + bb1 + c1 + d + pp + o + bb2 + c2 + "00" + nn;
 		if (ss)
@@ -1122,13 +1124,13 @@ class LightmarkLedInterface extends BaseInterface {
 	// Burst collector for segment definition, to allow defining multiple segments with repeated callable
 	private send = (s: string) => {this.command = s; };
 	private addSegment = this.createBurstCollector('segment', this.send, 25, "[Sd=","]",26);
-	
+
 	@callable("Define segment")
 	defineSegment(
-		@parameter("Add LED segment length 1-15 use multiple callables in same task to configure many segments") segment: number,){	 
-	
+		@parameter("Add LED segment length 1-15 use multiple callables in same task to configure many segments") segment: number,){
+
 	this.addSegment(toHex(limitedVal(segment, 1, 15), 1));
-	}	
+	}
 
 	// Burst collector for state setting, to allow setting multiple segments with repeated callable
 	private addStates = this.createBurstCollector('state', this.send, 25,"[Sd=","]");
@@ -1137,7 +1139,7 @@ class LightmarkLedInterface extends BaseInterface {
 		@parameter("Send to segments (as defined) names a,b,c and so on in order they been defined e.g 'adf' or 'bdt'. Defaults to '#' for all other segments") segments: string = "#",
 		@parameter(stateTooltip,true) state: number = 0)
 {
-		const ss = limitedVal(state, 0, 4);	
+		const ss = limitedVal(state, 0, 4);
 		const segs = segments.replace(/[^a-zA-Z#]/g, '');
 		this.addStates(segmentStateDesignator[ss] + segs );
 	}
@@ -1186,70 +1188,70 @@ class RGBInterface extends BaseInterface {
 
 	constructor(driver: NexmosphereBase<PortType>, index: number, channel?: string) {
 		super(driver, index,undefined, channel);
-		
+
 	}
 
 	@property("RGB command to send e.g 'A 0 80 5' or 'B 255 0 0', if read it will return last sent command.")
 	get command(): string { return this._command; }
 	set command(cmd: string) {
-		this.sendCommand(cmd); 
+		this.sendCommand(cmd);
 		this._command = cmd;
 	}
 
 	@callable("Define a new RGB color on this controller")
 	defineColor(
 		@parameter("color 1-9" ) color: number ,
-		@parameter("red 0-100") red: number, 
+		@parameter("red 0-100") red: number,
 		@parameter("green 0-100") green: number,
 		@parameter("blue 0-100") blue: number
 	){
-		const c = limitedVal(color, 1, 9);	
+		const c = limitedVal(color, 1, 9);
 		const r = padVal(limitedVal(red, 0,100));
 		const g = padVal(limitedVal(green, 0,100));
 		const b = padVal(limitedVal(blue, 0,100));
 		const cmd = c + " " + r + " " + g + " " + b;
 		this.command = cmd;
-			
+
 	}
 
 	@callable("Set RGB output (single ramp)")
 	setSingleRamp(
 		@parameter("color 1-9" ) color: number ,
-		@parameter("brightness 0-100") brightness: number, 
+		@parameter("brightness 0-100") brightness: number,
 		@parameter("ramptime 0-999(x0.1s)") ramp: number,
 		@parameter("Send to channel defaults to all",true) channel: number | 0,
-		
+
 	){
-		const c1 = limitedVal(color, 1, 9);	
+		const c1 = limitedVal(color, 1, 9);
 		const br = padVal(limitedVal(brightness, 0,100));
 		const r1 = padVal(limitedVal(ramp, 0, 999));
 		const ch = channel ? channel:"X" ;
 		const cmd = ch + " " + c1 + " " + br + " " + r1;
 		this.command = cmd;
-			
+
 	}
 
 	@callable("Set RGB output (pulsing)")
 	setPulsing(
 		@parameter("Ramp 1 color 1-9" ) color1: number ,
-		@parameter("Ramp 2 brightness 0-100") brightness1: number, 
+		@parameter("Ramp 2 brightness 0-100") brightness1: number,
 		@parameter("Ramp 2 time 0-999(x0.1s)") ramp1: number,
 		@parameter("Ramp 2 color 1-9" ) color2: number ,
-		@parameter("Ramp 2 brightness 0-100") brightness2: number, 
+		@parameter("Ramp 2 brightness 0-100") brightness2: number,
 		@parameter("Ramp 2 time 0-999(x0.1s)") ramp2: number,
 		@parameter("Send to channel defaults to all",true) channel: number | 0,
-		
+
 	){
-		const c1 = limitedVal(color1, 1, 9);	
+		const c1 = limitedVal(color1, 1, 9);
 		const br1 = padVal(limitedVal(brightness1, 0,100));
 		const ra1 = padVal(limitedVal(ramp1, 0, 999));
-		const c2 = limitedVal(color2, 1, 9);	
+		const c2 = limitedVal(color2, 1, 9);
 		const br2 = padVal(limitedVal(brightness2, 0,100));
 		const ra2 = padVal(limitedVal(ramp2, 0, 999));
 		const ch = channel ? channel:"X" ;
 		const cmd = ch + " " + c1 + " " + br1 + " " + ra1+ " " + c2 + " " + br2 + " " + ra2;
 		this.command = cmd;
-			
+
 	}
 	userFriendlyName() {
 		return "LED";
@@ -1257,7 +1259,7 @@ class RGBInterface extends BaseInterface {
 
 	sendCommand(cmd: string) {
 		this.sendData("G" + this.ifaceNo() + "B[" + cmd + "]")
-	}	
+	}
 }
 NexmosphereBase.registerInterface(RGBInterface, "RGB", "EM6", "SM115" );
 
@@ -1267,73 +1269,73 @@ class RGBWInterface extends BaseInterface {
 
 	constructor(driver: NexmosphereBase<PortType>, index: number, channel?: string) {
 		super(driver, index,undefined, channel);
-		
+
 	}
 
 	@property("RGBW command to send e.g 'A 0 80 5' or 'B 255 0 0 255', if read it will return last sent command.")
 	get command(): string { return this._command; }
 	set command(cmd: string) {
-		this.sendCommand(cmd); 
+		this.sendCommand(cmd);
 		this._command = cmd;
 	}
-	
+
 
 	@callable("Define a new RGBW color on this controller")
 	defineColor(
 		@parameter("color 1-9" ) color: number ,
-		@parameter("red 0-100") red: number, 
+		@parameter("red 0-100") red: number,
 		@parameter("green 0-100") green: number,
 		@parameter("blue 0-100") blue: number,
 		@parameter("white 0-100") white: number
-	)	
+	)
 	{
-		const c = limitedVal(color, 1, 9);	
+		const c = limitedVal(color, 1, 9);
 		const r = padVal(limitedVal(red, 0,100));
 		const g = padVal(limitedVal(green, 0,100));
 		const b = padVal(limitedVal(blue, 0,100));
 		const w = padVal(limitedVal(white, 0,100));
 		const cmd = c + " " + r + " " + g + " " + b + " " + w;
-		this.command = cmd;	
+		this.command = cmd;
 	}
 
 	@callable("Set RGBW output (single ramp)")
 	setSingleRamp(
 		@parameter("color 1-9" ) color: number ,
-		@parameter("brightness 0-100") brightness: number, 
+		@parameter("brightness 0-100") brightness: number,
 		@parameter("ramptime 0-999(x0.1s)") ramp: number,
 		@parameter("Send to channel defaults to all",true) channel: number | 0,
 	)
 	{
-		const c1 = limitedVal(color, 1, 9);	
+		const c1 = limitedVal(color, 1, 9);
 		const br = padVal(limitedVal(brightness, 0,100));
 		const r1 = padVal(limitedVal(ramp, 0, 999));
 		const ch = channel ? channel:"X" ;
 		const cmd = ch + " " + c1 + " " + br + " " + r1;
 		this.command = cmd;
-			
+
 	}
 
 	@callable("Set RGBW output (pulsing) ")
 	setPulsing(
 		@parameter("Ramp 1 color 1-9" ) color1: number ,
-		@parameter("Ramp 2 brightness 0-100") brightness1: number, 
+		@parameter("Ramp 2 brightness 0-100") brightness1: number,
 		@parameter("Ramp 2 time 0-999(x0.1s)") ramp1: number,
 		@parameter("Ramp 2 color 1-9" ) color2: number ,
-		@parameter("Ramp 2 brightness 0-100") brightness2: number, 
+		@parameter("Ramp 2 brightness 0-100") brightness2: number,
 		@parameter("Ramp 2 time 0-999(x0.1s)") ramp2: number,
 		@parameter("Send to channel defaults to all",true) channel: number | 0,
 	)
 	{
-		const c1 = limitedVal(color1, 1, 9);	
+		const c1 = limitedVal(color1, 1, 9);
 		const br1 = padVal(limitedVal(brightness1, 0,100));
 		const ra1 = padVal(limitedVal(ramp1, 0, 999));
-		const c2 = limitedVal(color2, 1, 9);	
+		const c2 = limitedVal(color2, 1, 9);
 		const br2 = padVal(limitedVal(brightness2, 0,100));
 		const ra2 = padVal(limitedVal(ramp2, 0, 999));
 		const ch = channel ? channel:"X" ;
 		const cmd = ch + " " + c1 + " " + br1 + " " + ra1+ " " + c2 + " " + br2 + " " + ra2;
 		this.command = cmd;
-			
+
 	}
 
 	userFriendlyName() {
@@ -1343,7 +1345,7 @@ class RGBWInterface extends BaseInterface {
 	sendCommand(cmd: string) {
 		this.sendData("G" + this.ifaceNo() + "B[" + cmd + "]")
 	}
-}	
+}
 
 NexmosphereBase.registerInterface(RGBWInterface, "RGBW");
 
@@ -1352,18 +1354,18 @@ class MonoLedInterface extends BaseInterface {
 
 	constructor(driver: NexmosphereBase<PortType>, index: number) {
 		super(driver, index, undefined);
-	
+
 	}
 	@property("Monoled command to send e.g '384' or '13823' consult API manual, if read it will return last sent command.")
 	get command(): string { return this._command; }
 	set command(cmd: string) {
-		this.sendCommand(cmd); 
+		this.sendCommand(cmd);
 		this._command = cmd;
 	}
 
 	@callable("Set Monoled output (single ramp)")
 	setOutput(
-		@parameter("brightness 0-100") brightness: number, 
+		@parameter("brightness 0-100") brightness: number,
 		@parameter("ramptime 0-15(seconds) automatically limited by fixed ramp steps in device, consult API manual") ramp: number,
 	)
 	{
@@ -1371,11 +1373,11 @@ class MonoLedInterface extends BaseInterface {
 		const br = limitedVal(brightness, 0,100,2.55);
 		const r = (limitedVal(ramp, 0, 15,1,false));
 		this.owner.log("Calculated values", br, r, Math.floor(15/r));
-		const cmd = 256 * Math.floor(15/r)+ br; 
+		const cmd = 256 * Math.floor(15/r)+ br;
 		this.command = cmd.toString();
-			
+
 	}
-	
+
 	sendCommand(cmd: string) {
 		this.sendData("G" + this.ifaceNo() + "A[" + cmd + "]")
 	}
@@ -1388,7 +1390,7 @@ class MonoLedInterface extends BaseInterface {
 NexmosphereBase.registerInterface(MonoLedInterface, "MonoLed");
 
 class DmxRgbwInterface extends BaseInterface {
-	
+
 	constructor(driver: NexmosphereBase<PortType>, index: number) {
 		super(driver, index);
 	}
@@ -1396,7 +1398,7 @@ class DmxRgbwInterface extends BaseInterface {
 	@property("DMX command to send e.g 'RA LIN 10 001 255 255 255 255' or 'RA LIN 13 SA', if read it will return last sent command.")
 	get command(): string { return this._command; }
 	set command(cmd: string) {
-		this.sendCommand(cmd); 
+		this.sendCommand(cmd);
 		this._command = cmd;
 	}
 	@callable("Set ALL 512 DMX channels to 0")
@@ -1408,7 +1410,7 @@ class DmxRgbwInterface extends BaseInterface {
 	defineState(
 		@parameter("Starting address 1-512") address: number,
 		@parameter("State identifier A-Z") stateId: string,
-		@parameter("One/Red 0-255") channel_1: number, 
+		@parameter("One/Red 0-255") channel_1: number,
 		@parameter("Two/Green 0-255",true) channel_2: number,
 		@parameter("Three/Blue 0-255",true) channel_3: number,
 		@parameter("Four/White 0-255",true ) channel_4: number,
@@ -1416,7 +1418,7 @@ class DmxRgbwInterface extends BaseInterface {
 	{
 		const a = padVal(limitedVal(address, 1,512),3);
 		const sId = stateId.toUpperCase()
-		
+
     const parts = [
         `S${sId}`,
         a,
@@ -1446,13 +1448,13 @@ class DmxRgbwInterface extends BaseInterface {
 		const cmd = `R${rampId.toUpperCase()} LIN ${padVal(limitedVal(rampTime, 0, 90),2)} S${stateId.toUpperCase()}`;
 		this.command = cmd;
 	}
-	
+
 	@callable("Direct ramp on up to 4 DMX channels")
 	directRamp(
 		@parameter("Starting address 1-512") address: number,
 		@parameter("Ramp identifier A-Z") rampId: string,
 		@parameter("Ramp time 0-90(x0.1s)") ramp: number,
-		@parameter("One/Red 0-255") channel_1: number, 
+		@parameter("One/Red 0-255") channel_1: number,
 		@parameter("Two/Green 0-255",true) channel_2: number,
 		@parameter("Three/Blue 0-255",true) channel_3: number,
 		@parameter("Four/White 0-255",true ) channel_4: number,
@@ -1461,7 +1463,7 @@ class DmxRgbwInterface extends BaseInterface {
 		const a = padVal(limitedVal(address, 1,512),3);
 		const rTime = padVal(limitedVal(ramp, 0, 90),2);
 		const rId = rampId.toUpperCase()
-		
+
 		const parts = [
 			`R${rId}`,
 			"LIN",
@@ -1483,7 +1485,7 @@ class DmxRgbwInterface extends BaseInterface {
 		const cmd = parts.join(" ");
 		this.command = cmd;
 	}
-	
+
 	sendCommand(cmd: string) {
 		this.sendData("X" + this.ifaceNo() + "B[" + cmd + "]")
 	}
@@ -1491,13 +1493,13 @@ class DmxRgbwInterface extends BaseInterface {
 	userFriendlyName() {
 		return "DmxRGBW";
 	}
-}	
+}
 
 NexmosphereBase.registerInterface(DmxRgbwInterface, "DMXRGBW","IXDM3");
 
 
 class QuadAudioSwitch extends BaseInterface {
-	
+
 	private switches: Record<string, any> = {};
 
 	constructor(driver: NexmosphereBase<PortType>, index: number) {
@@ -1505,7 +1507,7 @@ class QuadAudioSwitch extends BaseInterface {
 		for (let i = 1; i <= 4; i++) { //Init switches
     	this.switches[`sw${i}`] = false;
 }
-	
+
 	}
 
 	@property("Switch 1 state", false)
@@ -1513,7 +1515,7 @@ class QuadAudioSwitch extends BaseInterface {
 		return this.switches.sw1;
 	}
 	set sw1(value: boolean) {
-		if (this.switches.sw1 === value) return; 
+		if (this.switches.sw1 === value) return;
 		this.switches.sw1 = value;
 		this.updateAndSend();
 	}
@@ -1522,7 +1524,7 @@ class QuadAudioSwitch extends BaseInterface {
 		return this.switches.sw2;
 	}
 	set sw2(value: boolean) {
-		if (this.switches.sw2 === value) return; 
+		if (this.switches.sw2 === value) return;
 		this.switches.sw2 = value;
 		this.updateAndSend();
 	}
@@ -1531,7 +1533,7 @@ class QuadAudioSwitch extends BaseInterface {
 		return this.switches.sw3;
 	}
 	set sw3(value: boolean) {
-		if (this.switches.sw3 === value) return; 
+		if (this.switches.sw3 === value) return;
 		this.switches.sw3 = value;
 		this.updateAndSend();
 	}
@@ -1540,15 +1542,15 @@ class QuadAudioSwitch extends BaseInterface {
 		return this.switches.sw4;
 	}
 	set sw4(value: boolean) {
-		if (this.switches.sw4 === value) return; 
+		if (this.switches.sw4 === value) return;
 		this.switches.sw4 = value;
 		this.updateAndSend();
 	}
-	
+
 	@callable("Turn all switches ON/OFF")
-	setAllSwitches(value:boolean) { 
+	setAllSwitches(value:boolean) {
 	for (let i = 1; i <= 4; i++) {
-    	this.switches[`sw${i}`] = value; //Set all switches	
+    	this.switches[`sw${i}`] = value; //Set all switches
 		this.changed(`sw${i}`); //Update blocks on the change
 		}
 	this.updateAndSend();
@@ -1563,10 +1565,10 @@ class QuadAudioSwitch extends BaseInterface {
 		(sw2 ? 2 : 0) |
 		(sw3 ? 4 : 0) |
 		(sw4 ? 8 : 0);
-  	
+
 	this.sendData("G" + this.ifaceNo() +"[" + data + "]");
 	}
- 
+
 	userFriendlyName() {
 		return "AudioSwitch";
 	}
@@ -1574,26 +1576,26 @@ class QuadAudioSwitch extends BaseInterface {
 NexmosphereBase.registerInterface(QuadAudioSwitch, "Opticalx4", "Analogx4");
 
 class AudioSwitch extends BaseInterface {
-	
-	
+
+
 	private mSw:boolean = false;
 
 	constructor(driver: NexmosphereBase<PortType>, index: number) {
 		super(driver, index);
-	
+
 	}
 		@property("Switch 1 state", false)
 	get sw1(): boolean {
 		return this.mSw;
 	}
 	set sw1(value: boolean) {
-		if (this.mSw === value) return; 
+		if (this.mSw === value) return;
 		const cmd = value ? 1 : 0;
 		this.sendData("G" + this.ifaceNo() +"[" + cmd + "]");
 		this.mSw = value;
 
-		
-	}	
+
+	}
 	userFriendlyName() {
 		return "AudioSwitch";
 	}
@@ -2308,9 +2310,7 @@ class LidarInterface extends BaseInterface {
 	}
 
 }
-const kZoneDescr = "Zone occupied";
-const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
-type EnterExit = "ENTER" | "EXIT";
+
 /**
  * Nexmosphere requires >= 50 ms delay after each command
  * (in practice the needed delay seems to be longer)
@@ -2356,7 +2356,7 @@ class AnalogInputInterface extends BaseInterface {
 	private mInMin: number = 0;
 	private mInMax: number = 20;
 	private mOutMin: number = 0;
-	private mOutMax: number = 1;	
+	private mOutMax: number = 1;
 
 	@property("Analog input value", true)
 	get value(): number { return this.mValue; }
@@ -2379,15 +2379,15 @@ class AnalogInputInterface extends BaseInterface {
 		@parameter("Lower Lowest Output value (0)",true) outMin: number,
 		@parameter("Highest output value (1)",true) outMax: number
 	){
-		
+
 		this.mNormalize = normalize || false; ;
 		this.mInMin = inMin | 0;
 		this.mInMax = inMax | 20;
 		this.mOutMin = outMin | 0;
 		this.mOutMax = outMax | 1;
-			
+
 	}
-	
+
 	receiveData(data: string) {
 		const inputVal = Number(data.split("=")[1]);
 		this.owner.log("Analog input received", inputVal, normalize(inputVal, this.mInMin, this.mInMax, this.mOutMin, this.mOutMax));
@@ -2402,11 +2402,11 @@ NexmosphereBase.registerInterface(AnalogInputInterface, "AnalogIn","XDWA50");
 
 class IoInterface extends BaseInterface {
 	private mState: boolean = false;
-	
+
 
 	@property("IO state")
 	get state(): boolean { return this.mState; }
-	set state(value: boolean) { 
+	set state(value: boolean) {
 		if (this.mState === value) return;
 		this.sendData("X" + this.ifaceNo() +"A[" + (value ? "1" : "0") + "]");
 		this.mState = value;
@@ -2433,13 +2433,13 @@ class EncoderInterface extends BaseInterface {
 	private mDirection:string = "";
 	private mValue: number = 0;
 	private mAbsValue: number = 0;
-	
+
 
 	@property("Direction CW or CCW", true)
 	get direction(): string { return this.mDirection}
 	set direction(value: string) {this.mDirection = value}
 
-	@property("Delta", true) 
+	@property("Delta", true)
 	get value(): number { return this.mValue}
 	set value(value: number) { this.mValue = value }
 
@@ -2489,7 +2489,7 @@ class AngleInterface extends BaseInterface {
 			const parts = data.split("=");
 			const prefix = parts[0]
 			const values = parts[1].split(",");
-			
+
 		switch (prefix) {
 			case "O":
 				this.xAngle = Number(values[0]);
@@ -2531,7 +2531,7 @@ class AngleInterface extends BaseInterface {
 	@property("Trigger from stored position", true)
 	get triggerFromPosition(): number { return this.mTriggerFromPosition}
 	set triggerFromPosition(value: number) { this.mTriggerFromPosition = value}
-	
+
 	@callable("Send setting, see api for details")
 	sendSettings(
 		@parameter("Setting, e.g. 1:1 or 9:2") cmd: string) {
@@ -2584,7 +2584,7 @@ if (prefix === "Tr" || prefix === "Tv") {
 	this.temperature = Number(value);
 	return
 }
-	
+
 	}
 	@property("Humidity", true)
 	get humidity(): number { return this.mHumidity}
@@ -2593,7 +2593,7 @@ if (prefix === "Tr" || prefix === "Tv") {
 	@property("Temperature", true)
 	get temperature(): number { return this.mTemperature}
 	set temperature(value: number) { this.mTemperature = value}
-	
+
 	@callable(" Send setting, see api for details")
 	sendSettings(
 		@parameter("Setting, e.g. 1:1 or 4:5") cmd: string) {
@@ -2611,7 +2611,7 @@ if (prefix === "Tr" || prefix === "Tv") {
 		const limitCmd = limitedVal(cmd,0,2,1,false);
 		this.sendData("X" + this.ifaceNo() +"B[" + options[limitCmd] + "]");
 	}
-	
+
 	userFriendlyName() {
 		return "Temperature";
 	}
@@ -2635,14 +2635,14 @@ if (prefix === "Ar" || prefix === "Av") {
 	return
 }
 
-	
+
 	}
 	@property("intencity", true)
 	get intencity(): number { return this.mIntencity}
 	set intencity(value: number) { this.mIntencity = value}
 
 
-	
+
 	@callable(" Send setting, see api for details")
 	sendSettings(
 		@parameter("Setting, e.g. 1:2 or 6:1") cmd: string) {
@@ -2650,11 +2650,11 @@ if (prefix === "Ar" || prefix === "Av") {
 	}
 	@callable("Update value request")
 	updateValues(
-	
+
 	) {
 		this.sendData("X" + this.ifaceNo() +"B[LUX?]");
 	}
-	
+
 	userFriendlyName() {
 		return "AmbientLight";
 	}
@@ -2678,7 +2678,7 @@ class LightInterface extends BaseInterface {
 	set light(value: number) { this.mLight = value}
 
 
-	
+
 	@callable(" Send setting, see api for details")
 	sendSettings(
 		@parameter("Setting, e.g. 1:2 or 6:1") cmd: string) {
@@ -2737,9 +2737,9 @@ class ColorInterface extends BaseInterface {
 			this.saturation = Number(parts[1]);
 			this.light = Number(parts[2]);
 			break;
-				
 
-	
+
+
 
 
 		default:
@@ -2809,7 +2809,7 @@ class ColorInterface extends BaseInterface {
 		const limitedTime = limitedVal(timeMs,1,5,1,false);
 		this.sendData("X" + this.ifaceNo() +"B[MEASURE=" + limitedTime + "]");
 	}
-	
+
 	@callable(" Send setting, see api for details")
 	sendSettings(
 		@parameter("Setting, e.g. 1:2 or 6:1") cmd: string) {
@@ -2832,7 +2832,7 @@ class ShelfWeightInterface extends BaseInterface {
 	private mStockLevel: number = 0;
 	private mStockChange: number = 0;
 	private mCalibrating: boolean = false;
-	
+
 	@property("Anomaly count", true)
 	get anomalyCount(): number { return this.mAnomalyCount; }
 	set anomalyCount(value: number) { this.mAnomalyCount = value; }
@@ -2844,7 +2844,7 @@ class ShelfWeightInterface extends BaseInterface {
 	set stockLevel(value: number) { this.mStockLevel = value; }
 	@property("Stock change", true)
 	get stockChange(): number { return this.mStockChange; }
-	set stockChange(value: number) { this.mStockChange = value; }	
+	set stockChange(value: number) { this.mStockChange = value; }
 	@property("Pickup trigger")
 	get pickupTrigger(): boolean { return this.mPickupTrigger; }
 	set pickupTrigger(value: boolean) { this.mPickupTrigger = value; }
@@ -2885,7 +2885,7 @@ class ShelfWeightInterface extends BaseInterface {
 	) {
 		this.sendData("X" + this.ifaceNo() +"B[STOCKMEASURE=" + padVal(limitedVal(itemCount,1,999,1,true)) + "]");
 	}
-	
+
 	@callable("Calibrate base weight (Zero,Tara)")
 	calibrateTara() {
 		this.sendData("X" + this.ifaceNo() +"B[CALIBRATE=BASE]");
@@ -2912,16 +2912,16 @@ class ShelfWeightInterface extends BaseInterface {
 		}
 		switch (prefix) {
 			case "STOCKCHANGE":
-				
+
 				break;
 
 			case "STOCK":
-				
+
 				break;
 
 			case "PICKUP":
 				this.pickupTrigger = true;
-				
+
 				break;
 				case "WEIGHT":
 				this.weight = Number(value);
@@ -2929,7 +2929,7 @@ class ShelfWeightInterface extends BaseInterface {
 			case "CALIBRATION":
 				this.calibrating = !(value === "DONE"); //Finished calibration
 				break;
-			
+
 
 			default:
 				console.log("Unsupported color prefix: ", prefix)
@@ -2949,7 +2949,7 @@ class BarWeightInterface extends BaseInterface {
 	private mWeightDifference: number = 0;
 	private mAnomalyDetected: boolean = false;
 	private mLiftedItems: boolean[] = [false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false];
-		
+
 	@property("Weight value", true)
 	get weight(): number { return this.mWeight; }
 	set weight(value: number) { this.mWeight = value; }
@@ -2958,7 +2958,7 @@ class BarWeightInterface extends BaseInterface {
 	set calibrating(value: boolean) { this.mCalibrating = value; }
 	@property("Weight difference", true)
 	get weightDifference(): number { return this.mWeightDifference; }
-	set weightDifference(value: number) { this.mWeightDifference = value; }	
+	set weightDifference(value: number) { this.mWeightDifference = value; }
 	@property("Anomaly detected", true)
 	get anomalyDetected(): boolean { return this.mAnomalyDetected; }
 	set anomalyDetected(value: boolean) { this.mAnomalyDetected = value; }
@@ -2970,46 +2970,46 @@ class BarWeightInterface extends BaseInterface {
 	set liftedItem_2(value: boolean) { this.mLiftedItems[1] = value; }
 	@property("LiftedItem_3", true)
 	get liftedItem_3(): boolean { return this.mLiftedItems[2]; }
-	set liftedItem_3(value: boolean) { this.mLiftedItems[2] = value; }					
-	@property("LiftedItem_4", true)		
+	set liftedItem_3(value: boolean) { this.mLiftedItems[2] = value; }
+	@property("LiftedItem_4", true)
 	get liftedItem_4(): boolean { return this.mLiftedItems[3]; }
 	set liftedItem_4(value: boolean) { this.mLiftedItems[3] = value; }
 	@property("LiftedItem_5", true)
 	get liftedItem_5(): boolean { return this.mLiftedItems[4]; }
-	set liftedItem_5(value: boolean) { this.mLiftedItems[4] = value; }	
+	set liftedItem_5(value: boolean) { this.mLiftedItems[4] = value; }
 	@property("LiftedItem_6", true)
 	get liftedItem_6(): boolean { return this.mLiftedItems[5]; }
-	set liftedItem_6(value: boolean) { this.mLiftedItems[5] = value; }	
+	set liftedItem_6(value: boolean) { this.mLiftedItems[5] = value; }
 	@property("LiftedItem_7", true)
 	get liftedItem_7(): boolean { return this.mLiftedItems[6]; }
-	set liftedItem_7(value: boolean) { this.mLiftedItems[6] = value; }	
+	set liftedItem_7(value: boolean) { this.mLiftedItems[6] = value; }
 	@property("LiftedItem_8", true)
 	get liftedItem_8(): boolean { return this.mLiftedItems[7]; }
-	set liftedItem_8(value: boolean) { this.mLiftedItems[7] = value; }	
+	set liftedItem_8(value: boolean) { this.mLiftedItems[7] = value; }
 	@property("LiftedItem_9", true)
 	get liftedItem_9(): boolean { return this.mLiftedItems[8]; }
-	set liftedItem_9(value: boolean) { this.mLiftedItems[8] = value; }	
+	set liftedItem_9(value: boolean) { this.mLiftedItems[8] = value; }
 	@property("LiftedItem_10", true)
 	get liftedItem_10(): boolean { return this.mLiftedItems[9]; }
 	set liftedItem_10(value: boolean) { this.mLiftedItems[9] = value; }
-	@property("LiftedItem_11", true)		
+	@property("LiftedItem_11", true)
 	get liftedItem_11(): boolean { return this.mLiftedItems[10]; }
-	set liftedItem_11(value: boolean) { this.mLiftedItems[10] = value; }	
+	set liftedItem_11(value: boolean) { this.mLiftedItems[10] = value; }
 	@property("LiftedItem_12", true)
 	get liftedItem_12(): boolean { return this.mLiftedItems[11]; }
-	set liftedItem_12(value: boolean) { this.mLiftedItems[11] = value; }	
+	set liftedItem_12(value: boolean) { this.mLiftedItems[11] = value; }
 	@property("LiftedItem_13", true)
 	get liftedItem_13(): boolean { return this.mLiftedItems[12]; }
-	set liftedItem_13(value: boolean) { this.mLiftedItems[12] = value; }	
+	set liftedItem_13(value: boolean) { this.mLiftedItems[12] = value; }
 	@property("LiftedItem_14", true)
 	get liftedItem_14(): boolean { return this.mLiftedItems[13]; }
-	set liftedItem_14(value: boolean) { this.mLiftedItems[13] = value; }	
+	set liftedItem_14(value: boolean) { this.mLiftedItems[13] = value; }
 	@property("LiftedItem_15", true)
 	get liftedItem_15(): boolean { return this.mLiftedItems[14]; }
-	set liftedItem_15(value: boolean) { this.mLiftedItems[14] = value; }	
+	set liftedItem_15(value: boolean) { this.mLiftedItems[14] = value; }
 	@property("LiftedItem_16", true)
 	get liftedItem_16(): boolean { return this.mLiftedItems[15]; }
-	set liftedItem_16(value: boolean) { this.mLiftedItems[15] = value; }		
+	set liftedItem_16(value: boolean) { this.mLiftedItems[15] = value; }
 
 
 	@callable("Request weight")
@@ -3042,7 +3042,7 @@ class BarWeightInterface extends BaseInterface {
 		@parameter("Item weight 1-9999.9 grams") itemWeight: number
 	) {
 		this.sendData("X" + this.ifaceNo() +"B[ITEM" + padVal(itemNo,2) + "WEIGHT=" + padVal(limitedVal(itemWeight,1,9999,1,false),5,1) + "]");
-	}	
+	}
 
 	@callable("Measure a custom items weight")
 	measureCustomItemWeight(
@@ -3082,7 +3082,7 @@ class BarWeightInterface extends BaseInterface {
 	}
 
 
-	receiveData(data: string) {	
+	receiveData(data: string) {
 		this.owner.log("Bar weight input received", data);
 		const parts = data.split("=");
 		const prefix = parts[0]
@@ -3108,7 +3108,7 @@ class BarWeightInterface extends BaseInterface {
 					const [key, val] = part.split(":");
 					itemInfo[key] = val;
 				});
-				
+
 				this.owner.log("Received item info: ", itemInfo);
 				break;
 			case"PU":
@@ -3119,7 +3119,7 @@ class BarWeightInterface extends BaseInterface {
 					this.mLiftedItems[pickItemNo - 1] = true;
 					this.changed("liftedItem_" + pickItemNo);
 				}
-				break;	
+				break;
 			case"PB":
 				// Putback trigger for item number
 				const putItemNo = Number(value);
@@ -3135,8 +3135,8 @@ class BarWeightInterface extends BaseInterface {
 				console.log("Unsupported Bar weight prefix: ", prefix)
 				break;
 		}
-		
-		
+
+
 	}
 	userFriendlyName(): string {
 		return "BarWeight";
@@ -3148,10 +3148,10 @@ NexmosphereBase.registerInterface(BarWeightInterface, "BARWEIGHT","XZ-W11","XZ-W
 class WirePickup extends BaseInterface {
 	private mPickup: boolean = false;
 	private mAlarm: boolean = false;
-	
+
 	@property("Alarm state", true)
 	get alarm(): boolean { return this.mAlarm; }
-	set alarm(value: boolean) { this.mAlarm = value; }	
+	set alarm(value: boolean) { this.mAlarm = value; }
 	@property("Pickup state", true)
 	get pickup(): boolean { return this.mPickup; }
 	set pickup(value: boolean) { this.mPickup = value; }
@@ -3161,7 +3161,7 @@ class WirePickup extends BaseInterface {
 	this.alarm = (value & 4) !== 0;
 	this.pickup = (value & 3) !== 0;
 	}
-	
+
 	sendSettings(
 	@parameter("Setting, e.g. 1:2 or 4:7") cmd: string) {
 	this.sendData("X" + this.ifaceNo() +"S[" + cmd + "]");
@@ -3191,10 +3191,10 @@ class WirelessPickup extends BaseInterface {
 	}
 	receiveData(data: string) {
 		let value = Number(data);
-	
+
 	this.pickup = (value & 3) !== 0;
 	}
-	
+
 	sendSettings(
 	@parameter("Setting, e.g. 5:1 or 8:1") cmd: string) {
 	this.sendData("X" + this.ifaceNo() +"S[" + cmd + "]");
@@ -3241,7 +3241,7 @@ export function padVal(
 
     // Check if number has decimals (no includes)
     const dot = str.indexOf('.');
-    
+
     // No decimal part → behave like before
     if (dot === -1) {
         while (str.length < width) {
@@ -3295,7 +3295,7 @@ export function toHex(num: number, width: number = 2): string {
 	return hex
 	}
 
-/* Limits value to min max and applies optional factor defaults to 1 
+/* Limits value to min max and applies optional factor defaults to 1
 default rounds to nearest integer, !!scaled after clamping!!*/
 export function limitedVal(
     num: number,

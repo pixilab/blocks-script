@@ -28,6 +28,8 @@ const kUdpPacketParser = /^FROMID=([0-9A-F]{2}(?::[0-9A-F]{2}){5}):(.+)/;
 const kUdpRuntimeParser = /RUNTIME=(\d+)HOUR/;
 const kUdpHartbeatEchoParser = /N000B\[RUNTIME\?\]/;
 let NEXMOSPHERE_COMMAND_DELAY_MS = 100;
+const kZoneDescr = "Zone occupied";
+const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
 class NexmosphereBase extends Driver_1.Driver {
     port;
     static interfaceRegistry;
@@ -2176,8 +2178,6 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], LidarInterface.prototype, "setDetectionMode", null);
-const kZoneDescr = "Zone occupied";
-const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
 class CmdResponseWaiter {
     cmd;
     expectedResponse;
