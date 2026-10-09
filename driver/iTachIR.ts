@@ -2,9 +2,9 @@
  * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {callable, driver, max, min, parameter, property} from "../system_lib/Metadata";
 
 /**	Basic driver for sending keystrokes through a Global Caché iTach
 	Ethernet IR sender.

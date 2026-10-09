@@ -37,11 +37,11 @@
  	All Rights Reserved.
  */
 
-import {NetworkUDP, SerialPort} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {driver, property} from "system_lib/Metadata";
-import {SGOptions} from "system/PubSub";
-import {Dictionary} from "system_lib/ScriptBase";
+import {NetworkUDP, SerialPort} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {driver, property} from "../system_lib/Metadata";
+import {SGOptions} from "../system/PubSub";
+import {Dictionary} from "../system_lib/ScriptBase";
 
 /**
  * Maps enumValues to param type, Keys must match enumValues in type property

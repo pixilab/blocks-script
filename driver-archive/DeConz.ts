@@ -14,12 +14,12 @@
  */
 
 
-import {NetworkTCP} from "system/Network";
-import {SimpleFile} from "system/SimpleFile";
-import {SimpleHTTP} from "system/SimpleHTTP";
-import {Driver} from "system_lib/Driver";
-import * as Meta from "system_lib/Metadata";
-import {callable, driver, parameter} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {SimpleFile} from "../system/SimpleFile";
+import {SimpleHTTP} from "../system/SimpleHTTP";
+import {Driver} from "../system_lib/Driver";
+import * as Meta from "../system_lib/Metadata";
+import {callable, driver, parameter} from "../system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 8080 })
 export class DeConz extends Driver<NetworkTCP> {

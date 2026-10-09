@@ -7,10 +7,10 @@
  	Created 2019 by PIXILAB AB, Mike Fahl
 */
 
-import {SimpleHTTP} from "system/SimpleHTTP";
-import {SimpleFile} from "system/SimpleFile";
-import {Script, ScriptEnv} from "system_lib/Script";
-import {callable, parameter} from "system_lib/Metadata";
+import {SimpleHTTP} from "../system/SimpleHTTP";
+import {SimpleFile} from "../system/SimpleFile";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {callable, parameter} from "../system_lib/Metadata";
 
 /**
  * Used both as settings data and form parameter dictionary for sending the message.

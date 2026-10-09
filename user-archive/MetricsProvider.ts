@@ -12,11 +12,11 @@
 	All Rights Reserved.
 */
 
-import {Spot, DisplaySpot, SpotGroup} from "system/Spot";
-import {Script, ScriptEnv} from "system_lib/Script";
-import {SimpleHTTP} from "system/SimpleHTTP";
-import {SimpleFile} from "system/SimpleFile";
-import * as Meta from "system_lib/Metadata";
+import {Spot, DisplaySpot, SpotGroup} from "../system/Spot";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {SimpleHTTP} from "../system/SimpleHTTP";
+import {SimpleFile} from "../system/SimpleFile";
+import * as Meta from "../system_lib/Metadata";
 
 
 //Some default settings to use if config has not been provided

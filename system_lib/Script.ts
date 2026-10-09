@@ -3,7 +3,7 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {PropertyValue, PropValueType, RecordBase, ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
+import {PropertyValue, PropValueType, RecordBase, ScriptBase, ScriptBaseEnv} from "../system_lib/ScriptBase";
 
 /**
  Ultimate base class for all TypeScript based user scripts.

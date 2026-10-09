@@ -12,10 +12,10 @@
  *
  */
 
-import { NetworkTCP } from "system/Network";
-import { SimpleHTTP } from "system/SimpleHTTP";
-import { Driver } from "system_lib/Driver";
-import { driver, min, max, property } from "system_lib/Metadata";
+import { NetworkTCP } from "../system/Network";
+import { SimpleHTTP } from "../system/SimpleHTTP";
+import { Driver } from "../system_lib/Driver";
+import { driver, min, max, property } from "../system_lib/Metadata";
 
 @driver("NetworkTCP", { port: 9000 })
 export class GenelecSmartIP extends Driver<NetworkTCP> {

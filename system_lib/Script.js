@@ -1,58 +1,37 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-define(["require", "exports", "system_lib/ScriptBase"], function (require, exports, ScriptBase_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Script = void 0;
-    var Script = (function (_super) {
-        __extends(Script, _super);
-        function Script() {
-            return _super !== null && _super.apply(this, arguments) || this;
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Script = void 0;
+const ScriptBase_1 = require("../system_lib/ScriptBase");
+class Script extends ScriptBase_1.ScriptBase {
+    establishChannel(leafChannelName, callback) {
+        if (callback) {
+            this.__scriptFacade.establishChannel(leafChannelName, function (sender, axon) {
+                callback(axon.data);
+            });
         }
-        Script.prototype.establishChannel = function (leafChannelName, callback) {
-            if (callback) {
-                this.__scriptFacade.establishChannel(leafChannelName, function (sender, axon) {
-                    callback(axon.data);
-                });
-            }
-            else
-                this.__scriptFacade.establishChannel(leafChannelName);
-        };
-        Script.prototype.sendOnChannel = function (leafChannelName, data) {
-            this.__scriptFacade.sendOnChannel(leafChannelName, data);
-        };
-        Script.prototype.newRecord = function (type) {
-            return this.__scriptFacade.newRecord(type);
-        };
-        Script.prototype.deleteRecord = function (record, archive, filesToArchive) {
-            return this.__scriptFacade.deleteRecord(record, archive, filesToArchive);
-        };
-        Script.prototype.deleteRecords = function (type, archive) {
-            return this.__scriptFacade.deleteRecords(type, archive || false);
-        };
-        Script.prototype.getRecord = function (type, puid) {
-            return this.__scriptFacade.getRecord(type, puid);
-        };
-        Script.prototype.getRecordSec = function (type, fieldName, fieldValue, optional) {
-            return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue, optional);
-        };
-        Script.prototype.getAllPuids = function (ofType) {
-            return this.__scriptFacade.getAllPuids(ofType);
-        };
-        return Script;
-    }(ScriptBase_1.ScriptBase));
-    exports.Script = Script;
-});
+        else
+            this.__scriptFacade.establishChannel(leafChannelName);
+    }
+    sendOnChannel(leafChannelName, data) {
+        this.__scriptFacade.sendOnChannel(leafChannelName, data);
+    }
+    newRecord(type) {
+        return this.__scriptFacade.newRecord(type);
+    }
+    deleteRecord(record, archive, filesToArchive) {
+        return this.__scriptFacade.deleteRecord(record, archive, filesToArchive);
+    }
+    deleteRecords(type, archive) {
+        return this.__scriptFacade.deleteRecords(type, archive || false);
+    }
+    getRecord(type, puid) {
+        return this.__scriptFacade.getRecord(type, puid);
+    }
+    getRecordSec(type, fieldName, fieldValue, optional) {
+        return this.__scriptFacade.getRecordSec(type, fieldName, fieldValue, optional);
+    }
+    getAllPuids(ofType) {
+        return this.__scriptFacade.getAllPuids(ofType);
+    }
+}
+exports.Script = Script;

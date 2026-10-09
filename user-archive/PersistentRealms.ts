@@ -9,9 +9,9 @@
 	- removing an unused async from saveRealm, resulting in a promise leak.
  */
 
-import {Realm} from 'system/Realm';
-import {Script, ScriptEnv} from 'system_lib/Script';
-import {callable, parameter} from "system_lib/Metadata";
+import {Realm} from '../system/Realm';
+import {Script, ScriptEnv} from '../system_lib/Script';
+import {callable, parameter} from "../system_lib/Metadata";
 import {SimpleFile} from "../system/SimpleFile";
 
 const BASE_PATH = 'PersistentRealms/';

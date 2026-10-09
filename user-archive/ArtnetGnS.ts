@@ -15,10 +15,10 @@
 
  */
 
-import { Artnet, Fixture, Channel, AnalogChannel } from "system/Artnet";
-import { Realm } from "system/Realm";
-import { Script, ScriptEnv } from "system_lib/Script";
-import { callable, max, min, parameter, property } from "system_lib/Metadata";
+import { Artnet, Fixture, Channel, AnalogChannel } from "../system/Artnet";
+import { Realm } from "../system/Realm";
+import { Script, ScriptEnv } from "../system_lib/Script";
+import { callable, max, min, parameter, property } from "../system_lib/Metadata";
 
 const CHANNEL_NAME_PREFIX = 'L_';
 const CHANNEL_NAME_DIGITS = 2;
@@ -982,8 +982,6 @@ class ArtnetScene {
    abstract call(timefactor? : number) : void;
  }
 class ArtnetSceneChannel extends ArtnetSceneItem {
-    public readonly duration: number;
-    public readonly delay: number;
     private readonly channel: AnalogChannel;
     private value: number;
     public constructor(
@@ -1004,8 +1002,6 @@ class ArtnetSceneChannel extends ArtnetSceneItem {
     }
 }
 class ArtnetSceneChannelFadeToLabel extends ArtnetSceneItem {
-    public readonly duration: number;
-    public readonly delay: number;
     private readonly channel: AnalogChannel;
     private valuePath: string;
     public constructor(

@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
-import {NetworkTCP} from "system/Network";
-import {BoolState, NetworkProjector, NumState} from "driver/NetworkProjector";
-import * as Meta from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {BoolState, NetworkProjector, NumState} from "../driver/NetworkProjector";
+import * as Meta from "../system_lib/Metadata";
 
 /*
  Manage a PJLink projector, accessed through a provided NetworkTCP connection.

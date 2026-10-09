@@ -12,8 +12,8 @@
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {property} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {property} from "../system_lib/Metadata";
 
 export class Week extends Script {
 	private mWeek = 0;	// Invalid week number (but valid number), making it trigger when first set

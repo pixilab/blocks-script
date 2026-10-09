@@ -6,9 +6,9 @@
  	Created 2018 by Mike Fahl.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {SimpleFile} from "system/SimpleFile";
-import {max, min, property} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {SimpleFile} from "../system/SimpleFile";
+import {max, min, property} from "../system_lib/Metadata";
 
 // Composite hour and minutes
 interface HMTime {

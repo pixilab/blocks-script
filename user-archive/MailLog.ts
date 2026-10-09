@@ -9,11 +9,11 @@
 	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script} from "system_lib/Script";
-import {SimpleMail} from "system/SimpleMail";
-import {SimpleProcess} from "system/SimpleProcess";
-import {callable} from "system_lib/Metadata";
-import {SimpleFile} from "system/SimpleFile";
+import {Script} from "../system_lib/Script";
+import {SimpleMail} from "../system/SimpleMail";
+import {SimpleProcess} from "../system/SimpleProcess";
+import {callable} from "../system_lib/Metadata";
+import {SimpleFile} from "../system/SimpleFile";
 
 export class MailLog extends Script {
 	/**

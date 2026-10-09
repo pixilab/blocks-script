@@ -1,34 +1,16 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-define(["require", "exports", "./ScriptBase"], function (require, exports, ScriptBase_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Feed = void 0;
-    var Feed = (function (_super) {
-        __extends(Feed, _super);
-        function Feed(env) {
-            return _super.call(this, env) || this;
-        }
-        Feed.prototype.establishFeed = function (feed) {
-            this.__scriptFacade.establishFeed(feed);
-        };
-        Feed.prototype.refreshFeed = function (instanceName) {
-            this.__scriptFacade.refreshFeed(instanceName);
-        };
-        return Feed;
-    }(ScriptBase_1.ScriptBase));
-    exports.Feed = Feed;
-});
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Feed = void 0;
+const ScriptBase_1 = require("./ScriptBase");
+class Feed extends ScriptBase_1.ScriptBase {
+    constructor(env) {
+        super(env);
+    }
+    establishFeed(feed) {
+        this.__scriptFacade.establishFeed(feed);
+    }
+    refreshFeed(instanceName) {
+        this.__scriptFacade.refreshFeed(instanceName);
+    }
+}
+exports.Feed = Feed;

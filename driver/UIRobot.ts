@@ -2,9 +2,9 @@
  * Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, parameter, property} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {callable, driver, parameter, property} from "../system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 3047 })
 export class UIRobot extends Driver<NetworkTCP> {

@@ -19,11 +19,11 @@
  */
 
 
-import {field, id, callable, parameter} from "system_lib/Metadata";
-import * as feed from "system_lib/Feed";
-import {ListData} from "system_lib/Feed";
+import {field, id, callable, parameter} from "../system_lib/Metadata";
+import * as feed from "../system_lib/Feed";
+import {ListData} from "../system_lib/Feed";
 import {SimpleHTTP} from "../system/SimpleHTTP";
-import { SimpleFile} from "system/SimpleFile";
+import { SimpleFile} from "../system/SimpleFile";
 
 const DEBUG_LOGGING_ENABLED = false;  
 const CONFIG_FILE = "Rss.config.json";

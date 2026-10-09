@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -22,40 +8,40 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Script", "system/Realm", "system/Spot", "system_lib/Metadata"], function (require, exports, Script_1, Realm_1, Spot_1, Metadata_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.PropGetter = void 0;
-    var PropGetter = exports.PropGetter = (function (_super) {
-        __extends(PropGetter, _super);
-        function PropGetter(env) {
-            return _super.call(this, env) || this;
-        }
-        PropGetter.prototype.readTaskItem = function (fetchSpec) {
-            var realm = Realm_1.Realm[fetchSpec.realmName];
-            var result;
-            if (fetchSpec.varName)
-                result = realm.variable[fetchSpec.varName].value;
-            else
-                result = realm.group[fetchSpec.groupName][fetchSpec.taskName].running;
-            return result;
-        };
-        PropGetter.prototype.readSpotState = function (fetchSpec) {
-            var spotListItem = Spot_1.Spot[fetchSpec.spotPath];
-            return spotListItem[fetchSpec.propName];
-        };
-        __decorate([
-            (0, Metadata_1.resource)(),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Object]),
-            __metadata("design:returntype", Object)
-        ], PropGetter.prototype, "readTaskItem", null);
-        __decorate([
-            (0, Metadata_1.resource)(),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Object]),
-            __metadata("design:returntype", Object)
-        ], PropGetter.prototype, "readSpotState", null);
-        return PropGetter;
-    }(Script_1.Script));
-});
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PropGetter = void 0;
+const Script_1 = require("../system_lib/Script");
+const Realm_1 = require("../system/Realm");
+const Spot_1 = require("../system/Spot");
+const Metadata_1 = require("../system_lib/Metadata");
+class PropGetter extends Script_1.Script {
+    constructor(env) {
+        super(env);
+    }
+    readTaskItem(fetchSpec) {
+        const realm = Realm_1.Realm[fetchSpec.realmName];
+        var result;
+        if (fetchSpec.varName)
+            result = realm.variable[fetchSpec.varName].value;
+        else
+            result = realm.group[fetchSpec.groupName][fetchSpec.taskName].running;
+        return result;
+    }
+    readSpotState(fetchSpec) {
+        const spotListItem = Spot_1.Spot[fetchSpec.spotPath];
+        return spotListItem[fetchSpec.propName];
+    }
+}
+exports.PropGetter = PropGetter;
+__decorate([
+    (0, Metadata_1.resource)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Object)
+], PropGetter.prototype, "readTaskItem", null);
+__decorate([
+    (0, Metadata_1.resource)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Object)
+], PropGetter.prototype, "readSpotState", null);

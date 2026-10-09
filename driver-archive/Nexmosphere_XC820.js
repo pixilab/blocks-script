@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -22,30 +8,27 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "../system_lib/Metadata", "../driver/NexmosphereBase"], function (require, exports, Metadata_1, NexmosphereBase_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Nexmosphere_XC820 = void 0;
-    var kNumInterfaces = 4;
-    var Nexmosphere_XC820 = exports.Nexmosphere_XC820 = (function (_super) {
-        __extends(Nexmosphere_XC820, _super);
-        function Nexmosphere_XC820(port) {
-            var _this = _super.call(this, port, kNumInterfaces) || this;
-            _this.specialInterfaces = [
-                ["RGBW", 5]
-            ];
-            _this.initConnection(port);
-            _this.addBuiltInInterfaces(_this.specialInterfaces);
-            return _this;
-        }
-        Nexmosphere_XC820.prototype.considerConnected = function () {
-            return this.port.connected;
-        };
-        Nexmosphere_XC820 = __decorate([
-            (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
-            (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
-            __metadata("design:paramtypes", [Object])
-        ], Nexmosphere_XC820);
-        return Nexmosphere_XC820;
-    }(NexmosphereBase_1.NexmosphereBase));
-});
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Nexmosphere_XC820 = void 0;
+const Metadata_1 = require("../system_lib/Metadata");
+const NexmosphereBase_1 = require("../driver/NexmosphereBase");
+const kNumInterfaces = 4;
+let Nexmosphere_XC820 = class Nexmosphere_XC820 extends NexmosphereBase_1.NexmosphereBase {
+    specialInterfaces = [
+        ["RGBW", 5]
+    ];
+    constructor(port) {
+        super(port, kNumInterfaces);
+        this.initConnection(port);
+        this.addBuiltInInterfaces(this.specialInterfaces);
+    }
+    considerConnected() {
+        return this.port.connected;
+    }
+};
+exports.Nexmosphere_XC820 = Nexmosphere_XC820;
+exports.Nexmosphere_XC820 = Nexmosphere_XC820 = __decorate([
+    (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
+    (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
+    __metadata("design:paramtypes", [Object])
+], Nexmosphere_XC820);

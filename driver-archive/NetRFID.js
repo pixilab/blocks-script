@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -22,68 +8,62 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.NetRFID = void 0;
-    var NetRFID = exports.NetRFID = (function (_super) {
-        __extends(NetRFID, _super);
-        function NetRFID(socket) {
-            var _this = _super.call(this, socket) || this;
-            _this.socket = socket;
-            socket.autoConnect();
-            socket.subscribe('textReceived', function (sender, message) {
-                var scanned = message.text;
-                if (scanned.indexOf('v') === 0)
-                    scanned = scanned.substring(4);
-                _this.scanned = NetRFID_1.removeControls(scanned);
-            });
-            return _this;
-        }
-        NetRFID_1 = NetRFID;
-        NetRFID.removeControls = function (scanned) {
-            var result = '';
-            var len = scanned.length;
-            for (var ix = 0; ix < len; ++ix) {
-                if (scanned.charCodeAt(ix) > 0x20)
-                    result += scanned.charAt(ix);
-            }
-            return result;
-        };
-        Object.defineProperty(NetRFID.prototype, "scanned", {
-            get: function () {
-                return this.mScanned;
-            },
-            set: function (value) {
-                this.mScanned = value;
-                if (value)
-                    this.startResetTimeout();
-            },
-            enumerable: false,
-            configurable: true
+var NetRFID_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NetRFID = void 0;
+const Driver_1 = require("../system_lib/Driver");
+const Metadata_1 = require("../system_lib/Metadata");
+let NetRFID = NetRFID_1 = class NetRFID extends Driver_1.Driver {
+    socket;
+    mScanned;
+    mResetValuePromise;
+    constructor(socket) {
+        super(socket);
+        this.socket = socket;
+        socket.autoConnect();
+        socket.subscribe('textReceived', (sender, message) => {
+            let scanned = message.text;
+            if (scanned.indexOf('v') === 0)
+                scanned = scanned.substring(4);
+            this.scanned = NetRFID_1.removeControls(scanned);
         });
-        NetRFID.prototype.startResetTimeout = function () {
-            var _this = this;
-            this.stopResetTimer();
-            this.mResetValuePromise = wait(500);
-            this.mResetValuePromise.then(function () { return _this.scanned = ""; });
-        };
-        NetRFID.prototype.stopResetTimer = function () {
-            if (this.mResetValuePromise) {
-                this.mResetValuePromise.cancel();
-                this.mResetValuePromise = undefined;
-            }
-        };
-        var NetRFID_1;
-        __decorate([
-            (0, Metadata_1.property)("Last scanned value, or empty string", true),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], NetRFID.prototype, "scanned", null);
-        NetRFID = NetRFID_1 = __decorate([
-            (0, Metadata_1.driver)('NetworkTCP', { port: 50000 }),
-            __metadata("design:paramtypes", [Object])
-        ], NetRFID);
-        return NetRFID;
-    }(Driver_1.Driver));
-});
+    }
+    static removeControls(scanned) {
+        let result = '';
+        const len = scanned.length;
+        for (let ix = 0; ix < len; ++ix) {
+            if (scanned.charCodeAt(ix) > 0x20)
+                result += scanned.charAt(ix);
+        }
+        return result;
+    }
+    set scanned(value) {
+        this.mScanned = value;
+        if (value)
+            this.startResetTimeout();
+    }
+    get scanned() {
+        return this.mScanned;
+    }
+    startResetTimeout() {
+        this.stopResetTimer();
+        this.mResetValuePromise = wait(500);
+        this.mResetValuePromise.then(() => this.scanned = "");
+    }
+    stopResetTimer() {
+        if (this.mResetValuePromise) {
+            this.mResetValuePromise.cancel();
+            this.mResetValuePromise = undefined;
+        }
+    }
+};
+exports.NetRFID = NetRFID;
+__decorate([
+    (0, Metadata_1.property)("Last scanned value, or empty string", true),
+    __metadata("design:type", String),
+    __metadata("design:paramtypes", [String])
+], NetRFID.prototype, "scanned", null);
+exports.NetRFID = NetRFID = NetRFID_1 = __decorate([
+    (0, Metadata_1.driver)('NetworkTCP', { port: 50000 }),
+    __metadata("design:paramtypes", [Object])
+], NetRFID);

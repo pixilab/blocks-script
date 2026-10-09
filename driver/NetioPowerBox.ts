@@ -16,10 +16,10 @@
 	Version 1.0.1
  */
 
-import { NetworkTCP } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { SimpleHTTP } from "system/SimpleHTTP";
-import { driver, property } from "system_lib/Metadata";
+import { NetworkTCP } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { SimpleHTTP } from "../system/SimpleHTTP";
+import { driver, property } from "../system_lib/Metadata";
 
 /**
  * What's in the Outputs field from the "netio.json" request

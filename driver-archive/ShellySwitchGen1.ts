@@ -14,9 +14,9 @@
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {MQTT, NetworkTCP} from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { driver, property } from "system_lib/Metadata";
+import {MQTT, NetworkTCP} from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { driver, property } from "../system_lib/Metadata";
 import {IndexedProperty} from "../system_lib/ScriptBase";
 import {InputBase, OutputBase, MqttSwitchBase} from "./MqttSwitchBase";
 

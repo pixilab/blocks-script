@@ -6,7 +6,7 @@
  */
 
 import {Driver} from "./Driver";
-import {NetworkTCP, NetworkUDP} from "system/Network";
+import {NetworkTCP, NetworkUDP} from "../system/Network";
 
 
 export abstract class NetworkDriver extends Driver<NetworkTCP | NetworkUDP> {

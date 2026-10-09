@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -25,85 +11,73 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Script", "system_lib/Metadata"], function (require, exports, Script_1, Metadata_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ClassyScript = void 0;
-    var ClassyScript = exports.ClassyScript = (function (_super) {
-        __extends(ClassyScript, _super);
-        function ClassyScript(env) {
-            var _this = _super.call(this, env) || this;
-            _this.mConnected = false;
-            _this.mDynPropValue = false;
-            _this.mLevel = 0;
-            console.log("ClassyScript instantiated");
-            _this.mConnected = false;
-            _this.property("dynProp1", { type: Boolean }, function (sv) {
-                if (sv !== undefined) {
-                    if (_this.mDynPropValue !== sv) {
-                        _this.mDynPropValue = sv;
-                        console.log("dynProp1", sv);
-                    }
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ClassyScript = void 0;
+const Script_1 = require("../system_lib/Script");
+const Metadata_1 = require("../system_lib/Metadata");
+class ClassyScript extends Script_1.Script {
+    mConnected = false;
+    mDynPropValue = false;
+    mLevel = 0;
+    constructor(env) {
+        super(env);
+        console.log("ClassyScript instantiated");
+        this.mConnected = false;
+        this.property("dynProp1", { type: Boolean }, (sv) => {
+            if (sv !== undefined) {
+                if (this.mDynPropValue !== sv) {
+                    this.mDynPropValue = sv;
+                    console.log("dynProp1", sv);
                 }
-                return _this.mDynPropValue;
-            });
-            return _this;
-        }
-        Object.defineProperty(ClassyScript.prototype, "connected", {
-            get: function () {
-                return this.mConnected;
-            },
-            set: function (online) {
-                var _this = this;
-                this.mConnected = online;
-                console.info("Connection state", online, this.internalFunction(40, 2));
-                wait(2000).then(function () {
-                    _this.mConnected = false;
-                    console.log("Connected OFF after delay");
-                    _this.changed('connected');
-                });
-            },
-            enumerable: false,
-            configurable: true
+            }
+            return this.mDynPropValue;
         });
-        Object.defineProperty(ClassyScript.prototype, "level", {
-            get: function () {
-                return this.mLevel;
-            },
-            set: function (value) {
-                this.mLevel = value;
-                console.info("Property level changed to", value);
-            },
-            enumerable: false,
-            configurable: true
+    }
+    set connected(online) {
+        this.mConnected = online;
+        console.info("Connection state", online, this.internalFunction(40, 2));
+        wait(2000).then(() => {
+            this.mConnected = false;
+            console.log("Connected OFF after delay");
+            this.changed('connected');
         });
-        ClassyScript.prototype.doSomething = function (aString, aNumber, aBoolean) {
-            var result = aString + ' ' + aNumber + ' ' + aBoolean;
-            console.info("doSomething", result);
-            return result;
-        };
-        ClassyScript.prototype.internalFunction = function (a, b) {
-            return a + b;
-        };
-        __decorate([
-            (0, Metadata_1.property)("Useful textual description"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], ClassyScript.prototype, "connected", null);
-        __decorate([
-            (0, Metadata_1.property)("A numeric value"),
-            (0, Metadata_1.min)(0),
-            (0, Metadata_1.max)(25),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], ClassyScript.prototype, "level", null);
-        __decorate([
-            (0, Metadata_1.callable)("Something to help the user"),
-            __param(0, (0, Metadata_1.parameter)("Textual description shown in UI")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, Number, Boolean]),
-            __metadata("design:returntype", String)
-        ], ClassyScript.prototype, "doSomething", null);
-        return ClassyScript;
-    }(Script_1.Script));
-});
+    }
+    get connected() {
+        return this.mConnected;
+    }
+    set level(value) {
+        this.mLevel = value;
+        console.info("Property level changed to", value);
+    }
+    get level() {
+        return this.mLevel;
+    }
+    doSomething(aString, aNumber, aBoolean) {
+        const result = aString + ' ' + aNumber + ' ' + aBoolean;
+        console.info("doSomething", result);
+        return result;
+    }
+    internalFunction(a, b) {
+        return a + b;
+    }
+}
+exports.ClassyScript = ClassyScript;
+__decorate([
+    (0, Metadata_1.property)("Useful textual description"),
+    __metadata("design:type", Boolean),
+    __metadata("design:paramtypes", [Boolean])
+], ClassyScript.prototype, "connected", null);
+__decorate([
+    (0, Metadata_1.property)("A numeric value"),
+    (0, Metadata_1.min)(0),
+    (0, Metadata_1.max)(25),
+    __metadata("design:type", Number),
+    __metadata("design:paramtypes", [Number])
+], ClassyScript.prototype, "level", null);
+__decorate([
+    (0, Metadata_1.callable)("Something to help the user"),
+    __param(0, (0, Metadata_1.parameter)("Textual description shown in UI")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number, Boolean]),
+    __metadata("design:returntype", String)
+], ClassyScript.prototype, "doSomething", null);

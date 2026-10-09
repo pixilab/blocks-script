@@ -5,8 +5,8 @@
  * version 1.0
  */
 
-import {NetworkUDP} from "system/Network";
-import {driver} from "system_lib/Metadata";
+import {NetworkUDP} from "../system/Network";
+import {driver} from "../system_lib/Metadata";
 import {NexmosphereBase,BuiltInElements } from "../driver/NexmosphereBase";
 
 const kNumInterfaces: number = 8;

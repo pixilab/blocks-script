@@ -12,9 +12,9 @@
 	Tested with Minrray UV510AS-12-ST-NDI PTZ 12x zoom
  */
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {driver, parameter, property, callable, min, max} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {driver, parameter, property, callable, min, max} from "../system_lib/Metadata";
 
 // A simple map-like object type
 interface Dictionary<TElem> {

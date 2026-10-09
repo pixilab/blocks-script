@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -25,114 +11,96 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system_lib/Driver", "system_lib/Metadata"], function (require, exports, Driver_1, Metadata_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.TextIO = void 0;
-    var TextIO = exports.TextIO = (function (_super) {
-        __extends(TextIO, _super);
-        function TextIO(connection) {
-            var _this = _super.call(this, connection) || this;
-            _this.connection = connection;
-            _this.mRecievedText = '';
-            _this.mAutoClear = true;
-            _this.mAlwaysFireChange = false;
-            connection.autoConnect();
-            connection.subscribe('textReceived', function (sender, msg) {
-                _this.recievedText = msg.text;
-                log("Received: " + msg.text);
-            });
-            return _this;
-        }
-        TextIO.prototype.sendText = function (rawData, termination) {
-            if (termination === undefined)
-                this.connection.sendText(rawData);
-            else
-                this.connection.sendText(rawData, termination);
-            log("Sent: " + rawData);
-        };
-        Object.defineProperty(TextIO.prototype, "recievedText", {
-            get: function () {
-                return this.mRecievedText;
-            },
-            set: function (msg) {
-                var _this = this;
-                var oldData = this.mRecievedText;
-                this.mRecievedText = msg;
-                if (this.mAlwaysFireChange && oldData === msg)
-                    this.changed('recievedText');
-                if (this.mClearTimer) {
-                    this.mClearTimer.cancel();
-                    this.mClearTimer = undefined;
-                }
-                if (msg && this.mAutoClear) {
-                    this.mClearTimer = wait(300);
-                    this.mClearTimer.then(function () {
-                        _this.mClearTimer = undefined;
-                        if (_this.mAutoClear)
-                            _this.recievedText = '';
-                    });
-                }
-            },
-            enumerable: false,
-            configurable: true
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TextIO = void 0;
+const Driver_1 = require("../system_lib/Driver");
+const Metadata_1 = require("../system_lib/Metadata");
+let TextIO = class TextIO extends Driver_1.Driver {
+    connection;
+    mRecievedText = '';
+    mAutoClear = true;
+    mAlwaysFireChange = false;
+    mClearTimer;
+    constructor(connection) {
+        super(connection);
+        this.connection = connection;
+        connection.autoConnect();
+        connection.subscribe('textReceived', (sender, msg) => {
+            this.recievedText = msg.text;
+            log("Received: " + msg.text);
         });
-        Object.defineProperty(TextIO.prototype, "autoClear", {
-            get: function () {
-                return this.mAutoClear;
-            },
-            set: function (cmd) {
-                this.mAutoClear = cmd;
-            },
-            enumerable: false,
-            configurable: true
-        });
-        Object.defineProperty(TextIO.prototype, "alwaysFireChange", {
-            get: function () {
-                return this.mAlwaysFireChange;
-            },
-            set: function (value) {
-                this.mAlwaysFireChange = value;
-            },
-            enumerable: false,
-            configurable: true
-        });
-        __decorate([
-            (0, Metadata_1.callable)("Sends rawData to the device"),
-            __param(1, (0, Metadata_1.parameter)('Line termination. Default is a carriage return. Pass null for none.', true)),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String, String]),
-            __metadata("design:returntype", void 0)
-        ], TextIO.prototype, "sendText", null);
-        __decorate([
-            (0, Metadata_1.property)("The most recently received text message"),
-            __metadata("design:type", String),
-            __metadata("design:paramtypes", [String])
-        ], TextIO.prototype, "recievedText", null);
-        __decorate([
-            (0, Metadata_1.property)("Clear recievedText automatically after 300 mS"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], TextIO.prototype, "autoClear", null);
-        __decorate([
-            (0, Metadata_1.property)("Fire change on data received even if recievedText didn't change"),
-            __metadata("design:type", Boolean),
-            __metadata("design:paramtypes", [Boolean])
-        ], TextIO.prototype, "alwaysFireChange", null);
-        TextIO = __decorate([
-            (0, Metadata_1.driver)('NetworkTCP'),
-            (0, Metadata_1.driver)('SerialPort'),
-            __metadata("design:paramtypes", [Object])
-        ], TextIO);
-        return TextIO;
-    }(Driver_1.Driver));
-    var DEBUG = false;
-    function log() {
-        var messages = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            messages[_i] = arguments[_i];
-        }
-        if (DEBUG)
-            console.info(messages);
     }
-});
+    sendText(rawData, termination) {
+        if (termination === undefined)
+            this.connection.sendText(rawData);
+        else
+            this.connection.sendText(rawData, termination);
+        log("Sent: " + rawData);
+    }
+    get recievedText() {
+        return this.mRecievedText;
+    }
+    set recievedText(msg) {
+        const oldData = this.mRecievedText;
+        this.mRecievedText = msg;
+        if (this.mAlwaysFireChange && oldData === msg)
+            this.changed('recievedText');
+        if (this.mClearTimer) {
+            this.mClearTimer.cancel();
+            this.mClearTimer = undefined;
+        }
+        if (msg && this.mAutoClear) {
+            this.mClearTimer = wait(300);
+            this.mClearTimer.then(() => {
+                this.mClearTimer = undefined;
+                if (this.mAutoClear)
+                    this.recievedText = '';
+            });
+        }
+    }
+    get autoClear() {
+        return this.mAutoClear;
+    }
+    set autoClear(cmd) {
+        this.mAutoClear = cmd;
+    }
+    get alwaysFireChange() {
+        return this.mAlwaysFireChange;
+    }
+    set alwaysFireChange(value) {
+        this.mAlwaysFireChange = value;
+    }
+};
+exports.TextIO = TextIO;
+__decorate([
+    (0, Metadata_1.callable)("Sends rawData to the device"),
+    __param(1, (0, Metadata_1.parameter)('Line termination. Default is a carriage return. Pass null for none.', true)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], TextIO.prototype, "sendText", null);
+__decorate([
+    (0, Metadata_1.property)("The most recently received text message"),
+    __metadata("design:type", String),
+    __metadata("design:paramtypes", [String])
+], TextIO.prototype, "recievedText", null);
+__decorate([
+    (0, Metadata_1.property)("Clear recievedText automatically after 300 mS"),
+    __metadata("design:type", Boolean),
+    __metadata("design:paramtypes", [Boolean])
+], TextIO.prototype, "autoClear", null);
+__decorate([
+    (0, Metadata_1.property)("Fire change on data received even if recievedText didn't change"),
+    __metadata("design:type", Boolean),
+    __metadata("design:paramtypes", [Boolean])
+], TextIO.prototype, "alwaysFireChange", null);
+exports.TextIO = TextIO = __decorate([
+    (0, Metadata_1.driver)('NetworkTCP'),
+    (0, Metadata_1.driver)('SerialPort'),
+    __metadata("design:paramtypes", [Object])
+], TextIO);
+const DEBUG = false;
+function log(...messages) {
+    if (DEBUG)
+        console.info(messages);
+}

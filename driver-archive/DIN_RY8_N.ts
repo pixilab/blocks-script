@@ -6,9 +6,9 @@
  */
 
 
-import {SerialPort} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, max, min, property} from "system_lib/Metadata";
+import {SerialPort} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {callable, driver, max, min, property} from "../system_lib/Metadata";
 import {IndexedProperty} from "../system_lib/ScriptBase";
 
 interface MyOptions {

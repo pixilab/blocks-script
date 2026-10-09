@@ -1,6 +1,6 @@
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import * as Meta from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import * as Meta from "../system_lib/Metadata";
 
 /**
  A driver using a TCP socket for communicating with a "device".

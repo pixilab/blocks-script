@@ -4,10 +4,10 @@
  	Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {Realm} from "system/Realm";
-import {SimpleFile} from "system/SimpleFile";
-import {resource} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {Realm} from "../system/Realm";
+import {SimpleFile} from "../system/SimpleFile";
+import {resource} from "../system_lib/Metadata";
 
 
 /*	Optional cofiguration JSON file structure. Specifies the name of the realm in which

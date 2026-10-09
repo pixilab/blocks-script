@@ -7,7 +7,7 @@
   Version: 0.1
  */
 
-import * as Meta from 'system_lib/Metadata';
+import * as Meta from '../system_lib/Metadata';
 import { OSCviaUDP } from './OSCviaUDP';
 
 

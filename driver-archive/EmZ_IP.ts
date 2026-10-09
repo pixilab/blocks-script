@@ -2,9 +2,9 @@
  * Created 2018 by Sam Walz (sw@noparking.dk)
  */
 
-import {NetworkUDP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import * as Meta from "system_lib/Metadata";
+import {NetworkUDP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import * as Meta from "../system_lib/Metadata";
 
 const PROTOCOL_VERSION = 'ProfilNetV2.0';
 const MESSAGE_LINE_BREAK = '\r\n';

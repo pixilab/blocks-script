@@ -39,9 +39,9 @@ Created 2021 by Mattias Andersson.
 */
 
 
-import { NetworkTCP, SerialPort } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
+import { NetworkTCP, SerialPort } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import {callable, driver, max, min, parameter, property} from "../system_lib/Metadata";
 import { AggregateElem } from "../system_lib/ScriptBase";
 
 // Parse RFID tag detection from XR-DR01 Rfid element

@@ -14,10 +14,9 @@
 
  */
 
-import {NetworkTCP} from "system/Network";
-import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
-import {BoolState, NetworkProjector, NumState, State} from "driver/NetworkProjector";
-import {Driver} from "system_lib/Driver";
+import {NetworkTCP} from "../system/Network";
+import {callable, driver, max, min, parameter, property} from "../system_lib/Metadata";
+import {BoolState, NetworkProjector, NumState, State} from "../driver/NetworkProjector";
 
 const ZONE_ALL = 'Z0';
 const ZONE_MAIN = 'Z1';
@@ -61,17 +60,17 @@ export class AnthemMRX_x20 extends NetworkProjector {
 
 	private _fpb: NumState;
 	private _mut: BoolState;
-	private _powerAll: boolean;
-	private _powZone2: BoolState;
-	private _powZone3: BoolState;
-	private powerZone2: boolean;
-	private powerZone3: boolean;
+	private _powerAll: boolean | undefined;
+	private _powZone2: BoolState | undefined;
+	private _powZone3: BoolState | undefined;
+	private powerZone2: boolean | undefined;
+	private powerZone3: boolean | undefined;
 	private _sip: BoolState;
 	private _vol: SignedNumberState;
 
 	private readonly staticInfo: Dictionary<string>;
 
-	private getToKnowRunning: boolean;
+	private getToKnowRunning: boolean | undefined;
 
 	constructor(socket: NetworkTCP) {
 		socket.setReceiveFraming(';');
@@ -133,7 +132,7 @@ export class AnthemMRX_x20 extends NetworkProjector {
 			this['powerZone3'] = on;
 		this._powerAll = on;
 	}
-	public get powerAll(): boolean {
+	public get powerAll(): boolean | undefined {
 		return this._powerAll;
 	}
 	private updatePowerAll(): void {

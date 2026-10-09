@@ -1,6 +1,6 @@
-import { NetworkTCP } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { driver } from "system_lib/Metadata";
+import { NetworkTCP } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { driver } from "../system_lib/Metadata";
 
 /**
  * A driver for controlling Symetrix Composer Controllers 101-110.

@@ -6,7 +6,7 @@
  * version 1.1 Fixed bug in constructor where initConnection was not called for SerialPort driver.
  */
 
-import {driver} from "system_lib/Metadata";
+import {driver} from "../system_lib/Metadata";
 import {NexmosphereBase,ConnType, BuiltInElements} from "../driver/NexmosphereBase";
 
 const kNumInterfaces: number = 2;

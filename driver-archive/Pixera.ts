@@ -7,9 +7,9 @@
  */
 
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, property} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {callable, driver, property} from "../system_lib/Metadata";
 import {AggregateElem} from "../system_lib/ScriptBase";
 
 const enum TimelineMode {

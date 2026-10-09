@@ -6,9 +6,9 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {SimpleFile} from "system/SimpleFile";
-import {PrimTypeSpecifier} from "system/PubSub";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {SimpleFile} from "../system/SimpleFile";
+import {PrimTypeSpecifier} from "../system/PubSub";
 
 
 type propTypes = number|string|boolean;	// Property data types I support

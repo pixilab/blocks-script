@@ -324,7 +324,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 			}
 			return currValue;
 		}
-		this.registerProp(ps, opts, sgFunc);
+		this.registerProp(ps, opts, sgFunc as MySgFunc);
 	}
 
 	/**
@@ -344,7 +344,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 			}
 			return currValue;
 		}
-		this.registerProp(ps, ConfigurableMQTT.optsFromPropSetting(ps), sgFunc)
+		this.registerProp(ps, ConfigurableMQTT.optsFromPropSetting(ps), sgFunc as MySgFunc)
 	}
 
 	/**
@@ -360,7 +360,7 @@ export class ConfigurableMQTT extends Driver<MQTT> {
 			}
 			return currValue;
 		}
-		this.registerProp(ps, ConfigurableMQTT.optsFromPropSetting(ps), sgFunc)
+		this.registerProp(ps, ConfigurableMQTT.optsFromPropSetting(ps), sgFunc as MySgFunc)
 	}
 
 	/**

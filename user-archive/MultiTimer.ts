@@ -10,9 +10,9 @@
  	Copyright (c) 2024 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {AggregateElem, IndexedProperty} from "system_lib/ScriptBase";
-import {callable, parameter, property} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {AggregateElem, IndexedProperty} from "../system_lib/ScriptBase";
+import {callable, parameter, property} from "../system_lib/Metadata";
 
 export class MultiTimer extends Script {
 	timer: IndexedProperty<Timer>;

@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -25,53 +11,51 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Script", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Script_1, Metadata_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Pushover = void 0;
-    var Pushover = exports.Pushover = (function (_super) {
-        __extends(Pushover, _super);
-        function Pushover(env) {
-            var _this = _super.call(this, env) || this;
-            SimpleFile_1.SimpleFile.read(Pushover.CONFIG_FILE_NAME).then(function (readValue) {
-                var settings = JSON.parse(readValue);
-                if (!settings.token || !settings.user)
-                    console.warn("Invalid settings", Pushover.CONFIG_FILE_NAME);
-                _this.settings = settings;
-            }).catch(function (error) {
-                return console.error("Can't read settings", Pushover.CONFIG_FILE_NAME, error);
-            });
-            return _this;
-        }
-        Pushover.prototype.sendMessage = function (message) {
-            var settings = this.settings;
-            if (!settings)
-                throw ("can't send messsage (no settings)");
-            settings.message = message;
-            var encodedUrl = Pushover.makeFormUrl(Pushover.MSG_URL, settings);
-            var request = SimpleHTTP_1.SimpleHTTP.newRequest(encodedUrl);
-            return request.post("", 'application/x-www-form-urlencoded');
-        };
-        Pushover.makeFormUrl = function (baseUrl, params) {
-            var result = baseUrl;
-            if (params) {
-                var count = 0;
-                for (var par in params) {
-                    result += count++ ? '&' : '?';
-                    result += par + '=' + encodeURIComponent(params[par]);
-                }
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Pushover = void 0;
+const SimpleHTTP_1 = require("../system/SimpleHTTP");
+const SimpleFile_1 = require("../system/SimpleFile");
+const Script_1 = require("../system_lib/Script");
+const Metadata_1 = require("../system_lib/Metadata");
+class Pushover extends Script_1.Script {
+    static CONFIG_FILE_NAME = "Pushover.config.json";
+    static MSG_URL = "https://api.pushover.net/1/messages.json";
+    settings;
+    constructor(env) {
+        super(env);
+        SimpleFile_1.SimpleFile.read(Pushover.CONFIG_FILE_NAME).then(readValue => {
+            const settings = JSON.parse(readValue);
+            if (!settings.token || !settings.user)
+                console.warn("Invalid settings", Pushover.CONFIG_FILE_NAME);
+            this.settings = settings;
+        }).catch(error => console.error("Can't read settings", Pushover.CONFIG_FILE_NAME, error));
+    }
+    sendMessage(message) {
+        let settings = this.settings;
+        if (!settings)
+            throw ("can't send messsage (no settings)");
+        settings.message = message;
+        const encodedUrl = Pushover.makeFormUrl(Pushover.MSG_URL, settings);
+        const request = SimpleHTTP_1.SimpleHTTP.newRequest(encodedUrl);
+        return request.post("", 'application/x-www-form-urlencoded');
+    }
+    static makeFormUrl(baseUrl, params) {
+        let result = baseUrl;
+        if (params) {
+            let count = 0;
+            for (const par in params) {
+                result += count++ ? '&' : '?';
+                result += par + '=' + encodeURIComponent(params[par]);
             }
-            return result;
-        };
-        Pushover.CONFIG_FILE_NAME = "Pushover.config.json";
-        Pushover.MSG_URL = "https://api.pushover.net/1/messages.json";
-        __decorate([
-            (0, Metadata_1.callable)("Send a message"),
-            __param(0, (0, Metadata_1.parameter)("Message content")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", Promise)
-        ], Pushover.prototype, "sendMessage", null);
-        return Pushover;
-    }(Script_1.Script));
-});
+        }
+        return result;
+    }
+}
+exports.Pushover = Pushover;
+__decorate([
+    (0, Metadata_1.callable)("Send a message"),
+    __param(0, (0, Metadata_1.parameter)("Message content")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], Pushover.prototype, "sendMessage", null);

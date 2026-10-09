@@ -1,128 +1,137 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "driver/NetworkProjector", "system_lib/Metadata"], function (require, exports, NetworkProjector_1, Meta) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Christie_GS = void 0;
-    var Christie_GS = exports.Christie_GS = (function (_super) {
-        __extends(Christie_GS, _super);
-        function Christie_GS(socket) {
-            var _this = _super.call(this, socket) || this;
-            _this._power = new NetworkProjector_1.BoolState('PWR', 'power');
-            _this.addState(_this._power);
-            _this._input = new NetworkProjector_1.NumState('SIN+MAIN', 'input', Christie_GS_1.kMinInput, Christie_GS_1.kMaxInput);
-            _this.addState(_this._input);
-            socket.setReceiveFraming(")", true);
-            _this.poll();
-            _this.attemptConnect();
-            return _this;
+var Christie_GS_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Christie_GS = void 0;
+const NetworkProjector_1 = require("../driver/NetworkProjector");
+const Meta = __importStar(require("../system_lib/Metadata"));
+let Christie_GS = class Christie_GS extends NetworkProjector_1.NetworkProjector {
+    static { Christie_GS_1 = this; }
+    static replyParser = /\(\D+(\d+)\D/;
+    static kMinInput = 1;
+    static kMaxInput = 12;
+    _input;
+    constructor(socket) {
+        super(socket);
+        this._power = new NetworkProjector_1.BoolState('PWR', 'power');
+        this.addState(this._power);
+        this._input = new NetworkProjector_1.NumState('SIN+MAIN', 'input', Christie_GS_1.kMinInput, Christie_GS_1.kMaxInput);
+        this.addState(this._input);
+        socket.setReceiveFraming(")", true);
+        this.poll();
+        this.attemptConnect();
+    }
+    set input(value) {
+        if (this._input.set(value)) {
+            this.sendCorrection();
         }
-        Christie_GS_1 = Christie_GS;
-        Object.defineProperty(Christie_GS.prototype, "input", {
-            get: function () {
-                return this._input.get();
-            },
-            set: function (value) {
-                if (this._input.set(value)) {
-                    this.sendCorrection();
-                }
-            },
-            enumerable: false,
-            configurable: true
-        });
-        Christie_GS.prototype.justConnected = function () {
-            _super.prototype.justConnected.call(this);
-            this.connected = false;
-            this.pollStatus();
-        };
-        Christie_GS.prototype.pollStatus = function () {
-            var _this = this;
-            this.request('PWR?').then(function (reply) {
-                var powered = reply == '1';
-                _this._power.updateCurrent(powered);
-                if (powered)
-                    return _this.request('SIN+MAIN?');
-                else {
-                    _this.connected = true;
-                    _this.sendCorrection();
-                }
-            }).then(function (reply) {
-                if (reply !== undefined) {
-                    var selInput = parseInt(reply);
-                    if (!isNaN(selInput))
-                        _this._input.updateCurrent(selInput);
-                }
-                _this.connected = true;
-                _this.sendCorrection();
-            }).catch(function (error) {
-                _this.disconnectAndTryAgainSoon();
-            });
-            return true;
-        };
-        Christie_GS.prototype.request = function (question, param) {
-            var _this = this;
-            var toSend = question.indexOf('?') < 0 ? '#' + question : question;
-            if (param !== undefined)
-                toSend += param;
-            toSend = '(' + toSend + ')';
-            this.socket.sendText(toSend)
-                .catch(function (err) {
-                return _this.sendFailed(err);
-            });
-            var result = this.startRequest(question);
-            result.finally(function () {
-                asap(function () {
-                    _this.sendCorrection();
-                });
-            });
-            return result;
-        };
-        Christie_GS.prototype.textReceived = function (text) {
-            if (text) {
-                var parts = Christie_GS_1.replyParser.exec(text);
-                if (parts)
-                    this.requestSuccess(parts[1]);
-                else
-                    console.warn("Unexpected data", text);
+    }
+    get input() {
+        return this._input.get();
+    }
+    justConnected() {
+        super.justConnected();
+        this.connected = false;
+        this.pollStatus();
+    }
+    pollStatus() {
+        this.request('PWR?').then(reply => {
+            const powered = reply == '1';
+            this._power.updateCurrent(powered);
+            if (powered)
+                return this.request('SIN+MAIN?');
+            else {
+                this.connected = true;
+                this.sendCorrection();
             }
-        };
-        var Christie_GS_1;
-        Christie_GS.replyParser = /\(\D+(\d+)\D/;
-        Christie_GS.kMinInput = 1;
-        Christie_GS.kMaxInput = 12;
-        __decorate([
-            Meta.property("Desired input source number"),
-            Meta.min(Christie_GS_1.kMinInput),
-            Meta.max(Christie_GS_1.kMaxInput),
-            __metadata("design:type", Number),
-            __metadata("design:paramtypes", [Number])
-        ], Christie_GS.prototype, "input", null);
-        Christie_GS = Christie_GS_1 = __decorate([
-            Meta.driver('NetworkTCP', { port: 3002 }),
-            __metadata("design:paramtypes", [Object])
-        ], Christie_GS);
-        return Christie_GS;
-    }(NetworkProjector_1.NetworkProjector));
-});
+        }).then(reply => {
+            if (reply !== undefined) {
+                const selInput = parseInt(reply);
+                if (!isNaN(selInput))
+                    this._input.updateCurrent(selInput);
+            }
+            this.connected = true;
+            this.sendCorrection();
+        }).catch(error => {
+            this.disconnectAndTryAgainSoon();
+        });
+        return true;
+    }
+    request(question, param) {
+        var toSend = question.indexOf('?') < 0 ? '#' + question : question;
+        if (param !== undefined)
+            toSend += param;
+        toSend = '(' + toSend + ')';
+        this.socket.sendText(toSend)
+            .catch(err => this.sendFailed(err));
+        const result = this.startRequest(question);
+        result.finally(() => {
+            asap(() => {
+                this.sendCorrection();
+            });
+        });
+        return result;
+    }
+    textReceived(text) {
+        if (text) {
+            const parts = Christie_GS_1.replyParser.exec(text);
+            if (parts)
+                this.requestSuccess(parts[1]);
+            else
+                console.warn("Unexpected data", text);
+        }
+    }
+};
+exports.Christie_GS = Christie_GS;
+__decorate([
+    Meta.property("Desired input source number"),
+    Meta.min(Christie_GS.kMinInput),
+    Meta.max(Christie_GS.kMaxInput),
+    __metadata("design:type", Number),
+    __metadata("design:paramtypes", [Number])
+], Christie_GS.prototype, "input", null);
+exports.Christie_GS = Christie_GS = Christie_GS_1 = __decorate([
+    Meta.driver('NetworkTCP', { port: 3002 }),
+    __metadata("design:paramtypes", [Object])
+], Christie_GS);

@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2018 Mika Raunio <mika@imagemaker.fi>. Licensed under the MIT License.
  */
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import * as Meta from "system_lib/Metadata";
-import {State} from "lib/split-string";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import * as Meta from "../system_lib/Metadata";
+import {State} from "../lib/split-string";
 const split = require("lib/split-string");
 
 /**

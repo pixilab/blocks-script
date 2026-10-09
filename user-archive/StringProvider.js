@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -22,78 +8,76 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define(["require", "exports", "system_lib/Script", "system/SimpleFile", "system_lib/Metadata"], function (require, exports, Script_1, SimpleFile_1, Metadata_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.StringProvider = void 0;
-    var StringProvider = exports.StringProvider = (function (_super) {
-        __extends(StringProvider, _super);
-        function StringProvider(env) {
-            var _this = _super.call(this, env) || this;
-            SimpleFile_1.SimpleFile.read(StringProvider.kFileName).then(function (data) {
-                try {
-                    _this.data = JSON.parse(data);
-                    _this.publishProperties();
-                }
-                catch (parseError) {
-                    console.error("Failed parsing JSON data from file", StringProvider.kFileName, parseError);
-                }
-            }).catch(function (error) {
-                console.error("Failed reading file; use initial sample data", StringProvider.kFileName, error);
-                _this.data = {
-                    "alpha": "A",
-                    "beta": "B",
-                    "numeric": 42,
-                    "bool": true
-                };
-                _this.publishProperties();
-            });
-            return _this;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.StringProvider = void 0;
+const Script_1 = require("../system_lib/Script");
+const SimpleFile_1 = require("../system/SimpleFile");
+const Metadata_1 = require("../system_lib/Metadata");
+class StringProvider extends Script_1.Script {
+    data;
+    mPersistor;
+    static kFileName = "StringProvider.json";
+    constructor(env) {
+        super(env);
+        SimpleFile_1.SimpleFile.read(StringProvider.kFileName).then(data => {
+            try {
+                this.data = JSON.parse(data);
+                this.publishProperties();
+            }
+            catch (parseError) {
+                console.error("Failed parsing JSON data from file", StringProvider.kFileName, parseError);
+            }
+        }).catch(error => {
+            console.error("Failed reading file; use initial sample data", StringProvider.kFileName, error);
+            this.data = {
+                "alpha": "A",
+                "beta": "B",
+                "numeric": 42,
+                "bool": true
+            };
+            this.publishProperties();
+        });
+    }
+    fetch(fetchSpec) {
+        return this.data[fetchSpec.name];
+    }
+    publishProperties() {
+        for (var key in this.data) {
+            const propData = this.data[key];
+            var typeName = typeof propData;
+            if (typeName === 'boolean' ||
+                typeName === 'number' ||
+                typeName === 'string')
+                this.makeProperty(key, typeName);
+            else
+                console.error("Invalid type of ", key, typeName);
         }
-        StringProvider.prototype.fetch = function (fetchSpec) {
-            return this.data[fetchSpec.name];
-        };
-        StringProvider.prototype.publishProperties = function () {
-            for (var key in this.data) {
-                var propData = this.data[key];
-                var typeName = typeof propData;
-                if (typeName === 'boolean' ||
-                    typeName === 'number' ||
-                    typeName === 'string')
-                    this.makeProperty(key, typeName);
-                else
-                    console.error("Invalid type of ", key, typeName);
+    }
+    makeProperty(name, typeName) {
+        typeName = typeName.charAt(0).toUpperCase() + typeName.substr(1);
+        this.property(name, { type: typeName }, value => {
+            if (value !== undefined && value !== this.data[name]) {
+                this.data[name] = value;
+                this.persistVars();
             }
-        };
-        StringProvider.prototype.makeProperty = function (name, typeName) {
-            var _this = this;
-            typeName = typeName.charAt(0).toUpperCase() + typeName.substr(1);
-            this.property(name, { type: typeName }, function (value) {
-                if (value !== undefined && value !== _this.data[name]) {
-                    _this.data[name] = value;
-                    _this.persistVars();
-                }
-                return _this.data[name];
+            return this.data[name];
+        });
+    }
+    persistVars() {
+        if (!this.mPersistor) {
+            this.mPersistor = wait(200);
+            this.mPersistor.then(() => {
+                delete this.mPersistor;
+                const jsonData = JSON.stringify(this.data, null, 2);
+                SimpleFile_1.SimpleFile.write(StringProvider.kFileName, jsonData);
             });
-        };
-        StringProvider.prototype.persistVars = function () {
-            var _this = this;
-            if (!this.mPersistor) {
-                this.mPersistor = wait(200);
-                this.mPersistor.then(function () {
-                    delete _this.mPersistor;
-                    var jsonData = JSON.stringify(_this.data, null, 2);
-                    SimpleFile_1.SimpleFile.write(StringProvider.kFileName, jsonData);
-                });
-            }
-        };
-        StringProvider.kFileName = "StringProvider.json";
-        __decorate([
-            (0, Metadata_1.resource)(),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [Object]),
-            __metadata("design:returntype", String)
-        ], StringProvider.prototype, "fetch", null);
-        return StringProvider;
-    }(Script_1.Script));
-});
+        }
+    }
+}
+exports.StringProvider = StringProvider;
+__decorate([
+    (0, Metadata_1.resource)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", String)
+], StringProvider.prototype, "fetch", null);

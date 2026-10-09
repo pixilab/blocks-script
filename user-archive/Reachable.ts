@@ -8,8 +8,8 @@
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {callable, parameter} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {callable, parameter} from "../system_lib/Metadata";
 import {SimpleProcess} from "../system/SimpleProcess";
 
 

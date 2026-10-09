@@ -3,9 +3,9 @@
 	Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP, SerialPort} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, property, parameter} from "system_lib/Metadata";
+import {NetworkTCP, SerialPort} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {callable, driver, property, parameter} from "../system_lib/Metadata";
 
 type ConnType = NetworkTCP | SerialPort;
 

@@ -12,9 +12,9 @@
  */
 
 
-import {driver, property} from "system_lib/Metadata";
-import {Driver} from "system_lib/Driver";
-import {NetworkUDP} from "system/Network";
+import {driver, property} from "../system_lib/Metadata";
+import {Driver} from "../system_lib/Driver";
+import {NetworkUDP} from "../system/Network";
 
 @driver('NetworkUDP', { rcvPort: 9898 })
 export class UDPTimecode extends Driver<NetworkUDP> {

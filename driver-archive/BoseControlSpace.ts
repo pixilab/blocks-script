@@ -2,9 +2,9 @@
  * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP} from "system/Network";
-import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
-import {Driver} from "system_lib/Driver";
+import {NetworkTCP} from "../system/Network";
+import {callable, driver, max, min, parameter, property} from "../system_lib/Metadata";
+import {Driver} from "../system_lib/Driver";
 
 
 /**

@@ -355,7 +355,7 @@ export class Md5 {
         const s = self._state;
 
         return {
-            buffer: String.fromCharCode.apply(null, self._buffer8),
+            buffer: String.fromCharCode.apply(null, self._buffer8 as any as number[]),
             buflen: self._bufferLength,
             length: self._dataLength,
             state: [s[0], s[1], s[2], s[3]]

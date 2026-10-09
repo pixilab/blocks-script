@@ -14,7 +14,7 @@ import {PropertyAccessor} from "../system_lib/Script";
 import {Realm} from "../system/Realm"
 import {NetworkTCP} from "../system/Network";
 import {Driver} from "../system_lib/Driver";
-import {DisplaySpot, Spot, SpotGroup, SpotGroupItem} from "system/Spot";
+import {DisplaySpot, Spot, SpotGroup, SpotGroupItem} from "../system/Spot";
 import {SimpleFile} from "../system/SimpleFile";
 
 // "special" blocks group, designed to store ISAAC related Blocks

@@ -1,6 +1,6 @@
-import { NetworkTCP } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { driver, property } from "system_lib/Metadata";
+import { NetworkTCP } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { driver, property } from "../system_lib/Metadata";
 
 /**
  * A very basic NetRFID driver for receiving scanned values.
