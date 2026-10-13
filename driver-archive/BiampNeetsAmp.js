@@ -150,15 +150,15 @@ let BiampNeetsAmp = class BiampNeetsAmp extends NetworkProjector_1.NetworkProjec
 exports.BiampNeetsAmp = BiampNeetsAmp;
 __decorate([
     Meta.property("Desired audio input number"),
-    Meta.min(BiampNeetsAmp.kMinInput),
-    Meta.max(BiampNeetsAmp.kMaxInput),
+    Meta.min(BiampNeetsAmp_1.kMinInput),
+    Meta.max(BiampNeetsAmp_1.kMaxInput),
     __metadata("design:type", Number),
     __metadata("design:paramtypes", [Number])
 ], BiampNeetsAmp.prototype, "input", null);
 __decorate([
     Meta.property("Desired output volume"),
-    Meta.min(BiampNeetsAmp.kMinVol),
-    Meta.max(BiampNeetsAmp.kMaxVol),
+    Meta.min(BiampNeetsAmp_1.kMinVol),
+    Meta.max(BiampNeetsAmp_1.kMaxVol),
     __metadata("design:type", Number),
     __metadata("design:paramtypes", [Number])
 ], BiampNeetsAmp.prototype, "volume", null);

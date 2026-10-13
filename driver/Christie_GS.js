@@ -126,8 +126,8 @@ let Christie_GS = class Christie_GS extends NetworkProjector_1.NetworkProjector 
 exports.Christie_GS = Christie_GS;
 __decorate([
     Meta.property("Desired input source number"),
-    Meta.min(Christie_GS.kMinInput),
-    Meta.max(Christie_GS.kMaxInput),
+    Meta.min(Christie_GS_1.kMinInput),
+    Meta.max(Christie_GS_1.kMaxInput),
     __metadata("design:type", Number),
     __metadata("design:paramtypes", [Number])
 ], Christie_GS.prototype, "input", null);
