@@ -116,8 +116,8 @@ let BarcoPW392 = class BarcoPW392 extends NetworkProjector_1.NetworkProjector {
 exports.BarcoPW392 = BarcoPW392;
 __decorate([
     Meta.property("Desired input source number"),
-    Meta.min(BarcoPW392.kMinInput),
-    Meta.max(BarcoPW392.kMaxInput),
+    Meta.min(BarcoPW392_1.kMinInput),
+    Meta.max(BarcoPW392_1.kMaxInput),
     __metadata("design:type", Number),
     __metadata("design:paramtypes", [Number])
 ], BarcoPW392.prototype, "input", null);
