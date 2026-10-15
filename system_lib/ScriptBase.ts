@@ -2,7 +2,7 @@
  * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {SetterGetter, SGOptions} from "system/PubSub";
+import {SetterGetter, SGOptions} from "../system/PubSub";
 import {PropertyAccessor} from "./Script";
 
 
@@ -32,7 +32,7 @@ export class ScriptBase<FC extends ScriptBaseEnv> implements ChangeNotifier {
 			}
 		};
 		if (!options || !options.readOnly) {	// Read/write
-			propDescriptor.set = function (value) {	// Define setter also
+			propDescriptor.set =  (value) => {	// Define setter also
 				const oldValue = gsFunc();	// Detect change and fire notification
 				if (oldValue !== gsFunc(value)) // Always obains new value
 					this.__scriptFacade.changed(name);

@@ -10,9 +10,9 @@
  Created 2018 by Mike Fahl.
  */
 
-import {NetworkTCP} from "system/Network";
-import {callable, parameter, property} from "system_lib/Metadata";
-import {Driver} from "system_lib/Driver";
+import {NetworkTCP} from "../system/Network";
+import {callable, parameter, property} from "../system_lib/Metadata";
+import {Driver} from "../system_lib/Driver";
 
 export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	private awake: boolean;						// Initialization queries are done successfully

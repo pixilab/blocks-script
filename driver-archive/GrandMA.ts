@@ -7,9 +7,9 @@
  * - start macros
  */
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {driver, max, min, property, callable, parameter} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {driver, max, min, property, callable, parameter} from "../system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 30000 })
 export class GrandMA extends Driver<NetworkTCP> {

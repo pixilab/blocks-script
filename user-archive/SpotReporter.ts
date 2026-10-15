@@ -6,9 +6,9 @@
  */
 
 
-import { Script, ScriptEnv } from "system_lib/Script";
-import { DisplaySpot, Spot, SpotGroup } from "system/Spot";
-import { SimpleMail } from "system/SimpleMail";
+import { Script, ScriptEnv } from "../system_lib/Script";
+import { DisplaySpot, Spot, SpotGroup } from "../system/Spot";
+import { SimpleMail } from "../system/SimpleMail";
 import {callable, parameter, property} from "../system_lib/Metadata";
 
 const kNewline = "<br>\n"; // Email uses HTML format

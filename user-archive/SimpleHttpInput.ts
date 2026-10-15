@@ -11,8 +11,8 @@
  * Copyright (c) 2023 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {property, resource} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {property, resource} from "../system_lib/Metadata";
 
 export class SimpleHttpInput extends Script {
 	private mLastMessage = "";	// Backing store for lastMessage property

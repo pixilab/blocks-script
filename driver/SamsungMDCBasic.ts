@@ -5,9 +5,9 @@
  * Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {driver, max, min, property} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {driver, max, min, property} from "../system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 1515 })
 export class SamsungMDCBasic extends Driver<NetworkTCP> {

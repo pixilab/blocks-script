@@ -5,9 +5,9 @@
  	Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkUDP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {callable, driver, property} from "system_lib/Metadata";
+import {NetworkUDP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {callable, driver, property} from "../system_lib/Metadata";
 
 @driver('NetworkUDP', { port: 4444 })
 export class UDP_Input extends Driver<NetworkUDP> {

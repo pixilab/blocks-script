@@ -4,8 +4,8 @@
 	Copyright (c) 2024 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {min, property} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {min, property} from "../system_lib/Metadata";
 
 export class WallClock extends Script {
 	private mClockTime = "0:00";	// Time, as a string. E.g. "14:45"

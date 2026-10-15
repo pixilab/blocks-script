@@ -8,8 +8,8 @@
  	Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {property, callable} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {property, callable} from "../system_lib/Metadata";
 
 export class Countdown extends Script {
 	private mMinutes = 0;

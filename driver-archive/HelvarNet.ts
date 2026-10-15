@@ -4,9 +4,9 @@
 	Created by: Jonas Hjalmarsson, 2019, https://jonashjalmarsson.se
  */
 
-import { NetworkTCP } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { callable, property, driver, parameter } from "system_lib/Metadata";
+import { NetworkTCP } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { callable, property, driver, parameter } from "../system_lib/Metadata";
 
 @driver('NetworkTCP', { port: 50000 })
 export class HelvarNet extends Driver<NetworkTCP> {

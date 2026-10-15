@@ -7,10 +7,10 @@
 
  	Created 2018 by Samuel Walz
  */
-import {SimpleHTTP} from "system/SimpleHTTP";
-import {SimpleFile} from "system/SimpleFile";
-import {Script, ScriptEnv} from "system_lib/Script";
-import {callable, parameter} from "system_lib/Metadata";
+import {SimpleHTTP} from "../system/SimpleHTTP";
+import {SimpleFile} from "../system/SimpleFile";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {callable, parameter} from "../system_lib/Metadata";
 
 export class Flock extends Script {
 

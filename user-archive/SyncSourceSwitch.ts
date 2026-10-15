@@ -18,9 +18,9 @@
  * Author: Mattias Andersson
  */
 
-import {PropertyAccessor, Script, ScriptEnv} from "system_lib/Script";
-import {property, callable, parameter} from "system_lib/Metadata";
-import {AggregateElem, Dictionary} from "system_lib/ScriptBase";
+import {PropertyAccessor, Script, ScriptEnv} from "../system_lib/Script";
+import {property, callable, parameter} from "../system_lib/Metadata";
+import {AggregateElem, Dictionary} from "../system_lib/ScriptBase";
 
 
 export class SyncSourceSwitch extends Script {

@@ -17,11 +17,11 @@
 
 const ASCII = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
-import { NetworkTCP } from "system/Network";
-import { SimpleHTTP, Request, Response } from "system/SimpleHTTP";
-import { SimpleFile } from "system/SimpleFile";
-import { Driver } from "system_lib/Driver";
-import { callable, max, min, parameter, property, driver } from "system_lib/Metadata";
+import { NetworkTCP } from "../system/Network";
+import { SimpleHTTP, Request, Response } from "../system/SimpleHTTP";
+import { SimpleFile } from "../system/SimpleFile";
+import { Driver } from "../system_lib/Driver";
+import { callable, max, min, parameter, property, driver } from "../system_lib/Metadata";
 
 const XIC_CONFIG_BASE_PATH : string = 'xicato.config';
 const XIC_GROUP_OFFSET : number = 49152;

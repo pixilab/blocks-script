@@ -1,4 +1,4 @@
-/*	
+/*
 THIS DRIVER IS DEPRICASTED AND NO LONGER MAINTAINED. PLEASE USE THE NEW CONTROLLER SPECIFIC DRIVERS and NexmosphereBase instead.
 PIXILAB Blocks driver for the Nexmosphere line of controllers and elements:
 https://nexmosphere.com/technology/xperience-platform/
@@ -39,9 +39,9 @@ Created 2021 by Mattias Andersson.
 */
 
 
-import { NetworkTCP, SerialPort } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
+import { NetworkTCP, SerialPort } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import {callable, driver, max, min, parameter, property} from "../system_lib/Metadata";
 import { AggregateElem } from "../system_lib/ScriptBase";
 
 // Parse RFID tag detection from XR-DR01 Rfid element
@@ -52,6 +52,10 @@ const kPortPacketParser = /^X(\d+)([AB])\[(.+)]$/;
 
 // Controllers response to a product code request (D003B[TYPE]) controller response D001B[TYPE=XRDR1  ]
 const kProductCodeParser = /D(\d+)B\[\w+=(.+)]$/;
+
+const kZoneDescr = "Zone occupied";
+const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
+type EnterExit = "ENTER" | "EXIT";
 
 // A simple map-like object type
 interface Dictionary<TElem> { [id: string]: TElem; }
@@ -1131,9 +1135,7 @@ class LidarInterface extends BaseInterface {
 	}
 
 }
-const kZoneDescr = "Zone occupied";
-const RESPONSE_SETTINGS_STORED = "SETTINGS-STORED";
-type EnterExit = "ENTER" | "EXIT";
+
 /**
  * Nexmosphere requires >= 50 ms delay after each command
  * (in practice the needed delay seems to be longer)

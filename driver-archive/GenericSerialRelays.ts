@@ -22,22 +22,22 @@
  *
  * Compatible with many unbranded boards sold online (e.g., USB relay modules
  * with 1–8 channels).
- * 
+ *
  * Specify a the number of relays on the board in the driver options field. i.e 8
- * 
+ *
  * WARNING: the relay will always be reset at driver/player/server restart as there is no way to query current state.
- * 
+ *
  * version 1.0
- * 
+ *
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2021 by Mattias Andersson.
  */
 
 
-import { NetworkTCP, SerialPort } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { callable, driver,property } from "system_lib/Metadata";
-import { IndexedProperty, Dictionary} from 'system_lib/ScriptBase';
+import { NetworkTCP, SerialPort } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { callable, driver,property } from "../system_lib/Metadata";
+import { IndexedProperty, Dictionary} from '../system_lib/ScriptBase';
 
 
 type ConnType = NetworkTCP | SerialPort;
@@ -46,7 +46,7 @@ type ConnType = NetworkTCP | SerialPort;
 @driver('SerialPort', { baudRate: 9600 })
 
 export class GenericSerialRelays extends Driver<ConnType> {
-    public relays: IndexedProperty<Relay>;  
+    public relays: IndexedProperty<Relay>;
     public aggregateRelays: Dictionary<Relay>
 
     public constructor(private connection: ConnType) {
@@ -62,11 +62,11 @@ export class GenericSerialRelays extends Driver<ConnType> {
             for (let i = 1; i <= numInterfaces; i++) { //1 based to id numbering.
                 const relay = new Relay(i, this);
                 this.relays.push(relay);
-                
+
             }
             }else{
                 const relay = new Relay(1, this); //No options given, go ahead and create a single relay
-                this.relays.push(relay);    
+                this.relays.push(relay);
 		    } */
     }
 
@@ -82,14 +82,14 @@ export class GenericSerialRelays extends Driver<ConnType> {
         const st = state ? 0x01 : 0x00;
         const checksum = (START + relay + st) & 0xFF;
         this.connection.sendBytes([START, relay, st, checksum])
-        
+
     }
 
     isNumeric(str:string) {
     return typeof str === "string" && str.trim() !== "" && !isNaN(Number(str));
     }
 }
-    
+
 class Relay {
 
 	private id: number;
@@ -100,21 +100,21 @@ class Relay {
     {
         this.id = ix
         this.owner = owner
-        this.mRelay = false 
+        this.mRelay = false
         this.mName = name
         //asap(() => this.owner.sendCommand(this.id, false))  //Reset the relay in case it is on
     }
-    
+
 	@property("Controls the relay", false)
 	get relay(): boolean { return this.mRelay; }
-	set relay(value: boolean) { 
+	set relay(value: boolean) {
         if (value != this.mRelay)
-            this.owner.sendCommand(this.id, value) 
+            this.owner.sendCommand(this.id, value)
             this.mRelay = value; }
-    
-    
+
+
 	@property("RelayName", true)
 	get name(): string { return this.mName; }
-	
+
 }
 

@@ -1,9 +1,9 @@
 /* PIXILAB Blocks driver for the Stotzen Typhoon DSP1212 by Audioteknikk AS, Norway.
  */
 
-import {NetworkUDP} from "system/Network";
-import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
-import {Driver} from "system_lib/Driver";
+import {NetworkUDP} from "../system/Network";
+import {callable, driver, max, min, parameter, property} from "../system_lib/Metadata";
+import {Driver} from "../system_lib/Driver";
 
 
 @driver('NetworkUDP', { port: 50000 })

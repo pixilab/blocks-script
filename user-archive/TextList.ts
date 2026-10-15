@@ -8,10 +8,10 @@
 	Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {IndexedProperty} from "system_lib/ScriptBase";
-import {SimpleFile} from "system/SimpleFile";
-import {callable, property} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {IndexedProperty} from "../system_lib/ScriptBase";
+import {SimpleFile} from "../system/SimpleFile";
+import {callable, property} from "../system_lib/Metadata";
 
 export class TextList extends Script {
 	private lines: IndexedProperty<IndexedPropItem>;

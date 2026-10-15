@@ -300,6 +300,11 @@ export interface DisplaySpot extends ControllableSpot, SpotGroupItem, GeoZonable
 	readonly macAddress: string|null;
 
 	/**
+	 * Player version, if known, else null.
+	 */
+	readonly version: string|null;
+
+	/**
 	 * Event fired when interesting connection state event occurs.
 	 * NOTE: You need to re-subscribe if the object fires the 'finish' event.
 	 */

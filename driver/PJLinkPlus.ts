@@ -9,11 +9,11 @@
  *
  * Created 2018 by Samuel Walz <mail@samwalz.com>
  */
-import {NetworkTCP} from 'system/Network';
-import {NetworkProjector, State, BoolState, NumState} from 'driver/NetworkProjector';
-import {callable, driver, min, max, parameter, property} from 'system_lib/Metadata';
-import { SimpleFile } from 'system/SimpleFile';
-import { Md5 } from 'lib/md5';
+import {NetworkTCP} from '../system/Network';
+import {NetworkProjector, State, BoolState, NumState} from '../driver/NetworkProjector';
+import {callable, driver, min, max, parameter, property} from '../system_lib/Metadata';
+import { SimpleFile } from '../system/SimpleFile';
+import { Md5 } from '../lib/md5';
 
 /*
  * projector commands
@@ -1422,29 +1422,7 @@ export class PJLinkPlus extends NetworkProjector {
 		console.warn(this.logPrefix + ' ' + messages.join(', '));
 	}
 }
-class TracePromise<T> implements Thenable<T> {
 
-	private readonly promise : Promise<T>;
-	private _callback : promiseCallback<T>;
-
-	constructor(callback: promiseCallback<T>) {
-		this._callback = callback;
-		this.promise = new Promise<T>(callback);
-	}
-
-	catch<U>(onRejected?: (error: any) => (Thenable<U> | U)): Thenable<U> {
-		return this.promise.catch(onRejected);
-	}
-
-	finally<U>(finallyHandler: () => void): Promise<U> {
-		return this.promise.finally(finallyHandler);
-	}
-
-	then<U>(onFulfilled?: (value: T) => (Thenable<U> | U), onRejected?: (error: any) => void): Thenable<U> {
-		return this.promise.then(onFulfilled, onRejected);
-	}
-
-}
 class StringState extends State<string> {
 	correct(drvr: NetworkProjector): Promise<string> {
 		return this.correct2(drvr, this.wanted);

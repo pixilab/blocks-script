@@ -1,6 +1,6 @@
-import {Spot, DisplaySpot, SpotGroup} from "system/Spot";
-import {Script, ScriptEnv} from "system_lib/Script";
-import * as Meta from "system_lib/Metadata";
+import {Spot, DisplaySpot, SpotGroup} from "../system/Spot";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import * as Meta from "../system_lib/Metadata";
 
 export class NavigationSynchronizer extends Script {
     private navigationMasters : NavigationMaster[] = [];

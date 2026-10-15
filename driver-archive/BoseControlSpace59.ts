@@ -20,9 +20,9 @@ mute sub-properties).
 Copyright (c) 2021 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP} from "system/Network";
-import {callable, driver, max, min, parameter, property} from "system_lib/Metadata";
-import {Driver} from "system_lib/Driver";
+import {NetworkTCP} from "../system/Network";
+import {callable, driver, max, min, parameter, property} from "../system_lib/Metadata";
+import {Driver} from "../system_lib/Driver";
 
 interface Options {
 	gain: GainSetting[];	// Only option accepted at this point - more here later

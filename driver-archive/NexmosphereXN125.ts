@@ -6,8 +6,8 @@
  * version 1.0
  */
 
-import { NetworkTCP, SerialPort } from "system/Network";
-import { driver} from "system_lib/Metadata";
+import { NetworkTCP, SerialPort } from "../system/Network";
+import { driver} from "../system_lib/Metadata";
 import {NexmosphereBase} from "../driver/NexmosphereBase";
 
 const kNumInterfaces: number = 2;

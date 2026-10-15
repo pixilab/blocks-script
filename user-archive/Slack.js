@@ -1,18 +1,4 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -25,41 +11,38 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-define(["require", "exports", "system/SimpleHTTP", "system/SimpleFile", "system_lib/Script", "system_lib/Metadata"], function (require, exports, SimpleHTTP_1, SimpleFile_1, Script_1, Metadata_1) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Slack = void 0;
-    var Slack = exports.Slack = (function (_super) {
-        __extends(Slack, _super);
-        function Slack(env) {
-            var _this = _super.call(this, env) || this;
-            _this.accessToken = "";
-            SimpleFile_1.SimpleFile.read(Slack.CONFIG_FILE_NAME).then(function (readValue) {
-                var settings = JSON.parse(readValue);
-                _this.accessToken = settings.access_token;
-                if (!_this.accessToken)
-                    console.warn("Access token not set", Slack.CONFIG_FILE_NAME);
-            }).catch(function (error) {
-                return console.error("Can't read file", Slack.CONFIG_FILE_NAME, error);
-            });
-            return _this;
-        }
-        Slack.prototype.sendMessage = function (message) {
-            return this.sendJSON('{"text":"' + message + '"}');
-        };
-        Slack.prototype.sendJSON = function (jsonContent) {
-            var request = SimpleHTTP_1.SimpleHTTP.newRequest(Slack.SLACK_MSG_URL + this.accessToken);
-            return request.post(jsonContent, 'application/json');
-        };
-        Slack.CONFIG_FILE_NAME = "Slack.config.json";
-        Slack.SLACK_MSG_URL = "https://hooks.slack.com/services/";
-        __decorate([
-            (0, Metadata_1.callable)("Send message to Slack"),
-            __param(0, (0, Metadata_1.parameter)("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
-            __metadata("design:type", Function),
-            __metadata("design:paramtypes", [String]),
-            __metadata("design:returntype", Promise)
-        ], Slack.prototype, "sendMessage", null);
-        return Slack;
-    }(Script_1.Script));
-});
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Slack = void 0;
+const SimpleHTTP_1 = require("../system/SimpleHTTP");
+const SimpleFile_1 = require("../system/SimpleFile");
+const Script_1 = require("../system_lib/Script");
+const Metadata_1 = require("../system_lib/Metadata");
+class Slack extends Script_1.Script {
+    static CONFIG_FILE_NAME = "Slack.config.json";
+    static SLACK_MSG_URL = "https://hooks.slack.com/services/";
+    accessToken = "";
+    constructor(env) {
+        super(env);
+        SimpleFile_1.SimpleFile.read(Slack.CONFIG_FILE_NAME).then(readValue => {
+            var settings = JSON.parse(readValue);
+            this.accessToken = settings.access_token;
+            if (!this.accessToken)
+                console.warn("Access token not set", Slack.CONFIG_FILE_NAME);
+        }).catch(error => console.error("Can't read file", Slack.CONFIG_FILE_NAME, error));
+    }
+    sendMessage(message) {
+        return this.sendJSON('{"text":"' + message + '"}');
+    }
+    sendJSON(jsonContent) {
+        var request = SimpleHTTP_1.SimpleHTTP.newRequest(Slack.SLACK_MSG_URL + this.accessToken);
+        return request.post(jsonContent, 'application/json');
+    }
+}
+exports.Slack = Slack;
+__decorate([
+    (0, Metadata_1.callable)("Send message to Slack"),
+    __param(0, (0, Metadata_1.parameter)("Message content (supports basic formatting e.g. \\n *bold* _italic_)")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], Slack.prototype, "sendMessage", null);

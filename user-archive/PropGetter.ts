@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
-import {Script, ScriptEnv} from "system_lib/Script";
-import {Realm} from "system/Realm";
-import {Spot} from "system/Spot";
-import {resource} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {Realm} from "../system/Realm";
+import {Spot} from "../system/Spot";
+import {resource} from "../system_lib/Metadata";
 
 
 /**

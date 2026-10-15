@@ -13,7 +13,7 @@ import { driver, property } from "../system_lib/Metadata";
 @driver('NetworkTCP', { port: 51325 })
 export class AllenHeathAHM extends Driver<NetworkTCP> {
     private isConnected:boolean = false
-    private activePreset:number
+    private activePreset:number | undefined;
     private receiveBuffer:number[] = []
 
     public constructor(private socket: NetworkTCP) {
@@ -30,7 +30,7 @@ export class AllenHeathAHM extends Driver<NetworkTCP> {
         this.sendRecallPreset(presetNumber)
         // this.activePreset = presetNumber // Uncomment this if the device does not respond on preset change
     }
-    get preset(): number {
+    get preset(): number | undefined {
         return this.activePreset
     }
 
@@ -84,7 +84,7 @@ export class AllenHeathAHM extends Driver<NetworkTCP> {
      * @param bytes Byte (number) array that may begin with a preset recall response
      * @returns Parsed preset number, or undefined if response not found at array beginning
      */
-    private parsePresetRecallResponse(bytes:number[]):number {
+    private parsePresetRecallResponse(bytes:number[]): number | undefined {
         if(
             bytes[0] == 0xB0 && // Select Bank
             bytes[1] == 0x00 &&

@@ -4,8 +4,8 @@
  * Created 2021 by Mattias Andersson.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {callable, parameter} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {callable, parameter} from "../system_lib/Metadata";
 
 /**
  * A user script must begin with a class that extends the Script base-class. The name of this class

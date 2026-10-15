@@ -2,9 +2,9 @@
  * Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkUDP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {driver, property} from "system_lib/Metadata";
+import {NetworkUDP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {driver, property} from "../system_lib/Metadata";
 
 /**
  * Similar to the UDP_Input driver, but receives "raw bytes" instead of text. Each byte

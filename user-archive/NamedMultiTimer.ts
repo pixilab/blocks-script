@@ -11,9 +11,9 @@
 	version 1.0.0 initial release
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {AggregateElem} from "system_lib/ScriptBase";
-import {callable, parameter, property} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {AggregateElem} from "../system_lib/ScriptBase";
+import {callable, parameter, property} from "../system_lib/Metadata";
 
 interface Dictionary<TElem> { [id: string]: TElem; }
 

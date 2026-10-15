@@ -41,10 +41,10 @@ Where "analog" and "digital" sets the datatype.
 The callable enforceProp will send all the currently stored values in Blocks to the KNX groups.
  */
 
-import {callable, parameter, driver, property} from "system_lib/Metadata";
-import {Driver} from "system_lib/Driver";
-import {NetworkUDP} from "system/Network";
-import {SimpleFile} from "system/SimpleFile";
+import {callable, parameter, driver, property} from "../system_lib/Metadata";
+import {Driver} from "../system_lib/Driver";
+import {NetworkUDP} from "../system/Network";
+import {SimpleFile} from "../system/SimpleFile";
 
 const enum State {
 	DISCONNECTED,	// Initial (virgin) state
@@ -453,7 +453,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 		on: boolean
 	) {
 		const cmd: OnOffCmd = {
-			handler: this.sendOnOff.bind(this),
+			handler: this.sendOnOff.bind(this) as ((cmd: QueuedCommand) => void),
 			destAddr: calcAddr(addr1, addr2, addr3),
 			on: on
 		};
@@ -470,7 +470,7 @@ export class KNXNetIP extends Driver<NetworkUDP> {
 	) {
 		scene = Math.min(Math.max(0, scene), 63);
 		const cmd: NumberCmd = {
-			handler: this.sendSingleByteNumber.bind(this),
+			handler: this.sendSingleByteNumber.bind(this) as ((cmd: QueuedCommand) => void),
 			destAddr: calcAddr(addr1, addr2, addr3),
 			num: scene
 		};
@@ -647,7 +647,7 @@ class AnalogProp implements DynProp {
 		const anal = this.analog;
 		const owner = this.owner;
 		const cmd: NumberCmd = {
-			handler: owner.sendSingleByteNumber.bind(owner),
+			handler: owner.sendSingleByteNumber.bind(owner) as ((cmd: QueuedCommand) => void),
 			destAddr: calcAddr(anal.addr[0], anal.addr[1], anal.addr[2]),
 			num: Math.round(this.wantedValue * 255)
 		};
@@ -684,7 +684,7 @@ class DigitalProp implements DynProp {
 		const ch = this.digital;
 		const owner = this.owner;
 		const cmd: OnOffCmd = {
-			handler: owner.sendOnOff.bind(owner),
+			handler: owner.sendOnOff.bind(owner) as ((cmd: QueuedCommand) => void),
 			destAddr: calcAddr(ch.addr[0], ch.addr[1], ch.addr[2]),
 			on: this.wantedValue
 		};

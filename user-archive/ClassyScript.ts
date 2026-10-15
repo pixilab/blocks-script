@@ -2,8 +2,8 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {Script, ScriptEnv} from "system_lib/Script";
-import {callable, max, min, parameter, property} from "system_lib/Metadata";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {callable, max, min, parameter, property} from "../system_lib/Metadata";
 
 export class ClassyScript extends Script {
 	private mConnected = false;

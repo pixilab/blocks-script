@@ -2,9 +2,9 @@
  * Copyright (c) 2023 Mika Raunio <mika@diago.global>. Licensed under the MIT License.
  */
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import * as Meta from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import * as Meta from "../system_lib/Metadata";
 
 /*
  * This driver talks to a Leuze BPS 8 SM 100-01 via a TCP serial server,

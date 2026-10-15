@@ -1,13 +1,13 @@
 {
   "name": "PIXILAB-Blocks-Scripts",
-  "version": "6.1.0",
+  "version": "8.0.0",
   "description": "",
   "author": "PIXILAB Technologies AB",
   "license": "Copyright (c) PIXILAB Technologies AB, Sweden. All Rights Reserved.",
   "dependencies": {
-    "reflect-metadata": "^0.1.10"
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "typescript": "^4.8.4"
+    "typescript": "^7.0.2"
   }
 }

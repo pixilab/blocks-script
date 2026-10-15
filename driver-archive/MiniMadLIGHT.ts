@@ -8,7 +8,7 @@
   - OSC documentation was wrong about index and name commands
  */
 
-import * as Meta from 'system_lib/Metadata';
+import * as Meta from '../system_lib/Metadata';
 import { OSCviaUDP } from './OSCviaUDP';
 import { NetworkUDP } from '../system/Network';
 

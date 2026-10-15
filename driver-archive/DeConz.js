@@ -228,8 +228,6 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                 this.pendingCommands = {};
                 return;
             }
-            if (!this.devices || !this.groups)
-                return;
             var _loop_1 = function () {
                 if (this_1.pendingCommands.hasOwnProperty(dest)) {
                     var cmd = this_1.pendingCommands[dest];
@@ -256,6 +254,13 @@ define(["require", "exports", "system/SimpleFile", "system/SimpleHTTP", "system_
                         _this.sendPendingCommandsSoon();
                     });
                     return { value: void 0 };
+            if (!this.devices || !this.groups)
+                return;
+            var _loop_1 = function () {
+                if (this_1.pendingCommands.hasOwnProperty(dest)) {
+                    var cmd = this_1.pendingCommands[dest];
+                    delete this_1.pendingCommands[dest];
+                    if (targetItem = this_1.devices.byName[dest]) {
                 }
             };
             var this_1 = this, typeUrlSeg, cmdUrlSeg, targetItem;

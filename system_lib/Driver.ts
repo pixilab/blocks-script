@@ -3,9 +3,9 @@
  * Created 2018 by Mike Fahl.
  */
 
-import {ScriptBase, ScriptBaseEnv} from "system_lib/ScriptBase";
-import * as Meta from "system_lib/Metadata";
-import {NetworkBase} from "system/Network";
+import {ScriptBase, ScriptBaseEnv} from "../system_lib/ScriptBase";
+import * as Meta from "../system_lib/Metadata";
+import {NetworkBase} from "../system/Network";
 
 /**
  Ultimate base class for all script-based drivers.

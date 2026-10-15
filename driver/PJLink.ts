@@ -2,10 +2,10 @@
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  * Created 2018 by Mike Fahl.
  */
-import {NetworkTCP} from "system/Network";
-import {BoolState, NetworkProjector, NumState} from "driver/NetworkProjector";
-import * as Meta from "system_lib/Metadata";
-import {property} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {BoolState, NetworkProjector, NumState} from "../driver/NetworkProjector";
+import * as Meta from "../system_lib/Metadata";
+import {property} from "../system_lib/Metadata";
 
 /**
  Manage a PJLink projector, accessed through a provided NetworkTCPDevice connection.

@@ -2,9 +2,9 @@
  * Copyright (c) 2018 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import * as Meta from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import * as Meta from "../system_lib/Metadata";
 
 
 @Meta.driver('NetworkTCP', { port: 4999 })

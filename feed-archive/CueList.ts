@@ -385,7 +385,7 @@ class Cue {
 					this.taskRunningPath(list, '_exit'), running => {
 						if (!running) {
 							exitPropAccessor.close();
-							resolver();
+							resolver(null);
 						}
 					}
 				);

@@ -41,9 +41,9 @@
  */
 
 
-import {Script, ScriptEnv, PropertyAccessor} from "system_lib/Script";
-import {SimpleServer, Connection} from "system/SimpleServer";
-import {SimpleFile} from "system/SimpleFile";
+import {Script, ScriptEnv, PropertyAccessor} from "../system_lib/Script";
+import {SimpleServer, Connection} from "../system/SimpleServer";
+import {SimpleFile} from "../system/SimpleFile";
 import {callable} from "../system_lib/Metadata";
 
 /**
@@ -133,7 +133,7 @@ export class TCPProtocol extends Script {
 			} else
 				throw "Configuration has no paths";
 		} catch (error) {
-			this.configError("bad data", error);
+			this.configError("bad data", error as string);
 		}
 	}
 

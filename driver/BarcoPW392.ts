@@ -2,9 +2,9 @@
  * Copyright (c) 2020 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import * as Meta from "system_lib/Metadata";
-import {BoolState, NetworkProjector, NumState} from "driver/NetworkProjector";
-import {NetworkTCP} from "system/Network";
+import * as Meta from "../system_lib/Metadata";
+import {BoolState, NetworkProjector, NumState} from "../driver/NetworkProjector";
+import {NetworkTCP} from "../system/Network";
 
 /**
  Manage a BarcoPW392 protocol (aka ProjectionDesign) projector,

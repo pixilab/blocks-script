@@ -1,6 +1,6 @@
-import {NetworkTCP} from "system/Network";
-import {Driver} from "system_lib/Driver";
-import {driver, property} from "system_lib/Metadata";
+import {NetworkTCP} from "../system/Network";
+import {Driver} from "../system_lib/Driver";
+import {driver, property} from "../system_lib/Metadata";
 
 /**	Wall-plate Switcher for HDMI and USB-C.
 * https://atlona.com/product/at-hdvs-210u-tx-wp/

@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
-		"target": "es5",
-		"module": "amd",
+		"target": "es2023",
+		"module": "commonjs",
 		"noImplicitAny": true,
 		"noEmitHelpers": false,
 		"experimentalDecorators": true,
@@ -9,9 +9,12 @@
 		"removeComments": true,
 		"sourceMap": false,
 		"isolatedModules": false,
-		"moduleResolution": "classic",
+		"strictNullChecks": false,
+        "strictPropertyInitialization": false,
 		"rootDir":".",
-		"typeRoots": ["./system", "./node_modules"]
+		"typeRoots": ["./system", "./node_modules"],
+        "types": ["PIXI.d.ts"],
+        "ignoreDeprecations": "6.0"
 	},
 	"compileOnSave": true
 }

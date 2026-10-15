@@ -30,9 +30,9 @@ const OSC_TYPE_TAG_BOOLEAN_FALSE = 'F';
 
 const split: any = require("lib/split-string");
 
-import {NetworkUDP} from "system/Network";
-import * as Meta from "system_lib/Metadata";
-import {property} from "system_lib/Metadata";
+import {NetworkUDP} from "../system/Network";
+import * as Meta from "../system_lib/Metadata";
+import {property} from "../system_lib/Metadata";
 import {NetworkDriver} from "../system_lib/NetworkDriver";
 
 interface TnB {

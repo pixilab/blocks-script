@@ -7,9 +7,9 @@
  	Copyright (c) 2019 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
  */
 
-import {SimpleServer} from "system/SimpleServer";
-import {Script, ScriptEnv} from "system_lib/Script";
-import {property} from "system_lib/Metadata";
+import {SimpleServer} from "../system/SimpleServer";
+import {Script, ScriptEnv} from "../system_lib/Script";
+import {property} from "../system_lib/Metadata";
 
 
 export class SimpleInput extends Script {
