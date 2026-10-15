@@ -957,7 +957,7 @@ export class KNXNetIP_Bidirectional extends Driver<NetworkUDP> {
 		on: boolean
 	) {
 		const cmd: OnOffCmd = {
-			handler: this.sendOnOff.bind(this),
+			handler: this.sendOnOff.bind(this) as ((cmd: QueuedCommand) => void),
 			destAddr: calcAddr(addr1, addr2, addr3),
 			debugLabel: 'setOnOff ' + addr1 + '/' + addr2 + '/' + addr3,
 			on: on
@@ -975,7 +975,7 @@ export class KNXNetIP_Bidirectional extends Driver<NetworkUDP> {
 	) {
 		scene = Math.min(Math.max(0, scene), 63);
 		const cmd: ValueCmd = {
-			handler: this.sendGroupValueWrite.bind(this),
+			handler: this.sendGroupValueWrite.bind(this) as ((cmd: QueuedCommand) => void),
 			destAddr: calcAddr(addr1, addr2, addr3),
 			debugLabel: 'setScene ' + addr1 + '/' + addr2 + '/' + addr3,
 			payload: [scene]
@@ -986,7 +986,7 @@ export class KNXNetIP_Bidirectional extends Driver<NetworkUDP> {
 	public requestGroupRead(addr: number) {
 		debugLog('requestGroupRead', formatAddr(addr));
 		const cmd: ReadCmd = {
-			handler: this.sendGroupRead.bind(this),
+			handler: this.sendGroupRead.bind(this) as ((cmd: QueuedCommand) => void),
 			destAddr: addr,
 			debugLabel: 'GroupValueRead ' + formatAddr(addr),
 			isRead: true
@@ -1252,7 +1252,7 @@ class AnalogProp implements DynProp {
 	sendWantedValue() {
 		const owner = this.owner;
 		const cmd: ValueCmd = {
-			handler: owner.sendGroupValueWrite.bind(owner),
+			handler: owner.sendGroupValueWrite.bind(owner) as ((cmd: QueuedCommand) => void),
 			destAddr: this.cmdAddr,
 			debugLabel: this.propName,
 			payload: this.valueCodec.encode(this.wantedValue)
@@ -1310,7 +1310,7 @@ class DigitalProp implements DynProp {
 	sendWantedValue() {
 		const owner = this.owner;
 		const cmd: OnOffCmd = {
-			handler: owner.sendOnOff.bind(owner),
+			handler: owner.sendOnOff.bind(owner) as ((cmd: QueuedCommand) => void),
 			destAddr: this.cmdAddr,
 			debugLabel: this.propName,
 			on: this.wantedValue
@@ -1349,7 +1349,7 @@ class SceneProp implements DynProp {
 					this.wantedValue = v;
 					// Send scene recall as single byte payload
 					const cmd: ValueCmd = {
-						handler: this.owner.sendGroupValueWrite.bind(this.owner),
+						handler: this.owner.sendGroupValueWrite.bind(this.owner) as ((cmd: QueuedCommand) => void),
 						destAddr: this.cmdAddr,
 						debugLabel: this.propName,
 						payload: [v]
@@ -1382,7 +1382,7 @@ class SceneProp implements DynProp {
 
 	sendWantedValue() {
 		const cmd: ValueCmd = {
-			handler: this.owner.sendGroupValueWrite.bind(this.owner),
+			handler: this.owner.sendGroupValueWrite.bind(this.owner) as ((cmd: QueuedCommand) => void),
 			destAddr: this.cmdAddr,
 			debugLabel: this.propName,
 			payload: [this.wantedValue]
