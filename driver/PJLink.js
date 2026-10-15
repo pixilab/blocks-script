@@ -251,8 +251,8 @@ let PJLink = class PJLink extends NetworkProjector_1.NetworkProjector {
 exports.PJLink = PJLink;
 __decorate([
     Meta.property("Desired input source number; 11…59"),
-    Meta.min(PJLink_1.kMinInput),
-    Meta.max(PJLink_1.kMaxInput),
+    Meta.min(PJLink.kMinInput),
+    Meta.max(PJLink.kMaxInput),
     __metadata("design:type", Number),
     __metadata("design:paramtypes", [Number])
 ], PJLink.prototype, "input", null);

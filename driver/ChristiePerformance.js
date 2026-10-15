@@ -179,8 +179,8 @@ __decorate([
 ], ChristiePerformance.prototype, "powerUp", null);
 __decorate([
     Meta.property("Desired input source number"),
-    Meta.min(ChristiePerformance_1.kMinInput),
-    Meta.max(ChristiePerformance_1.kMaxInput),
+    Meta.min(ChristiePerformance.kMinInput),
+    Meta.max(ChristiePerformance.kMaxInput),
     __metadata("design:type", Number),
     __metadata("design:paramtypes", [Number])
 ], ChristiePerformance.prototype, "input", null);

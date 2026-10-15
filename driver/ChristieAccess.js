@@ -137,8 +137,8 @@ let ChristieAccess = class ChristieAccess extends NetworkProjector_1.NetworkProj
 exports.ChristieAccess = ChristieAccess;
 __decorate([
     Meta.property("Desired input source number"),
-    Meta.min(ChristieAccess_1.kMinInput),
-    Meta.max(ChristieAccess_1.kMaxInput),
+    Meta.min(ChristieAccess.kMinInput),
+    Meta.max(ChristieAccess.kMaxInput),
     __metadata("design:type", Number),
     __metadata("design:paramtypes", [Number])
 ], ChristieAccess.prototype, "input", null);
