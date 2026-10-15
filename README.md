@@ -1,7 +1,10 @@
 # blocks-script
+
+**IMPORTANT**: The scripts in this *legacy* branch are for use with Blocks 7. Blocks 8 and later have an newer script format, so use files form the master branch going forward.
+
 Scripting support for use with PIXILAB Blocks®, including custom device drivers and user scripts.
 
-**IMPORTANT**: In general, you should not activate drivers or user scripts by moving those from their xxx-archive directories into their active directories (i.e., driver and user) unless you need their functionality. In particular, user scipts are activated by merely moving them to the user directory. Active user scripts may consume system resources or cause problems if used in an incorrect manner.
+In general, you should not activate drivers or user scripts by moving those from their xxx-archive directories into their active directories (i.e., driver and user) unless you need their functionality. In particular, user scipts are activated by merely moving them to the user directory. Active user scripts may consume system resources or cause problems if used in an incorrect manner.
 
 Learn now to install and use drivers on your Blocks system here:
 https://pixilab.se/docs/blocks/drivers/concepts#using_a_device_driver
