@@ -1,6 +1,6 @@
 /*
 	Two-way KNXNet-IP driver.
-	
+
 	Copyright (c) 2026 PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
 
 DRIVER USER INSTRUCTIONS
@@ -106,10 +106,10 @@ EXAMPLE CONFIGURATION
 }
 */
 
-import {callable, parameter, driver, property} from "system_lib/Metadata";
-import {Driver} from "system_lib/Driver";
-import {NetworkUDP} from "system/Network";
-import {SimpleFile} from "system/SimpleFile";
+import {callable, parameter, driver, property} from "../system_lib/Metadata";
+import {Driver} from "../system_lib/Driver";
+import {NetworkUDP} from "../system/Network";
+import {SimpleFile} from "../system/SimpleFile";
 
 let debugLoggingEnabled = false;
 
@@ -234,7 +234,7 @@ export class KNXNetIP_Bidirectional extends Driver<NetworkUDP> {
 		this.loadConfig();
 		// Start periodic probe timer (will only actively attempt connections when appropriate)
 		this.startProbe();
-		
+
 		// Persisted pending-disconnect cleanup is attempted only when socket is enabled.
 		// The driver object may be recreated even when socket is disabled; avoid touching
 		// files or logging about prior disconnects in that case.
@@ -876,7 +876,7 @@ export class KNXNetIP_Bidirectional extends Driver<NetworkUDP> {
 			return; // nothing to do
 		const listenerPort = this.socket.listenerPort;
 		debugLog("sendDisconnectRequest attempt", this.disconnectAttempts + 1, "for channel", this.channelId);
-		const disconnReq = [ 
+		const disconnReq = [
 			0x06, 0x10,
 			Command.DISCONNECT_REQUEST >> 8, Command.DISCONNECT_REQUEST & 0xff,
 			0x00, 0x10,	// Total length
@@ -884,10 +884,10 @@ export class KNXNetIP_Bidirectional extends Driver<NetworkUDP> {
 			this.channelId, 0x00,	// Connection HPAI
 			0x08,	// HPAI length
 			0x01,	// Host Protocol Code 0x01 -> IPV4_UDP, 0x02 -> IPV6_TCP */
-			0, 0, 0, 0,	// Response IP address (any) 
+			0, 0, 0, 0,	// Response IP address (any)
 			listenerPort >> 8, listenerPort & 0xff
 		];
-		this.socket.sendBytes(setLength(disconnReq)); 
+		this.socket.sendBytes(setLength(disconnReq));
 		// Record that we asked to disconnect
 		this.debugLastDisconnectRequest = { when: Date.now(), reconnect };
 		// Persist the pending disconnect so other instances can try to clean up

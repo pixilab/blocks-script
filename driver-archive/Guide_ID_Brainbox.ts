@@ -18,9 +18,9 @@
  *
  * Notes:
  *  - Keep `sendUpdateIntervalMs` in sync with device expectations to avoid flooding.
- * 
+ *
  * v.1.0.0  - Initial version
- * v.1.0.1  - Add loopdetection to resend the current video code if time goes backwards, likely due to a loop in the content. 
+ * v.1.0.1  - Add loopdetection to resend the current video code if time goes backwards, likely due to a loop in the content.
  *            to ensure that the brainbox will resync to the correct video in case of a loop.
  *          - Requires server version 7.5.2 because of a bug fixed in TimeFlow
  * v.1.0.2  - Add instance debug logging and callable to enable it. Debug logging is disabled by default to avoid performance issues, but can be enabled to troubleshoot and verify the communication with the brainbox.
@@ -31,9 +31,9 @@
  */
 
 
-import { SerialPort,NetworkTCP } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { callable, driver} from "system_lib/Metadata";
+import { SerialPort,NetworkTCP } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { callable, driver} from "../system_lib/Metadata";
 import { DisplaySpot, Spot } from "../system/Spot";
 
 
@@ -49,7 +49,7 @@ const sendUpdateIntervalMs = 500;
 @driver('SerialPort', { baudRate: 115200})
 
 export class Guide_ID_Brainbox extends Driver<ConnType> {
-private spotPath: string; //Not the full path, just the spot name and its group 
+private spotPath: string; //Not the full path, just the spot name and its group
 private mySpot: DisplaySpot;
 private paramPropAccessor: any;
 private timePropAccessor: any;
@@ -73,15 +73,15 @@ private debugLogging = false; // Set to true to enable verbose logging
             this.mySpot = Spot[this.spotPath] as DisplaySpot;
             this.connection.subscribe('textReceived', (sender, msg) => {
                 this.onData(msg.text);
-            });   
+            });
             this.connection.subscribe('finish', () => {
             this.scheduledUpdate?.cancel();
             this.scheduledUpdate = undefined;
-            }); 
+            });
             this.connection.subscribe('connect', (sender, msg) => {
                 if (msg){
                     this.log("Guide ID Brainbox connected");
-                    this.sendData("\r\n" + "console video 1");  // Initialize B-Box 
+                    this.sendData("\r\n" + "console video 1");  // Initialize B-Box
                 }
             });
             this.hookUpSpotSubs();
@@ -96,7 +96,7 @@ private debugLogging = false; // Set to true to enable verbose logging
         this.timePropAccessor = this.getProperty<TimeFlow>("Spot." + this.spotPath + ".time", value=>this.onTimeChange(value))
         this.mySpot.subscribe('connect', (sender, message) => this.onConnectChanged(sender,message));
         this.mySpot.subscribe('finish', () => this.onDisplaySpotFinished());
-    } 
+    }
 
     @callable ("Enable debug Logging")debugLogEnable(enable:boolean){
         this.debugLogging = enable;
@@ -119,23 +119,23 @@ private debugLogging = false; // Set to true to enable verbose logging
             return;
         }
 
-        //Kickstart the sync 
+        //Kickstart the sync
         this.log("Time changed: " + this.timeRecived.currentTime);
         if (this.firstTime){
         this.startSync()
         this.firstTime = false;
         this.log("firstTime flag is now false, time updates will now be scheduled and loop detection will be active");
         }
-        
+
         //Check if we are looping, we send out the init messages again to make sure the b-box is in right mode.
-        if (this.timeRecived.currentTime < this.lastTime){ 
+        if (this.timeRecived.currentTime < this.lastTime){
             this.log("Time went backwards, likely due to a  loop. Time: " + this.timeRecived.currentTime + " Last time: " + this.lastTime);
-            this.startSync(); 
+            this.startSync();
         }
-        this.lastTime = this.timeRecived.currentTime; 
+        this.lastTime = this.timeRecived.currentTime;
     }
 
- 
+
     private onDisplaySpotFinished(){
         this.mySpot = Spot[this.spotPath] as DisplaySpot;
          this.hookUpSpotSubs();
@@ -148,9 +148,9 @@ private debugLogging = false; // Set to true to enable verbose logging
     }
 
     private onConnectChanged(sender:DisplaySpot,message:any):void{
-      
+
     }
-   
+
     private onData(data: string) {
         this.log("Data received: " + data);
         const splitData = data.split(" ")
@@ -158,14 +158,14 @@ private debugLogging = false; // Set to true to enable verbose logging
         const value = splitData[1];
         this.log("Command recieved: " + command + " Value: " + value);
         this.log("Current video id on spot parameter: " + Spot[this.spotPath].parameter[idParameterName]);
-        //We must consider the videocode when making, because the Podcasters will broadcast to all brainbox recievers and will make all spots  
+        //We must consider the videocode when making, because the Podcasters will broadcast to all brainbox recievers and will make all spots
         // within active if we only check for the ID, but we only want to activate the one with the matching ID
         if (command === "videocode" && value === Spot[this.spotPath].parameter[idParameterName]){
             const current =  Spot[this.spotPath].active
             if  (current === false) {
             Spot[this.spotPath].active = true
             }
-        }   
+        }
     }
     startSync(): void {
         this.sendData("\r\n" + "console video 1");
@@ -189,14 +189,14 @@ private debugLogging = false; // Set to true to enable verbose logging
    private scheduleTimeUpdate(): void {
         if (this.scheduledUpdate)
             this.scheduledUpdate.cancel();
-    
+
         this.sendTimeUpdate(this.timeRecived.currentTime);
         this.scheduledUpdate = wait(sendUpdateIntervalMs);
         this.scheduledUpdate.then(() => {
             if (Spot[this.spotPath].playingBlock !== "") //Only reschedule update if there is still a block assigned
                 this.scheduleTimeUpdate();
             });
-        } 
+        }
     private sendData(data: string) {
         this.log("Sending data: " + data);
         if (this.connection.connected)
@@ -208,7 +208,7 @@ private debugLogging = false; // Set to true to enable verbose logging
         console.log(this.spotPath + " " + messages);
     }
 }
- 
+
 function isIpOrLocalhost(addr: string): boolean {
     return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(addr) || addr === "localhost";
 }

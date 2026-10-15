@@ -1,10 +1,10 @@
 /**
  * Driver to control Visio Exaplay
  * Support play,pause,stop, gotoCue,gotoTime, syncsource.
- * If controlled from blocks only, polling is not required, is e.g looping it done from cues on the Exaplay timeline, poolong is 
- * required. This can be avoided by controlling loops from blocks. 
- * 
- * The Exaplay driver supports multiple compositions, each composition is represented by a named aggregate property.    
+ * If controlled from blocks only, polling is not required, is e.g looping it done from cues on the Exaplay timeline, poolong is
+ * required. This can be avoided by controlling loops from blocks.
+ *
+ * The Exaplay driver supports multiple compositions, each composition is represented by a named aggregate property.
  * Each composition has its own playState, volume and TimeFlow sync source.
  * The driver supports adding compositions dynamically using the addComposition callable method.
  * Each composition requires an ID as in Exaplay, and polling can be enabled/disabled per composition.
@@ -13,26 +13,26 @@
  * Commands are queued to avoid overloading the Exaplay with too many commands at once.
  * The driver expects responses for commands that request data, e.g get status.
  * The driver implements a simple timeout mechanism to handle cases where the Exaplay does not respond in time.
- * 
- * 
- * TimeFlow sync is done by polling the Exaplay for current time when playing. 
+ *
+ *
+ * TimeFlow sync is done by polling the Exaplay for current time when playing.
  * Drift correction is implemented to keep the TimeFlow in sync with Exaplay time.
- * (This is due to lack of spontanios event messages in the Expalay tcp control api) 
- * 
+ * (This is due to lack of spontanios event messages in the Expalay tcp control api)
+ *
  * Copyright (c) PIXILAB Technologies AB, Sweden (http://pixilab.se). All Rights Reserved.
- * 
- * 
+ *
+ *
  * Created 2025 by Mattias Andersson.
  *
  * @version 1.1
- * 1.0 - Initial version. Basic play, pause, stop, gotoCue, gotoTime, volume and TimeFlow sync support. Polling support for TimeFlow sync. 
- * 1.1 - Buggfixes. Handling message queue, flushing message queue on disable and reconfiguration. Added minimum pollinterval. 
- * 
+ * 1.0 - Initial version. Basic play, pause, stop, gotoCue, gotoTime, volume and TimeFlow sync support. Polling support for TimeFlow sync.
+ * 1.1 - Buggfixes. Handling message queue, flushing message queue on disable and reconfiguration. Added minimum pollinterval.
+ *
  */
 
-import { NetworkTCP } from "system/Network";
-import { Driver } from "system_lib/Driver";
-import { callable, driver, max, min, parameter, property } from "system_lib/Metadata";
+import { NetworkTCP } from "../system/Network";
+import { Driver } from "../system_lib/Driver";
+import { callable, driver, max, min, parameter, property } from "../system_lib/Metadata";
 import { AggregateElem } from "../system_lib/ScriptBase";
 
 interface Dictionary<TElem> { [id: string]: TElem; }
@@ -107,7 +107,7 @@ export class Exaplay extends Driver<NetworkTCP> {
     }
     @callable("Configure a composition")
     stopAllCompositions(
-        
+
     ) {
         for (const compName in this.compositions) {
             const comp = this.compositions[compName];
@@ -216,20 +216,20 @@ class Composition extends AggregateElem {
     currentClip: 0,
     totalDuration: 0
     };
-    private driftCount = 0; // number of consecutive messages with drift 
+    private driftCount = 0; // number of consecutive messages with drift
     private readonly driftThresholdCount = 10; // number of consecutive messages with drift before resync
     private readonly driftMs = 100;           // threshold per message in ms
-    
+
     constructor(
         protected readonly owner: Exaplay,
         protected readonly id: number,
         protected readonly enablePolling: boolean,
         protected readonly pollingInterval: number,
         protected readonly verboseLogging:boolean = false
-        
+
     ) {
         super();
-        this.poll();  
+        this.poll();
     }
     @property("Play state, 'PLAY', 'STOP', 'PAUSE' ", false)
     get playState(): string { return this.mPlayState; }
@@ -242,7 +242,7 @@ class Composition extends AggregateElem {
                         break;
                     case "STOP":
                         this.owner.sendCommand("stop", this.id)
-                        break;  
+                        break;
                     case "PAUSE":
                         this.owner.sendCommand("pause", this.id)
                         break;
@@ -250,7 +250,7 @@ class Composition extends AggregateElem {
                         console.log("Unknown playState value:", value);
                 }
                 this.getStatus()
-      
+
             }
             this.mPlayState = value;
         }
@@ -343,7 +343,7 @@ class Composition extends AggregateElem {
                 this.syncSource = new TimeFlow(status.currentTime * 1000, 1);
                 this.mPlayState = "PLAY"
             } else {
-                this.checkDrift(status); 
+                this.checkDrift(status);
             }
 
         } else if (status.playbackStatus === 2 && newState) {
@@ -353,7 +353,7 @@ class Composition extends AggregateElem {
 
         if (newState) {
             this.changed("playState");
-          
+
         }
 
         this.currentPlaybackStatus = status.playbackStatus;

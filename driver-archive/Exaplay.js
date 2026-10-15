@@ -11,12 +11,10 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Exaplay = void 0;
-const Network_1 = require("system/Network");
-const Driver_1 = require("system_lib/Driver");
-const Metadata_1 = require("system_lib/Metadata");
+const Driver_1 = require("../system_lib/Driver");
+const Metadata_1 = require("../system_lib/Metadata");
 const ScriptBase_1 = require("../system_lib/ScriptBase");
 let Exaplay = class Exaplay extends Driver_1.Driver {
     connection;
@@ -174,7 +172,7 @@ __decorate([
 ], Exaplay.prototype, "stopAllCompositions", null);
 exports.Exaplay = Exaplay = __decorate([
     (0, Metadata_1.driver)('NetworkTCP', { port: 8100 }),
-    __metadata("design:paramtypes", [typeof (_a = typeof Network_1.NetworkTCP !== "undefined" && Network_1.NetworkTCP) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [Object])
 ], Exaplay);
 class Composition extends ScriptBase_1.AggregateElem {
     owner;
