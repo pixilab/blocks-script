@@ -105,9 +105,10 @@ let PJLink = class PJLink extends NetworkProjector_1.NetworkProjector {
         if (this.keepAlive)
             this.connected = false;
         this.request('POWR').then(reply => {
+            const on = (parseInt(reply) & 1) != 0;
             if (!this.inCmdHoldoff())
-                this._power.updateCurrent((parseInt(reply) & 1) != 0);
-            if (this._power.get())
+                this._power.updateCurrent(on);
+            if (this._power.getCurrent())
                 this.getMiscState1();
             else {
                 this.connected = true;
@@ -129,7 +130,7 @@ let PJLink = class PJLink extends NetworkProjector_1.NetworkProjector {
         }, error => {
             this.warnMsg("INPT query error", error);
             if (ignoreError)
-                this.getMiscState2();
+                this.getMiscState2(ignoreError);
             else {
                 this.connected = true;
                 this.sendCorrection();
@@ -147,10 +148,8 @@ let PJLink = class PJLink extends NetworkProjector_1.NetworkProjector {
             this.sendCorrection();
         }, error => {
             this.warnMsg("AVMT query error", error);
-            if (!ignoreError) {
-                this.connected = true;
-                this.sendCorrection();
-            }
+            this.connected = true;
+            this.sendCorrection();
         });
     }
     sendCorrection() {
@@ -218,7 +217,8 @@ let PJLink = class PJLink extends NetworkProjector_1.NetworkProjector {
                             break;
                         case 'ERR3':
                             treatAsOk = true;
-                            this.projectorBusy();
+                            if (this._power.get() !== false)
+                                this.projectorBusy();
                             this.warnMsg("PJLink projector BUSY", currCmd, text);
                             break;
                         default:

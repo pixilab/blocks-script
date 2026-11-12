@@ -13,9 +13,9 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Nexmosphere_NEO = void 0;
-const Metadata_1 = require("../system_lib/Metadata");
-const NexmosphereBase_1 = require("../driver/NexmosphereBase");
-const ScriptBase_1 = require("../system_lib/ScriptBase");
+const Metadata_1 = require("system_lib/Metadata");
+const NexmosphereBase_1 = require("driver/NexmosphereBase");
+const ScriptBase_1 = require("system_lib/ScriptBase");
 const kNumInterfaces = 4;
 const kNumOutputs = 4;
 let Nexmosphere_NEO = class Nexmosphere_NEO extends NexmosphereBase_1.NexmosphereBase {

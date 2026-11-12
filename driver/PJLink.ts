@@ -48,6 +48,7 @@ export class PJLink extends NetworkProjector {
 					if (typeof value !== 'number')
 						throw "Invalid POWR query response " + reply;
 					const on = (value & 1) != 0;
+					// this.infoMsg("POWR response", on);
 					if (!this.inCmdHoldoff())
 						this._power.updateCurrent(on);
 					if (on && this.okToSendCommand()) // Attempt input too in case never done
@@ -107,12 +108,14 @@ export class PJLink extends NetworkProjector {
 
 		this.request('POWR').then(
 			reply => {
+				const on = (parseInt(reply) & 1) != 0;
+				// this.infoMsg("POWR initially", on, reply);
 				if (!this.inCmdHoldoff())
-					this._power.updateCurrent((parseInt(reply) & 1) != 0);
-				if (this._power.get()) // Power on - proceed quering misc
+					this._power.updateCurrent(on);
+				if (this._power.getCurrent()) // Power on - proceed quering misc
 					this.getMiscState1();
 				else {
-					this.connected = true;	// Can't query input if off - skip that step
+					this.connected = true;	// Can't query input while off - skip that step
 					this.sendCorrection();
 				}
 			},
@@ -132,6 +135,7 @@ export class PJLink extends NetworkProjector {
 				const value = parseInt(reply);
 				if (typeof value !== 'number')
 					throw "Invalid INPT query response " + reply;
+				// this.infoMsg("INPT reply", value)
 				if (!this.inCmdHoldoff())
 					this._input.updateCurrent(value);
 				this.getMiscState2();
@@ -140,7 +144,7 @@ export class PJLink extends NetworkProjector {
 				// May fail for "normal" reasons, eg, during power up/down
 				this.warnMsg("INPT query error", error);
 				if (ignoreError)
-					this.getMiscState2();
+					this.getMiscState2(ignoreError);
 				else {
 					this.connected = true; // Allow things to proceed anyway
 					this.sendCorrection();
@@ -155,6 +159,7 @@ export class PJLink extends NetworkProjector {
 				const value = parseInt(reply);
 				if (typeof value !== 'number')
 					throw "Invalid AVMT query response " + reply;
+				// this.infoMsg("AVMT reply", value)
 				if (!this.inCmdHoldoff())
 					this._mute.updateCurrent(value === 31);
 				this.connected = true;
@@ -163,10 +168,8 @@ export class PJLink extends NetworkProjector {
 			error => {
 				// May fail for "normal" reasons, eg, during power up/down
 				this.warnMsg("AVMT query error", error);
-				if (!ignoreError) {
-					this.connected = true; // Allow things to proceed anyway
-					this.sendCorrection();
-				}
+				this.connected = true; // Allow things to proceed anyway
+				this.sendCorrection();
 			}
 		);
 	}
@@ -203,7 +206,7 @@ export class PJLink extends NetworkProjector {
 		var toSend = '%1' + question;
 		toSend += ' ';
 		toSend += (param === undefined) ? '?' : param;
-		// console.info("request", toSend);
+		// this.infoMsg("PJLink sent request", toSend);
 		this.socket.sendText(toSend).catch(
 			err=>this.sendFailed(err)
 		);
@@ -275,7 +278,8 @@ export class PJLink extends NetworkProjector {
 					case 'ERR3':	// Bad time for this command (usually in standby or not yet awake)
 						// console.info("PJLink ERR3");
 						treatAsOk = true;	// Consider OK, but "busy" for a while
-						this.projectorBusy();
+						if (this._power.get() !== false)
+							this.projectorBusy();
 						this.warnMsg("PJLink projector BUSY", currCmd, text);
 						break;
 					default:

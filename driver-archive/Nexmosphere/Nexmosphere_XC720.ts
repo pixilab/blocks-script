@@ -5,8 +5,8 @@
  * version 1.0
  */
 
-import { driver } from "../system_lib/Metadata";
-import { NexmosphereBase,ConnType,BuiltInElements  } from "../driver/NexmosphereBase";
+import { driver } from "system_lib/Metadata";
+import { NexmosphereBase,ConnType,BuiltInElements  } from "driver/NexmosphereBase";
 
 const kNumInterfaces: number = 4;	// Number of interface ports on this device
 

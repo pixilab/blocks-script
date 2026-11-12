@@ -5,8 +5,8 @@
  * version 1.0
  */
 
-import { driver } from "../system_lib/Metadata";
-import { NexmosphereBase,ConnType,BuiltInElements  } from "../driver/NexmosphereBase";
+import { driver } from "system_lib/Metadata";
+import { NexmosphereBase,ConnType,BuiltInElements  } from "driver/NexmosphereBase";
 
 const kNumInterfaces: number = 8;	// Number of interface ports on this device
 
@@ -16,13 +16,13 @@ export class Nexmosphere_XC101 extends NexmosphereBase<ConnType> {
 
     private specialInterfaces: BuiltInElements  = [
     ]
-   
+
 
     constructor(port: ConnType) {
         super(port, kNumInterfaces);
         this.initConnection(port)
         this.addBuiltInInterfaces(this.specialInterfaces);
-        
+
     }
 
      protected considerConnected(): boolean {

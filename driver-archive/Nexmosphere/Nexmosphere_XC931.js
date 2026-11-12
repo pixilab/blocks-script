@@ -10,8 +10,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Nexmosphere_XC931 = void 0;
-const Metadata_1 = require("../system_lib/Metadata");
-const NexmosphereBase_1 = require("../driver/NexmosphereBase");
+const Metadata_1 = require("system_lib/Metadata");
+const NexmosphereBase_1 = require("driver/NexmosphereBase");
 const kNumInterfaces = 8;
 let Nexmosphere_XC931 = class Nexmosphere_XC931 extends NexmosphereBase_1.NexmosphereBase {
     specialInterfaces = [

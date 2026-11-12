@@ -11,7 +11,10 @@
 		"isolatedModules": false,
 		"strictNullChecks": false,
         "strictPropertyInitialization": false,
-		"rootDir":".",
+		"paths": {
+		  // See https://stackoverflow.com/questions/79923194/option-baseurl-is-deprecated-and-will-stop-functioning-in-typescript-7
+			"*": ["./*"]
+		},
 		"typeRoots": ["./system", "./node_modules"],
         "types": ["PIXI.d.ts"],
         "ignoreDeprecations": "6.0"

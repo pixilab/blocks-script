@@ -9,11 +9,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Nexmosphere_XC181 = void 0;
-const Metadata_1 = require("../system_lib/Metadata");
-const NexmosphereBase_1 = require("../driver/NexmosphereBase");
+exports.Nexmosphere_XC171 = void 0;
+const Metadata_1 = require("system_lib/Metadata");
+const NexmosphereBase_1 = require("driver/NexmosphereBase");
 const kNumInterfaces = 8;
-let Nexmosphere_XC181 = class Nexmosphere_XC181 extends NexmosphereBase_1.NexmosphereBase {
+let Nexmosphere_XC171 = class Nexmosphere_XC171 extends NexmosphereBase_1.NexmosphereBase {
     specialInterfaces = [
         ["WIRELESSPICKUP", 111],
         ["WIRELESSPICKUP", 112],
@@ -29,9 +29,9 @@ let Nexmosphere_XC181 = class Nexmosphere_XC181 extends NexmosphereBase_1.Nexmos
         return this.port.connected;
     }
 };
-exports.Nexmosphere_XC181 = Nexmosphere_XC181;
-exports.Nexmosphere_XC181 = Nexmosphere_XC181 = __decorate([
+exports.Nexmosphere_XC171 = Nexmosphere_XC171;
+exports.Nexmosphere_XC171 = Nexmosphere_XC171 = __decorate([
     (0, Metadata_1.driver)('NetworkTCP', { port: 4001 }),
     (0, Metadata_1.driver)('SerialPort', { baudRate: 115200 }),
     __metadata("design:paramtypes", [Object, Number])
-], Nexmosphere_XC181);
+], Nexmosphere_XC171);

@@ -6,9 +6,9 @@
  */
 
 
-import {NetworkUDP} from "../system/Network";
-import {driver} from "../system_lib/Metadata";
-import {NexmosphereBase,BuiltInElements } from "../driver/NexmosphereBase";
+import {NetworkUDP} from "system/Network";
+import {driver} from "system_lib/Metadata";
+import {NexmosphereBase,BuiltInElements } from "driver/NexmosphereBase";
 const kNumInterfaces: number = 4;
 @driver('NetworkUDP', { port: 5000, rcvPort: 5000 })
 
