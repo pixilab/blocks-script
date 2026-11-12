@@ -27,6 +27,7 @@ class NetworkProjector extends Driver_1.Driver {
     keepAlive = true;
     connTimeout = 3000;
     pollInterval = 21333;
+    toldConnFailed = false;
     failedToConnect = false;
     _power;
     propList;
@@ -45,7 +46,7 @@ class NetworkProjector extends Driver_1.Driver {
                 if (this.socket.connected && this.keepAlive)
                     this.infoMsg("connected");
                 else if (!this.socket.connected && this.keepAlive && this.socket.enabled)
-                    this.warnMsg("connection dropped", message.type);
+                    this.warnMsg("Connection failed initially", message.type);
                 this.connectStateChanged();
             }
         });
@@ -183,7 +184,7 @@ class NetworkProjector extends Driver_1.Driver {
     }
     justConnected(sendCorrection) {
         if (!this.keepAlive) {
-            this.failedToConnect = false;
+            this.toldConnFailed = this.failedToConnect = false;
             this.resetTimeout();
             if (sendCorrection)
                 this.sendCorrection();
@@ -207,8 +208,11 @@ class NetworkProjector extends Driver_1.Driver {
                 this.connectSoon();
             }
             else {
+                if (!this.toldConnFailed) {
+                    this.errorMsg("Connection failed");
+                    this.toldConnFailed = true;
+                }
                 if (this.failedToConnect) {
-                    this.warnMsg("connection dropped");
                     this.connected = false;
                     this.connectSoon();
                 }
@@ -220,6 +224,8 @@ class NetworkProjector extends Driver_1.Driver {
             if (this.reqToSend())
                 this.connectSoon();
         }
+        else
+            this.toldConnFailed = false;
     }
     disconnectAndTryAgainSoon(howSoonMillis) {
         if (this.socket.connected)

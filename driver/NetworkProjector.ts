@@ -29,8 +29,8 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	private connTimeout = 3000; 	// Connection timeout, mS
 	private pollInterval = 21333;	// Default device polling interval, in mS
 
-	// Only relevant when keepAlive is false. If we fail to connect and this var is already true, then the device is down.
-	protected failedToConnect = false;
+	private toldConnFailed = false;	// To not nag in log if fails repeatedly
+	protected failedToConnect = false;	// Set to detect two failed attempts in non-keepAlive mode
 
 	// Basic states (presumably) supported by all projectors.
 	protected _power: BoolState;					// Set in subclass ctor
@@ -59,7 +59,7 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 				if (this.socket.connected && this.keepAlive)
 					this.infoMsg("connected");
 				else if (!this.socket.connected && this.keepAlive && this.socket.enabled)
-					this.warnMsg("connection dropped", message.type);
+					this.warnMsg("Connection failed initially", message.type);
 				this.connectStateChanged();
 			}
 		});
@@ -312,11 +312,12 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 	 Override if you want to do something once connection has been established
 	 successfully.
 
-	 sendCorrection true expresses that there is a command to send, the one that triggered the connection to be established to begin with
+	 sendCorrection true expresses that there is a command to send, the one that triggered
+	 the connection to be established to begin with
 	 */
 	protected justConnected(sendCorrection?: boolean): void {
 		if (!this.keepAlive) {
-			this.failedToConnect = false;
+			this.toldConnFailed = this.failedToConnect = false;
 			this.resetTimeout();		// Start the connection timeout
 
 			if (sendCorrection)
@@ -351,9 +352,12 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 				this.connected = false;	// Tell clients connection dropped
 				this.connectSoon();
 			} else {
+				if (!this.toldConnFailed) {
+					this.errorMsg("Connection failed");
+					this.toldConnFailed = true;	// Don't nag in log
+				}
 				if (this.failedToConnect) {
-					this.warnMsg("connection dropped");
-					this.connected = false;		// Failed for the second time to connect to the device
+					this.connected = false;		// Indicates connection failed through property
 					this.connectSoon();			// Try to reconnect soon
 				} else
 					this.failedToConnect = true; // This is one 'strike'. Second strike means the device not reachable
@@ -364,7 +368,8 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 
 			if (this.reqToSend())
 				this.connectSoon();	// Got data to send - attempt to re-connect soon
-		}
+		} else
+			this.toldConnFailed = false;
 	}
 
 	/**
@@ -375,7 +380,6 @@ export abstract class NetworkProjector extends Driver<NetworkTCP> {
 			this.socket.disconnect();
 		this.connectSoon(howSoonMillis);
 	}
-
 
 	/**
 	 Disconnect function
