@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"target": "es2023",
+		"target": "es2025",
 		"module": "commonjs",
 		"noImplicitAny": true,
 		"noEmitHelpers": false,
@@ -12,7 +12,6 @@
 		"strictNullChecks": false,
         "strictPropertyInitialization": false,
 		"paths": {
-		  // See https://stackoverflow.com/questions/79923194/option-baseurl-is-deprecated-and-will-stop-functioning-in-typescript-7
 			"*": ["./*"]
 		},
 		"typeRoots": ["./system", "./node_modules"],
