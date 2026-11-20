@@ -4,7 +4,7 @@
 
  	Copyright (c) 2019 No Parking Production ApS, Denmark (https://noparking.dk). All Rights Reserved.
 	Created by: Samuel Walz <mail@samwalz.com>
-  Version: 0.3
+  Version: 0.3.1
   Features:
   - get auth token via username & password
   - set intensity for devices & groups
@@ -207,14 +207,14 @@ export class Xicato extends Driver<NetworkTCP> {
   	}
 
     private gotAuthCode(authCode: string) {
-  		this.mAuthToken = authCode;
+  		this.token = authCode;
       // console.log(authCode);
   		this.mAuthorized = true;
   	}
 
   	private unauthorize() {
   		this.mAuthorized = false;
-        this.mAuthToken = undefined;
+        this.token = undefined;
   		// this.config = undefined;
   		console.warn("Unauthorized due to 401/403");
   	}

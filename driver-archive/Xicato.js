@@ -126,12 +126,12 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
         }
     }
     gotAuthCode(authCode) {
-        this.mAuthToken = authCode;
+        this.token = authCode;
         this.mAuthorized = true;
     }
     unauthorize() {
         this.mAuthorized = false;
-        this.mAuthToken = undefined;
+        this.token = undefined;
         console.warn("Unauthorized due to 401/403");
     }
     regularPoll() {
