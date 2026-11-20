@@ -24,6 +24,8 @@ const XIC_GROUP_OFFSET = 49152;
 const XIC_MAX_DEVICE_GROUPS = 16;
 const XIC_MAX_DEVICE_SCENES = 32;
 let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
+    mSocket;
+    mLoggingIn;
     mUsername;
     mPassword;
     mAuthToken;
@@ -42,6 +44,7 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
     scenesFileName;
     constructor(socket) {
         super(socket);
+        this.mSocket = socket;
         const settingsFileName = XIC_CONFIG_BASE_PATH + '/' + socket.name + '.config';
         const dataPath = XIC_CONFIG_BASE_PATH + '/' + socket.name;
         this.devicesFileName = dataPath + '/devices.json';
@@ -119,7 +122,7 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
                     this.regularPoll();
                 }
                 else {
-                    this.authenticationPoll();
+                    this.authenticationPoll().catch(_error => { });
                 }
                 this.requestPoll(3000);
             });
@@ -184,6 +187,8 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
         });
     }
     setIntensityREST(network, deviceId, intensity, fadeTime) {
+        if (!this.mSocket.enabled)
+            return;
         network = encodeURI(network);
         var url = this.mBaseURL + '/device/setintensity/' + network + '/' + deviceId + '/' + intensity + '/' + (fadeTime ? fadeTime : '');
         this.authorizedGet(url).
@@ -192,6 +197,8 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
         });
     }
     recallSceneREST(network, deviceId, scene, fadeTime) {
+        if (!this.mSocket.enabled)
+            return Promise.resolve();
         network = encodeURI(network);
         var url = this.mBaseURL + '/device/recallscene/' + network + '/' + deviceId + '/' + scene + '/' + (fadeTime ? fadeTime : '');
         return new Promise((resolve, reject) => {
@@ -223,8 +230,17 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
             }).catch(error => { reject(error); });
         });
     }
+    whenReady() {
+        if (!this.mSocket.enabled)
+            return Promise.reject('Xicato gateway ' + this.mSocket.name + ' is disabled');
+        if (!this.mAlive)
+            return Promise.reject('Xicato gateway ' + this.mSocket.name + ': settings not read yet');
+        if (this.mAuthToken)
+            return Promise.resolve();
+        return this.authenticationPoll();
+    }
     authorizedGet(url) {
-        const promise = new Promise((resolve, reject) => {
+        return this.whenReady().then(() => new Promise((resolve, reject) => {
             this.createAuthorizedRequest(url).
                 get().
                 then(response => {
@@ -232,19 +248,17 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
             }).catch(error => {
                 this.requestFailed(error, reject);
             });
-        });
-        return promise;
+        }));
     }
     authorizedPut(url, jsonData) {
-        const promise = new Promise((resolve, reject) => {
+        return this.whenReady().then(() => new Promise((resolve, reject) => {
             this.createAuthorizedRequest(url).
                 put(jsonData ? jsonData : '').then(response => {
                 this.handleGetPutResponse(response, resolve, reject);
             }).catch(error => {
                 this.requestFailed(error, reject);
             });
-        });
-        return promise;
+        }));
     }
     handleGetPutResponse(response, resolve, reject) {
         this.connected = true;
@@ -268,6 +282,16 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
         return SimpleHTTP_1.SimpleHTTP.newRequest(url).header('Authorization', 'Bearer ' + this.mAuthToken);
     }
     authenticationPoll() {
+        if (!this.mLoggingIn) {
+            this.mLoggingIn = new Promise((resolve, reject) => {
+                this.requestToken(resolve, reject);
+            });
+            const done = () => { this.mLoggingIn = undefined; };
+            this.mLoggingIn.then(done, done);
+        }
+        return this.mLoggingIn;
+    }
+    requestToken(resolve, reject) {
         SimpleHTTP_1.SimpleHTTP.newRequest(this.mBaseURL + '/api/token').
             header('Authorization', 'Basic ' + this.toBase64(this.mUsername + ':' + this.mPassword)).
             get().
@@ -277,7 +301,10 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
                 var authResponse = response.data;
                 if (authResponse && authResponse.length) {
                     this.gotAuthCode(authResponse);
+                    resolve();
+                    return;
                 }
+                reject('Xicato gateway ' + this.mSocket.name + ': empty login answer');
             }
             else {
                 this.mAuthorized = false;
@@ -293,8 +320,12 @@ let Xicato = Xicato_1 = class Xicato extends Driver_1.Driver {
                         this.mLoggedAuthFail = true;
                     }
                 }
+                reject('Xicato gateway ' + this.mSocket.name + ': login failed with HTTP ' + response.status);
             }
-        }).catch(error => this.requestFailed(error));
+        }).catch(error => {
+            this.requestFailed(error);
+            reject(error);
+        });
     }
     getDevices() {
         this.showDevicesREST().

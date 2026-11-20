@@ -5,6 +5,9 @@
  	Copyright (c) 2019 No Parking Production ApS, Denmark (https://noparking.dk). All Rights Reserved.
 	Created by: Samuel Walz <mail@samwalz.com>
   Version: 0.3.1
+  - 0.3.1: publishes the token when it logs in or out; sends nothing to a disabled gateway (scene and
+    intensity calls are skipped, others fail with a short message); logs in before a request when it has no
+    token yet, instead of sending it unauthorized
   Features:
   - get auth token via username & password
   - set intensity for devices & groups
@@ -32,6 +35,9 @@ const XIC_MAX_DEVICE_SCENES : number = 32;
 @driver('NetworkTCP', { port: 8000 })
 export class Xicato extends Driver<NetworkTCP> {
 
+    private readonly mSocket : NetworkTCP;
+    private mLoggingIn : Promise<void>;	// login in flight, if any
+
     private mUsername : string;
     private mPassword : string;
     private mAuthToken : string;
@@ -56,6 +62,7 @@ export class Xicato extends Driver<NetworkTCP> {
 
     public constructor(socket: NetworkTCP) {
         super(socket);
+        this.mSocket = socket;
 
         // no auto-connect needed since REST API
         const settingsFileName = XIC_CONFIG_BASE_PATH + '/' + socket.name + '.config';
@@ -199,7 +206,7 @@ export class Xicato extends Driver<NetworkTCP> {
                     this.regularPoll();
                 } else {
                     // no auth token: get auth token
-                    this.authenticationPoll();
+                    this.authenticationPoll().catch(_error => {});
                 }
   				this.requestPoll(3000);	// Set up to poll again soon
   			});
@@ -283,6 +290,7 @@ export class Xicato extends Driver<NetworkTCP> {
     // Control Permission API Calls //
 
     private setIntensityREST (network: string, deviceId: number, intensity: number, fadeTime?: number) : void {
+        if (!this.mSocket.enabled) return;	// a disabled gateway is off on purpose
         network = encodeURI(network);
         var url = this.mBaseURL + '/device/setintensity/' + network + '/' + deviceId + '/' + intensity + '/' + (fadeTime ? fadeTime : '');
         this.authorizedGet(url).
@@ -293,6 +301,7 @@ export class Xicato extends Driver<NetworkTCP> {
         });
     }
     private recallSceneREST (network: string, deviceId: number, scene: number, fadeTime?: number) : Promise<void> {
+        if (!this.mSocket.enabled) return Promise.resolve();	// a disabled gateway is off on purpose
         network = encodeURI(network);
         var url = this.mBaseURL + '/device/recallscene/' + network + '/' + deviceId + '/' + scene + '/' + (fadeTime ? fadeTime : '');
         return new Promise<void>((resolve, reject) => {
@@ -330,8 +339,19 @@ export class Xicato extends Driver<NetworkTCP> {
     }
 
 
+    /**
+     * Resolves when a request can be sent: the gateway is enabled, its settings are read and the driver has a token,
+     * logging in first if it has none yet (rather than sending a request the gateway answers with 401).
+     */
+    private whenReady () : Promise<void> {
+        if (!this.mSocket.enabled) return Promise.reject('Xicato gateway ' + this.mSocket.name + ' is disabled');
+        if (!this.mAlive) return Promise.reject('Xicato gateway ' + this.mSocket.name + ': settings not read yet');
+        if (this.mAuthToken) return Promise.resolve();
+        return this.authenticationPoll();
+    }
+
     private authorizedGet (url: string) : Promise<string> {
-        const promise = new Promise<string>((resolve, reject) => {
+        return this.whenReady().then(() => new Promise<string>((resolve, reject) => {
             this.createAuthorizedRequest(url).
             get().
             then(response => {
@@ -339,11 +359,10 @@ export class Xicato extends Driver<NetworkTCP> {
             }).catch(error => {
                 this.requestFailed(error, reject);
             });
-        });
-        return promise;
+        }));
     }
     private authorizedPut (url: string, jsonData?: string) : Promise<string> {
-        const promise = new Promise<string>((resolve, reject) => {
+        return this.whenReady().then(() => new Promise<string>((resolve, reject) => {
             this.createAuthorizedRequest(url).
             put(
                 jsonData ? jsonData : ''
@@ -352,8 +371,7 @@ export class Xicato extends Driver<NetworkTCP> {
             }).catch(error => {
                 this.requestFailed(error, reject);
             });
-        });
-        return promise;
+        }));
     }
     private handleGetPutResponse (
         response: Response<any>,
@@ -380,7 +398,19 @@ export class Xicato extends Driver<NetworkTCP> {
     }
 
 
-    private authenticationPoll() {
+    /** Logs in; resolves once the driver has a token. Shares a login already in flight. */
+    private authenticationPoll() : Promise<void> {
+        if (!this.mLoggingIn) {
+            this.mLoggingIn = new Promise<void>((resolve, reject) => {
+                this.requestToken(resolve, reject);
+            });
+            const done = () => { this.mLoggingIn = undefined; };
+            this.mLoggingIn.then(done, done);
+        }
+        return this.mLoggingIn;
+    }
+
+    private requestToken(resolve: () => void, reject: (error?: any) => void) {
   		SimpleHTTP.newRequest(this.mBaseURL + '/api/token').
         header('Authorization', 'Basic ' + this.toBase64(this.mUsername + ':' + this.mPassword)).
         get().
@@ -391,7 +421,10 @@ export class Xicato extends Driver<NetworkTCP> {
   				if (authResponse && authResponse.length) {
                     // console.log('got auth response: ' + authResponse);
   					this.gotAuthCode(authResponse);
+  					resolve();
+  					return;
   				}
+  				reject('Xicato gateway ' + this.mSocket.name + ': empty login answer');
   			} else {
   				this.mAuthorized = false;
                 if (response.status === 401) {
@@ -406,8 +439,12 @@ export class Xicato extends Driver<NetworkTCP> {
   						this.mLoggedAuthFail = true;	// Log that error only once per session
   					}
   				}
+  				reject('Xicato gateway ' + this.mSocket.name + ': login failed with HTTP ' + response.status);
   			}
-  		}).catch(error => this.requestFailed(error));
+  		}).catch(error => {
+  			this.requestFailed(error);	// no warning: polling retries the login every few seconds
+  			reject(error);
+  		});
   	}
 
   	private getDevices() {
