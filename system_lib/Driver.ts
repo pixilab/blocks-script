@@ -60,7 +60,7 @@ export class Driver<FacadeType extends NetworkBase> extends ScriptBase<FacadeTyp
 	}
 }
 
-// Internal implementation - not for direct client access
+// Common base for various Network device drivers
 export interface DriverFacade extends ScriptBaseEnv {
 	readonly name: string;		// Leaf name of this object
 	readonly fullName: string;	// Full, dot-separated path, incl enclosing containers
