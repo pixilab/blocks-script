@@ -101,6 +101,8 @@ export interface ListData<ListItem> {
 
 // Internal use only!
 export interface FeedEnv extends ScriptBaseEnv {
+	subscribe(event: 'finish', listener: ()=>void): void; // Script is being shut down
+
 	establishFeed<ListItem, DetailsItem extends ListItem>(feed: StaticFeed<ListItem, DetailsItem>): void;
 	refreshFeed(instName: string): void;
 }

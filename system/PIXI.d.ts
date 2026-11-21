@@ -25,6 +25,7 @@ interface Console {
 	info(...toLog: any[]): void;		// Log as info message
 	error(...toLog: any[]): void;		// Log as error message
 	warn(...toLog: any[]): void;		// Log as warning message
+	assert(testedForTruthy: any, ...toLog: any[]): void; // Logs error if 1st arg is falsey
 }
 declare var console: Console;	// Globally accessible through "console"
 
