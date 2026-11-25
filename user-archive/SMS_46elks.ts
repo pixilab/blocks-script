@@ -51,7 +51,7 @@ export class SMS_46elks extends Script {
 			if (!user || !password)
 				throw "Missing user or password";
 
-			const auth = Base64.encode(user + ':' + password);
+			const auth = toBase64(user + ':' + password);
 
 			let srcData = {
 				from: from || "Blocks",
@@ -91,6 +91,29 @@ export interface Dictionary<TElem> {
 	[id: string]: TElem;
 }
 
+function toBase64(str: string): string {
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	let result = "";
+	let i = 0;
+
+	while (i < str.length) {
+		const c1 = str.charCodeAt(i++);
+		const c2 = str.charCodeAt(i++);
+		const c3 = str.charCodeAt(i++);
+
+		const e1 = c1 >> 2;
+		const e2 = ((c1 & 3) << 4) | (c2 >> 4);
+		const e3 = isNaN(c2) ? 64 : ((c2 & 15) << 2) | (c3 >> 6);
+		const e4 = isNaN(c2) || isNaN(c3) ? 64 : c3 & 63;
+
+		result +=
+			chars.charAt(e1) +
+			chars.charAt(e2) +
+			(e3 === 64 ? "=" : chars.charAt(e3)) +
+			(e4 === 64 ? "=" : chars.charAt(e4));
+	}
+	return result;
+}
 
 /**
  * Encode the key/value pairs in dict to a string, URL query param style.
@@ -107,16 +130,3 @@ function formDataEnclode(dict: Dictionary<string>) {
 	return result;
 }
 
-
-/*	Minimal Base64 encode/decode utility for the Nashorn JavaScript
-	implmentation.
- */
-declare var java: any
-var Base64 = {
-	decode: function (str: string): string {
-		return new java.lang.String(java.util.Base64.decoder.decode(str));
-	},
-	encode: function (str: any): string {
-		return java.util.Base64.encoder.encodeToString(str.bytes);
-	}
-};
